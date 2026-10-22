@@ -1,8 +1,9 @@
 # Agent infrastructure
 
 Status **2026-10-22**: Codex Plus runner installed on `runner.brokebyte.me`;
-GitHub workflows are published on `codex/agent-runner-infra`; activation on the
-default branch is pending. GBrain is deferred. Fadwix containers, config, networks, ports,
+The initial infrastructure PR has been merged into `main`. The extension in
+`globalarray/chore/improve_agent_workflows` (optional Issue, full discussion,
+editable progress report and descriptive runner branches) is not yet published. GBrain is deferred. Fadwix containers, config, networks, ports,
 Docker and kernel settings were not changed; no reboot was performed.
 
 ## Responsibility boundaries
@@ -28,15 +29,16 @@ are deployed with the same `runner/`, `review/`, `planning/` boundaries under
 
 - `agent-review.yml`: only a new human PR comment with exact body `/agent-review`.
   Verify write/maintain/admin permission before execution/cancellation. Resolve
-  current head/base SHA, linked Issue (`Refs`, `Closes`, `Fixes`, `Resolves`),
-  comments, diff and CI metadata. Same-repository PRs only. No automatic review
+  current head/base SHA, linked Issues when present (`Refs`, `Closes`, `Fixes`, `Resolves`),
+  full conversation/review/inline discussion, diff and CI metadata. Without an
+  Issue, review from PR context and disclose missing requirements. Same-repository PRs only. No automatic review
   on PR opening, pushes, readiness or edited comments.
 - Literal `INFRA/ML:` requires Go skills. Standalone `ML:` forbids them; Go
   changes under that title are a scope conflict. For `INFRA:`/other titles,
   actual Go source/module/workspace changes determine Go routing. All scopes
   use `caveman-review` and `ponytail-review`.
 - `issue-planning.yml`: every new Issue receives a static fix-boundary report.
-  Exact `/create-plan` in the Issue creates `codex/issue-N-plan` with only
+  Exact `/create-plan` in the Issue creates `runner/fix/<short_description>/issue_N` with only
   `.agent/plans/issue-N-fix.md` and a draft PR. `/discuss-plan <changes>` in that
   managed PR revises only the plan. Both commands require a human with write,
   maintain or admin permission. No implementation, approval, merge or deployment.
@@ -47,7 +49,9 @@ are deployed with the same `runner/`, `review/`, `planning/` boundaries under
 
 GitHub-hosted context jobs use read tokens. The fixed SSH invocation receives
 no GitHub token. A separate GitHub-hosted publisher has only the write permissions
-needed for its action. Review publication uses `COMMENT`, never `APPROVE`.
+needed for its action. Review publication edits the original bot progress comment with its report or
+failure/cancellation/stale status; it never approves a PR. A cancelled entire
+workflow or publisher/API failure may prevent the final status update.
 Stale head/base/title or Issue/source changes abort publication. Branch revisions
 are fast-forward only, never force-pushed. Model output cannot select the plan
 write path. Duplicate requests are guarded; an existing plan PR is not replaced.
@@ -185,13 +189,42 @@ restore only into a new private directory. Backup may contain secrets: establish
 private encrypted off-host retention. Neither backup/restore nor MCP has passed
 its rehearsal. Prepared GBrain unit/timer are inactive.
 
+## Extension rollout
+
+The new planner report adds a validated `branch_description`; its publisher builds
+`runner/fix/<short_description>/issue_N`. Update the GitHub orchestration and
+root-owned runner adapters together. Until the extension is approved/published,
+the active runner retains its initial protocol. Do not deploy only one side and
+claim the new flow operational. After merge, copy the updated infra directory to
+private staging and run `runner/install-workflow.py` with the existing public key,
+then rehearse scope, plan creation, discussion and review on test objects.
+
 ## Checks, remaining activation and rollback
 
+Install the pinned development tools in a local virtual environment:
+
 ```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install -r .agent/infra/requirements-dev.txt
+```
+
+Ruff checks Python syntax, unused/undefined names, imports, bug-prone patterns
+and simplifications (including SIM117) using root `ruff.toml`. The same pinned
+version checks formatting locally and in CI. The Python target remains 3.9;
+reference checkouts and generated protobuf bindings are excluded. Python edits
+anywhere in the repository and lint configuration changes trigger infra checks.
+
+```sh
+.venv/bin/ruff check .
+.venv/bin/ruff format --check .
 python3 -B -m unittest discover -s .agent/infra/tests -p 'test_*.py' -v
 actionlint .github/workflows/*.yml
 git diff --check
 ```
+
+To apply safe lint fixes and formatting locally, run `.venv/bin/ruff check --fix .`
+then `.venv/bin/ruff format .` and inspect the diff before publication. CI checks
+only; it does not rewrite files.
 
 `review/smoke-review.py` is a separate trusted fixture diagnostic for default
 Codex config and unavailable-memory disclosure. It never publishes to GitHub.

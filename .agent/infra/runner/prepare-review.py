@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Prepare a private Codex home. Does not start a PR runner or publish reviews."""
+
 import os
-from pathlib import Path
 import pwd
 import shutil
 import subprocess
+from pathlib import Path
 
 
 def main():

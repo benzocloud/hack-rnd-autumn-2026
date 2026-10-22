@@ -4,11 +4,11 @@ Trigger only on a newly created PR comment whose full body is `/agent-review` (A
 
 1. Checkout and identify exact PR head SHA; capture base SHA.
 2. Read `AGENTS.md`, `.agent/instructions.md`, `.agent/decisions.md`, this workflow and architecture.
-3. Load linked Issue, acceptance criteria, recent comments, PR description, changed files, relevant diff and CI results.
-4. Query GBrain with read-only credentials when enabled/available. Otherwise report `GBrain: unavailable` and its reason, and continue from required repository/Issue/diff/CI context. Memory unavailability alone does not make review incomplete (ADR-010).
+3. Load PR description, changed files, diff, CI and the full available discussion: conversation comments, review summaries and inline review comments/replies. Follow pagination without silent truncation. If API/pagination/payload limits prevent complete context collection, fail visibly instead of silently reviewing a subset. Load explicitly linked Issues and all their comments when present. Without an Issue, use PR context and disclose that absence; do not invent acceptance criteria (ADR-016/017).
+4. Query GBrain with read-only credentials when enabled/available. Otherwise report `GBrain: unavailable` and its reason, and continue from repository/PR/diff/CI and available Issue context. Memory unavailability alone does not make review incomplete (ADR-010).
 5. Load pinned, actually installed `caveman-review` and `ponytail-review`. Route Go skills according to the title table below (ADR-012). Missing required skills make review incomplete. The worker explicitly supplies the root-owned required SKILL.md content and records SHA-256 loading receipts; the report lists skills applied. Loading receipts prove supplied instructions, not that every recommendation was followed. Never claim a missing skill ran.
 6. Validate findings, consolidate duplicates and produce SHA-bound structured output.
-7. Separate publisher rechecks the current PR head SHA and posts actionable comments/check summary using minimal GitHub permissions only if it still matches. Discard stale results; do not automatically review the new SHA. No merge, approval, deployment or code changes.
+7. After authorization, a separate announcer posts one progress comment. A separate publisher runs after analysis success/failure/cancellation, rechecks the current PR head SHA and edits the same progress comment with the advisory report using minimal GitHub permissions only if it still matches. On failure/cancellation/supersession, update its status and link to Actions. Whole-workflow cancellation or publisher/API failure can prevent the final update; Actions remains the diagnostic source. Discard stale results; do not automatically review the new SHA. No merge, approval, deployment or code changes.
 
 Findings: severity BLOCKER/MAJOR/MINOR; exact file/line, evidence, impact, proposed fix. State skills and checks actually run, and limitations.
 

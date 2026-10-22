@@ -16,9 +16,19 @@
 | --- | --- | --- |
 | `feat` | Новая прикладная возможность | `feat: add analysis result endpoint` |
 | `fix` | Исправление ошибки поведения | `fix: handle an empty ML service response` |
-| `chore` | Инфраструктура, настройки, документация, планы и служебные изменения | `chore: configure agent runner and planning workflows` |
+| `docs` | Документация, инструкции и примеры без изменения рабочего кода | `docs: document agent review commands` |
+| `style` | Форматирование кода без изменения поведения | `style: format request handlers` |
+| `refactor` | Перестройка кода без изменения поведения | `refactor: extract request validation` |
+| `perf` | Улучшение производительности | `perf: reduce prediction allocations` |
+| `test` | Добавление и исправление тестов | `test: isolate GitHub event fixtures` |
+| `build` | Сборка, упаковка и зависимости | `build: update Go toolchain` |
+| `ci` | Конфигурация и скрипты CI/CD | `ci: configure agent review workflow` |
+| `chore` | Прочие служебные изменения, настройки и автоматические планы | `chore: update Issue fix plan (request 123)` |
+| `revert` | Откат ранее внесённого изменения | `revert: remove prediction cache` |
 
-Использовать `feat`, `fix` или `chore`, выбирая тип по результату изменения.
+Разрешённые типы: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`,
+`build`, `ci`, `chore`, `revert`. Выбирать наиболее точный тип по результату
+изменения; `chore` использовать, когда остальные типы не подходят.
 Не подменять описание заглушкой вроде `update` или `changes`. Заголовок должен
 объяснять, что изменилось; разные задачи не объединять ради одного коммита.
 Для созданного агентом плана: `chore: update Issue fix plan (request N)`.
@@ -27,11 +37,21 @@
 
 ## Ветки и публикация
 
-В maxhack использовалось `<nickname>/<type>/<short_description>`. Этот шаблон
-сохранён как источник, но здесь действует текущий префикс `codex/`; существующие
-ветки не переименовывать. Автоматическая ветка плана остаётся
-`codex/issue-N-plan` (ADR-013). Не выдумывать nickname, remote или базовую ветку;
-проверять новое имя через `git check-ref-format --branch`.
+Использовать шаблон maxhack: `<nickname>/<type>/<short_description>`.
+`nickname` — настоящий nickname ответственного разработчика; `type` — один из
+разрешённых типов коммитов из таблицы выше; описание — латиницей, lowercase,
+слова через подчёркивания. Например: `globalarray/docs/review_commands`,
+`globalarray/ci/review_workflow` или `globalarray/refactor/request_validation`.
+Для автоматизации nickname фиксирован: `runner`. Ветка плана Issue N:
+`runner/fix/<short_description>/issue_N`
+(например, `runner/fix/handle_empty_input/issue_123`). Краткое английское описание
+должно отражать смысл исправления; номер Issue — отдельный последний сегмент.
+Для `/discuss-plan` существующее имя ветки сохраняется.
+
+Не выдумывать nickname, remote или базовую ветку; проверять новое имя через
+`git check-ref-format --branch`. Существующие ветки открытых PR не
+переименовывать автоматически. Новое соглашение заменяет прежний префикс
+`codex/` для новых веток (ADR-018).
 
 Перед коммитом проверить итоговый diff, новые файлы и состав индекса; включать
 только согласованный результат и не затрагивать чужую незавершённую работу.

@@ -1,4 +1,5 @@
 """Shared read-only inference lifecycle; receives no GitHub credentials."""
+
 import base64
 import fcntl
 import gzip
@@ -6,19 +7,20 @@ import hashlib
 import io
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tarfile
 import tempfile
 from contextlib import contextmanager
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "review"))
 from review_policy import safe_path
 
 HOME = Path("/var/lib/hackrnd-review")
 MAX_INPUT = 18 * 1024 * 1024
+
 
 def extract_snapshot(archive, destination):
     total = 0
@@ -65,10 +67,17 @@ def workspace(package):
             source.mkdir()
             extract_snapshot(base64.b64decode(package["archive"], validate=True), source)
             for name, content in package["policies"].items():
-                if name not in {"AGENTS.md", ".agent/instructions.md", ".agent/decisions.md",
-                                ".agent/workflows/automated-review.md", ".agent/workflows/context-and-memory.md",
-                                ".agent/workflows/issue-planning.md", ".agent/prompts/pr-review.md",
-                                ".agent/workflows/git-conventions.md", ".agent/references/go-services.md"}:
+                if name not in {
+                    "AGENTS.md",
+                    ".agent/instructions.md",
+                    ".agent/decisions.md",
+                    ".agent/workflows/automated-review.md",
+                    ".agent/workflows/context-and-memory.md",
+                    ".agent/workflows/issue-planning.md",
+                    ".agent/prompts/pr-review.md",
+                    ".agent/workflows/git-conventions.md",
+                    ".agent/references/go-services.md",
+                }:
                     raise ValueError("Unexpected trusted policy path")
                 path = job / str(safe_path(name))
                 path.parent.mkdir(parents=True, exist_ok=True)
@@ -83,7 +92,10 @@ def load_skills(job, required):
     texts, receipts = [], []
     for name in required:
         path = (HOME / ".agents/skills" / name / "SKILL.md").resolve(strict=True)
-        if not path.is_relative_to(Path("/opt/hackrnd-agent/skill-sources")) or path.stat().st_uid != 0:
+        if (
+            not path.is_relative_to(Path("/opt/hackrnd-agent/skill-sources"))
+            or path.stat().st_uid != 0
+        ):
             raise ValueError("Required skill must come from root-owned pinned sources")
         data = path.read_bytes()
         if len(data) > 128 * 1024:
@@ -96,21 +108,45 @@ def load_skills(job, required):
 
 def infer(job, schema, prompt, ml=False):
     (job / "report.schema.json").write_text(json.dumps(schema))
-    command = ["/opt/hackrnd-agent/bin/codex", "exec", "-p", "workflow",
-               "--skip-git-repo-check", "--ephemeral", "--json",
-               "--output-schema", str(job / "report.schema.json"),
-               "--output-last-message", str(job / "report.json")]
+    command = [
+        "/opt/hackrnd-agent/bin/codex",
+        "exec",
+        "-p",
+        "workflow",
+        "--skip-git-repo-check",
+        "--ephemeral",
+        "--json",
+        "--output-schema",
+        str(job / "report.schema.json"),
+        "--output-last-message",
+        str(job / "report.json"),
+    ]
     if ml:
         command += ["-c", 'default_permissions="agent-review-ml"']
         paths = [p for p in (HOME / ".agents/skills").iterdir() if p.name.startswith("golang-")]
-        entries = ",".join('{path=' + json.dumps(str(p / "SKILL.md")) + ',enabled=false}' for p in paths)
+        entries = ",".join(
+            "{path=" + json.dumps(str(p / "SKILL.md")) + ",enabled=false}" for p in paths
+        )
         command += ["-c", "skills.config=[" + entries + "]"]
     command.append("-")
-    env = {"HOME": str(HOME), "USER": "hackrnd-review", "LOGNAME": "hackrnd-review",
-           "PATH": "/opt/hackrnd-agent/bin:/usr/bin:/bin", "LANG": "C.UTF-8"}
+    env = {
+        "HOME": str(HOME),
+        "USER": "hackrnd-review",
+        "LOGNAME": "hackrnd-review",
+        "PATH": "/opt/hackrnd-agent/bin:/usr/bin:/bin",
+        "LANG": "C.UTF-8",
+    }
     with (job / "events.jsonl").open("w") as events, (job / "stderr.log").open("w") as errors:
-        result = subprocess.run(command, input=prompt, text=True, cwd=job, env=env,
-                                stdout=events, stderr=errors, timeout=1050)
+        result = subprocess.run(
+            command,
+            input=prompt,
+            text=True,
+            cwd=job,
+            env=env,
+            stdout=events,
+            stderr=errors,
+            timeout=1050,
+        )
     if result.returncode:
         shutil.copyfile(job / "stderr.log", HOME / "checks/last-workflow-error.log")
         raise RuntimeError("Codex failed; no valid report was produced")

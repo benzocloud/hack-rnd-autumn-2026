@@ -2,9 +2,9 @@ name: Agent infrastructure checks
 
 on:
   push:
-    paths: ['.agent/infra/**', '.agent/workflows/**', '.github/workflows/**']
+    paths: ['**/*.py', 'ruff.toml', '.agent/infra/**', '.agent/workflows/**', '.github/workflows/**']
   pull_request:
-    paths: ['.agent/infra/**', '.agent/workflows/**', '.github/workflows/**']
+    paths: ['**/*.py', 'ruff.toml', '.agent/infra/**', '.agent/workflows/**', '.github/workflows/**']
 
 permissions:
   contents: read
@@ -18,6 +18,14 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 2
+      - name: Install pinned Python lint tools
+        run: |
+          python3 -m venv "$RUNNER_TEMP/infra-lint-venv"
+          "$RUNNER_TEMP/infra-lint-venv/bin/python" -m pip install -r .agent/infra/requirements-dev.txt
+      - name: Lint Python
+        run: '"$RUNNER_TEMP/infra-lint-venv/bin/ruff" check --output-format github .'
+      - name: Check Python formatting
+        run: '"$RUNNER_TEMP/infra-lint-venv/bin/ruff" format --check .'
       - name: Validate infrastructure safety boundaries
         run: python3 -B -m unittest discover -s .agent/infra/tests -p 'test_*.py' -v
       - name: Check whitespace
