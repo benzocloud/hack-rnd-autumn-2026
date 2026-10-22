@@ -1,0 +1,36 @@
+# Applied only by the fixed SSH review entrypoint, never from PR content.
+default_permissions = "agent-review"
+web_search = "disabled"
+
+[features]
+apps = false
+browser_use = false
+computer_use = false
+image_generation = false
+in_app_browser = false
+hooks = false
+plugins = false
+multi_agent = false
+multi_agent_v2 = false
+skill_mcp_dependency_install = false
+
+[permissions.agent-review.filesystem]
+":root" = "deny"
+":minimal" = "read"
+"/opt/hackrnd-agent" = "read"
+"/var/lib/hackrnd-review/.agents/skills" = "read"
+"/var/lib/hackrnd-review/.codex" = "deny"
+"/run" = "deny"
+"/proc" = "deny"
+
+[permissions.agent-review.filesystem.":workspace_roots"]
+"." = "read"
+
+[permissions.agent-review.network]
+enabled = false
+
+[permissions.agent-review-ml]
+extends = "agent-review"
+
+[permissions.agent-review-ml.filesystem]
+"/opt/hackrnd-agent/skill-sources/cc-skills-golang" = "deny"

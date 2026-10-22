@@ -1,0 +1,12 @@
+[Unit]
+Description=Back up Hackrnd GBrain with a quiesced PGLite snapshot
+After=hackrnd-gbrain.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/hackrnd-agent/gbrain/backup.py
+ExecStopPost=/usr/bin/systemctl --no-block start hackrnd-gbrain.service
+UMask=0077
+Nice=15
+IOSchedulingClass=idle
+TimeoutStartSec=10min

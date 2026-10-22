@@ -1,0 +1,45 @@
+[Unit]
+Description=Hackathon shared GBrain MCP (localhost only)
+After=network.target
+
+[Service]
+Type=simple
+User=hackrnd-gbrain
+Group=hackrnd-gbrain
+WorkingDirectory=/var/lib/hackrnd-gbrain
+Environment=GBRAIN_NO_AUTOPILOT_INSTALL=1
+Environment=GBRAIN_NO_REEMBED=1
+Environment=GBRAIN_ALLOW_SHELL_JOBS=0
+Environment=GBRAIN_SERVE_STALL_WATCHDOG_MS=60000
+EnvironmentFile=/etc/hackrnd-agent/gbrain.env
+ExecStart=/opt/hackrnd-agent/bin/gbrain serve --http --bind 127.0.0.1 --port 3131 --surface verbs --suppress-bootstrap-token
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=90
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+IPAddressDeny=any
+IPAddressAllow=localhost
+ReadWritePaths=/var/lib/hackrnd-gbrain
+TemporaryFileSystem=/opt:ro
+BindReadOnlyPaths=/opt/hackrnd-agent
+InaccessiblePaths=-/run/docker.sock -/run/containerd -/var/lib/docker
+CPUQuota=75%
+MemoryHigh=512M
+MemoryMax=768M
+MemorySwapMax=128M
+TasksMax=64
+IOWeight=10
+
+[Install]
+WantedBy=multi-user.target

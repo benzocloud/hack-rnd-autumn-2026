@@ -1,0 +1,24 @@
+name: Agent infrastructure checks
+
+on:
+  push:
+    paths: ['.agent/infra/**', '.agent/workflows/**', '.github/workflows/**']
+  pull_request:
+    paths: ['.agent/infra/**', '.agent/workflows/**', '.github/workflows/**']
+
+permissions:
+  contents: read
+
+jobs:
+  safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, Node.js 24
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Validate infrastructure safety boundaries
+        run: python3 -B -m unittest discover -s .agent/infra/tests -p 'test_*.py' -v
+      - name: Check whitespace
+        run: git diff --check HEAD^ HEAD

@@ -1,0 +1,94 @@
+name: Agent review
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions: {}
+
+jobs:
+  authorize:
+    if: >-
+      github.event.issue.pull_request &&
+      github.event.comment.body == '/agent-review' &&
+      github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      requested: ${{ steps.authorize.outputs.requested }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, Node.js 24
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - id: authorize
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .agent/infra/review/github_review.py authorize
+
+  review:
+    needs: authorize
+    if: needs.authorize.outputs.requested == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # Apply cancellation only AFTER authorization. Other comments cannot cancel jobs.
+    concurrency:
+      group: agent-review-${{ github.repository }}-${{ github.event.issue.number }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      checks: read
+      statuses: read
+    outputs:
+      requested: ${{ steps.prepare.outputs.requested }}
+    steps:
+      - name: Checkout trusted workflow revision, never PR scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, Node.js 24
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Authorize request and collect SHA-bound context
+        id: prepare
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .agent/infra/review/github_review.py prepare
+      - name: Review through fixed restricted SSH command
+        if: steps.prepare.outputs.requested == 'true'
+        env:
+          AGENT_REVIEW_SSH_KEY: ${{ secrets.AGENT_REVIEW_SSH_KEY }}
+          AGENT_REVIEW_KNOWN_HOSTS: ${{ secrets.AGENT_REVIEW_KNOWN_HOSTS }}
+        run: python3 .agent/infra/review/github_review.py invoke
+      - name: Save validated result only
+        if: steps.prepare.outputs.requested == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2, Node.js 24
+        with:
+          name: agent-review-result
+          path: report.json
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: review
+    if: needs.review.outputs.requested == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, Node.js 24
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2, Node.js 24
+        with:
+          name: agent-review-result
+      - name: Reject stale/duplicate result and publish advisory review
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .agent/infra/review/github_review.py publish
