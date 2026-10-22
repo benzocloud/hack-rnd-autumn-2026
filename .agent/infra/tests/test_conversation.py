@@ -18,6 +18,7 @@ import review_dispatch
 import ssh_conversation as worker
 from plan_policy import PLAN_STATE_PREFIX, render_staged_plan, validate_staged_report
 from plan_policy import command as planning_command
+from test_dialogue import cross_reference, related_pr
 from test_planning import context as planning_context
 from test_staged_planning import staged_report
 
@@ -92,6 +93,8 @@ class API:
                 "/pulls/2/comments": self.inline,
                 "/pulls/2/files": self.files,
                 "/issues/7/comments": self.linked_comments,
+                "/issues/2/timeline": [],
+                "/issues/7/timeline": [],
             }[path]
         )
 
@@ -251,6 +254,252 @@ class ConversationTests(unittest.TestCase):
         ):
             c = self.collect(api)
         self.assertEqual([item["task"]["number"] for item in c["issues"]], [7])
+
+    def shared_dialogue(self, api):
+        root = 7 if api.pr else 2
+        api.related = related_pr(body=f"Refs #{root}")
+        api.related_comments = [
+            {
+                "id": 40,
+                "body": "Earlier decision: inspect api/history.py",
+                "created_at": "2026-10-22T09:00:00Z",
+                "user": {"login": "reviewer"},
+            }
+        ]
+        api.related_reviews = [{"id": 41, "state": "CHANGES_REQUESTED", "body": "Keep the API"}]
+        api.related_inline = [{"id": 42, "in_reply_to_id": 39, "path": "api/history.py", "line": 5}]
+        api.timeline = [cross_reference(3)]
+        request, pages = api.request, api.pages
+
+        def shared_request(path, *args, **kwargs):
+            if path == "/pulls/3":
+                return copy.deepcopy(api.related)
+            if path == "/issues/3":
+                return {**copy.deepcopy(api.related), "pull_request": {}}
+            return request(path, *args, **kwargs)
+
+        request_patch = patch.object(api, "request", side_effect=shared_request)
+
+        def shared_pages(path):
+            values = {
+                f"/issues/{root}/timeline": api.timeline,
+                "/issues/3/comments": api.related_comments,
+                "/pulls/3/reviews": api.related_reviews,
+                "/pulls/3/comments": api.related_inline,
+            }
+            return copy.deepcopy(values[path]) if path in values else pages(path)
+
+        pages_patch = patch.object(api, "pages", side_effect=shared_pages)
+        request_patch.start()
+        pages_patch.start()
+        self.addCleanup(request_patch.stop)
+        self.addCleanup(pages_patch.stop)
+
+    def test_issue_and_pr_questions_share_history_but_reply_at_request_origin(self):
+        for pr in (False, True):
+            with self.subTest(pr=pr):
+                api = API(pr=pr)
+                api.issue["state"] = "closed"
+                self.shared_dialogue(api)
+                self.start(api)
+                c = self.collect(api)
+                self.assertEqual(c["dialogue_root"], 7 if pr else 2)
+                related = c["related_prs"][0]
+                self.assertEqual(related["task"]["state"], "closed")
+                self.assertEqual(related["pr_comments"][0]["user"]["login"], "reviewer")
+                self.assertEqual(related["pr_comments"][0]["created_at"], "2026-10-22T09:00:00Z")
+                self.assertEqual(related["pr_reviews"], api.related_reviews)
+                self.assertEqual(related["pr_review_comments"][0]["in_reply_to_id"], 39)
+                self.save(c)
+                github.publish_result(api, api.payload)
+                self.assertEqual(api.writes[-1][0], "/issues/comments/88")
+                self.assertIn(f"issues/{c['dialogue_root']}", api.writes[-1][1]["body"])
+                self.assertIn("pull/3", api.writes[-1][1]["body"])
+                self.assertEqual([method for _, _, method in api.writes], [None, "PATCH"])
+
+    def test_colon_references_collect_history_and_reject_mixed_roots(self):
+        api = API(pr=True)
+        api.task["body"] = "Closes: #7"
+        self.shared_dialogue(api)
+        api.related["body"] = "Fixes: #7"
+        c = self.collect(api)
+        self.assertEqual(c["dialogue_root"], 7)
+        self.assertEqual([thread["task"]["number"] for thread in c["related_prs"]], [3])
+        api.task["body"] = f"Fixes {github.REPOSITORY}#7"
+        api.related["body"] = f"Refs {github.REPOSITORY}#7"
+        c = self.collect(api)
+        self.assertEqual(c["dialogue_root"], 7)
+        self.assertEqual(c["issues"][0]["task"]["number"], 7)
+        self.assertEqual([thread["task"]["number"] for thread in c["related_prs"]], [3])
+        api.task["body"] = "Refs #7\nCloses: #8"
+        with self.assertRaisesRegex(ValueError, "Ambiguous"):
+            self.collect(api)
+
+    def test_incidental_comment_references_do_not_establish_a_dialogue_root(self):
+        api = API(pr=True)
+        api.task["body"] = "Standalone PR"
+        api.comments.append({"id": 40, "body": "Refs #7"})
+        self.shared_dialogue(api)
+        c = self.collect(api)
+        self.assertIsNone(c["dialogue_root"])
+        self.assertEqual(c["related_prs"], [])
+        self.assertEqual(c["issues"][0]["task"]["number"], 7)
+        self.assertFalse(any("timeline" in call.args[0] for call in api.pages.call_args_list))
+
+    def test_ambiguous_or_non_issue_root_is_rejected_before_inference(self):
+        api = API(pr=True)
+        api.task["body"] = "Refs #7 and #8"
+        with self.assertRaisesRegex(ValueError, "Ambiguous"):
+            self.collect(api)
+        api.task["body"] = "Refs #2"
+        with self.assertRaisesRegex(ValueError, "must be an Issue"):
+            self.collect(api)
+        api.task["body"] = "Refs #7"
+        api.issue["pull_request"] = {}
+        with self.assertRaisesRegex(ValueError, "must be an Issue"):
+            self.collect(api)
+
+    def test_shared_history_reaches_both_modes_and_question_source_selection(self):
+        for mode in ("question", "discuss"):
+            with self.subTest(mode=mode):
+                api = API(pr=True)
+                api.payload["comment"]["body"] = f"/{mode} Explain the earlier decision"
+                api.comments[0] = copy.deepcopy(api.payload["comment"])
+                self.shared_dialogue(api)
+                c = self.collect(api)
+                Path("source/api").mkdir(parents=True, exist_ok=True)
+                Path("source/api/history.py").write_text("value = 2\n")
+                Path("context.json").write_text(json.dumps(c))
+                Path("events.jsonl").write_text("")
+
+                def infer_fixture(*args, mode=mode, context=c, **kwargs):
+                    if mode == "question":
+                        supplied = json.loads(args[2].rsplit("\n", 1)[-1])
+                        self.assertEqual(supplied["context"]["related_prs"], context["related_prs"])
+                        self.assertIn("api/history.py", supplied["source_files"])
+                    else:
+                        self.assertEqual(json.loads(Path("context.json").read_text()), context)
+                        self.assertIn("related_prs", args[2])
+                    return result(context)["report"]
+
+                with (
+                    patch.object(worker, "workspace", return_value=nullcontext(Path.cwd())),
+                    patch.object(worker, "infer", side_effect=infer_fixture),
+                ):
+                    response = worker.run({"context": c})
+                self.assertEqual(response["model"], policy.MODELS[mode])
+
+    def test_related_discussion_membership_and_source_changes_invalidate_answer(self):
+        for change in (
+            "comment",
+            "review",
+            "inline",
+            "body",
+            "state",
+            "head",
+            "added",
+            "removed",
+            "oversized",
+        ):
+            with self.subTest(change=change):
+                api = API(pr=True)
+                self.shared_dialogue(api)
+                self.start(api)
+                self.save(self.collect(api))
+                if change == "comment":
+                    api.related_comments[0]["body"] += " Changed decision"
+                elif change == "review":
+                    api.related_reviews[0]["state"] = "DISMISSED"
+                elif change == "inline":
+                    api.related_inline[0]["line"] += 1
+                elif change == "body":
+                    api.related["body"] = "Refs #8"
+                elif change == "state":
+                    api.related["state"] = "open"
+                elif change == "head":
+                    api.related["head"]["sha"] = "d" * 40
+                elif change == "added":
+                    api.related_comments.append({"id": 43, "body": "New requirement"})
+                elif change == "removed":
+                    api.timeline.clear()
+                else:
+                    api.related_comments[0]["body"] = "x" * 160000
+                with self.assertRaisesRegex(ValueError, "changed|limit"):
+                    github.publish_result(api, api.payload)
+                self.assertEqual(len(api.writes), 1)
+
+    def test_shared_history_display_metadata_is_ignored_but_author_changes_are_not(self):
+        api = API(pr=True)
+        self.shared_dialogue(api)
+        self.start(api)
+        self.save(self.collect(api))
+        api.related["user"]["avatar_url"] = "https://example.test/avatar"
+        api.related_comments[0]["reactions"] = {"+1": 1}
+        github.publish_result(api, api.payload)
+        self.save(self.collect(api))
+        api.related_comments[0]["user"]["login"] = "someone_else"
+        with self.assertRaisesRegex(ValueError, "changed"):
+            github.publish_result(api, api.payload)
+
+    def test_new_related_pr_discovered_during_answer_invalidates_publication(self):
+        api = API(pr=True)
+        self.shared_dialogue(api)
+        self.start(api)
+        self.save(self.collect(api))
+        api.timeline.append(cross_reference(4))
+        request, pages = api.request, api.pages
+        with (
+            patch.object(
+                api,
+                "request",
+                side_effect=lambda path, *args, **kwargs: (
+                    related_pr(4) if path == "/pulls/4" else request(path, *args, **kwargs)
+                ),
+            ),
+            patch.object(
+                api,
+                "pages",
+                side_effect=lambda path: (
+                    []
+                    if path in ("/issues/4/comments", "/pulls/4/reviews", "/pulls/4/comments")
+                    else pages(path)
+                ),
+            ),
+            self.assertRaisesRegex(ValueError, "changed"),
+        ):
+            github.publish_result(api, api.payload)
+        self.assertEqual(len(api.writes), 1)
+
+    def test_missing_or_invalid_canonical_history_is_rejected(self):
+        api = API(pr=True)
+        self.shared_dialogue(api)
+        c = self.collect(api)
+        for change in (
+            "root",
+            "missing-issue",
+            "duplicate",
+            "origin",
+            "sha",
+            "comments",
+            "unrooted",
+        ):
+            bad = copy.deepcopy(c)
+            if change == "root":
+                bad["dialogue_root"] = -1
+            elif change == "missing-issue":
+                bad["issues"] = []
+            elif change == "duplicate":
+                bad["related_prs"] *= 2
+            elif change == "origin":
+                bad["related_prs"][0]["task"]["number"] = bad["thread_number"]
+            elif change == "sha":
+                bad["related_prs"][0]["head_sha"] = "not-a-sha"
+            elif change == "comments":
+                bad["related_prs"][0]["pr_comments"] = "missing history"
+            else:
+                bad["dialogue_root"] = None
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                policy.validate_context(bad)
 
     def test_reactions_and_user_metadata_do_not_invalidate_answer(self):
         api = API(pr=True)

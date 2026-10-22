@@ -27,7 +27,14 @@ def context():
         "scope": "ML",
         "required_skills": ["caveman-review", "ponytail-review"],
         "files": ["ml/main.py"],
-        "issues": [{"number": 1}],
+        "issues": [],
+        "dialogue_root": None,
+        "related_prs": [],
+        "issue_comments": [],
+        "pr_comments": [],
+        "pr_reviews": [],
+        "pr_review_comments": [],
+        "body": None,
         "ci": {},
     }
 

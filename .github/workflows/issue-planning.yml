@@ -95,8 +95,7 @@ jobs:
     needs: [authorize, announce, analyze]
     if: >-
       always() && needs.authorize.outputs.requested == 'true' &&
-      (needs.announce.result == 'success' ||
-      (needs.analyze.result == 'success' && needs.analyze.outputs.requested == 'true'))
+      (needs.announce.result == 'success' || needs.analyze.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     concurrency:

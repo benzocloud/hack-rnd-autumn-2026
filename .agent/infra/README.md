@@ -3,8 +3,8 @@
 Status **2026-10-22**: Codex Plus runner installed on `runner.brokebyte.me`.
 Conversation/staged-plan support from
 [PR #7](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/7) is installed.
-Current adapters and profile match [PR #10](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/10)
-merge `75ba614ba204ef6524a3ac5b719d28949db87fac`; Russian review messages were
+Current adapters and profile match [PR #12](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/12)
+merge `12b8ff93b091e55fddc452dcfbba845f92092795`; Russian review messages were
 verified through GitHub in PR #11. All agent workflows are enabled; live checks and remaining limits
 are recorded below. GBrain is deferred. Fadwix containers, config, networks, ports,
 Docker and kernel settings were not changed; no reboot was performed.
@@ -69,7 +69,7 @@ are deployed with the same `runner/`, `review/`, `planning/`, `conversation/` bo
   Plus Codex/ChatGPT Work quota; no separate free ChatGPT Chat mode is claimed.
   Conversation publishers have only contents read and comment write permissions.
 
-Local follow-up, not deployed: `/question` supplies the complete visible text of
+Installed with PR #12: `/question` supplies the complete visible text of
 a managed plan without its encoded state footer, after checking that the state
 reproduces the original Markdown exactly. The omission is marked in the source
 excerpt and disclosed in the published reply. Visible line numbers and the
@@ -77,8 +77,44 @@ original file are preserved; legacy plans stay unchanged. Invalid/missing state,
 a plan beyond the existing 128 KiB file bound, visible content over 24,000
 characters or total selected source over 80,000 JSON characters still fail with
 `/discuss` suggested. No tools, model fallback, protocol fields or write authority
-are added. Update the conversation worker and publisher together before claiming
-this projection is active; only local mocked inference tests have passed.
+are added. The worker and publisher were updated together. All 90 infrastructure
+tests also passed on the server, and the installed worker passed a projection
+check as the unprivileged reviewer without model inference. A real GitHub
+question about a large managed plan has not yet been repeated after this fix.
+
+Local ADR-021 stages 1–3, not deployed: questions, ordinary discussion, Issue
+assessment, plan creation/amendment and explicit PR review rebuild the Issue
+dialogue with related same-repository PRs, including closed history.
+Only formal references in a PR description or its managed-plan marker define
+its root; comment mentions remain supplementary context. Multiple distinct roots
+fail visibly. Candidates come from the complete Issue timeline and are checked
+against their current descriptions and head repositories. More than ten related
+PR candidates or existing pagination/context limits fail without silent omission.
+Authors, timestamps, review states and inline reply locations are retained.
+The request's code SHA and reply location stay unchanged; related history is
+rechecked before publication, with links to the root Issue and included PRs.
+Plan amendments can read a closed Issue through its open managed PR; new commands
+in the closed Issue or closed PR remain rejected. Planning and review publication
+recheck the full history as well as existing source/destination guards. Context
+is bounded at 160,000 characters; reactions and display metadata alone do not
+invalidate a result. Common validation lives in `review/review_policy.py`, while
+the GitHub-only collector and substantive comparison stay in `runner/github_dialogue.py`.
+These stages change all analysis contexts: update GitHub orchestration, workers
+and policies together before activation.
+`/create-plan` now links the verified open plan-only PR before closing its Issue.
+The fixed file must exist and be nonempty at the PR head; deleted plans fail.
+One stable bot handoff comment is reused or repaired, with an exact clickable PR
+link and a clear statement that closure is plan handoff, not a completed fix.
+If the PR exists after a link/closure failure, a new authorized command can retry
+without another model call or Git write. Closed, ambiguous or implementation PRs
+leave the Issue open. A branch created before a failed PR creation is preserved;
+without a managed PR it still requires manual recovery, never an overwrite.
+The publish job now runs for successful existing-plan preparation even when
+inference was skipped; no result artifact is downloaded or consumed in that path.
+Only the existing planning publisher with `issues: write` closes the Issue.
+Local verification: all 124 infrastructure tests, Ruff lint/format, actionlint
+and whitespace checks passed, with model/SSH/GitHub analysis and publication
+calls mocked.
 
 GitHub-hosted context jobs use read tokens. The fixed SSH invocation receives
 no GitHub token. A separate GitHub-hosted publisher has only the write permissions
@@ -169,7 +205,7 @@ Create a dedicated Ed25519 key locally; copy **only its public key** to a privat
 root staging directory on the runner. Pass that public key to the installer:
 
 ```sh
-ssh root@runner.brokebyte.me 'python3 /root/hackrnd-language-75ba614ba204ef6524a3ac5b719d28949db87fac/full-candidate/.agent/infra/runner/install-workflow.py /root/hackrnd-bootstrap/review-key.pub'
+ssh root@runner.brokebyte.me 'python3 /root/hackrnd-question-12b8ff93b091e55fddc452dcfbba845f92092795/candidate/.agent/infra/runner/install-workflow.py /root/hackrnd-bootstrap/review-key.pub'
 ```
 
 The installer updates root-owned adapters, scoped sudoers, key restriction,
@@ -187,7 +223,7 @@ and back up the prior root-owned adapters/profile for rollback. The new dispatch
 allowlist has six fixed commands; the four-command pilot was the
 previous state. Verify selected model access, shell-tool exclusion and source
 read/auth denial as the unprivileged user before publishing test commands.
-The versioned staging path above is the verified PR #10 bundle, not a moving
+The versioned staging path above is the verified PR #12 bundle, not a moving
 checkout. Stage future versions separately and coordinate both protocol sides.
 The live rollout below used the existing public key and preserved Plus auth.
 
@@ -369,19 +405,45 @@ same edited comment. Its review workflow passed; the report was static and the
 test PR had no CI checks. The PR was closed without merge and its disposable
 branch deleted. No service restart or Fadwix changes were needed.
 
+The PR #12 fix replaced only `conversation/ssh_conversation.py` atomically under
+the review lock. All eight installed adapters and the workflow profile match
+merge `12b8ff93b091e55fddc452dcfbba845f92092795`. The previous worker and hash,
+ownership/mode, container and verification receipts are retained under
+`/root/hackrnd-question-12b8ff93b091e55fddc452dcfbba845f92092795/`.
+All 90 unit tests passed on the server with mocked external/model calls. The
+installed worker ran as `hackrnd-review`: a 39,324-character fixture became
+6,236 characters, preserving visible lines, the source file and one canonical
+path for `./` and `/./` aliases. No inference was called. All nine Fadwix
+containers retained their IDs, start times and restart counts; no restart or
+host-wide configuration change was performed. Main's merge CI also passed.
+
 Observed limits still require follow-up: the initial model report cited worker
 `context.json` as a repository file, producing an invalid link; a requested plan
 amendment removed it, but the formatter does not verify source existence. Also,
 the initial one-stage plan occupied 35,989 characters including encoded state,
 exceeding `/question`'s 24,000-character per-file bound. That guard was reproduced
-without inference; the local follow-up above addresses this metadata overhead.
-Until it is deployed, use `/discuss` for such plans.
+without inference; PR #12 addresses this metadata overhead and is installed.
+A live GitHub question about a large plan still needs a manual quota-consuming
+rehearsal; visible text above the unchanged bound still requires `/discuss`.
 The live static reviewer also disclosed denied `rg` execution and the absence of
 the trusted root copy of `local-development.md`; it used read-only inspection.
 
-ADR-021's shared Issue/PR dialogue and Issue closure after publishing a plan PR link are
-accepted follow-up work, not implemented by the staged-plan protocol. Fadwix,
+ADR-021's shared dialogue and Issue handoff are implemented locally in
+`.agent/plans/shared-issue-dialogue.md`; final developer review and a coordinated
+rollout are still pending. None of that follow-up is installed yet. Fadwix,
 GBrain, Docker and host-wide settings are outside this rollout.
+
+For the approved ADR-021 rollout, suspend only the three agent workflows before
+merging the updated orchestration. Back up installed adapters/profile and compare
+their hashes with the pinned candidate. Under the existing review lock, install
+the matching review/planning/conversation workers and policies; the shared
+`review_policy.py` validates all three contexts. Keep `github_dialogue.py` on the
+trusted GitHub side, outside model jobs. Verify the existing auth/sandbox and the
+new context schema before re-enabling workflows. Rehearse a disposable Issue →
+plan PR → linked/closed Issue → discussion/amendment/review from that PR. A
+retry check can simulate link/closure failure with mocks; any live model checks
+are manual and consume quota. On failure, restore matching GitHub and runner
+versions together. This is an installation plan, not evidence of deployment.
 
 If activation fails, leave agent workflows suspended and restore both the prior
 GitHub orchestration and the corresponding runner adapters/profile together.
@@ -420,10 +482,11 @@ Private diagnostics live in `/var/lib/hackrnd-review/checks/`, not Git/artifacts
 Validate report content, source/SHA/skill scope and expected findings; CLI exit 0
 alone is insufficient.
 
-Remaining: live changed-SHA re-review rehearsal; source-link validation and
-question handling of encoded plan metadata; required CI/human branch rules;
-Plus renewal/quota/revocation and sustained
-operation. Do not equate local or SSH fixture tests with deployed GitHub behavior.
+Remaining: final ADR-021 review, publication and coordinated rollout;
+live changed-SHA re-review and
+large-plan question rehearsals; source-link validation; required CI/human branch
+rules; Plus renewal/quota/revocation and sustained operation. Do not equate local
+or SSH fixture tests with deployed GitHub behavior.
 No auto merge/deploy is included.
 
 Rollback: disable only the three agent workflows (`agent-review.yml`,

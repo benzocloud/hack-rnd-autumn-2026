@@ -41,6 +41,14 @@ def context():
         "branch": identity(7)[0],
         "plan_path": identity(7)[1],
         "base_branch": "main",
+        "dialogue_root": 7,
+        "related_prs": [],
+        "issue_comments": [],
+        "pr_comments": [],
+        "pr_reviews": [],
+        "pr_review_comments": [],
+        "pr_state": None,
+        "pr_body": None,
     }
 
 
@@ -276,6 +284,7 @@ class PlanningTests(unittest.TestCase):
                         {"id": 2, "body": "Later correction"},
                     ],
                     "/pulls?state=open": [],
+                    "/issues/7/timeline": [],
                     "/issues/10/comments": [{"id": 3, "body": "Plan discussion"}],
                     "/pulls/10/reviews": [{"id": 4, "body": "Review summary"}],
                     "/pulls/10/comments": [
@@ -288,6 +297,7 @@ class PlanningTests(unittest.TestCase):
             pr = (
                 {
                     "number": 10,
+                    "state": "open",
                     "head": {"sha": "a" * 40, "ref": identity(7, "handle_empty_prediction")[0]},
                 }
                 if mode == "discuss-plan"
@@ -442,14 +452,33 @@ class PlanningTests(unittest.TestCase):
         if mode == "discuss-plan":
             c["existing_plan"] = "Old plan"
             c["pr_number"] = 10
+            c["pr_state"] = "open"
+            c["pr_comments"] = [
+                {
+                    "id": 33,
+                    "user": {"login": "github-actions[bot]"},
+                    "body": "<!-- agent-plan-discussion:3 -->\n\nStarted",
+                }
+            ]
             c["branch"] = branch or identity(7, "handle_empty_prediction")[0]
-            pr = {"number": 10, "head": {"sha": c["source_sha"], "ref": c["branch"]}}
+            pr = {
+                "number": 10,
+                "state": "open",
+                "head": {"sha": c["source_sha"], "ref": c["branch"]},
+            }
 
         class API:
             def __init__(self):
                 self.writes = []
+                self.issue = issue()
+                self.issue_comments = []
+                self.created = None
 
             def pages(self, path):
+                if path == "/issues/7/comments":
+                    return self.issue_comments
+                if path == "/pulls/10/files":
+                    return [{"filename": identity(7)[1]}]
                 if path == "/issues/10/comments":
                     return [
                         {
@@ -464,8 +493,30 @@ class PlanningTests(unittest.TestCase):
                 if body is not None:
                     self.writes.append((path, body, method))
                     if path == "/pulls":
-                        return {"number": 10, "html_url": "https://github.com/example/plan/10"}
+                        self.created = {
+                            **body,
+                            "number": 10,
+                            "state": "open",
+                            "changed_files": 1,
+                            "head": {
+                                "sha": "c" * 40,
+                                "ref": body["head"],
+                                "repo": {"full_name": github_plan.REPOSITORY},
+                            },
+                        }
+                        return self.created
+                    if path == "/issues/7/comments":
+                        comment = {"id": 34, **body, "user": {"login": "github-actions[bot]"}}
+                        self.issue_comments.append(comment)
+                        return comment
+                    if path == "/issues/7":
+                        self.issue.update(body)
+                        return self.issue
                     return {"sha": "c" * 40}
+                if path == "/pulls/10":
+                    return self.created
+                if path == "/issues/7":
+                    return self.issue
                 if path.startswith("/git/ref/"):
                     raise urllib.error.HTTPError("https://api.github.com", 404, "Absent", {}, None)
                 if path.startswith("/git/commits/"):

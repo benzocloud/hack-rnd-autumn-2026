@@ -13,6 +13,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "runner"))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "planning"))
 from conversation_policy import command, validate_context, validate_result
 from github_api import REPOSITORY, GitHub, event, invoke_json, pull_request_discussion
+from github_dialogue import (
+    dialogue_root,
+    related_pull_requests,
+    substantive_history,
+    substantive_item,
+)
 from github_plan import default_source, output
 from plan_policy import fingerprint, identity, source_links
 
@@ -155,6 +161,17 @@ def collect(api, payload, request):
         if match:
             plan = [identity(int(match[1]))[1]]
     comments = {"issue_comments": [], **discussion(api, task["number"], pr)}
+    root = dialogue_root(task, pr)
+    issues = linked_issues(api, task, comments)
+    if pr and root is not None:
+        if root == task["number"]:
+            raise ValueError("A dialogue root must be an Issue, not its PR")
+        linked_root = next((item for item in issues if item["task"]["number"] == root), None)
+        if linked_root is None:
+            issue = api.request(f"/issues/{root}")
+            if "pull_request" in issue:
+                raise ValueError("A dialogue root must be an Issue, not another PR")
+            issues.append({"task": issue, "comments": api.pages(f"/issues/{root}/comments")})
     context = {
         "repository": REPOSITORY,
         "mode": mode,
@@ -170,7 +187,11 @@ def collect(api, payload, request):
         "base_branch": branch,
         "files": files,
         "existing_plan": plan,
-        "issues": linked_issues(api, task, comments),
+        "issues": issues,
+        "dialogue_root": root,
+        "related_prs": (
+            related_pull_requests(api, root, task["number"]) if root is not None else []
+        ),
         **comments,
     }
     validate_context(context)
@@ -218,43 +239,8 @@ def invoke():
     Path("conversation-result.json").write_text(json.dumps({"context": context, "result": result}))
 
 
-def substantive_item(item):
-    """Keep text, chronology and review locations, excluding API display metadata."""
-    fields = (
-        "id",
-        "number",
-        "title",
-        "body",
-        "state",
-        "created_at",
-        "submitted_at",
-        "author_association",
-        "path",
-        "line",
-        "start_line",
-        "side",
-        "start_side",
-        "original_line",
-        "original_start_line",
-        "position",
-        "original_position",
-        "commit_id",
-        "original_commit_id",
-        "in_reply_to_id",
-        "pull_request_review_id",
-        "diff_hunk",
-        "subject_type",
-    )
-    return {
-        **{key: item[key] for key in fields if key in item},
-        "user": {key: item.get("user", {}).get(key) for key in ("id", "login", "type")},
-    }
-
-
 def substantive_context(context):
-    result = {**context, "task": substantive_item(context["task"])}
-    for key in ("issue_comments", "pr_comments", "pr_reviews", "pr_review_comments"):
-        result[key] = [substantive_item(item) for item in context[key]]
+    result = {**context, "task": substantive_item(context["task"]), **substantive_history(context)}
     result["issues"] = [
         {
             "task": substantive_item(item["task"]),
@@ -302,6 +288,19 @@ def publish_result(api, payload):
         sources += "\n\nНе прочитаны (бинарные или не UTF-8): " + ", ".join(
             f"`{p}`" for p in result["skipped_source_files"]
         )
+    if context["dialogue_root"] is not None:
+        sources += f"\n\nОбщий диалог: [Issue #{context['dialogue_root']}](https://github.com/{REPOSITORY}/issues/{context['dialogue_root']})."
+        numbers = [thread["task"]["number"] for thread in context["related_prs"]]
+        if "pull_request" in context["task"]:
+            numbers.append(context["thread_number"])
+        if numbers:
+            sources += (
+                " Учтены PR: "
+                + ", ".join(
+                    f"[#{n}](https://github.com/{REPOSITORY}/pull/{n})" for n in sorted(numbers)
+                )
+                + "."
+            )
     update_status(
         api,
         payload,

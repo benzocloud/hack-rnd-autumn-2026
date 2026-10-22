@@ -9,7 +9,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "review"))
-from review_policy import REPOSITORY, SHA, safe_path
+from review_policy import REPOSITORY, SHA, safe_path, validate_history
 
 MODES = {"scope", "create-plan", "discuss-plan"}
 LISTS = (
@@ -211,8 +211,17 @@ def validate_context(context):
         "issue_fingerprint"
     ] != fingerprint(context["issue"]):
         raise ValueError("Issue context mismatch")
-    if context["issue"]["state"] != "open":
-        raise ValueError("Issue must remain open")
+    validate_history(context, context.get("pr_number") or context["issue_number"])
+    if context["dialogue_root"] != context["issue_number"]:
+        raise ValueError("Planning Issue dialogue root mismatch")
+    if context["issue"]["state"] != "open" and not (
+        context["issue"]["state"] == "closed"
+        and context["mode"] == "discuss-plan"
+        and type(context.get("pr_number")) is int
+        and context["pr_number"] > 0
+        and context["pr_state"] == "open"
+    ):
+        raise ValueError("Issue must remain open outside an open plan PR")
     if context["mode"] == "discuss-plan":
         _, path = identity(context["issue_number"])
         if (

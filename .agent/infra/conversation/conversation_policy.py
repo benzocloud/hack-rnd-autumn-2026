@@ -1,13 +1,12 @@
 """Read-only question/discussion protocol; plan writes use the planning publisher."""
 
-import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "planning"))
 from plan_policy import command as planning_command
 from plan_policy import discussion_command, fingerprint
-from review_policy import REPOSITORY, SHA, safe_path
+from review_policy import REPOSITORY, SHA, safe_path, validate_history
 
 MODELS = {"question": "gpt-6-luna", "discuss": "gpt-6.1-sol"}
 SCHEMA = {
@@ -49,20 +48,19 @@ def validate_context(context):
         raise ValueError("Expected an open conversation task")
     if not isinstance(context["question"], str) or not context["question"].strip():
         raise ValueError("Empty conversation request")
-    for key in (
-        "issue_comments",
-        "pr_comments",
-        "pr_reviews",
-        "pr_review_comments",
-        "issues",
-        "files",
-    ):
+    for key in ("issues", "files"):
         if not isinstance(context[key], list):
             raise ValueError("Missing complete conversation context")
+    validate_history(context, context["thread_number"])
+    root = context["dialogue_root"]
+    if root is not None and "pull_request" in context["task"]:
+        roots = [item["task"] for item in context["issues"] if item["task"]["number"] == root]
+        if len(roots) != 1 or "pull_request" in roots[0]:
+            raise ValueError("Missing canonical Issue dialogue")
+    elif root != context["thread_number"] and "pull_request" not in context["task"]:
+        raise ValueError("Issue dialogue must use its own root")
     for path in [*context["files"], *context["existing_plan"]]:
         safe_path(path)
-    if len(json.dumps(context, ensure_ascii=False)) > 160000:
-        raise ValueError("Discussion exceeds context limit; refusing silent truncation")
 
 
 def validate_report(report, context):
