@@ -33,6 +33,8 @@ class API:
         return self.comments[0]
 
     def pages(self, path):
+        if path == "/issues/7/timeline":
+            return []
         assert path == "/issues/7/comments", path
         return self.comments
 
@@ -68,7 +70,15 @@ class ScopeStatusTests(unittest.TestCase):
             github_plan.start()
             self.assertIn("Начал оценку", self.api.comments[0]["body"])
             Path("plan-result.json").write_text(
-                json.dumps({"context": context(), "report": report()})
+                json.dumps(
+                    {
+                        "context": {
+                            **context(),
+                            **github_plan.discussion_context(self.api, self.api.issue, None),
+                        },
+                        "report": report(),
+                    }
+                )
             )
             github_plan.publish()
         self.assertEqual(

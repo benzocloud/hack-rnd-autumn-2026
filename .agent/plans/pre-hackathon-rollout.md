@@ -1,6 +1,6 @@
 # Pre-hackathon infrastructure rollout plan
 
-**Status:** In progress (2026-10-22). GitHub review/Issue planning workflows and responsibility-based infra layout implemented locally; restricted SSH transport installed. Codex Plus login/inference and read-only sandbox verified on `runner.brokebyte.me`. GBrain is deferred and optional (ADR-010); its CPU prerequisite does not block runner development. Review is requested only through `/agent-review` PR comments (ADR-011), with title-based skill routing (ADR-012). End-to-end PR review is not deployed. **Owner:** Tech Lead. **Deadline:** Complete before hackathon starts. **Objective:** local Codex planning and independent server-side PR review working end-to-end, with shared memory added later.
+**Status:** In progress (2026-10-22). GitHub review, Issue planning and conversation workflows are active on main. Runner adapters/profile match PR #12 merge `12b8ff93b091e55fddc452dcfbba845f92092795`. Real Issue/plan/discussion/review cycles passed on disposable Issue #8 and PR #9; Russian review comments passed on PR #11. All 90 infrastructure tests passed on the server after PR #12, plus an installed-worker check without inference. GBrain is deferred and optional (ADR-010). Review requires `/agent-review` (ADR-011) and title-based skill routing (ADR-012). Main protection, full re-review/failure/auth rehearsals and ADR-021 remain open. **Owner:** Tech Lead. **Deadline:** Complete before hackathon starts. **Objective:** local Codex planning and independent server-side PR review working end-to-end, with shared memory added later.
 
 Implementation, pins, evidence and continuation steps: `.agent/infra/README.md`.
 Owner confirmed this is a test host and authorized installation while requiring
@@ -13,7 +13,7 @@ performed. GBrain hardware changes are deferred. Open work below is not represen
 - [ ] Verify current Codex CLI support for ChatGPT Plus sign-in, noninteractive `codex exec`, terms, limits and session renewal. Decide Plus pilot vs separately billed API fallback; never share a personal account among developers.
   - Plus pilot selected by owner. Browser login through Brave, login status and actual `codex exec` inference verified; terms/quotas and renewal rehearsal remain open.
 - [ ] Decide trusted PR scope, draft PR review policy, expected concurrency and failure mode for missing GBrain/skills.
-  - Accepted ADR-010/011/012: optional memory; explicit `/agent-review` requests; literal combined `INFRA/ML:` invokes Go skills, standalone `ML:` excludes them. Workflows implemented locally with authorization, SHA checks, concurrency and title routing; activation and real GitHub rehearsal remain pending.
+  - Accepted ADR-010/011/012: optional memory; explicit `/agent-review` requests; literal combined `INFRA/ML:` invokes Go skills, standalone `ML:` excludes them. Workflows are active with authorization, SHA checks and concurrency; trusted routing fixtures and ordinary live GitHub review passed. Hostile-input and sustained-operation verification remain open.
 - [ ] Assign Issue owners for infrastructure work and document acceptance criteria.
 **Exit:** access/security plan approved; no secret in repo.
 
@@ -21,7 +21,7 @@ performed. GBrain hardware changes are deferred. Open work below is not represen
 - [x] Commit root `AGENTS.md`, `.agent/` policies, ADRs and prompts to the rollout branch.
 - [ ] Configure protected `main`: no direct push, required CI, human approval, no self-approval.
 - [ ] Define Issue and PR templates; PR should include scope/acceptance criteria and test evidence; an Issue link is optional for review (ADR-016).
-- [ ] Provision least-privilege GitHub App/token for PR metadata/read and separate review publication.
+- [x] Provision scoped GitHub Actions tokens for metadata reads and separate comment/plan publication; model jobs receive no GitHub token.
 **Exit:** sample Issue + PR can be retrieved with correct permissions.
 
 ## Phase 2 — GBrain shared memory (deferred follow-up; not a runner prerequisite)
@@ -51,17 +51,17 @@ performed. GBrain hardware changes are deferred. Open work below is not represen
 - [ ] Authenticate Codex using the selected supported method; secure and rotate/revoke credentials as needed.
   - Plus login and inference work; auth file is private. Rotation/revocation rehearsal remains open.
 - [ ] Review runner gets read-only source, read-only GBrain, no production secrets or deployment privileges.
-- [ ] Separate review analysis from GitHub comment publishing; validate output schema and SHA.
+- [x] Separate review analysis from GitHub comment publishing; validate output schema and SHA.
 **Exit:** controlled test review executes all applicable skills and cannot write to GBrain or production.
 
 ## Phase 5 — GitHub Actions orchestration
 - [ ] Implement CI: Go tests/lint, Python tests, frontend build/tests, Buf lint/breaking as applicable.
-- [ ] Implement PR workflow: `issue_comment.created` with exact `/agent-review` body on a PR → verify requester write/maintain/admin permission → resolve current head/base SHA → fetch linked Issue/comments, PR/diff and CI status → checkout exact head SHA → validate required `.agent/` files and title-based skill routing → run isolated Codex review → recheck head SHA → publish summary/comments. No PR-open, push, ready-for-review or comment-edit triggers.
-- [ ] Runner passes trusted metadata/context file paths and `.agent/prompts/pr-review.md` to `codex exec` (prefer stdin); model reads repo policies itself.
-- [ ] Bind findings to reviewed SHA; cancel superseded jobs; deduplicate comments; limit concurrency/cost.
-- [ ] Restrict `GITHUB_TOKEN` permissions; do not run untrusted PR scripts in privileged self-hosted environment. For forks, avoid secret-bearing PR jobs and use a safe trusted orchestration model.
+- [x] Implement PR workflow: `issue_comment.created` with exact `/agent-review` body on a PR → verify requester write/maintain/admin permission → resolve current head/base SHA → fetch linked Issue/comments, PR/diff and CI status → checkout exact head SHA → validate required `.agent/` files and title-based skill routing → run isolated Codex review → recheck head SHA → publish summary/comments. No PR-open, push, ready-for-review or comment-edit triggers.
+- [x] Runner passes trusted metadata/context file paths and `.agent/prompts/pr-review.md` to `codex exec` (prefer stdin); model reads repo policies itself.
+- [x] Bind findings to reviewed SHA; cancel superseded jobs; deduplicate comments; limit concurrency/cost.
+- [x] Restrict `GITHUB_TOKEN` permissions; do not run untrusted PR scripts in privileged self-hosted environment. Fork PRs are rejected in this pilot.
 - [ ] Fail visibly if required skill, credentials or mandatory context are missing; never publish false PASS.
-  - Initial mandatory-memory failure is historical. Current default-config fixture review succeeds without GBrain and explicitly reports its unavailability. Required source/SHA/CI/skills still cannot be omitted; linked Issues are fetched when present (ADR-016); publisher and safety checks are implemented locally; real GitHub activation/rehearsal remain pending.
+  - Initial mandatory-memory failure is historical. Default-config fixtures and real GitHub reviews succeed without GBrain and disclose its absence. Required source/SHA/CI/skills still cannot be omitted; linked Issues are fetched when present (ADR-016). Full live missing-skill/expired-auth/stale-source rehearsals remain open.
 **Exit:** synthetic PR produces SHA-specific feedback with evidence and status.
 
 ## Phase 5a — Issue assessment and plan automation (ADR-013)
@@ -71,7 +71,8 @@ performed. GBrain hardware changes are deferred. Open work below is not represen
 - [x] Separate read-only model analysis from GitHub write publisher; derive plan path from Issue number and reject stale source/Issue context.
 - [x] Organize infrastructure by responsibility (ADR-014); update installers, workflow paths and safety checks.
 - [x] Provision restricted SSH secrets; owner enabled organization policy and repository Actions PR creation was verified enabled, with default read token.
-- [ ] Activate on default branch and rehearse real Issue → scope report → draft plan PR → discussion.
+- [x] Activate on default branch and rehearse real Issue → scope report → draft plan PR → discussion (Issue #8 / PR #9).
+- [ ] Implement ADR-021's shared Issue/PR context and close the Issue after publishing the plan PR link. Stages and review gates: `.agent/plans/shared-issue-dialogue.md`.
 
 ## Phase 6 — End-to-end rehearsal
 - [ ] Open synthetic Issue with acceptance criteria and intentional bug.
@@ -109,9 +110,12 @@ performed. GBrain hardware changes are deferred. Open work below is not represen
 
 ## Current verification boundary
 
-Infrastructure unit tests and local Actions lint pass. Restricted SSH review
-fixtures exercise standalone ML and combined INFRA/ML routing without publishing
-to GitHub. The runner and GitHub secrets/settings are provisioned; workflow files
-are published on `codex/agent-runner-infra`. Default-branch activation, real
-GitHub publication, human/CI branch protection and full rehearsal are pending.
-See `.agent/infra/README.md` for exact entrypoints and tested limitations.
+Installed infrastructure corresponds to main merge `12b8ff9`; GitHub and server
+unit checks passed. Real Issue scope, plan creation/amendment, question,
+discussion and explicit review were verified in disposable threads. The latest
+large-plan fix passed an installed-worker check, not a new live model call.
+Restricted SSH fixtures cover standalone ML and combined INFRA/ML routing;
+Go/gopls, hostile input, full changed-SHA/failure/auth rehearsals and sustained
+operation remain unverified. Main is not protected (GitHub API checked
+2026-10-22). ADR-021 stages 1–2 are local work, not deployed; stage 3 remains
+unstarted. See `.agent/infra/README.md` for exact evidence and limits.

@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "planning"))
 import github_plan
 import ssh_plan
 from plan_policy import identity, previous_plan, render_staged_plan
+from test_dialogue import cross_reference, related_pr
 from test_planning import issue, plan_report
 from test_review_context import temporary_workdir
 
@@ -23,7 +24,12 @@ from test_review_context import temporary_workdir
 class PlanningAPI:
     def __init__(self):
         self.base = "a" * 40
+        self.issue = issue()
         self.pr = None
+        self.sibling = None
+        self.sibling_comments = [{"id": 301, "body": "Earlier decision", "user": {"login": "dev"}}]
+        self.sibling_reviews = [{"id": 302, "body": "Keep the API", "state": "COMMENTED"}]
+        self.sibling_inline = [{"id": 303, "body": "Reply", "in_reply_to_id": 300, "line": 4}]
         self.comments = {7: [], 10: []}
         self.commits = {self.base: {"tree": {"sha": "base-tree"}, "message": "Base"}}
         self.trees = {}
@@ -37,7 +43,7 @@ class PlanningAPI:
             "user": {"login": "developer", "type": "User"},
         }
         self.comments[number].append(comment)
-        task = issue() if number == 7 else {**self.pr, "pull_request": {}}
+        task = self.issue if number == 7 else {**self.pr, "pull_request": {}}
         return {
             "action": "created",
             "issue": copy.deepcopy(task),
@@ -104,7 +110,9 @@ class PlanningAPI:
         if path.startswith("/issues/comments/"):
             return self.comment(int(path.split("/")[-1]))
         if path == "/issues/7":
-            return issue()
+            return copy.deepcopy(self.issue)
+        if path == "/pulls/3":
+            return copy.deepcopy(self.sibling)
         if path == "/pulls/10":
             return self.pr
         if path.startswith("/tarball/"):
@@ -134,7 +142,7 @@ class PlanningAPI:
         if path == "/pulls?state=open":
             return copy.deepcopy([self.pr] if self.pr else [])
         if path == "/issues/7/timeline":
-            return (
+            return ([cross_reference(3)] if self.sibling else []) + (
                 [
                     {
                         "event": "cross-referenced",
@@ -161,6 +169,14 @@ class PlanningAPI:
                 {"id": 51, "body": "Check empty input"},
                 {"id": 52, "body": "Keep nonempty input unchanged", "in_reply_to_id": 51},
             ]
+        if path in ("/issues/3/comments", "/pulls/3/reviews", "/pulls/3/comments"):
+            return copy.deepcopy(
+                {
+                    "/issues/3/comments": self.sibling_comments,
+                    "/pulls/3/reviews": self.sibling_reviews,
+                    "/pulls/3/comments": self.sibling_inline,
+                }[path]
+            )
         raise AssertionError("Unexpected pages: " + path)
 
 
@@ -209,6 +225,11 @@ class PlanningCycleTests(unittest.TestCase):
                 stdin.buffer = io.BytesIO(json.dumps(package).encode())
                 ssh_plan.main()
                 self.assertIn("stages", infer.call_args.args[1]["required"])
+                self.assertIn("related_prs", infer.call_args.args[2])
+                self.assertEqual(
+                    json.loads(Path("context.json").read_text())["related_prs"],
+                    package["context"]["related_prs"],
+                )
                 self.assertEqual(
                     infer.call_args.args[1]["properties"]["review_mode"]["enum"],
                     [expected["review_mode"]],
@@ -312,6 +333,145 @@ class PlanningCycleTests(unittest.TestCase):
                     folder,
                     before_publish=lambda: setattr(api, "base", "d" * 40),
                 )
+            self.assertEqual(api.writes, [])
+
+    def test_closed_issue_plan_amendment_reads_shared_history_and_only_writes_plan(self):
+        with temporary_workdir() as folder:
+            api = PlanningAPI()
+            api.sibling = related_pr()
+            first = self.cycle(api, api.request_event(7, "/create-plan"), plan_report(), folder)
+            self.assertEqual(first["related_prs"][0]["task"]["number"], 3)
+            api.issue["state"] = "closed"
+            updated = plan_report()
+            updated["source_sha"] = api.pr["head"]["sha"]
+            original_branch = api.pr["head"]["ref"]
+            collected = self.cycle(
+                api,
+                api.request_event(10, "/discuss Поправь план: уточни проверки"),
+                updated,
+                folder,
+            )
+            self.assertEqual(collected["issue"]["state"], "closed")
+            self.assertEqual(collected["related_prs"][0]["task"]["state"], "closed")
+            self.assertEqual(
+                collected["related_prs"][0]["pr_review_comments"][0]["in_reply_to_id"], 300
+            )
+            self.assertEqual(api.pr["head"]["ref"], original_branch)
+            self.assertFalse(any(path == "/issues/7" for path, _, _ in api.writes))
+            self.assertEqual(
+                api.writes[-1][0], "/issues/comments/" + str(api.comments[10][-1]["id"])
+            )
+
+    def test_closed_issue_rejects_new_work_and_closed_or_ambiguous_plan_pr_rejects_amendment(self):
+        with temporary_workdir() as folder:
+            api = PlanningAPI()
+            self.cycle(api, api.request_event(7, "/create-plan"), plan_report(), folder)
+            api.issue["state"] = "closed"
+            with self.assertRaisesRegex(ValueError, "open Issue"):
+                github_plan.selected(api, api.request_event(7, "/create-plan"))
+            with (
+                patch.dict(os.environ, {"GITHUB_EVENT_NAME": "issues"}),
+                self.assertRaisesRegex(ValueError, "open Issue"),
+            ):
+                github_plan.selected(api, {"action": "opened", "issue": api.issue})
+            payload = api.request_event(10, "/discuss Поправь план: уточни проверки")
+            self.assertEqual(github_plan.selected(api, payload)[1]["state"], "closed")
+            api.pr["state"] = "closed"
+            with self.assertRaisesRegex(ValueError, "open same-repository"):
+                github_plan.selected(api, payload)
+            api.pr["state"] = "open"
+            api.pr["body"] += "\nCloses: #8"
+            with self.assertRaisesRegex(ValueError, "Ambiguous"):
+                github_plan.selected(api, payload)
+
+    def test_changed_shared_history_aborts_plan_before_any_git_write(self):
+        for change in (
+            "issue-comment",
+            "related-comment",
+            "review",
+            "inline",
+            "head",
+            "removed",
+            "added",
+        ):
+            with self.subTest(change=change), temporary_workdir() as folder:
+                api = PlanningAPI()
+                if change != "added":
+                    api.sibling = related_pr()
+
+                def mutate(api=api, change=change):
+                    if change == "issue-comment":
+                        api.comments[7].append({"id": 999, "body": "New requirement"})
+                    elif change == "related-comment":
+                        api.sibling_comments[0]["body"] += " Changed"
+                    elif change == "review":
+                        api.sibling_reviews[0]["state"] = "DISMISSED"
+                    elif change == "inline":
+                        api.sibling_inline[0]["line"] += 1
+                    elif change == "head":
+                        api.sibling["head"]["sha"] = "d" * 40
+                    elif change == "removed":
+                        api.sibling = None
+                    else:
+                        api.sibling = related_pr()
+
+                with self.assertRaisesRegex(ValueError, "discussion changed"):
+                    self.cycle(
+                        api,
+                        api.request_event(7, "/create-plan"),
+                        plan_report(),
+                        folder,
+                        before_publish=mutate,
+                    )
+                self.assertEqual(api.writes, [])
+
+    def test_plan_amendment_rejects_changed_origin_discussion_and_requirements(self):
+        for change in ("comment", "pr-body", "issue"):
+            with self.subTest(change=change), temporary_workdir() as folder:
+                api = PlanningAPI()
+                self.cycle(api, api.request_event(7, "/create-plan"), plan_report(), folder)
+                previous_writes = len(api.writes)
+                updated = plan_report()
+                updated["source_sha"] = api.pr["head"]["sha"]
+
+                def mutate(api=api, change=change):
+                    if change == "comment":
+                        api.comments[10].append({"id": 999, "body": "New requirement"})
+                    elif change == "pr-body":
+                        api.pr["body"] += "\nChanged requirement"
+                    else:
+                        api.issue["body"] += " Changed requirement"
+
+                with self.assertRaisesRegex(ValueError, "changed"):
+                    self.cycle(
+                        api,
+                        api.request_event(10, "/discuss Поправь план: уточни проверки"),
+                        updated,
+                        folder,
+                        before_publish=mutate,
+                    )
+                self.assertFalse(
+                    any(path.startswith("/git/") for path, _, _ in api.writes[previous_writes:])
+                )
+                self.assertTrue(
+                    any(
+                        "Обновление плана не подтверждено" in comment["body"]
+                        for comment in api.comments[10]
+                    )
+                )
+                self.assertEqual(len(api.writes[previous_writes:]), 2)
+
+    def test_oversized_shared_plan_history_stops_before_inference(self):
+        with temporary_workdir() as folder:
+            api = PlanningAPI()
+            api.sibling = related_pr()
+            api.sibling_comments[0]["body"] = "x" * 160000
+            with (
+                patch.object(ssh_plan, "infer") as infer,
+                self.assertRaisesRegex(ValueError, "context limit"),
+            ):
+                self.cycle(api, api.request_event(7, "/create-plan"), plan_report(), folder)
+            infer.assert_not_called()
             self.assertEqual(api.writes, [])
 
 

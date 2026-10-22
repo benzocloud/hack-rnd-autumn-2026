@@ -41,6 +41,14 @@ def context():
         "branch": identity(7)[0],
         "plan_path": identity(7)[1],
         "base_branch": "main",
+        "dialogue_root": 7,
+        "related_prs": [],
+        "issue_comments": [],
+        "pr_comments": [],
+        "pr_reviews": [],
+        "pr_review_comments": [],
+        "pr_state": None,
+        "pr_body": None,
     }
 
 
@@ -276,6 +284,7 @@ class PlanningTests(unittest.TestCase):
                         {"id": 2, "body": "Later correction"},
                     ],
                     "/pulls?state=open": [],
+                    "/issues/7/timeline": [],
                     "/issues/10/comments": [{"id": 3, "body": "Plan discussion"}],
                     "/pulls/10/reviews": [{"id": 4, "body": "Review summary"}],
                     "/pulls/10/comments": [
@@ -288,6 +297,7 @@ class PlanningTests(unittest.TestCase):
             pr = (
                 {
                     "number": 10,
+                    "state": "open",
                     "head": {"sha": "a" * 40, "ref": identity(7, "handle_empty_prediction")[0]},
                 }
                 if mode == "discuss-plan"
@@ -442,8 +452,20 @@ class PlanningTests(unittest.TestCase):
         if mode == "discuss-plan":
             c["existing_plan"] = "Old plan"
             c["pr_number"] = 10
+            c["pr_state"] = "open"
+            c["pr_comments"] = [
+                {
+                    "id": 33,
+                    "user": {"login": "github-actions[bot]"},
+                    "body": "<!-- agent-plan-discussion:3 -->\n\nStarted",
+                }
+            ]
             c["branch"] = branch or identity(7, "handle_empty_prediction")[0]
-            pr = {"number": 10, "head": {"sha": c["source_sha"], "ref": c["branch"]}}
+            pr = {
+                "number": 10,
+                "state": "open",
+                "head": {"sha": c["source_sha"], "ref": c["branch"]},
+            }
 
         class API:
             def __init__(self):

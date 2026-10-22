@@ -1,5 +1,6 @@
 """Shared validation for the GitHub orchestrator and fixed SSH entrypoint."""
 
+import json
 import re
 from pathlib import PurePosixPath
 
@@ -47,6 +48,36 @@ def safe_path(value):
     return p
 
 
+def validate_history(context, origin_number):
+    root = context["dialogue_root"]
+    if root is not None and (type(root) is not int or root < 1):
+        raise ValueError("Invalid Issue dialogue root")
+    for key in ("issue_comments", "pr_comments", "pr_reviews", "pr_review_comments", "related_prs"):
+        if not isinstance(context[key], list):
+            raise ValueError("Missing complete discussion context")
+    if root is None and context["related_prs"]:
+        raise ValueError("Related PRs require an Issue dialogue root")
+    numbers = set()
+    if len(context["related_prs"]) > 10:
+        raise ValueError("Too many related PRs")
+    for thread in context["related_prs"]:
+        number = thread["task"]["number"]
+        if type(number) is not int or number < 1 or number in numbers or number == origin_number:
+            raise ValueError("Invalid related PR identity")
+        numbers.add(number)
+        if thread["task"]["state"] not in ("open", "closed") or any(
+            not SHA.fullmatch(thread[key]) for key in ("head_sha", "base_sha")
+        ):
+            raise ValueError("Invalid related PR source/state")
+        if any(
+            not isinstance(thread[key], list)
+            for key in ("pr_comments", "pr_reviews", "pr_review_comments")
+        ):
+            raise ValueError("Missing related PR discussion")
+    if len(json.dumps(context, ensure_ascii=False)) > 160000:
+        raise ValueError("Discussion exceeds context limit; refusing silent truncation")
+
+
 def validate_context(context):
     if context["repository"] != REPOSITORY:
         raise ValueError("Unexpected repository")
@@ -61,6 +92,10 @@ def validate_context(context):
         raise ValueError("Skill routing differs from trusted policy")
     if not isinstance(context.get("issues"), list) or not isinstance(context.get("ci"), dict):
         raise ValueError("Missing required task/CI context; issues must be a list (possibly empty)")
+    validate_history(context, context["pr_number"])
+    root = context["dialogue_root"]
+    if [item["number"] for item in context["issues"]] != ([] if root is None else [root]):
+        raise ValueError("Review Issue dialogue root mismatch")
 
 
 FINDING = {

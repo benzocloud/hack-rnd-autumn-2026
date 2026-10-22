@@ -12,6 +12,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "runner"))
 from github_api import REPOSITORY, GitHub, event, invoke_json, pull_request_discussion
+from github_dialogue import (
+    dialogue_root,
+    related_pull_requests,
+    substantive_history,
+    substantive_item,
+)
 from plan_policy import (
     PLAN_FILE_LIMIT,
     command,
@@ -56,6 +62,8 @@ def selected(api, payload):
         if not match:
             raise ValueError("/discuss requires a managed plan PR")
         number = int(match[1])
+        if dialogue_root(pr, pr) != number:
+            raise ValueError("Plan PR does not identify its canonical Issue")
         _, path = identity(number)
         if (
             pr["state"] != "open"
@@ -67,8 +75,10 @@ def selected(api, payload):
         if len(files) != 1 or files[0]["filename"] != path or pr["changed_files"] != 1:
             raise ValueError("Plan PR contains implementation changes; edit it manually")
     issue = api.request(f"/issues/{number}")
-    if "pull_request" in issue or issue["state"] != "open":
-        raise ValueError("Expected an open Issue")
+    if "pull_request" in issue or issue["state"] not in (
+        ("open", "closed") if mode == "discuss-plan" else ("open",)
+    ):
+        raise ValueError("Expected an open Issue, or historical Issue in an open plan PR")
     return mode, issue, pr
 
 
@@ -200,6 +210,32 @@ def existing_plan(api, pr, path):
     return markdown
 
 
+def discussion_context(api, issue, pr):
+    return {
+        "dialogue_root": issue["number"],
+        "issue_comments": api.pages(f"/issues/{issue['number']}/comments"),
+        "related_prs": related_pull_requests(
+            api, issue["number"], pr["number"] if pr else issue["number"]
+        ),
+        "pr_state": pr["state"] if pr else None,
+        "pr_body": pr.get("body") if pr else None,
+        **(
+            pull_request_discussion(api, pr["number"])
+            if pr
+            else {"pr_comments": [], "pr_reviews": [], "pr_review_comments": []}
+        ),
+    }
+
+
+def planning_history(context):
+    return {
+        **substantive_history(context),
+        "issue": substantive_item(context["issue"]),
+        "pr_state": context["pr_state"],
+        "pr_body": context["pr_body"],
+    }
+
+
 def prepare():
     api, payload = GitHub(), event()
     request = selected(api, payload)
@@ -229,7 +265,6 @@ def prepare():
         "plan_path": path,
         "request_id": payload.get("comment", {}).get("id", issue["id"]),
         "request_body": payload.get("comment", {}).get("body", ""),
-        "issue_comments": api.pages(f"/issues/{issue['number']}/comments"),
         "open_prs": [
             {
                 "number": p["number"],
@@ -241,11 +276,7 @@ def prepare():
         ],
         "pr_number": pr["number"] if pr else None,
         "existing_plan": existing,
-        **(
-            pull_request_discussion(api, pr["number"])
-            if pr
-            else {"pr_comments": [], "pr_reviews": [], "pr_review_comments": []}
-        ),
+        **discussion_context(api, issue, pr),
     }
     validate_context(context)
     policies = {
@@ -375,6 +406,9 @@ def publish_result(api, payload):
         raise ValueError("Source changed; request a fresh plan")
     if pr and existing_plan(api, pr, path) != context["existing_plan"]:
         raise ValueError("Saved plan state changed; discard stale plan")
+    current = {"issue": issue, **discussion_context(api, issue, pr)}
+    if planning_history(current) != planning_history(context):
+        raise ValueError("Issue/PR discussion changed; discard stale plan")
     markdown = render(report, context)
     marker = f"<!-- agent-plan-request:{mode}:{request_id} -->"
     destination = pr["number"] if pr else issue["number"]

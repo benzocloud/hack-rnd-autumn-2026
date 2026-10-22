@@ -12,6 +12,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "runner"))
 from github_api import GitHub, event, invoke_json, pull_request_discussion
+from github_dialogue import (
+    dialogue_root,
+    related_pull_requests,
+    substantive_history,
+    substantive_item,
+)
 from review_policy import (
     REPOSITORY,
     is_request,
@@ -40,6 +46,41 @@ def select_request(api, payload):
     return pr
 
 
+def discussion_context(api, pr):
+    root = dialogue_root(pr, pr)
+    issues = []
+    if root is not None:
+        issue = api.request(f"/issues/{root}")
+        if "pull_request" in issue:
+            raise ValueError("A dialogue root must be an Issue, not another PR")
+        issues.append(
+            {
+                **substantive_item(issue),
+                "comments": api.pages(f"/issues/{root}/comments"),
+            }
+        )
+    return {
+        "dialogue_root": root,
+        "issue_comments": [],
+        "issues": issues,
+        "related_prs": related_pull_requests(api, root, pr["number"]) if root is not None else [],
+        **pull_request_discussion(api, pr["number"]),
+    }
+
+
+def review_history(context):
+    return {
+        **substantive_history(context),
+        "issues": [
+            {
+                **substantive_item(issue),
+                "comments": [substantive_item(c) for c in issue["comments"]],
+            }
+            for issue in context["issues"]
+        ],
+    }
+
+
 def prepare():
     api, payload = GitHub(), event()
     pr = select_request(api, payload)
@@ -54,27 +95,6 @@ def prepare():
         raise ValueError("Changed-file list is incomplete")
     names = [item["filename"] for item in files]
     scope, skills = skills_for(pr["title"], names)
-    issue_pattern = (
-        r"(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|refs?)\s+(?:#|https://github\.com/"
-        + re.escape(REPOSITORY)
-        + r"/issues/)(\d+)"
-    )
-    issue_numbers = sorted({int(n) for n in re.findall(issue_pattern, pr.get("body") or "", re.I)})
-    if len(issue_numbers) > 10:
-        raise ValueError("Too many linked tasks for one review")
-    issues = []
-    for n in issue_numbers:
-        issue = api.request(f"/issues/{n}")
-        if "pull_request" in issue:
-            raise ValueError("A linked task must be an Issue, not another PR")
-        issues.append(
-            {
-                "number": n,
-                "title": issue["title"],
-                "body": issue.get("body"),
-                "comments": api.pages(f"/issues/{n}/comments"),
-            }
-        )
     context = {
         "repository": REPOSITORY,
         "pr_number": number,
@@ -86,8 +106,7 @@ def prepare():
         "scope": scope,
         "required_skills": skills,
         "files": names,
-        "issues": issues,
-        **pull_request_discussion(api, number),
+        **discussion_context(api, pr),
         "ci": {
             "checks": api.pages(f"/commits/{head}/check-runs", "check_runs"),
             "status": api.request(f"/commits/{head}/status"),
@@ -277,6 +296,25 @@ def publish():
                     "⏭️ **Ревью заменено** более новым запросом от пользователя с правами запуска.",
                 )
                 return
+    try:
+        current_discussion = discussion_context(api, pr)
+        validate_context({**context, **current_discussion})
+    except Exception:
+        update_status(
+            api,
+            payload,
+            "⚠️ **Результат ревью не опубликован** — не удалось проверить полный контекст Issue/PR. Подробности в Actions.",
+        )
+        raise
+    if pr.get("body") != context.get("body") or review_history(
+        current_discussion
+    ) != review_history(context):
+        update_status(
+            api,
+            payload,
+            "⚠️ **Результат ревью устарел** — описание или история Issue/PR изменились во время анализа. Отправьте новый комментарий `/agent-review`.",
+        )
+        return
     body = [
         "Ревью агента: **"
         + ("завершено" if report["status"] == "complete" else "не завершено")
@@ -290,6 +328,14 @@ def publish():
         body.append(
             "Связанные Issue: " + ", ".join(f"#{item['number']}" for item in context["issues"])
         )
+        if context["related_prs"]:
+            body.append(
+                "Учтены связанные PR: "
+                + ", ".join(
+                    f"[#{p['task']['number']}](https://github.com/{REPOSITORY}/pull/{p['task']['number']})"
+                    for p in context["related_prs"]
+                )
+            )
     else:
         body.append(
             "Связанный Issue не указан: ревью выполнено по описанию и обсуждению PR, изменениям, исходникам и CI."
