@@ -109,7 +109,7 @@ def scope_status(api, payload, body=None):
 
 
 def scope_run_link():
-    return f"[Actions run](https://github.com/{REPOSITORY}/actions/runs/{int(os.environ['GITHUB_RUN_ID'])})"
+    return f"[Запуск GitHub Actions](https://github.com/{REPOSITORY}/actions/runs/{int(os.environ['GITHUB_RUN_ID'])})"
 
 
 def start():
@@ -390,7 +390,7 @@ def publish_result(api, payload):
             payload,
             "✅ **Оценка границ исправления завершена**\n\n"
             + markdown
-            + "\nДля ветки и draft PR с планом: `/create-plan`. Для изменения плана в его PR: `/discuss Поправь план: <изменения>`.",
+            + "\nДля ветки и черновика PR с планом: `/create-plan`. Для изменения плана в его PR: `/discuss Поправь план: <изменения>`.",
         )
         return
     description = report["branch_description"].replace("_", " ")
@@ -446,7 +446,7 @@ def publish_result(api, payload):
         )
         api.request(
             f"/issues/{issue['number']}/comments",
-            {"body": marker + "\nСоздан draft PR с планом: " + created["html_url"]},
+            {"body": marker + "\nСоздан черновик PR с планом: " + created["html_url"]},
         )
     else:
         # New commit has the exact reviewed head as parent. force=false makes a

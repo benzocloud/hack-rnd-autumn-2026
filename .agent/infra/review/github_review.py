@@ -164,7 +164,12 @@ def update_status(api, payload, body):
         raise ValueError("Review status comment is missing; refusing a duplicate result")
     api.request(
         f"/issues/comments/{int(comment['id'])}",
-        {"body": status_marker(payload) + "\n\n" + body + f"\n\n[Actions run]({run_url()})"},
+        {
+            "body": status_marker(payload)
+            + "\n\n"
+            + body
+            + f"\n\n[Запуск GitHub Actions]({run_url()})"
+        },
         method="PATCH",
     )
 
@@ -179,8 +184,8 @@ def start():
             f"/issues/{pr['number']}/comments",
             {
                 "body": status_marker(payload)
-                + "\n\n⏳ **Agent review started** — collecting context and preparing static analysis."
-                + f"\n\n[Actions run]({run_url()})"
+                + "\n\n⏳ **Начал ревью** — собираю контекст и готовлю статический анализ."
+                + f"\n\n[Запуск GitHub Actions]({run_url()})"
             },
         )
 
@@ -195,9 +200,9 @@ def invoke():
             "status": "incomplete",
             "memory": "unavailable",
             "skills": [],
-            "checks": ["Trusted title/changed-file routing check; model was not invoked"],
+            "checks": ["Проверен префикс заголовка и состав изменений; модель не запускалась"],
             "limitations": [
-                "ML: conflicts with Go changes. Correct the title or split the PR, then submit a new /agent-review comment."
+                "Префикс ML: противоречит изменениям Go. Исправьте заголовок или разделите PR, затем отправьте новый комментарий /agent-review."
             ],
             "findings": [],
         }
@@ -223,11 +228,11 @@ def publish():
     if job_result != "success" or os.environ.get("REVIEW_REQUESTED") == "false":
         if not is_request(payload):
             raise ValueError("Invalid review event")
-        label = "cancelled" if job_result == "cancelled" else "failed"
+        label = "отменено" if job_result == "cancelled" else "завершилось ошибкой"
         update_status(
             api,
             payload,
-            f"⚠️ **Agent review {label}** — no completed review was produced. See the Actions run for details.",
+            f"⚠️ **Ревью {label}** — итоговый отчёт не получен. Подробности в GitHub Actions.",
         )
         return
     package = json.loads(Path("report.json").read_text())
@@ -251,7 +256,7 @@ def publish():
         update_status(
             api,
             payload,
-            "⚠️ **Agent review stale** — the PR changed during analysis. Submit a new `/agent-review` comment.",
+            "⚠️ **Результат ревью устарел** — PR изменился во время анализа. Отправьте новый комментарий `/agent-review`.",
         )
         return
     for comment in reversed(api.pages(f"/issues/{pr['number']}/comments")):
@@ -267,50 +272,57 @@ def publish():
                 "write",
             ):
                 update_status(
-                    api, payload, "⏭️ **Agent review superseded** by a newer authorized request."
+                    api,
+                    payload,
+                    "⏭️ **Ревью заменено** более новым запросом от пользователя с правами запуска.",
                 )
                 return
     body = [
-        f"Agent review: **{report['status']}**",
-        f"Commit: `{context['head_sha']}`",
-        f"Scope: `{report['scope']}`",
-        "GBrain: unavailable (deferred).",
-        "Skills reported applied: " + ", ".join(report["skills"]),
+        "Ревью агента: **"
+        + ("завершено" if report["status"] == "complete" else "не завершено")
+        + "**",
+        f"Коммит: `{context['head_sha']}`",
+        f"Область изменений: `{report['scope']}`",
+        "GBrain недоступен (развёртывание отложено).",
+        "Навыки, указанные в отчёте: " + (", ".join(report["skills"]) or "нет"),
     ]
     if context["issues"]:
         body.append(
-            "Linked Issues: " + ", ".join(f"#{item['number']}" for item in context["issues"])
+            "Связанные Issue: " + ", ".join(f"#{item['number']}" for item in context["issues"])
         )
     else:
         body.append(
-            "No linked Issue: reviewed using the PR description, discussion, diff, source and CI."
+            "Связанный Issue не указан: ревью выполнено по описанию и обсуждению PR, изменениям, исходникам и CI."
         )
         if not (context.get("body") or "").strip():
             body.append(
-                "PR description is empty; requirement and acceptance coverage cannot be confirmed."
+                "Описание PR пустое; полноту проверки требований и критериев приёмки подтвердить нельзя."
             )
     ci = context["ci"]
     body.append(
-        "GitHub CI metadata: combined status `"
+        "Данные CI GitHub: общий статус `"
         + str(ci.get("status", {}).get("state", "unknown"))
-        + "`; check runs: "
+        + "`; запусков проверок: "
         + str(len(ci.get("checks", [])))
-        + ". No local tests were executed by this static reviewer."
+        + ". Агент выполнил статическое ревью без локального запуска тестов."
     )
     for item in report["findings"]:
         link = f"https://github.com/{REPOSITORY}/blob/{context['head_sha']}/{urllib.parse.quote(item['file'])}#L{item['line']}"
+        severity = {"BLOCKER": "Блокирующее", "MAJOR": "Существенное", "MINOR": "Незначительное"}[
+            item["severity"]
+        ]
         body += [
-            f"\n**{item['severity']}** — [{item['file']}:{item['line']}]({link})",
+            f"\n**{severity}** — [{item['file']}:{item['line']}]({link})",
             item["evidence"],
-            "Impact: " + item["impact"],
-            "Fix: " + item["fix"],
+            "Последствия: " + item["impact"],
+            "Исправление: " + item["fix"],
         ]
     if not report["findings"]:
         body.append(
-            "No actionable findings reported; this is not approval or proof that tests passed."
+            "Замечаний к исправлению нет. Это не апрув и не подтверждение успешного прохождения тестов."
         )
-    body += ["\nChecks actually run:"] + ["- " + v for v in report["checks"]]
-    body += ["\nLimitations:"] + ["- " + v for v in report["limitations"]]
+    body += ["\nВыполненные проверки:"] + ["- " + v for v in report["checks"]]
+    body += ["\nОграничения:"] + ["- " + v for v in report["limitations"]]
     rendered = "\n\n".join(body)
     if len(rendered) > 60000:
         raise ValueError("Review too large to publish safely")

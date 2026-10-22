@@ -450,7 +450,8 @@ def render(report, context):
     lines = [
         f"# План исправления Issue #{context['issue_number']}",
         source_links(report["summary"], report["source_sha"]),
-        f"Исходники: [`{report['source_sha']}`](https://github.com/{REPOSITORY}/commit/{report['source_sha']}). Статус: `{report['status']}`.",
+        f"Исходники: [`{report['source_sha']}`](https://github.com/{REPOSITORY}/commit/{report['source_sha']}). Статус: "
+        + ("готов к обсуждению." if report["status"] == "ready" else "нужны уточнения."),
         "Это оценка и план. Реализация требует отдельного решения разработчика. GBrain недоступен; анализ статический, тесты не запускались.",
     ]
     labels = (

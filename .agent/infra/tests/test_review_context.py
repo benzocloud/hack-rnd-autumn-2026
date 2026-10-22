@@ -174,14 +174,16 @@ class ReviewContextTests(unittest.TestCase):
                 patch.object(github_review, "event", return_value=event()),
             ):
                 github_review.start()
+                self.assertIn("Начал ревью", api.comments[-1]["body"])
                 github_review.start()
                 github_review.publish()
             self.assertEqual(
                 [p for p, _, _ in api.writes], ["/issues/2/comments", "/issues/comments/50"]
             )
             self.assertEqual(api.writes[-1][2], "PATCH")
-            self.assertIn("No linked Issue", api.comments[-1]["body"])
-            self.assertIn("PR description is empty", api.comments[-1]["body"])
+            self.assertIn("Связанный Issue не указан", api.comments[-1]["body"])
+            self.assertIn("Описание PR пустое", api.comments[-1]["body"])
+            self.assertIn("Ревью агента: **завершено**", api.comments[-1]["body"])
             self.assertIn("a" * 40, api.comments[-1]["body"])
 
     def test_failed_or_cancelled_analysis_updates_start_comment_without_report(self):
@@ -200,6 +202,7 @@ class ReviewContextTests(unittest.TestCase):
                     github_review.publish()
                 self.assertEqual(api.writes[-1][0], "/issues/comments/50")
                 self.assertIn(
-                    "cancelled" if result == "cancelled" else "failed", api.comments[-1]["body"]
+                    "отменено" if result == "cancelled" else "завершилось ошибкой",
+                    api.comments[-1]["body"],
                 )
                 self.assertIn("actions/runs/123", api.comments[-1]["body"])

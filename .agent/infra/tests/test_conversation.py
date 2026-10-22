@@ -337,7 +337,8 @@ class ConversationTests(unittest.TestCase):
                 path, body, _ = api.writes[-1]
                 self.assertEqual(path, "/issues/comments/88")
                 self.assertIn(f"/blob/{c['source_sha']}/api/main.py#L2-L4", body["body"])
-                self.assertIn("input 100", body["body"])
+                self.assertIn("входные 100", body["body"])
+                self.assertIn("глубина рассуждений: низкая", body["body"])
                 self.assertIn("gpt-6-luna", body["body"])
 
     def test_prepare_invoke_publish_preserves_request_and_artifact_boundaries(self):

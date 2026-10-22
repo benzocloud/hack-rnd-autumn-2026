@@ -73,7 +73,7 @@ def status_comment(api, payload):
 
 
 def run_link():
-    return f"[Actions run](https://github.com/{REPOSITORY}/actions/runs/{int(os.environ['GITHUB_RUN_ID'])})"
+    return f"[Запуск GitHub Actions](https://github.com/{REPOSITORY}/actions/runs/{int(os.environ['GITHUB_RUN_ID'])})"
 
 
 def update_status(api, payload, body):
@@ -278,7 +278,7 @@ def publish_result(api, payload):
     report = result["report"]
     usage = result["usage"]
     tokens = (
-        f"input {usage['input_tokens']}, cached input {usage['cached_input_tokens']}, output {usage['output_tokens']}"
+        f"входные {usage['input_tokens']}, из кеша {usage['cached_input_tokens']}, выходные {usage['output_tokens']}"
         if usage
         else "CLI не предоставил данные"
     )
@@ -306,7 +306,7 @@ def publish_result(api, payload):
         "✅ **Ответ готов**\n\n"
         + source_links(report["answer"], context["source_sha"])
         + sources
-        + f"\n\nМодель: `{result['model']}`, reasoning: `{result['reasoning']}`. Tokens: {tokens}."
+        + f"\n\nМодель: `{result['model']}`, глубина рассуждений: низкая. Токены: {tokens}."
         + "\nИспользуется общий лимит Codex / ChatGPT Work подписки Plus. GBrain недоступен."
         + f"\nИсточник: `{context['source_sha']}`.",
     )
