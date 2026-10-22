@@ -40,8 +40,8 @@ def report():
         "status": "complete",
         "memory": "unavailable",
         "skills": ["caveman-review", "ponytail-review"],
-        "checks": ["Static inspection"],
-        "limitations": ["No runtime tests"],
+        "checks": ["Статический анализ"],
+        "limitations": ["Тесты не запускались"],
         "findings": [],
     }
 
@@ -205,7 +205,7 @@ class ReviewTests(unittest.TestCase):
                 ):
                     github_review.publish()
                 self.assertEqual(api.writes, 0)
-                self.assertIn("stale", status.call_args.args[2])
+                self.assertIn("Результат ревью устарел", status.call_args.args[2])
             finally:
                 os.chdir(previous)
 

@@ -58,6 +58,7 @@ Never claim CI/tests ran locally. Never write, approve, merge or deploy.
             "\nPinned required skill instructions supplied by the trusted worker:\n"
             + (job / "required-skills.md").read_text()
         )
+        prompt += "\nWrite all human-facing checks, limitations, evidence, impact and fix text in Russian, regardless of the skills' output-language defaults. Keep JSON field names/enums, code quotes, commands, identifiers, model and skill names unchanged.\n"
         report = infer(job, schema, prompt, ml=context["scope"] == "ML")
         validate_report(report, context)
         for finding in report["findings"]:

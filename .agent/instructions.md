@@ -10,6 +10,7 @@
 8. Do not claim tests, skills, MCP calls, or GitHub actions succeeded unless verified. Report missing capabilities.
 9. Distinguish implemented, tested, PR opened, reviewed, merged and deployed.
 10. Follow the staged plan format and review gates in `.agent/workflows/issue-planning.md` (ADR-020). After every implementation stage, report the result and checks, then stop for developer review and explicit approval before the next stage. The exception applies when the developer-approved plan or trusted task instructions clearly indicate, by meaning and context, that developer review is deferred until all stages are finished. No exact phrase or language is required. In that mode, stop for final developer review; never infer this exception from general implementation approval or choose it yourself. Stage approval never implicitly authorizes commit/push, merge or deployment.
+11. Publish human-facing agent comments in Issues and PRs in Russian consistently: progress, results, review findings, errors, cancellation/stale notices and report labels. Preserve commands, code quotes, paths, identifiers, model/skill names and protocol values in their original form. Commit messages and generated PR titles remain English under the Git conventions; this language rule governs comments, not wire formats.
 
 Issue assessment and plan commands: `.agent/workflows/issue-planning.md`.
 
