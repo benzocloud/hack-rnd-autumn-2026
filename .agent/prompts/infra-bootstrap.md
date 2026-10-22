@@ -2,7 +2,7 @@
 
 You are preparing the hackathon infrastructure BEFORE development begins.
 
-Read `AGENTS.md`, `.agent/instructions.md`, `.agent/decisions.md`, `.agent/infra/pre-hackathon-rollout.md` and related workflows.
+Read `AGENTS.md`, `.agent/instructions.md`, `.agent/decisions.md`, `.agent/plans/pre-hackathon-rollout.md` and related workflows.
 
 First inspect the repository and server environment; do not assume dependencies or credentials exist. Produce a phased implementation plan with explicit checkpoints and approval gates. For each phase state files/services to create, validation commands, failure/rollback plan, security boundaries and acceptance criteria.
 

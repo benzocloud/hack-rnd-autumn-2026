@@ -1,0 +1,34 @@
+{
+  "verified_on": "2026-10-22",
+  "platform": "linux-x86_64",
+  "codex-code-mode-host": {
+    "version": "0.163.0",
+    "url": "https://github.com/openai/codex/releases/download/rust-v0.163.0/codex-code-mode-host-x86_64-unknown-linux-musl.tar.gz",
+    "member": "codex-code-mode-host-x86_64-unknown-linux-musl",
+    "sha256": "314263128ba6592e7e807c265deeaf928a692b72dcbfeb5e0b20c9423b703529"
+  },
+  "bwrap": {
+    "version": "codex-0.163.0",
+    "url": "https://github.com/openai/codex/releases/download/rust-v0.163.0/bwrap-x86_64-unknown-linux-musl.tar.gz",
+    "member": "bwrap-x86_64-unknown-linux-musl",
+    "sha256": "bcc196b1d25dc2c2b912dcedf780b562deb0552f3c50648761ced145c3466a23"
+  },
+  "bun": {
+    "version": "1.4.3",
+    "url": "https://github.com/oven-sh/bun/releases/download/bun-v1.4.3/bun-linux-x64.zip",
+    "member": "bun-linux-x64/bun",
+    "sha256": "3e730528d89775f03f87f05c06787c4df4099d0a37f3f252e7b829cb23816e18"
+  },
+  "gbrain": {
+    "version": "0.60.366.0",
+    "commit": "c94425368cd5b9eb321a724cfd462e6b52bdd4d2",
+    "url": "https://github.com/garrytan/gbrain/releases/download/v0.60.366.0/gbrain-linux-x64",
+    "sha256": "bc2bcaec8c88755708acf8343702872a8172111811eaadac15f8021d4888d777"
+  },
+  "codex": {
+    "version": "0.163.0",
+    "url": "https://github.com/openai/codex/releases/download/rust-v0.163.0/codex-x86_64-unknown-linux-musl.tar.gz",
+    "member": "codex-x86_64-unknown-linux-musl",
+    "sha256": "beb339e8ecd9ba057a6bb2dc81ad8ca474812edfbf0fc5056ca818797648dde4"
+  }
+}

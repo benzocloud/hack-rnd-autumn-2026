@@ -1,0 +1,9 @@
+[Unit]
+Description=Resource limits for Hackrnd review processes only
+
+[Slice]
+CPUQuota=75%
+MemoryHigh=512M
+MemoryMax=1G
+MemorySwapMax=128M
+TasksMax=128
