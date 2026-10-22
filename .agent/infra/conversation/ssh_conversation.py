@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Fixed read-only worker for question/discussion comments."""
 
+import base64
 import json
 import os
 import re
@@ -10,7 +11,28 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "runner"))
 from conversation_policy import MODELS, SCHEMA, validate_context, validate_result
 from job import MAX_INPUT, infer, workspace
+from plan_policy import PLAN_FILE_LIMIT, PLAN_FORMAT_MARKER, PLAN_STATE_PREFIX, render_staged_plan
 from review_policy import safe_path
+
+
+def question_plan_source(text):
+    if len(text.encode("utf-8")) > PLAN_FILE_LIMIT:
+        raise ValueError("Managed plan exceeds file limit; use /discuss")
+    if PLAN_FORMAT_MARKER not in text and PLAN_STATE_PREFIX not in text:
+        return text
+    match = re.search(r"\n<!-- agent-plan-state:v1:([A-Za-z0-9+/=]+) -->\n?\Z", text)
+    try:
+        if match is None:
+            raise ValueError("Missing plan state")
+        state = json.loads(base64.b64decode(match[1], validate=True))
+        if render_staged_plan(state) != text:
+            raise ValueError("Plan text and state disagree")
+    except (AttributeError, KeyError, TypeError, ValueError) as error:
+        raise ValueError("Invalid managed plan state; use /discuss") from error
+    return (
+        text[: match.start()]
+        + "\n<!-- Закодированное служебное состояние плана исключено из контекста вопроса. -->\n"
+    )
 
 
 def question_sources(job, context):
@@ -31,13 +53,13 @@ def question_sources(job, context):
         r"(?:[\w.-]+/)+[\w.-]+|[\w-]+\.[\w-]+", json.dumps(discussion, ensure_ascii=False)
     ):
         try:
-            safe_path(name)
+            name = str(safe_path(name))
         except ValueError:
             continue
         paths.add(name)
-    paths.update(context["files"][:8])
-    for item in context.get("existing_plan", []):
-        paths.add(item)
+    paths.update(str(safe_path(name)) for name in context["files"][:8])
+    plans = {str(safe_path(name)) for name in context.get("existing_plan", [])}
+    paths.update(plans)
     sources, skipped = {}, []
     for name in sorted(paths):
         path = job / "source" / str(safe_path(name))
@@ -51,6 +73,8 @@ def question_sources(job, context):
             except UnicodeDecodeError:
                 skipped.append(name)
                 continue
+            if name in plans:
+                text = question_plan_source(text)
             if len(text) > 24000:
                 raise ValueError("Referenced source exceeds question limit; use /discuss")
             sources[name] = text
@@ -94,7 +118,7 @@ Return the required JSON, copying request identity and mode exactly.
 """
         if context["mode"] == "question":
             sources, skipped = question_sources(job, context)
-            prompt += "\nUse only the following complete task context and selected source files. Do not use any tools. Keep the answer within 300 words. Other source files were not inspected.\n"
+            prompt += "\nUse only the following complete task context and selected source content. Managed plan sources replace their encoded state footer with an explicit omission notice; their full visible text and its original line numbers are preserved. The encoded state was not supplied; if it is needed, suggest /discuss. Other selected files are complete. Do not use any tools. Keep the answer within 300 words. Other source files were not inspected.\n"
             prompt += json.dumps(
                 {
                     "context": context,

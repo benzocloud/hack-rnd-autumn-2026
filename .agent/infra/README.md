@@ -1,10 +1,11 @@
 # Agent infrastructure
 
 Status **2026-10-22**: Codex Plus runner installed on `runner.brokebyte.me`.
-[PR #7](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/7) merged as
-`de30157eb3ca8e296c3cb06b0b9335e57009434b`; matching conversation/staged-plan
-adapters and the workflow profile from `24af4e55ea097496bef3cea71350eb344c4a7867`
-are installed. All agent workflows are enabled; live checks and remaining limits
+Conversation/staged-plan support from
+[PR #7](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/7) is installed.
+Current adapters and profile match [PR #10](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/10)
+merge `75ba614ba204ef6524a3ac5b719d28949db87fac`; Russian review messages were
+verified through GitHub in PR #11. All agent workflows are enabled; live checks and remaining limits
 are recorded below. GBrain is deferred. Fadwix containers, config, networks, ports,
 Docker and kernel settings were not changed; no reboot was performed.
 
@@ -67,6 +68,17 @@ are deployed with the same `runner/`, `review/`, `planning/`, `conversation/` bo
   source links and measured CLI token usage when present. Both use the common
   Plus Codex/ChatGPT Work quota; no separate free ChatGPT Chat mode is claimed.
   Conversation publishers have only contents read and comment write permissions.
+
+Local follow-up, not deployed: `/question` supplies the complete visible text of
+a managed plan without its encoded state footer, after checking that the state
+reproduces the original Markdown exactly. The omission is marked in the source
+excerpt and disclosed in the published reply. Visible line numbers and the
+original file are preserved; legacy plans stay unchanged. Invalid/missing state,
+a plan beyond the existing 128 KiB file bound, visible content over 24,000
+characters or total selected source over 80,000 JSON characters still fail with
+`/discuss` suggested. No tools, model fallback, protocol fields or write authority
+are added. Update the conversation worker and publisher together before claiming
+this projection is active; only local mocked inference tests have passed.
 
 GitHub-hosted context jobs use read tokens. The fixed SSH invocation receives
 no GitHub token. A separate GitHub-hosted publisher has only the write permissions
@@ -157,7 +169,7 @@ Create a dedicated Ed25519 key locally; copy **only its public key** to a privat
 root staging directory on the runner. Pass that public key to the installer:
 
 ```sh
-ssh root@runner.brokebyte.me 'python3 /root/hackrnd-rollout-24af4e55ea097496bef3cea71350eb344c4a7867/candidate/.agent/infra/runner/install-workflow.py /root/hackrnd-bootstrap/review-key.pub'
+ssh root@runner.brokebyte.me 'python3 /root/hackrnd-language-75ba614ba204ef6524a3ac5b719d28949db87fac/full-candidate/.agent/infra/runner/install-workflow.py /root/hackrnd-bootstrap/review-key.pub'
 ```
 
 The installer updates root-owned adapters, scoped sudoers, key restriction,
@@ -175,7 +187,7 @@ and back up the prior root-owned adapters/profile for rollback. The new dispatch
 allowlist has six fixed commands; the four-command pilot was the
 previous state. Verify selected model access, shell-tool exclusion and source
 read/auth denial as the unprivileged user before publishing test commands.
-The versioned staging path above is the verified PR #7 bundle, not a moving
+The versioned staging path above is the verified PR #10 bundle, not a moving
 checkout. Stage future versions separately and coordinate both protocol sides.
 The live rollout below used the existing public key and preserved Plus auth.
 
@@ -347,12 +359,23 @@ retained as evidence. The merge push ran only infrastructure CI, successfully,
 without model analysis. All three agent workflows were re-enabled. These manual
 inference checks consumed subscription usage; the 85 local/CI unit tests did not.
 
+The subsequent PR #10 language update replaced only `review/ssh_review.py` and
+`planning/plan_policy.py` under the same lock, with atomic file replacement and
+backups in `/root/hackrnd-language-75ba614ba204ef6524a3ac5b719d28949db87fac/`.
+The remaining adapters/profile stayed unchanged; all installed hashes match that
+revision. [Test PR #11](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/11#issuecomment-6350051001)
+verified Russian start/final labels and model-written checks/limitations in the
+same edited comment. Its review workflow passed; the report was static and the
+test PR had no CI checks. The PR was closed without merge and its disposable
+branch deleted. No service restart or Fadwix changes were needed.
+
 Observed limits still require follow-up: the initial model report cited worker
 `context.json` as a repository file, producing an invalid link; a requested plan
 amendment removed it, but the formatter does not verify source existence. Also,
 the initial one-stage plan occupied 35,989 characters including encoded state,
 exceeding `/question`'s 24,000-character per-file bound. That guard was reproduced
-without inference; use `/discuss` for such plans until metadata handling improves.
+without inference; the local follow-up above addresses this metadata overhead.
+Until it is deployed, use `/discuss` for such plans.
 The live static reviewer also disclosed denied `rg` execution and the absence of
 the trusted root copy of `local-development.md`; it used read-only inspection.
 
