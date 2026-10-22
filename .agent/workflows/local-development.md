@@ -4,10 +4,20 @@
 2. Fetch GitHub Issue (scope, acceptance criteria, comments, dependencies, linked PRs).
 3. Query GBrain for relevant findings when configured/available; verify against current code and accepted decisions. If disabled/unavailable, disclose that and continue without shared memory (ADR-010).
 4. Check existing branches/PRs and contract dependencies. For Go services, consult `.agent/references/go-services.md` and name the applicable reference/pattern in the plan; disclose unavailable local reference checkouts.
-5. Present a plan: scope, touched files, API/proto changes, tests, risks, unresolved questions. Wait for developer approval unless autonomy explicitly requested.
+5. Present a staged plan under `.agent/workflows/issue-planning.md`: objective, current state, accepted decisions, scope, touched files, API/proto changes, dependencies, checks, completion criteria, risks and unresolved questions. A small fix may use one stage. Wait for developer approval unless autonomy explicitly requested; general plan approval does not remove stage review gates (ADR-020).
 6. Implement in dedicated branch/worktree; run relevant tests, lint and Buf checks.
    For Python, run `ruff check .` and `ruff format --check .` with the pinned
    tooling from `.agent/infra/requirements-dev.txt`; setup is in the infra README.
+   Work on the current agreed stage only. After its implementation/checks, report
+   results and limitations, mark it as awaiting developer review, and stop for
+   developer review and explicit approval before starting the next stage. Only
+   approval marks it accepted. The exception is a developer-approved plan or
+   trusted task instruction that clearly defers developer review until all stages
+   are complete, based on its meaning and context rather than an exact phrase or
+   language; then retain per-stage reporting and stop for developer review after
+   all stages. Do not add this exception yourself.
+   Agree new requirements/scope changes before implementation. Neither stage
+   approval nor deferred review implicitly authorizes commit/push/merge/deployment.
 7. Record useful verified findings with Issue/PR/commit provenance if permitted.
 8. Follow `.agent/workflows/git-conventions.md` for commit messages and publication. Developer decides when to push and open PR. After review, validate and fix findings; push updated SHA.
 

@@ -1,9 +1,9 @@
 # Agent infrastructure
 
 Status **2026-10-22**: Codex Plus runner installed on `runner.brokebyte.me`;
-The initial infrastructure PR has been merged into `main`. The extension in
-`globalarray/chore/improve_agent_workflows` (optional Issue, full discussion,
-editable progress report and descriptive runner branches) is not yet published. GBrain is deferred. Fadwix containers, config, networks, ports,
+The infrastructure and subsequent workflow extensions have been merged into
+`main`. The new conversation commands and staged-plan protocol described below are implemented locally;
+their matching runner adapters/profile have not been deployed. GBrain is deferred. Fadwix containers, config, networks, ports,
 Docker and kernel settings were not changed; no reboot was performed.
 
 ## Responsibility boundaries
@@ -14,13 +14,14 @@ Docker and kernel settings were not changed; no reboot was performed.
 | `runner/` | Restricted SSH, resource limits, sandbox, shared inference and transport | `install-workflow.py`, `review_dispatch.py`, `job.py`, `github_api.py`, `prepare-review.py` |
 | `review/` | PR context, skill routing, report validation and advisory publication | `github_review.py`, `ssh_review.py`, `review_policy.py`, `smoke-review.py` |
 | `planning/` | Issue assessment and plan-only branch/PR lifecycle | `github_plan.py`, `ssh_plan.py`, `plan_policy.py` |
+| `conversation/` | Read-only Issue/PR questions, context and replies | `github_conversation.py`, `ssh_conversation.py`, `conversation_policy.py` |
 | `skills/` | Pinned upstream instruction sources and installation | `install-skills.py`, `skills.json` |
 | `gbrain/` | Deferred memory service, credentials, backup and timer | `configure.py`, `backup.py`, `hackrnd-gbrain*` units |
 | `tests/` | Safety and protocol regression checks | `test_*.py` |
 
 GitHub events and job permissions belong in `.github/workflows/`; human/agent
 policy belongs in `.agent/workflows/` and accepted decisions. Runtime adapters
-are deployed with the same `runner/`, `review/`, `planning/` boundaries under
+are deployed with the same `runner/`, `review/`, `planning/`, `conversation/` boundaries under
 `/opt/hackrnd-agent/`. Binaries/releases and pinned skill sources remain under
 `bin/`, `releases/`, `skill-sources/`. Mutable state belongs only in private
 `/var/lib/hackrnd-review/` and future `/var/lib/hackrnd-gbrain/`.
@@ -42,13 +43,28 @@ are deployed with the same `runner/`, `review/`, `planning/` boundaries under
   that comment with the report or a failure/cancellation status and Actions link,
   including when analysis or artifact retrieval fails.
   Exact `/create-plan` in the Issue creates `runner/fix/<short_description>/issue_N` with only
-  `.agent/plans/issue-N-fix.md` and a draft PR. `/discuss-plan <changes>` in that
-  managed PR revises only the plan. Both commands require a human with write,
+  `.agent/plans/issue-N-fix.md` and a draft PR. `/discuss Поправь план: <changes>` in that
+  managed PR revises only the plan and edits one progress comment with its outcome. Both commands require a human with write,
   maintain or admin permission. No implementation, approval, merge or deployment.
   Plan PRs use `Refs #N`, avoiding automatic Issue closure when a plan merges.
-  Plan commits use `chore:` under `.agent/workflows/git-conventions.md`.
+  Plan commits and draft PR titles use `feat:` with the Issue number and a short
+  English fix description under `.agent/workflows/git-conventions.md`. Commit
+  bodies identify the requester/command and link directly to the originating
+  Issue/PR comment via `Request:`; the same link guards against duplicate commits.
 - `infra-checks.yml`: run stdlib safety tests for infrastructure changes on
   pushes/PRs. Application Go/Python/frontend/Buf CI awaits actual project code.
+- `agent-conversation.yml`: `/question <question>` and ordinary `/discuss <message>`
+  in open Issues/same-repository PRs. Read descriptions, all conversation/review/
+  inline comments/replies and directly linked Issues, with complete pagination.
+  Recheck source and discussion before editing the original progress comment.
+  `/question` selects `gpt-6-luna`/low and supplies bounded context/source in the
+  prompt with shell tools disabled; tool-use events invalidate the answer.
+  `/discuss` selects `gpt-6.1-sol`/low for read-only source inspection. Its explicit
+  managed-plan amendments route exclusively through `issue-planning.yml`.
+  The old plan-specific slash command is removed. Replies include SHA-bound
+  source links and measured CLI token usage when present. Both use the common
+  Plus Codex/ChatGPT Work quota; no separate free ChatGPT Chat mode is claimed.
+  Conversation publishers have only contents read and comment write permissions.
 
 GitHub-hosted context jobs use read tokens. The fixed SSH invocation receives
 no GitHub token. A separate GitHub-hosted publisher has only the write permissions
@@ -149,6 +165,16 @@ Store the private key in GitHub `AGENT_REVIEW_SSH_KEY`, and a host key verified
 through a trusted channel in `AGENT_REVIEW_KNOWN_HOSTS`. Never commit private
 keys, tokens or OAuth state. Never use an unverified keyscan as the trust source.
 
+For the conversation rollout, install `conversation/`, updated `runner/job.py`,
+`runner/review_dispatch.py`, the permission profile and both planning adapters
+together, before enabling the new default-branch workflows. Use the existing
+public key; hold `/var/lib/hackrnd-review/review.lock` while updating adapters,
+and back up the prior root-owned adapters/profile for rollback. The new dispatcher
+allowlist has six fixed commands; the four-command installed pilot above is the
+previous state. Verify selected model access, shell-tool exclusion and source
+read/auth denial as the unprivileged user before publishing test commands.
+No live rollout or inference with the new conversation workers is claimed yet.
+
 ## Pins and source references
 
 `bootstrap/versions.json` pins release URLs/archive SHA-256; `skills/skills.json`
@@ -217,6 +243,74 @@ then rehearse scope, plan creation, discussion and review on test objects.
 
 ## Checks, remaining activation and rollback
 
+### Staged-plan protocol: local verification and coordinated rollout
+
+Scope assessments keep the compact `steps` report. Plan creation and amendments
+require `stages` and `review_mode`, with numbered stages, dependencies, affected
+files, proposed actions/checks and completion criteria. New stages are unstarted;
+the default requires developer review after each implementation stage. Checks in
+generated plans are proposals, never evidence that tests ran.
+
+The plan Markdown includes a versioned structured-state footer. Amendments read
+it from the fixed plan path at the authorized PR head, preserve stage history
+and review mode, and reject model-invented status changes. The publisher fetches
+the same Git file again before writing; a substituted artifact cannot authorize
+different history. Rendered text and state must agree. A manual prose-only edit
+does not update structured state and stops the next automatic amendment; repair
+both together rather than removing metadata to bypass validation. A separate
+format marker and stage headings distinguish structured plans from legacy text:
+losing the state footer stops revision rather than resetting accepted stages.
+Model-provided text is escaped, multiline list items remain inside their parent
+item, and stage titles/results must be single lines. Source references stay
+clickable; model text cannot introduce checked tasks or additional headings.
+Legacy plans
+without structured state migrate with unstarted stages and per-stage review.
+New status approvals and review-mode changes are not inferred from comments;
+only previously recorded Git state is carried forward. This is not an automated
+implementation or developer-approval system.
+
+The report remains bounded at 45,000 JSON characters; the fixed Markdown file
+limit is 128 KiB to accommodate rendered text and structured state. No second
+repository file or external state database is added.
+
+Local adapter-cycle tests cover creation, revision, preservation of a previously
+recorded final-review mode and accepted stage, duplicate plan detection without
+another model invocation, and rejection of changed source before Git writes.
+GitHub HTTP, SSH transport, model inference and the worker workspace are mocked;
+these tests do not prove Linux sandboxing, installed adapters, model access or
+live GitHub publication. Real HTTP and subprocess calls are blocked in the cycle
+tests. Ordinary infrastructure CI on push runs only unit tests and lint, without
+model tokens. The separate manually run model fixture does consume usage.
+
+Activation requires a separate approved rollout:
+
+1. Suspend the three agent workflows during the protocol transition; ordinary
+   infrastructure CI can continue. Record current publisher/runner revisions and
+   back up the root-owned adapters and profile.
+2. Update `planning/plan_policy.py` and `planning/ssh_plan.py` on the runner under
+   the existing review lock, together with the conversation adapters/profile
+   required above. The GitHub side needs matching `planning/github_plan.py` and
+   `planning/plan_policy.py`. Old and new plan response formats are intentionally
+   incompatible; do not leave one side active with the other version.
+3. Before re-enabling commands, verify the synchronized revisions, fixed command
+   routing and existing auth/sandbox boundaries as the unprivileged reviewer.
+   Any real inference checks consume model quota and remain manual.
+4. Rehearse a disposable Issue, plan creation, a plan amendment and explicit PR
+   review. Confirm stage formatting, the same plan path/branch, one amended status
+   comment and exact source links. Verify a push does not start model analysis.
+   Re-enable normal requests only after the real results are inspected.
+
+No such rollout or live rehearsal has been performed for this change. ADR-021's
+shared Issue/PR dialogue and Issue closure after publishing a plan PR link are
+accepted follow-up work, not implemented by the staged-plan protocol. Fadwix,
+GBrain, Docker and host-wide settings are outside this rollout.
+
+If activation fails, leave agent workflows suspended and restore both the prior
+GitHub orchestration and the corresponding runner adapters/profile together.
+Keep already generated plans and diagnose protocol/state mismatches; an older
+adapter does not automatically understand new structured state. Do not delete
+stage history to make a rollback appear successful.
+
 Install the pinned development tools in a local virtual environment:
 
 ```sh
@@ -254,7 +348,8 @@ rehearsal; required CI/human branch rules; Plus renewal/quota/revocation and sus
 operation. Do not equate local or SSH fixture tests with deployed GitHub behavior.
 No auto merge/deploy is included.
 
-Rollback: disable only the two model workflows; revoke the dedicated SSH key and
+Rollback: disable only the three agent workflows (`agent-review.yml`,
+`issue-planning.yml`, `agent-conversation.yml`); revoke the dedicated SSH key and
 remove only `/etc/sudoers.d/hackrnd-agent-review` to stop new jobs. Stop this
 installation's `hackrnd-review-*` transient units if necessary. Preserve state.
 Log out Codex as the review identity if revoking the session. Remove only its

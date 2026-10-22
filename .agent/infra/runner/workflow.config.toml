@@ -34,3 +34,14 @@ extends = "agent-review"
 
 [permissions.agent-review-ml.filesystem]
 "/opt/hackrnd-agent/skill-sources/cc-skills-golang" = "deny"
+
+# Question context is supplied in the prompt; commands cannot read task files.
+[permissions.agent-question.filesystem]
+":root" = "deny"
+":minimal" = "read"
+"/var/lib/hackrnd-review/.codex" = "deny"
+"/run" = "deny"
+"/proc" = "deny"
+
+[permissions.agent-question.network]
+enabled = false

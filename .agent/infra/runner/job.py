@@ -106,7 +106,7 @@ def load_skills(job, required):
     return receipts
 
 
-def infer(job, schema, prompt, ml=False):
+def infer(job, schema, prompt, ml=False, model=None, reasoning=None, question=False):
     (job / "report.schema.json").write_text(json.dumps(schema))
     command = [
         "/opt/hackrnd-agent/bin/codex",
@@ -121,8 +121,15 @@ def infer(job, schema, prompt, ml=False):
         "--output-last-message",
         str(job / "report.json"),
     ]
+    if model is not None:
+        command += ["--model", model]
+    if reasoning is not None:
+        command += ["-c", "model_reasoning_effort=" + json.dumps(reasoning)]
+    if question:
+        command += ["--disable", "shell_tool", "-c", 'default_permissions="agent-question"']
     if ml:
-        command += ["-c", 'default_permissions="agent-review-ml"']
+        if not question:
+            command += ["-c", 'default_permissions="agent-review-ml"']
         paths = [p for p in (HOME / ".agents/skills").iterdir() if p.name.startswith("golang-")]
         entries = ",".join(
             "{path=" + json.dumps(str(p / "SKILL.md")) + ",enabled=false}" for p in paths
@@ -150,4 +157,14 @@ def infer(job, schema, prompt, ml=False):
     if result.returncode:
         shutil.copyfile(job / "stderr.log", HOME / "checks/last-workflow-error.log")
         raise RuntimeError("Codex failed; no valid report was produced")
+    if question:
+        for line in (job / "events.jsonl").read_text().splitlines():
+            event = json.loads(line)
+            item = event.get("item", {})
+            if event.get("type") in ("item.started", "item.completed") and item.get("type") not in (
+                "agent_message",
+                "reasoning",
+                "plan",
+            ):
+                raise ValueError("Question invoked a tool; refusing an agentic answer")
     return json.loads((job / "report.json").read_text())

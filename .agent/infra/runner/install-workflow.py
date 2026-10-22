@@ -30,6 +30,7 @@ def main():
         "review": ("ssh_review.py", "review_policy.py"),
         "runner": ("review_dispatch.py", "job.py"),
         "planning": ("ssh_plan.py", "plan_policy.py"),
+        "conversation": ("ssh_conversation.py", "conversation_policy.py"),
     }.items():
         target_dir = root / directory
         target_dir.mkdir(exist_ok=True)
