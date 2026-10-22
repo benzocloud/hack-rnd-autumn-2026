@@ -13,13 +13,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "runner"))
 from github_api import REPOSITORY, GitHub, event, invoke_json, pull_request_discussion
 from plan_policy import (
+    PLAN_FILE_LIMIT,
     command,
     fingerprint,
     identity,
     is_plan_branch,
     render,
     validate_context,
-    validate_report,
+    validate_response,
 )
 
 MARKER = re.compile(r"<!-- agent-plan:issue=(\d+) -->")
@@ -189,6 +190,16 @@ def managed_prs(api, number):
     return plans
 
 
+def existing_plan(api, pr, path):
+    content = api.request(f"/contents/{path}?ref={pr['head']['sha']}")
+    if content.get("encoding") != "base64" or content.get("size", 0) > PLAN_FILE_LIMIT:
+        raise ValueError("Unsupported plan file")
+    markdown = base64.b64decode(content["content"], validate=False).decode()
+    if len(markdown.encode()) > PLAN_FILE_LIMIT:
+        raise ValueError("Unsupported plan file")
+    return markdown
+
+
 def prepare():
     api, payload = GitHub(), event()
     request = selected(api, payload)
@@ -205,10 +216,7 @@ def prepare():
         return
     if pr:
         sha = pr["head"]["sha"]
-        content = api.request(f"/contents/{path}?ref={sha}")
-        if content.get("encoding") != "base64" or content.get("size", 0) > 60000:
-            raise ValueError("Unsupported plan file")
-        existing = base64.b64decode(content["content"], validate=False).decode()
+        existing = existing_plan(api, pr, path)
     context = {
         "repository": REPOSITORY,
         "mode": mode,
@@ -270,7 +278,7 @@ def invoke():
     context = json.loads(Path("context.json").read_text())
     validate_context(context)
     report = invoke_json("agent-" + context["mode"])
-    validate_report(report, context)
+    validate_response(report, context)
     Path("plan-result.json").write_text(json.dumps({"context": context, "report": report}))
 
 
@@ -341,7 +349,7 @@ def publish():
 def publish_result(api, payload):
     package = json.loads(Path("plan-result.json").read_text())
     context, report = package["context"], package["report"]
-    validate_report(report, context)
+    validate_response(report, context)
     request = selected(api, payload)
     if request is None:
         raise ValueError("Request no longer authorized")
@@ -365,6 +373,8 @@ def publish_result(api, payload):
         "source_sha"
     ] or base_branch != context["base_branch"]:
         raise ValueError("Source changed; request a fresh plan")
+    if pr and existing_plan(api, pr, path) != context["existing_plan"]:
+        raise ValueError("Saved plan state changed; discard stale plan")
     markdown = render(report, context)
     marker = f"<!-- agent-plan-request:{mode}:{request_id} -->"
     destination = pr["number"] if pr else issue["number"]

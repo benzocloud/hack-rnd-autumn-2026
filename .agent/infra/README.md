@@ -2,7 +2,7 @@
 
 Status **2026-10-22**: Codex Plus runner installed on `runner.brokebyte.me`;
 The infrastructure and subsequent workflow extensions have been merged into
-`main`. The new conversation commands described below are implemented locally;
+`main`. The new conversation commands and staged-plan protocol described below are implemented locally;
 their matching runner adapters/profile have not been deployed. GBrain is deferred. Fadwix containers, config, networks, ports,
 Docker and kernel settings were not changed; no reboot was performed.
 
@@ -243,6 +243,74 @@ then rehearse scope, plan creation, discussion and review on test objects.
 
 ## Checks, remaining activation and rollback
 
+### Staged-plan protocol: local verification and coordinated rollout
+
+Scope assessments keep the compact `steps` report. Plan creation and amendments
+require `stages` and `review_mode`, with numbered stages, dependencies, affected
+files, proposed actions/checks and completion criteria. New stages are unstarted;
+the default requires developer review after each implementation stage. Checks in
+generated plans are proposals, never evidence that tests ran.
+
+The plan Markdown includes a versioned structured-state footer. Amendments read
+it from the fixed plan path at the authorized PR head, preserve stage history
+and review mode, and reject model-invented status changes. The publisher fetches
+the same Git file again before writing; a substituted artifact cannot authorize
+different history. Rendered text and state must agree. A manual prose-only edit
+does not update structured state and stops the next automatic amendment; repair
+both together rather than removing metadata to bypass validation. A separate
+format marker and stage headings distinguish structured plans from legacy text:
+losing the state footer stops revision rather than resetting accepted stages.
+Model-provided text is escaped, multiline list items remain inside their parent
+item, and stage titles/results must be single lines. Source references stay
+clickable; model text cannot introduce checked tasks or additional headings.
+Legacy plans
+without structured state migrate with unstarted stages and per-stage review.
+New status approvals and review-mode changes are not inferred from comments;
+only previously recorded Git state is carried forward. This is not an automated
+implementation or developer-approval system.
+
+The report remains bounded at 45,000 JSON characters; the fixed Markdown file
+limit is 128 KiB to accommodate rendered text and structured state. No second
+repository file or external state database is added.
+
+Local adapter-cycle tests cover creation, revision, preservation of a previously
+recorded final-review mode and accepted stage, duplicate plan detection without
+another model invocation, and rejection of changed source before Git writes.
+GitHub HTTP, SSH transport, model inference and the worker workspace are mocked;
+these tests do not prove Linux sandboxing, installed adapters, model access or
+live GitHub publication. Real HTTP and subprocess calls are blocked in the cycle
+tests. Ordinary infrastructure CI on push runs only unit tests and lint, without
+model tokens. The separate manually run model fixture does consume usage.
+
+Activation requires a separate approved rollout:
+
+1. Suspend the three agent workflows during the protocol transition; ordinary
+   infrastructure CI can continue. Record current publisher/runner revisions and
+   back up the root-owned adapters and profile.
+2. Update `planning/plan_policy.py` and `planning/ssh_plan.py` on the runner under
+   the existing review lock, together with the conversation adapters/profile
+   required above. The GitHub side needs matching `planning/github_plan.py` and
+   `planning/plan_policy.py`. Old and new plan response formats are intentionally
+   incompatible; do not leave one side active with the other version.
+3. Before re-enabling commands, verify the synchronized revisions, fixed command
+   routing and existing auth/sandbox boundaries as the unprivileged reviewer.
+   Any real inference checks consume model quota and remain manual.
+4. Rehearse a disposable Issue, plan creation, a plan amendment and explicit PR
+   review. Confirm stage formatting, the same plan path/branch, one amended status
+   comment and exact source links. Verify a push does not start model analysis.
+   Re-enable normal requests only after the real results are inspected.
+
+No such rollout or live rehearsal has been performed for this change. ADR-021's
+shared Issue/PR dialogue and Issue closure after publishing a plan PR link are
+accepted follow-up work, not implemented by the staged-plan protocol. Fadwix,
+GBrain, Docker and host-wide settings are outside this rollout.
+
+If activation fails, leave agent workflows suspended and restore both the prior
+GitHub orchestration and the corresponding runner adapters/profile together.
+Keep already generated plans and diagnose protocol/state mismatches; an older
+adapter does not automatically understand new structured state. Do not delete
+stage history to make a rollback appear successful.
+
 Install the pinned development tools in a local virtual environment:
 
 ```sh
@@ -280,7 +348,8 @@ rehearsal; required CI/human branch rules; Plus renewal/quota/revocation and sus
 operation. Do not equate local or SSH fixture tests with deployed GitHub behavior.
 No auto merge/deploy is included.
 
-Rollback: disable only the two model workflows; revoke the dedicated SSH key and
+Rollback: disable only the three agent workflows (`agent-review.yml`,
+`issue-planning.yml`, `agent-conversation.yml`); revoke the dedicated SSH key and
 remove only `/etc/sudoers.d/hackrnd-agent-review` to stop new jobs. Stop this
 installation's `hackrnd-review-*` transient units if necessary. Preserve state.
 Log out Codex as the review identity if revoking the session. Remove only its

@@ -1,5 +1,6 @@
 """Issue-to-plan protocol: no source implementation or arbitrary write paths."""
 
+import base64
 import hashlib
 import json
 import re
@@ -50,8 +51,8 @@ STAGE_SCHEMA = {
     "additionalProperties": False,
     "properties": {
         "number": {"type": "integer", "minimum": 1},
-        "title": {"type": "string", "minLength": 1, "maxLength": 3000},
-        "result": {"type": "string", "minLength": 1, "maxLength": 3000},
+        "title": {"type": "string", "minLength": 1, "maxLength": 3000, "pattern": r"^[^\r\n]+$"},
+        "result": {"type": "string", "minLength": 1, "maxLength": 3000, "pattern": r"^[^\r\n]+$"},
         "status": {"type": "string", "enum": list(STAGE_STATUSES)},
         "depends_on": {"type": "array", "items": {"type": "integer", "minimum": 1}, "maxItems": 40},
         **{
@@ -68,8 +69,7 @@ STAGE_SCHEMA = {
 }
 STAGE_SCHEMA["properties"]["affected_files"]["items"]["pattern"] = r"^[^\s]+$"
 
-# Expand first: the active SSH/Markdown protocol keeps SCHEMA until stage 2
-# connects both readers and writers to this staged format together.
+# Scope assessments retain the compact schema; generated plans use stages.
 STAGED_SCHEMA = json.loads(json.dumps(SCHEMA))
 del STAGED_SCHEMA["properties"]["steps"]
 STAGED_SCHEMA["properties"].update(
@@ -82,6 +82,10 @@ STAGED_SCHEMA["required"] = [name for name in SCHEMA["required"] if name != "ste
     "review_mode",
     "stages",
 ]
+
+PLAN_STATE_PREFIX = "<!-- agent-plan-state:v1:"
+PLAN_FORMAT_MARKER = "<!-- agent-plan-format:v1 -->"
+PLAN_FILE_LIMIT = 128 * 1024
 
 SOURCE_REFERENCE = re.compile(
     r"(?P<link>\[[^\]\n]*\]\([^\n)]*\))"
@@ -292,6 +296,8 @@ def _validate_staged_shape(report, context):
         for key in ("title", "result"):
             if not isinstance(stage[key], str) or not stage[key].strip() or len(stage[key]) > 3000:
                 raise ValueError("Stage title and result must be nonempty text")
+            if stage[key].splitlines() != [stage[key]]:
+                raise ValueError("Stage title and result must be single lines")
         dependencies = stage["depends_on"]
         if (
             not isinstance(dependencies, list)
@@ -376,8 +382,71 @@ def source_links(text, sha):
     return SOURCE_REFERENCE.sub(replace, text)
 
 
+def previous_plan(context):
+    """Read structured state from the fixed Git file, never from discussion text.
+
+    The GitHub publisher must re-fetch the same file at the authorized PR head
+    before using this state. The worker cannot authorize a new mode or progress.
+    Legacy Markdown has no trusted progress and migrates to unstarted stages.
+    """
+    if context["mode"] != "discuss-plan":
+        return None
+    markdown = context["existing_plan"]
+    match = re.search(r"\n<!-- agent-plan-state:v1:([A-Za-z0-9+/=]+) -->\n?\Z", markdown)
+    if match is None:
+        if (
+            PLAN_STATE_PREFIX in markdown
+            or PLAN_FORMAT_MARKER in markdown
+            or re.search(r"(?m)^## Этап [1-9][0-9]* — ", markdown)
+        ):
+            raise ValueError("Missing or invalid stored plan state")
+        return None
+    try:
+        report = json.loads(base64.b64decode(match[1], validate=True))
+    except (ValueError, UnicodeDecodeError) as error:
+        raise ValueError("Invalid stored plan state") from error
+    if not isinstance(report, dict) or not isinstance(report.get("source_sha"), str):
+        raise ValueError("Invalid stored plan state")
+    prior_context = {**context, "source_sha": report["source_sha"]}
+    validate_staged_report(
+        report,
+        prior_context,
+        previous_plan=report,
+        approved_review_mode=report.get("review_mode"),
+    )
+    if render_staged_plan(report) != markdown:
+        raise ValueError("Stored plan text and structured state disagree")
+    return report
+
+
+def report_schema(context):
+    if context["mode"] == "scope":
+        return json.loads(json.dumps(SCHEMA))
+    previous = previous_plan(context)
+    schema = json.loads(json.dumps(STAGED_SCHEMA))
+    schema["properties"]["review_mode"]["enum"] = [
+        previous["review_mode"] if previous else "per-stage"
+    ]
+    return schema
+
+
+def validate_response(report, context):
+    if context["mode"] == "scope":
+        validate_report(report, context)
+        return
+    previous = previous_plan(context)
+    validate_staged_report(
+        report,
+        context,
+        previous_plan=previous,
+        approved_review_mode=previous["review_mode"] if previous else "per-stage",
+    )
+
+
 def render(report, context):
-    validate_report(report, context)
+    validate_response(report, context)
+    if context["mode"] != "scope":
+        return render_staged_plan(report)
     lines = [
         f"# План исправления Issue #{context['issue_number']}",
         source_links(report["summary"], report["source_sha"]),
@@ -401,3 +470,104 @@ def render(report, context):
             or "Нет.",
         ]
     return "\n\n".join(lines) + "\n"
+
+
+def plan_text(text, sha):
+    """Render model text literally, keeping generated source references as links."""
+
+    def escape(value):
+        return re.sub(r"([\\`*_{}\[\]()#+.!<>|~=-])", r"\\\1", value)
+
+    text = "\n".join(text.splitlines())
+    result, cursor = [], 0
+    for match in SOURCE_REFERENCE.finditer(text):
+        result.append(escape(text[cursor : match.start()]))
+        if match.group("link"):
+            link = re.fullmatch(r"\[([^\]\n]*)\]\((https?://[^\s<>]+)\)", match[0])
+            result.append(
+                f"[{escape(link[1])}]({quote(link[2], safe='/:#?&=%+-._~')})"
+                if link
+                else escape(match[0])
+            )
+        else:
+            linked = source_links(match[0], sha)
+            result.append(linked if linked != match[0] else escape(match[0]))
+        cursor = match.end()
+    result.append(escape(text[cursor:]))
+    return "".join(result)
+
+
+def render_staged_plan(report):
+    sha = report["source_sha"]
+
+    def items(values, checklist=False):
+        prefix = "- [ ] " if checklist else "- "
+        return (
+            "\n".join(prefix + plan_text(value, sha).replace("\n", "\n    ") for value in values)
+            or "Нет."
+        )
+
+    after_all = report["review_mode"] == "after-all"
+    review = (
+        "После всех этапов — остановка для итогового ревью и апрува разработчика."
+        if after_all
+        else "После каждого этапа — остановка до ревью и явного апрува разработчика."
+    )
+    lines = [
+        f"# План исправления Issue #{report['issue_number']}",
+        PLAN_FORMAT_MARKER,
+        "## Цель",
+        plan_text(report["summary"], sha),
+        "Статус плана: "
+        + ("готов к обсуждению." if report["status"] == "ready" else "нужны уточнения."),
+        "Режим ревью: " + review,
+        "План не запускает реализацию. Перечисленные действия и проверки предложены, "
+        "а не выполнены. GBrain недоступен; анализ статический, тесты не запускались.",
+        "## Текущее состояние и исходники",
+        f"Исходники: [`{sha}`](https://github.com/{REPOSITORY}/commit/{sha}).",
+        items(report["evidence"]),
+        "## Граница исправления",
+        items(report["in_scope"]),
+        "## Вне скоупа",
+        items(report["out_of_scope"]),
+        "## Затрагиваемые файлы",
+        items(report["affected_files"]),
+    ]
+    for stage in report["stages"]:
+        dependencies = ", ".join(f"этап {n}" for n in stage["depends_on"]) or "отсутствуют"
+        lines += [
+            f"## Этап {stage['number']} — " + plan_text(stage["title"], sha),
+            f"Статус: {stage['status']}.",
+            "Результат: " + plan_text(stage["result"], sha),
+            "Зависимости: " + dependencies + ".",
+            "### Внешние зависимости",
+            items(stage["external_dependencies"]),
+            "### Затрагиваемые файлы",
+            items(stage["affected_files"]),
+            "### Предлагаемые действия",
+            items(stage["actions"], checklist=True),
+            "### Предлагаемые проверки",
+            items(stage["checks"], checklist=True),
+            "### Критерии завершения",
+            items(stage["acceptance"]),
+            "Точка ревью: "
+            + (
+                "после всех этапов; до итогового апрува этап остаётся на ревью."
+                if after_all
+                else "остановиться после этапа до ревью и явного апрува разработчика."
+            ),
+        ]
+    lines += [
+        "## Общие критерии приёмки",
+        items(report["acceptance"]),
+        "## Риски",
+        items(report["risks"]),
+        "## Открытые вопросы",
+        items(report["questions"]),
+        "Апрув этапа не разрешает коммит, отправку изменений, слияние или развёртывание.",
+    ]
+    state = base64.b64encode(json.dumps(report).encode()).decode()
+    markdown = "\n\n".join(lines) + f"\n\n{PLAN_STATE_PREFIX}{state} -->\n"
+    if len(markdown.encode()) > PLAN_FILE_LIMIT:
+        raise ValueError("Rendered plan exceeds file limit")
+    return markdown

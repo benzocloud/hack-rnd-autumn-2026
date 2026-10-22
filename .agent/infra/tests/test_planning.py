@@ -62,6 +62,29 @@ def report():
     }
 
 
+def plan_report():
+    value = report()
+    del value["steps"]
+    return {
+        **value,
+        "review_mode": "per-stage",
+        "stages": [
+            {
+                "number": 1,
+                "title": "Handle empty predictions",
+                "result": "Empty input returns an empty result",
+                "status": "Не начат",
+                "depends_on": [],
+                "external_dependencies": [],
+                "affected_files": ["ml/predict.py"],
+                "actions": ["Add an empty-input guard"],
+                "checks": ["Run the empty-input regression test"],
+                "acceptance": ["Empty input returns an empty result"],
+            }
+        ],
+    }
+
+
 class PlanningTests(unittest.TestCase):
     def setUp(self):
         environment = patch.dict(
@@ -140,7 +163,7 @@ class PlanningTests(unittest.TestCase):
             patch.dict(os.environ, {"SSH_ORIGINAL_COMMAND": "agent-discuss-plan"}),
             patch.object(ssh_plan.sys, "stdin") as stdin,
             patch.object(ssh_plan, "workspace", return_value=nullcontext(Path("unused"))),
-            patch.object(ssh_plan, "infer", return_value=report()) as infer,
+            patch.object(ssh_plan, "infer", return_value=plan_report()) as infer,
             redirect_stdout(io.StringIO()),
         ):
             stdin.buffer = io.BytesIO(json.dumps({"context": c}).encode())
@@ -447,6 +470,12 @@ class PlanningTests(unittest.TestCase):
                     raise urllib.error.HTTPError("https://api.github.com", 404, "Absent", {}, None)
                 if path.startswith("/git/commits/"):
                     return {"tree": {"sha": "b" * 40}, "message": existing_message}
+                if path.startswith("/contents/"):
+                    return {
+                        "encoding": "base64",
+                        "size": 8,
+                        "content": base64.b64encode(b"Old plan").decode(),
+                    }
                 raise AssertionError("Unexpected API read " + path)
 
         api = API()
@@ -458,7 +487,9 @@ class PlanningTests(unittest.TestCase):
             previous = Path.cwd()
             try:
                 os.chdir(folder)
-                Path("plan-result.json").write_text(json.dumps({"context": c, "report": report()}))
+                Path("plan-result.json").write_text(
+                    json.dumps({"context": c, "report": plan_report()})
+                )
                 with (
                     patch.object(github_plan, "GitHub", return_value=api),
                     patch.object(github_plan, "event", return_value=payload),
@@ -489,6 +520,10 @@ class PlanningTests(unittest.TestCase):
         tree = next(body for path, body, method in api.writes if path == "/git/trees")
         self.assertEqual(len(tree["tree"]), 1)
         self.assertEqual(tree["tree"][0]["path"], identity(7)[1])
+        self.assertIn("## Этап 1", tree["tree"][0]["content"])
+        self.assertIn("Статус: Не начат.", tree["tree"][0]["content"])
+        self.assertIn(r"- [ ] Run the empty\-input regression test", tree["tree"][0]["content"])
+        self.assertNotIn("- [x]", tree["tree"][0]["content"])
         if mode == "create-plan":
             request = next(body for path, body, method in api.writes if path == "/pulls")
             self.assertTrue(request["draft"])
