@@ -9,8 +9,8 @@ import sys
 import urllib.error
 import urllib.parse
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "runner"))
-from github_api import GitHub, REPOSITORY, event, invoke_json
-from plan_policy import command, fingerprint, identity, render, validate_context, validate_report
+from github_api import GitHub, REPOSITORY, event, invoke_json, pull_request_discussion
+from plan_policy import command, fingerprint, identity, is_plan_branch, render, validate_context, validate_report
 
 MARKER = re.compile(r"<!-- agent-plan:issue=(\d+) -->")
 
@@ -34,9 +34,9 @@ def selected(api, payload):
         if not match:
             raise ValueError("/discuss-plan requires a managed plan PR")
         number = int(match[1])
-        branch, path = identity(number)
+        _, path = identity(number)
         if (pr["state"] != "open" or pr["head"].get("repo", {}).get("full_name") != REPOSITORY
-                or pr["head"]["ref"] != branch):
+                or not is_plan_branch(pr["head"]["ref"], number)):
             raise ValueError("Only open same-repository managed plan PRs are accepted")
         files = api.pages(f"/pulls/{pr['number']}/files")
         if len(files) != 1 or files[0]["filename"] != path or pr["changed_files"] != 1:
@@ -65,9 +65,25 @@ def default_source(api):
 
 
 def managed_prs(api, number):
-    branch, _ = identity(number)
-    return [p for p in api.pages("/pulls?state=all&head=" + urllib.parse.quote(REPOSITORY.split('/')[0] + ':' + branch, safe=""))
-            if f"<!-- agent-plan:issue={number} -->" in (p.get("body") or "")]
+    identity(number)
+    candidates = set()
+    # Plan PRs include Refs #N; the Issue timeline retains closed PR references.
+    for item in api.pages(f"/issues/{number}/timeline"):
+        if item.get("event") != "cross-referenced":
+            continue
+        source = item.get("source", {}).get("issue", {})
+        candidate = source.get("number")
+        if (type(candidate) is int and candidate > 0 and "pull_request" in source
+                and source.get("url") == f"https://api.github.com/repos/{REPOSITORY}/issues/{candidate}"):
+            candidates.add(candidate)
+    plans = []
+    for candidate in sorted(candidates):
+        pr = api.request(f"/pulls/{candidate}")
+        if (f"<!-- agent-plan:issue={number} -->" in (pr.get("body") or "")
+                and pr["head"].get("repo", {}).get("full_name") == REPOSITORY
+                and is_plan_branch(pr["head"]["ref"], number)):
+            plans.append(pr)
+    return plans
 
 
 def prepare():
@@ -77,7 +93,7 @@ def prepare():
     if request is None:
         return
     mode, issue, pr = request
-    branch, path = identity(issue["number"])
+    _, path = identity(issue["number"])
     base_branch, sha = default_source(api)
     existing = None
     if mode == "create-plan" and managed_prs(api, issue["number"]):
@@ -92,14 +108,15 @@ def prepare():
         existing = base64.b64decode(content["content"], validate=False).decode()
     context = {"repository": REPOSITORY, "mode": mode, "issue_number": issue["number"],
                "issue": issue, "issue_fingerprint": fingerprint(issue), "source_sha": sha,
-               "base_branch": base_branch, "branch": branch, "plan_path": path,
+               "base_branch": base_branch, "branch": pr["head"]["ref"] if pr else None, "plan_path": path,
                "request_id": payload.get("comment", {}).get("id", issue["id"]),
                "request_body": payload.get("comment", {}).get("body", ""),
                "issue_comments": api.pages(f"/issues/{issue['number']}/comments"),
                "open_prs": [{"number": p["number"], "title": p["title"], "body": p.get("body"), "head": p["head"]["ref"]}
                             for p in api.pages("/pulls?state=open")],
                "pr_number": pr["number"] if pr else None, "existing_plan": existing,
-               "pr_comments": api.pages(f"/issues/{pr['number']}/comments") if pr else []}
+               **(pull_request_discussion(api, pr["number"]) if pr else
+                  {"pr_comments": [], "pr_reviews": [], "pr_review_comments": []})}
     validate_context(context)
     policies = {name: Path(name).read_text() for name in ("AGENTS.md", ".agent/instructions.md", ".agent/decisions.md",
                 ".agent/workflows/issue-planning.md", ".agent/workflows/context-and-memory.md",
@@ -143,9 +160,11 @@ def publish():
             or request_id != context["request_id"] or fingerprint(issue) != context["issue_fingerprint"]
             or payload.get("comment", {}).get("body", "") != context["request_body"]):
         raise ValueError("Issue/request changed; discard stale plan")
-    branch, path = identity(issue["number"])
-    if branch != context["branch"] or path != context["plan_path"]:
+    branch, path = identity(issue["number"], report["branch_description"])
+    if (pr and pr["head"]["ref"] != context["branch"]) or path != context["plan_path"]:
         raise ValueError("Plan destination differs from trusted policy")
+    if pr:
+        branch = context["branch"]
     base_branch, current_sha = default_source(api)
     if (pr["head"]["sha"] if pr else current_sha) != context["source_sha"] or base_branch != context["base_branch"]:
         raise ValueError("Source changed; request a fresh plan")

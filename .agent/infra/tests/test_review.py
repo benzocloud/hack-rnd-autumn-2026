@@ -128,9 +128,10 @@ class ReviewTests(unittest.TestCase):
                 os.chdir(folder)
                 Path("report.json").write_text(json.dumps({"context": context(), "report": report()}))
                 api = API()
-                with patch.object(github_review, "GitHub", return_value=api), patch.object(github_review, "event", return_value=event()):
+                with patch.object(github_review, "GitHub", return_value=api), patch.object(github_review, "event", return_value=event()), patch.object(github_review, "update_status") as status:
                     github_review.publish()
                 self.assertEqual(api.writes, 0)
+                self.assertIn("stale", status.call_args.args[2])
             finally:
                 os.chdir(previous)
 

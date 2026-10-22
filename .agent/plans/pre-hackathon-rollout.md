@@ -20,7 +20,7 @@ performed. GBrain hardware changes are deferred. Open work below is not represen
 ## Phase 1 — Repo policies and GitHub
 - [x] Commit root `AGENTS.md`, `.agent/` policies, ADRs and prompts to the rollout branch.
 - [ ] Configure protected `main`: no direct push, required CI, human approval, no self-approval.
-- [ ] Define Issue and PR templates; PR must explicitly link Issue and include acceptance criteria/test evidence.
+- [ ] Define Issue and PR templates; PR should include scope/acceptance criteria and test evidence; an Issue link is optional for review (ADR-016).
 - [ ] Provision least-privilege GitHub App/token for PR metadata/read and separate review publication.
 **Exit:** sample Issue + PR can be retrieved with correct permissions.
 
@@ -61,7 +61,7 @@ performed. GBrain hardware changes are deferred. Open work below is not represen
 - [ ] Bind findings to reviewed SHA; cancel superseded jobs; deduplicate comments; limit concurrency/cost.
 - [ ] Restrict `GITHUB_TOKEN` permissions; do not run untrusted PR scripts in privileged self-hosted environment. For forks, avoid secret-bearing PR jobs and use a safe trusted orchestration model.
 - [ ] Fail visibly if required skill, credentials or mandatory context are missing; never publish false PASS.
-  - Initial mandatory-memory failure is historical. Current default-config fixture review succeeds without GBrain and explicitly reports its unavailability. Required source/Issue/SHA/CI/skills still cannot be omitted; publisher and safety checks are implemented locally; real GitHub activation/rehearsal remain pending.
+  - Initial mandatory-memory failure is historical. Current default-config fixture review succeeds without GBrain and explicitly reports its unavailability. Required source/SHA/CI/skills still cannot be omitted; linked Issues are fetched when present (ADR-016); publisher and safety checks are implemented locally; real GitHub activation/rehearsal remain pending.
 **Exit:** synthetic PR produces SHA-specific feedback with evidence and status.
 
 ## Phase 5a — Issue assessment and plan automation (ADR-013)

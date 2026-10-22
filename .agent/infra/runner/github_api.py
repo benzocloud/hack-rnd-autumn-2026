@@ -33,6 +33,13 @@ class GitHub:
         raise ValueError("Context pagination limit exceeded; refusing a partial review")
 
 
+def pull_request_discussion(api, number):
+    """All published discussion/review comments, preserving reply metadata."""
+    return {"pr_comments": api.pages(f"/issues/{number}/comments"),
+            "pr_reviews": api.pages(f"/pulls/{number}/reviews"),
+            "pr_review_comments": api.pages(f"/pulls/{number}/comments")}
+
+
 def event():
     if os.environ["GITHUB_REPOSITORY"] != REPOSITORY:
         raise ValueError("Unexpected repository")

@@ -11,7 +11,7 @@ import urllib.parse
 import urllib.request
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "runner"))
-from github_api import GitHub, event, invoke_json
+from github_api import GitHub, event, invoke_json, pull_request_discussion
 from review_policy import REPOSITORY, is_request, skills_for, scope_conflict, validate_context, validate_report
 
 
@@ -47,8 +47,6 @@ def prepare():
     scope, skills = skills_for(pr["title"], names)
     issue_pattern = r"(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|refs?)\s+(?:#|https://github\.com/" + re.escape(REPOSITORY) + r"/issues/)(\d+)"
     issue_numbers = sorted({int(n) for n in re.findall(issue_pattern, pr.get("body") or "", re.I)})
-    if not issue_numbers:
-        raise ValueError("PR must link its task using Refs/Closes/Fixes/Resolves #NUMBER")
     if len(issue_numbers) > 10:
         raise ValueError("Too many linked tasks for one review")
     issues = []
@@ -61,7 +59,7 @@ def prepare():
     context = {"repository": REPOSITORY, "pr_number": number, "comment_id": payload["comment"]["id"],
                "head_sha": head, "base_sha": base, "title": pr["title"], "body": pr.get("body"),
                "scope": scope, "required_skills": skills, "files": names, "issues": issues,
-               "pr_comments": api.pages(f"/issues/{number}/comments"),
+               **pull_request_discussion(api, number),
                "ci": {"checks": api.pages(f"/commits/{head}/check-runs", "check_runs"),
                       "status": api.request(f"/commits/{head}/status")}}
     validate_context(context)
@@ -91,6 +89,43 @@ def authorize():
         out.write("requested=" + str(allowed).lower() + "\n")
 
 
+def status_marker(payload):
+    return f"<!-- agent-review-request:{int(payload['comment']['id'])} -->"
+
+
+def run_url():
+    return f"https://github.com/{REPOSITORY}/actions/runs/{int(os.environ['GITHUB_RUN_ID'])}"
+
+
+def status_comment(api, payload):
+    marker = status_marker(payload)
+    matches = [item for item in api.pages(f"/issues/{int(payload['issue']['number'])}/comments")
+               if item.get("user", {}).get("login") == "github-actions[bot]"
+               and marker in (item.get("body") or "")]
+    if len(matches) > 1:
+        raise ValueError("Duplicate status comments for one review request")
+    return matches[0] if matches else None
+
+
+def update_status(api, payload, body):
+    comment = status_comment(api, payload)
+    if comment is None:
+        raise ValueError("Review status comment is missing; refusing a duplicate result")
+    api.request(f"/issues/comments/{int(comment['id'])}",
+                {"body": status_marker(payload) + "\n\n" + body + f"\n\n[Actions run]({run_url()})"}, method="PATCH")
+
+
+def start():
+    api, payload = GitHub(), event()
+    pr = select_request(api, payload)
+    if pr is None:
+        raise ValueError("Review request is no longer authorized")
+    if status_comment(api, payload) is None:
+        api.request(f"/issues/{pr['number']}/comments", {"body": status_marker(payload) +
+                    "\n\n⏳ **Agent review started** — collecting context and preparing static analysis."
+                    + f"\n\n[Actions run]({run_url()})"})
+
+
 def invoke():
     context = json.loads(Path("context.json").read_text())
     if scope_conflict(context):
@@ -114,30 +149,42 @@ def invoke():
 
 def publish():
     api, payload = GitHub(), event()
+    job_result = os.environ.get("REVIEW_JOB_RESULT", "success")
+    if job_result != "success" or os.environ.get("REVIEW_REQUESTED") == "false":
+        if not is_request(payload):
+            raise ValueError("Invalid review event")
+        label = "cancelled" if job_result == "cancelled" else "failed"
+        update_status(api, payload, f"⚠️ **Agent review {label}** — no completed review was produced. See the Actions run for details.")
+        return
     package = json.loads(Path("report.json").read_text())
     context, report = package["context"], package["report"]
     validate_report(report, context)
     if context["pr_number"] != payload["issue"]["number"] or context["comment_id"] != payload["comment"]["id"]:
         raise ValueError("Report does not belong to this comment request")
-    pr = select_request(api, payload)
+    try:
+        pr = select_request(api, payload)
+    except ValueError:
+        pr = None
     if (pr is None or pr["head"]["sha"] != context["head_sha"]
             or pr["base"]["sha"] != context["base_sha"] or pr["title"] != context["title"]):
-        print("Discarded stale review. A fresh /agent-review comment is required.")
+        update_status(api, payload, "⚠️ **Agent review stale** — the PR changed during analysis. Submit a new `/agent-review` comment.")
         return
     for comment in reversed(api.pages(f"/issues/{pr['number']}/comments")):
         if (comment["id"] > context["comment_id"] and comment.get("body") == "/agent-review"
                 and comment.get("user", {}).get("type") == "User"):
             login = urllib.parse.quote(comment["user"]["login"], safe="")
             if api.request("/collaborators/" + login + "/permission").get("permission") in ("admin", "maintain", "write"):
-                print("Discarded result superseded by a newer authorized request")
+                update_status(api, payload, "⏭️ **Agent review superseded** by a newer authorized request.")
                 return
-    marker = f"<!-- agent-review:{context['comment_id']}:{context['head_sha']} -->"
-    if any(marker in (item.get("body") or "") for item in api.pages(f"/pulls/{pr['number']}/reviews")):
-        print("This request/SHA was already published")
-        return
-    body = [marker, f"Agent review: **{report['status']}**", f"Commit: `{context['head_sha']}`",
+    body = [f"Agent review: **{report['status']}**", f"Commit: `{context['head_sha']}`",
             f"Scope: `{report['scope']}`", "GBrain: unavailable (deferred).",
             "Skills reported applied: " + ", ".join(report["skills"])]
+    if context["issues"]:
+        body.append("Linked Issues: " + ", ".join(f"#{item['number']}" for item in context["issues"]))
+    else:
+        body.append("No linked Issue: reviewed using the PR description, discussion, diff, source and CI.")
+        if not (context.get("body") or "").strip():
+            body.append("PR description is empty; requirement and acceptance coverage cannot be confirmed.")
     ci = context["ci"]
     body.append("GitHub CI metadata: combined status `" + str(ci.get("status", {}).get("state", "unknown"))
                 + "`; check runs: " + str(len(ci.get("checks", []))) + ". No local tests were executed by this static reviewer.")
@@ -152,9 +199,9 @@ def publish():
     rendered = "\n\n".join(body)
     if len(rendered) > 60000:
         raise ValueError("Review too large to publish safely")
-    # COMMENT is advisory: never approve, request merge, or deploy.
-    api.request(f"/pulls/{pr['number']}/reviews", {"commit_id": context["head_sha"], "body": rendered, "event": "COMMENT"})
+    # Edit the original progress comment; never approve, merge or add a duplicate review.
+    update_status(api, payload, rendered)
 
 
 if __name__ == "__main__":
-    {"authorize": authorize, "prepare": prepare, "invoke": invoke, "publish": publish}[sys.argv[1]]()
+    {"authorize": authorize, "start": start, "prepare": prepare, "invoke": invoke, "publish": publish}[sys.argv[1]]()

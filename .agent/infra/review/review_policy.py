@@ -52,8 +52,8 @@ def validate_context(context):
     scope, skills = skills_for(context["title"], context["files"])
     if context["scope"] != scope or context["required_skills"] != skills:
         raise ValueError("Skill routing differs from trusted policy")
-    if not context.get("issues") or not isinstance(context.get("ci"), dict):
-        raise ValueError("Missing required Issue/CI context")
+    if not isinstance(context.get("issues"), list) or not isinstance(context.get("ci"), dict):
+        raise ValueError("Missing required task/CI context; issues must be a list (possibly empty)")
 
 
 FINDING = {"type": "object", "additionalProperties": False, "properties": {

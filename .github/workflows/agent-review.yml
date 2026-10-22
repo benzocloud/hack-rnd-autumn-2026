@@ -29,8 +29,26 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: python3 .agent/infra/review/github_review.py authorize
 
-  review:
+  announce:
     needs: authorize
+    if: needs.authorize.outputs.requested == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, Node.js 24
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Post one progress comment for this request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .agent/infra/review/github_review.py start
+
+  review:
+    needs: [authorize, announce]
     if: needs.authorize.outputs.requested == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -73,8 +91,8 @@ jobs:
           retention-days: 1
 
   publish:
-    needs: review
-    if: needs.review.outputs.requested == 'true'
+    needs: [authorize, announce, review]
+    if: always() && needs.authorize.outputs.requested == 'true' && needs.announce.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -85,10 +103,15 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2, Node.js 24
+      - id: download
+        if: needs.review.result == 'success' && needs.review.outputs.requested == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2, Node.js 24
         with:
           name: agent-review-result
-      - name: Reject stale/duplicate result and publish advisory review
+      - name: Update original progress comment with result or failure
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
+          REVIEW_JOB_RESULT: ${{ steps.download.outcome == 'failure' && 'failure' || needs.review.result }}
+          REVIEW_REQUESTED: ${{ needs.review.outputs.requested }}
         run: python3 .agent/infra/review/github_review.py publish

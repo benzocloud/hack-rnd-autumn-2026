@@ -1,6 +1,7 @@
 """Issue-to-plan protocol: no source implementation or arbitrary write paths."""
 import hashlib
 import json
+import re
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "review"))
@@ -12,8 +13,9 @@ SCHEMA = {"type": "object", "additionalProperties": False, "properties": {
     "source_sha": {"type": "string"}, "issue_number": {"type": "integer"},
     "status": {"type": "string", "enum": ["ready", "needs-clarification"]},
     "summary": {"type": "string"},
+    "branch_description": {"type": "string", "pattern": r"^[a-z0-9]+(?:_[a-z0-9]+)*$", "minLength": 3, "maxLength": 48},
     **{name: {"type": "array", "items": {"type": "string"}} for name in LISTS},
-}, "required": ["source_sha", "issue_number", "status", "summary", *LISTS]}
+}, "required": ["source_sha", "issue_number", "status", "summary", "branch_description", *LISTS]}
 
 SCHEMA["properties"]["affected_files"]["items"]["pattern"] = r"^[^\s]+$"
 
@@ -37,10 +39,30 @@ def command(payload, event_name, attempt="1"):
     return None
 
 
-def identity(number):
+def identity(number, description=None):
     if type(number) is not int or number < 1:
         raise ValueError("Invalid Issue number")
-    return f"codex/issue-{number}-plan", f".agent/plans/issue-{number}-fix.md"
+    branch = None
+    if description is not None:
+        if not isinstance(description, str) or not 3 <= len(description) <= 48 or not re.fullmatch(r"[a-z0-9]+(?:_[a-z0-9]+)*", description):
+            raise ValueError("Invalid short branch description")
+        branch = f"runner/fix/{description}/issue_{number}"
+    return branch, f".agent/plans/issue-{number}-fix.md"
+
+
+def is_plan_branch(branch, number):
+    identity(number)
+    if branch == f"codex/issue-{number}-plan":
+        return True
+    if not isinstance(branch, str):
+        return False
+    parts = branch.split("/")
+    if len(parts) != 4:
+        return False
+    try:
+        return identity(number, parts[2])[0] == branch
+    except ValueError:
+        return False
 
 
 def fingerprint(issue):
@@ -56,8 +78,8 @@ def validate_context(context):
     if context["issue"]["state"] != "open":
         raise ValueError("Issue must remain open")
     if context["mode"] == "discuss-plan":
-        branch, path = identity(context["issue_number"])
-        if context["branch"] != branch or context["plan_path"] != path or not context.get("existing_plan"):
+        _, path = identity(context["issue_number"])
+        if not is_plan_branch(context["branch"], context["issue_number"]) or context["plan_path"] != path or not context.get("existing_plan"):
             raise ValueError("Not a managed plan")
 
 
@@ -65,6 +87,12 @@ def validate_report(report, context):
     validate_context(context)
     if set(report) != set(SCHEMA["required"]) or report["source_sha"] != context["source_sha"] or report["issue_number"] != context["issue_number"]:
         raise ValueError("Planning report does not match its source/Issue")
+    if not isinstance(report["branch_description"], str):
+        raise ValueError("Branch description must be a string")
+    identity(context["issue_number"], report["branch_description"])
+    if (context["mode"] == "discuss-plan" and context["branch"].startswith("runner/")
+            and report["branch_description"] != context["branch"].split("/")[2]):
+        raise ValueError("Plan revisions must keep the existing branch")
     if report["status"] not in ("ready", "needs-clarification") or not isinstance(report["summary"], str) or not report["summary"].strip():
         raise ValueError("Invalid planning status/summary")
     for name in LISTS:
