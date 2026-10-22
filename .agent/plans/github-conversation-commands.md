@@ -52,9 +52,17 @@ changes remain intact. Publication and runner rollout require the usual approval
 Local verification: 57 stdlib tests passed, including the prior review/planning
 regressions, conversation request/artifact/publication flow, managed-plan status
 updates, current-command routing and question tool-event rejection. Ruff lint,
-format checks, actionlint and `git diff --check` passed. Workflow/adapters/profile
-changes are not deployed. Selected-model access and actual tool restrictions on
-the runner, followed by live Issue/PR command smoke tests, remain rollout checks.
+format checks, actionlint and `git diff --check` passed. At this local verification
+point, workflow/adapters/profile changes had not been deployed.
+
+Subsequent rollout, 2026-10-22: after explicit owner approval, PR #7 merged and
+the matching runner adapters/profile were installed under the review lock with
+a private backup. Both selected models passed dispatcher fixtures. Live Issue #8
+and PR #9 verified questions, plan creation/amendment, ordinary PR discussion
+with linked Issue context, and explicit review, including editing one status
+comment per request. Both objects were closed manually without implementation or
+merge. The measured limits and rollout provenance are in `.agent/infra/README.md`;
+in particular, encoded plan state can exceed the question-source size limit.
 
 Review fixes: binary/non-UTF-8 question sources are skipped with explicit unread
 receipts, ordinary PR references are not mistaken for Issue tasks, and freshness

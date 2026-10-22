@@ -1,9 +1,11 @@
 # Agent infrastructure
 
-Status **2026-10-22**: Codex Plus runner installed on `runner.brokebyte.me`;
-The infrastructure and subsequent workflow extensions have been merged into
-`main`. The new conversation commands and staged-plan protocol described below are implemented locally;
-their matching runner adapters/profile have not been deployed. GBrain is deferred. Fadwix containers, config, networks, ports,
+Status **2026-10-22**: Codex Plus runner installed on `runner.brokebyte.me`.
+[PR #7](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/7) merged as
+`de30157eb3ca8e296c3cb06b0b9335e57009434b`; matching conversation/staged-plan
+adapters and the workflow profile from `24af4e55ea097496bef3cea71350eb344c4a7867`
+are installed. All agent workflows are enabled; live checks and remaining limits
+are recorded below. GBrain is deferred. Fadwix containers, config, networks, ports,
 Docker and kernel settings were not changed; no reboot was performed.
 
 ## Responsibility boundaries
@@ -155,7 +157,7 @@ Create a dedicated Ed25519 key locally; copy **only its public key** to a privat
 root staging directory on the runner. Pass that public key to the installer:
 
 ```sh
-ssh root@runner.brokebyte.me 'python3 /root/hackrnd-bootstrap/infra/runner/install-workflow.py /root/hackrnd-bootstrap/review-key.pub'
+ssh root@runner.brokebyte.me 'python3 /root/hackrnd-rollout-24af4e55ea097496bef3cea71350eb344c4a7867/candidate/.agent/infra/runner/install-workflow.py /root/hackrnd-bootstrap/review-key.pub'
 ```
 
 The installer updates root-owned adapters, scoped sudoers, key restriction,
@@ -170,10 +172,12 @@ For the conversation rollout, install `conversation/`, updated `runner/job.py`,
 together, before enabling the new default-branch workflows. Use the existing
 public key; hold `/var/lib/hackrnd-review/review.lock` while updating adapters,
 and back up the prior root-owned adapters/profile for rollback. The new dispatcher
-allowlist has six fixed commands; the four-command installed pilot above is the
+allowlist has six fixed commands; the four-command pilot was the
 previous state. Verify selected model access, shell-tool exclusion and source
 read/auth denial as the unprivileged user before publishing test commands.
-No live rollout or inference with the new conversation workers is claimed yet.
+The versioned staging path above is the verified PR #7 bundle, not a moving
+checkout. Stage future versions separately and coordinate both protocol sides.
+The live rollout below used the existing public key and preserved Plus auth.
 
 ## Pins and source references
 
@@ -231,19 +235,18 @@ dispatcher returned a report with `branch_description` and passed local
 source/Issue/schema validation. This was an SSH replay, separate from the
 original failed GitHub run.
 Issue scope progress comments are enabled by the default-branch version of
-`issue-planning.yml`; rehearse on a newly opened test Issue after merge.
+`issue-planning.yml`; the later PR #7 rehearsal verified them on Issue #8.
 
 The new planner report adds a validated `branch_description`; its publisher builds
 `runner/fix/<short_description>/issue_N`. Update the GitHub orchestration and
-root-owned runner adapters together. Until the extension is approved/published,
-the active runner retains its initial protocol. Do not deploy only one side and
+root-owned runner adapters together. Do not deploy only one side and
 claim the new flow operational. After merge, copy the updated infra directory to
 private staging and run `runner/install-workflow.py` with the existing public key,
 then rehearse scope, plan creation, discussion and review on test objects.
 
-## Checks, remaining activation and rollback
+## Checks, verified activation and rollback
 
-### Staged-plan protocol: local verification and coordinated rollout
+### Staged-plan protocol: verification and coordinated rollout
 
 Scope assessments keep the compact `steps` report. Plan creation and amendments
 require `stages` and `review_mode`, with numbered stages, dependencies, affected
@@ -282,7 +285,7 @@ live GitHub publication. Real HTTP and subprocess calls are blocked in the cycle
 tests. Ordinary infrastructure CI on push runs only unit tests and lint, without
 model tokens. The separate manually run model fixture does consume usage.
 
-Activation requires a separate approved rollout:
+Future protocol activations require a separate approved rollout:
 
 1. Suspend the three agent workflows during the protocol transition; ordinary
    infrastructure CI can continue. Record current publisher/runner revisions and
@@ -300,8 +303,60 @@ Activation requires a separate approved rollout:
    comment and exact source links. Verify a push does not start model analysis.
    Re-enable normal requests only after the real results are inspected.
 
-No such rollout or live rehearsal has been performed for this change. ADR-021's
-shared Issue/PR dialogue and Issue closure after publishing a plan PR link are
+### Verified PR #7 rollout, 2026-10-22
+
+The owner explicitly approved merge and installation. The three agent workflows
+were suspended during the transition; ordinary infrastructure CI remained active.
+The versioned candidate was transferred from a Git archive, its checksum verified,
+and all 27 Python sources parsed on the server before installation. The installer
+ran under the existing review lock with the existing public key. All eight
+installed adapter hashes and the workflow profile match the candidate revision.
+Backup, file ownership/modes and activation provenance are retained privately in
+`/root/hackrnd-rollout-24af4e55ea097496bef3cea71350eb344c4a7867/`.
+OAuth credentials were not included in that backup. No Fadwix container was
+recreated or restarted; container IDs and uptime remained unchanged.
+
+Both selected models answered trusted fixtures through the actual unprivileged
+dispatcher: `gpt-6-luna` for questions without tool events and `gpt-6.1-sol` for
+discussion. The live unit used `hackrnd-review`, no capabilities,
+`NoNewPrivileges=yes`, strict system protection and the scoped writable directory.
+Plus login remained valid; the review user has no supplementary groups.
+
+Live GitHub checks used disposable [Issue #8](https://github.com/benzocloud/hack-rnd-autumn-2026/issues/8)
+and [PR #9](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/9):
+
+- Automatic scope assessment edited the original progress comment into its report.
+- `/question` answered from Issue context and edited the same status comment.
+- `/create-plan` created one draft PR on `runner/fix/document_agent_commands/issue_8`,
+  containing only `.agent/plans/issue-8-fix.md`, with one unstarted stage and
+  per-stage developer review. The Issue received the PR link.
+- An explicit `/discuss` amendment updated the same branch/file, preserved the
+  stage status/review mode, used a `feat:` commit and a request-comment permalink,
+  and edited the same progress comment. Stored state validated after both writes.
+- Ordinary `/discuss` in the PR recalled markers from its linked Issue and prior
+  PR discussion without changing the plan SHA. All 11 source-link ranges in the
+  amended plan and the answer's line reference were checked against source.
+- Only the explicit `/agent-review` request ran review. Its original status comment
+  became a SHA-bound, complete advisory report applying `caveman-review` and
+  `ponytail-review`, with no Go skills. No findings were reported. This was not
+  approval: the bot-created plan PR had no CI checks, and no repository tests ran
+  in the static reviewer. The ordinary discussion's review jobs were skipped.
+
+Both test objects were closed manually without merging the plan; its branch is
+retained as evidence. The merge push ran only infrastructure CI, successfully,
+without model analysis. All three agent workflows were re-enabled. These manual
+inference checks consumed subscription usage; the 85 local/CI unit tests did not.
+
+Observed limits still require follow-up: the initial model report cited worker
+`context.json` as a repository file, producing an invalid link; a requested plan
+amendment removed it, but the formatter does not verify source existence. Also,
+the initial one-stage plan occupied 35,989 characters including encoded state,
+exceeding `/question`'s 24,000-character per-file bound. That guard was reproduced
+without inference; use `/discuss` for such plans until metadata handling improves.
+The live static reviewer also disclosed denied `rg` execution and the absence of
+the trusted root copy of `local-development.md`; it used read-only inspection.
+
+ADR-021's shared Issue/PR dialogue and Issue closure after publishing a plan PR link are
 accepted follow-up work, not implemented by the staged-plan protocol. Fadwix,
 GBrain, Docker and host-wide settings are outside this rollout.
 
@@ -342,9 +397,9 @@ Private diagnostics live in `/var/lib/hackrnd-review/checks/`, not Git/artifacts
 Validate report content, source/SHA/skill scope and expected findings; CLI exit 0
 alone is insufficient.
 
-Remaining: open/review the rollout PR; merge workflows to default branch;
-real Issue → scope → plan PR → discussion → explicit review → changed-SHA review
-rehearsal; required CI/human branch rules; Plus renewal/quota/revocation and sustained
+Remaining: live changed-SHA re-review rehearsal; source-link validation and
+question handling of encoded plan metadata; required CI/human branch rules;
+Plus renewal/quota/revocation and sustained
 operation. Do not equate local or SSH fixture tests with deployed GitHub behavior.
 No auto merge/deploy is included.
 
