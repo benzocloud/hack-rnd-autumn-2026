@@ -2,6 +2,15 @@
 
 Every newly opened Issue receives a static assessment of the fix boundary; no QA label or author filter is required. Inspect the Issue and all its comments, current default-branch source, relevant contracts and open PRs. Post included/excluded scope, affected paths, source evidence, proposed steps, acceptance criteria, risks and questions in the Issue. Unclear requirements remain questions, not invented facts. GBrain is optional and currently unavailable.
 
+After authorizing an opened Issue, post one bot comment announcing scope analysis.
+Edit that same comment with the source-bound assessment when analysis succeeds,
+or with a failure/cancellation status and Actions link if analysis, artifact
+retrieval or publication fails. Reject changed Issue/source context. Never publish
+an unvalidated runner response or create a second result comment. Whole-workflow
+cancellation, deleted status comments and GitHub/API failures can prevent updates;
+Actions remains the diagnostic source. This status is for scope assessment;
+implementation still requires a separate developer decision.
+
 Only new human comments from users with repository write/maintain/admin permission may create or revise plans:
 
 - Exact `/create-plan` in an open Issue creates `runner/fix/<short_description>/issue_N`, containing only `.agent/plans/issue-N-fix.md`, and a draft PR. The short description is meaningful English lowercase words joined by underscores, e.g. `runner/fix/handle_empty_input/issue_123`; validate the description and ref before writing. Existing plan PRs are reused, never overwritten or duplicated. Link with `Refs #N`; merging a plan must not close the Issue.

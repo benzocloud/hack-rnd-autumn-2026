@@ -129,9 +129,17 @@ def validate_context(context):
 
 def validate_report(report, context):
     validate_context(context)
+    if not isinstance(report, dict):
+        raise ValueError("Planning report must be an object")
+    if set(report) != set(SCHEMA["required"]):
+        missing = sorted(set(SCHEMA["required"]) - set(report))
+        unexpected = sorted(set(report) - set(SCHEMA["required"]))
+        raise ValueError(
+            f"Planning report schema mismatch (missing={missing}, unexpected={unexpected}); "
+            "deploy matching GitHub and runner planning adapters"
+        )
     if (
-        set(report) != set(SCHEMA["required"])
-        or report["source_sha"] != context["source_sha"]
+        report["source_sha"] != context["source_sha"]
         or report["issue_number"] != context["issue_number"]
     ):
         raise ValueError("Planning report does not match its source/Issue")

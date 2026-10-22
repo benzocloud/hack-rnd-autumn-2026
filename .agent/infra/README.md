@@ -38,6 +38,9 @@ are deployed with the same `runner/`, `review/`, `planning/` boundaries under
   actual Go source/module/workspace changes determine Go routing. All scopes
   use `caveman-review` and `ponytail-review`.
 - `issue-planning.yml`: every new Issue receives a static fix-boundary report.
+  An announcer first posts one scope-analysis status comment. Its publisher edits
+  that comment with the report or a failure/cancellation status and Actions link,
+  including when analysis or artifact retrieval fails.
   Exact `/create-plan` in the Issue creates `runner/fix/<short_description>/issue_N` with only
   `.agent/plans/issue-N-fix.md` and a draft PR. `/discuss-plan <changes>` in that
   managed PR revises only the plan. Both commands require a human with write,
@@ -190,6 +193,19 @@ private encrypted off-host retention. Neither backup/restore nor MCP has passed
 its rehearsal. Prepared GBrain unit/timer are inactive.
 
 ## Extension rollout
+
+On 2026-10-22 the runner's `planning/plan_policy.py` and `planning/ssh_plan.py`
+were synchronized after Issue #3 exposed an old report schema without
+`branch_description`. Only those two root-owned adapters were replaced under
+the review lock; originals are backed up under
+`/root/hackrnd-plan-fix.9peB65eE/backup`. No service restart was needed.
+A read-only replay of Issue #3 at source
+`59c7aea5a2051e836f8bcdde2b36ac7bc19ce4c7` through the fixed unprivileged
+dispatcher returned a report with `branch_description` and passed local
+source/Issue/schema validation. This was an SSH replay, separate from the
+original failed GitHub run.
+Issue scope progress comments are enabled by the default-branch version of
+`issue-planning.yml`; rehearse on a newly opened test Issue after merge.
 
 The new planner report adds a validated `branch_description`; its publisher builds
 `runner/fix/<short_description>/issue_N`. Update the GitHub orchestration and
