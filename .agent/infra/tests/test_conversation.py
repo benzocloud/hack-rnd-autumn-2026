@@ -16,7 +16,10 @@ import github_conversation as github
 import job
 import review_dispatch
 import ssh_conversation as worker
+from plan_policy import PLAN_STATE_PREFIX, render_staged_plan, validate_staged_report
 from plan_policy import command as planning_command
+from test_planning import context as planning_context
+from test_staged_planning import staged_report
 
 
 def payload(body="/question Почему падает api/main.py?"):
@@ -421,6 +424,89 @@ class ConversationTests(unittest.TestCase):
         )
         (source / "main.py").write_text("x" * 24001)
         with self.assertRaisesRegex(ValueError, "/discuss"):
+            worker.question_sources(Path.cwd(), c)
+
+    def managed_plan(self, summary=None):
+        api = API(pr=True)
+        api.task["body"] = "<!-- agent-plan:issue=7 -->\nRefs #7"
+        api.files = [{"filename": ".agent/plans/issue-7-fix.md"}]
+        self.start(api)
+        c = self.collect(api)
+        plan = staged_report()
+        plan["summary"] = summary if summary is not None else "Уточнить границы исправления. " * 150
+        validate_staged_report(plan, planning_context())
+        markdown = render_staged_plan(plan)
+        path = Path("source", c["existing_plan"][0])
+        path.parent.mkdir(parents=True)
+        path.write_text(markdown)
+        return api, c, path, markdown
+
+    def test_question_uses_full_visible_plan_and_discloses_omitted_state(self):
+        api, c, path, markdown = self.managed_plan()
+        self.assertGreater(len(markdown), 24000)
+        visible = markdown[: markdown.rindex("\n" + PLAN_STATE_PREFIX)]
+        Path("events.jsonl").write_text("")
+        with (
+            patch.object(worker, "workspace", return_value=nullcontext(Path.cwd())),
+            patch.object(worker, "infer", return_value=result(c)["report"]) as infer,
+        ):
+            response = worker.run({"context": c})
+        supplied = json.loads(infer.call_args.args[2].rsplit("\n", 1)[-1])
+        source = supplied["source_files"][c["existing_plan"][0]]
+        self.assertEqual(source.splitlines()[: len(visible.splitlines())], visible.splitlines())
+        self.assertNotIn(PLAN_STATE_PREFIX, source)
+        self.assertIn("служебное состояние", source)
+        self.assertTrue(infer.call_args.kwargs["question"])
+        self.assertEqual(infer.call_args.kwargs["model"], "gpt-6-luna")
+        self.assertEqual(path.read_text(), markdown)
+        Path("conversation-result.json").write_text(json.dumps({"context": c, "result": response}))
+        github.publish_result(api, api.payload)
+        self.assertIn("служебное состояние", api.writes[-1][1]["body"])
+        self.assertEqual([method for _, _, method in api.writes], [None, "PATCH"])
+
+    def test_question_plan_path_aliases_are_normalized_before_selection(self):
+        _, c, path, markdown = self.managed_plan()
+        name = c["existing_plan"][0]
+        self.assertGreater(len(markdown), 24000)
+        c["pr_comments"].append({"body": f"See [plan](./{name}) and .agent/./plans/issue-7-fix.md"})
+        sources, skipped = worker.question_sources(Path.cwd(), c)
+        self.assertEqual(list(sources), [name])
+        self.assertNotIn(PLAN_STATE_PREFIX, sources[name])
+        self.assertIn("служебное состояние", sources[name])
+        self.assertEqual(skipped, [])
+        self.assertEqual(path.read_text(), markdown)
+
+    def test_plan_state_projection_is_limited_to_managed_plans(self):
+        _, c, path, _ = self.managed_plan()
+        with self.assertRaisesRegex(ValueError, "/discuss"):
+            worker.question_sources(Path.cwd(), {**c, "existing_plan": []})
+        path.write_text("# Старый план без служебного состояния\n- Предлагаемая проверка\n")
+        sources, skipped = worker.question_sources(Path.cwd(), c)
+        self.assertEqual(sources[c["existing_plan"][0]], path.read_text())
+        self.assertEqual(skipped, [])
+
+    def test_invalid_or_divergent_plan_state_is_not_hidden(self):
+        _, c, path, markdown = self.managed_plan()
+        for bad in (
+            markdown[: markdown.rindex("\n" + PLAN_STATE_PREFIX)],
+            markdown.replace(PLAN_STATE_PREFIX, PLAN_STATE_PREFIX + "!"),
+            markdown.replace("Статус: Не начат.", "Статус: Принят.", 1),
+        ):
+            with self.subTest(bad=bad[:80]):
+                path.write_text(bad)
+                with self.assertRaisesRegex(ValueError, "/discuss"):
+                    worker.question_sources(Path.cwd(), c)
+
+    def test_visible_plan_and_total_source_limits_remain_enforced(self):
+        _, c, _, _ = self.managed_plan(summary="x" * 24001)
+        with self.assertRaisesRegex(ValueError, "/discuss"):
+            worker.question_sources(Path.cwd(), c)
+        c["existing_plan"] = []
+        c["files"] = [f"api/large{n}.py" for n in range(4)]
+        Path("source/api").mkdir()
+        for name in c["files"]:
+            Path("source", name).write_text("x" * 21000)
+        with self.assertRaisesRegex(ValueError, "Selected source exceeds"):
             worker.question_sources(Path.cwd(), c)
 
     def test_large_pr_supplies_first_eight_files_and_discloses_omissions(self):

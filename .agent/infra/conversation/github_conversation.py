@@ -288,6 +288,8 @@ def publish_result(api, payload):
         else ""
     )
     if context["mode"] == "question":
+        if any(path in result["source_files"] for path in context["existing_plan"]):
+            sources += "\n\nУ планов передан весь читаемый текст; закодированное служебное состояние при наличии исключено из контекста вопроса."
         omitted = [
             path
             for path in context["files"]
