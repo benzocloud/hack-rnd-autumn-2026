@@ -53,7 +53,7 @@ def selected(api, payload):
         pr = api.request(f"/pulls/{number}")
         match = MARKER.search(pr.get("body") or "")
         if not match:
-            raise ValueError("/discuss-plan requires a managed plan PR")
+            raise ValueError("/discuss requires a managed plan PR")
         number = int(match[1])
         _, path = identity(number)
         if (
@@ -114,8 +114,16 @@ def scope_run_link():
 def start():
     api, payload = GitHub(), event()
     request = selected(api, payload)
-    if request is None or request[0] != "scope":
-        raise ValueError("Expected an authorized Issue scope request")
+    if request is None or request[0] not in ("scope", "discuss-plan"):
+        raise ValueError("Expected an authorized scope or plan discussion request")
+    if request[0] == "discuss-plan":
+        plan_status(
+            api,
+            payload,
+            "⏳ **Начал обновление плана** — изучаю запрос и обсуждение PR.",
+            create=True,
+        )
+        return
     if scope_status(api, payload) is None:
         api.request(
             f"/issues/{request[1]['number']}/comments",
@@ -125,6 +133,26 @@ def start():
                 + scope_run_link()
             },
         )
+
+
+def plan_status(api, payload, body, create=False):
+    marker = f"<!-- agent-plan-discussion:{int(payload['comment']['id'])} -->"
+    comments = [
+        c
+        for c in api.pages(f"/issues/{int(payload['issue']['number'])}/comments")
+        if c.get("user", {}).get("login") == "github-actions[bot]"
+        and (c.get("body") or "").startswith(marker + "\n")
+    ]
+    if len(comments) > 1:
+        raise ValueError("Duplicate plan discussion status comments")
+    rendered = {"body": marker + "\n\n" + body + "\n\n" + scope_run_link()}
+    if comments:
+        if not create:
+            api.request(f"/issues/comments/{int(comments[0]['id'])}", rendered, method="PATCH")
+    elif create:
+        api.request(f"/issues/{int(payload['issue']['number'])}/comments", rendered)
+    else:
+        raise ValueError("Missing plan discussion status; refusing a duplicate result")
 
 
 def default_source(api):
@@ -173,7 +201,7 @@ def prepare():
     existing = None
     if mode == "create-plan" and managed_prs(api, issue["number"]):
         # Do not spend another model run or create duplicate branches/PRs.
-        print("A plan PR already exists for this Issue; use /discuss-plan there.")
+        print("A plan PR already exists for this Issue; use /discuss there.")
         return
     if pr:
         sha = pr["head"]["sha"]
@@ -246,7 +274,7 @@ def invoke():
     Path("plan-result.json").write_text(json.dumps({"context": context, "report": report}))
 
 
-def write_plan_commit(api, parent, path, markdown, request_id):
+def write_plan_commit(api, parent, path, markdown, message):
     # Fixed caller-derived path, never a path supplied by the model.
     if not re.fullmatch(r"\.agent/plans/issue-[1-9][0-9]*-fix\.md", path):
         raise ValueError("Refusing a source implementation write")
@@ -261,7 +289,7 @@ def write_plan_commit(api, parent, path, markdown, request_id):
     return api.request(
         "/git/commits",
         {
-            "message": f"chore: update Issue fix plan (request {request_id})",
+            "message": message,
             "tree": tree["sha"],
             "parents": [parent],
         },
@@ -270,19 +298,22 @@ def write_plan_commit(api, parent, path, markdown, request_id):
 
 def publish():
     api, payload = GitHub(), event()
-    scope = (
-        command(
-            payload,
-            os.environ.get("GITHUB_EVENT_NAME", "issue_comment"),
-            os.environ.get("GITHUB_RUN_ATTEMPT", "1"),
-        )
-        == "scope"
+    mode = command(
+        payload,
+        os.environ.get("GITHUB_EVENT_NAME", "issue_comment"),
+        os.environ.get("GITHUB_RUN_ATTEMPT", "1"),
     )
+    scope = mode == "scope"
     result = os.environ.get("PLAN_JOB_RESULT", "success")
     if result != "success" or os.environ.get("PLAN_REQUESTED") == "false":
-        if not scope:
+        if not scope and mode != "discuss-plan":
             raise ValueError("No completed plan was produced")
         status = "отменён" if result == "cancelled" else "завершился ошибкой"
+        if mode == "discuss-plan":
+            plan_status(
+                api, payload, f"⚠️ **Запрос обновления плана {status}**. Подробности в Actions."
+            )
+            return
         scope_status(
             api,
             payload,
@@ -297,6 +328,12 @@ def publish():
                 api,
                 payload,
                 "⚠️ **Оценка Issue не опубликована** — ответ runner не прошёл проверку, контекст изменился или публикация завершилась ошибкой. Подробности в Actions.",
+            )
+        elif mode == "discuss-plan":
+            plan_status(
+                api,
+                payload,
+                "⚠️ **Обновление плана не подтверждено** — контекст изменился, ответ не прошёл проверку или публикация завершилась ошибкой. Проверьте ветку и Actions перед повторным запросом.",
             )
         raise
 
@@ -343,9 +380,24 @@ def publish_result(api, payload):
             payload,
             "✅ **Оценка границ исправления завершена**\n\n"
             + markdown
-            + "\nДля ветки и draft PR с планом: `/create-plan`. Изменения плана обсуждаются в его PR командой `/discuss-plan <изменения>`.",
+            + "\nДля ветки и draft PR с планом: `/create-plan`. Для изменения плана в его PR: `/discuss Поправь план: <изменения>`.",
         )
         return
+    description = report["branch_description"].replace("_", " ")
+    verb = "create" if mode == "create-plan" else "update"
+    subject = f"feat: {verb} fix plan for #{issue['number']}: {description}"
+    actor = payload["comment"]["user"]["login"]
+    request_command = "/create-plan" if mode == "create-plan" else "/discuss"
+    request_url = (
+        f"https://github.com/{REPOSITORY}/{'pull' if pr else 'issues'}/{destination}"
+        f"#issuecomment-{request_id}"
+    )
+    request_trailer = f"Request: {request_url}"
+    message = (
+        subject + f"\n\nRefs #{issue['number']}\n"
+        f"Requested by @{actor} via {request_command}.\n"
+        f"\n{request_trailer}"
+    )
     if mode == "create-plan":
         existing = managed_prs(api, issue["number"])
         if existing:
@@ -363,7 +415,7 @@ def publish_result(api, payload):
             raise ValueError(
                 "Plan branch already exists without a managed PR; refusing to overwrite"
             )
-        sha = write_plan_commit(api, current_sha, path, markdown, request_id)
+        sha = write_plan_commit(api, current_sha, path, markdown, message)
         api.request("/git/refs", {"ref": "refs/heads/" + branch, "sha": sha})
         prefix = next(
             (p for p in ("INFRA/ML:", "ML:", "INFRA:") if issue["title"].startswith(p)), "INFRA:"
@@ -371,13 +423,14 @@ def publish_result(api, payload):
         created = api.request(
             "/pulls",
             {
-                "title": f"{prefix} chore: plan for Issue #{issue['number']}",
+                "title": f"{prefix} {subject}",
                 "head": branch,
                 "base": base_branch,
                 "draft": True,
                 "body": f"<!-- agent-plan:issue={issue['number']} -->\nRefs #{issue['number']}\n\n"
+                f"План запрошен [комментарием @{actor}]({request_url}) (`{request_command}`).\n\n"
                 "Только план исправления. Реализация отдельно после решения разработчика.\n\n"
-                "Для изменения плана: `/discuss-plan <изменения>`. Ревью — только `/agent-review`.\n"
+                "Для изменения плана: `/discuss Поправь план: <изменения>`. Ревью — только `/agent-review`.\n"
                 "CI не подтверждён; создание PR через GITHUB_TOKEN само по себе не запускает другие workflow.",
             },
         )
@@ -389,15 +442,12 @@ def publish_result(api, payload):
         # New commit has the exact reviewed head as parent. force=false makes a
         # concurrent branch update fail rather than overwriting another edit.
         current = api.request("/git/commits/" + context["source_sha"])
-        if f"request {request_id})" in current["message"]:
+        if request_trailer in current["message"].splitlines():
             print("This request already updated the plan commit")
         else:
-            sha = write_plan_commit(api, context["source_sha"], path, markdown, request_id)
+            sha = write_plan_commit(api, context["source_sha"], path, markdown, message)
             api.request("/git/refs/heads/" + branch, {"sha": sha, "force": False}, method="PATCH")
-        api.request(
-            f"/issues/{pr['number']}/comments",
-            {"body": marker + "\nПлан обновлён в `" + path + "`. Исходники не изменялись."},
-        )
+        plan_status(api, payload, "✅ План обновлён в `" + path + "`. Исходники не изменялись.")
 
 
 if __name__ == "__main__":

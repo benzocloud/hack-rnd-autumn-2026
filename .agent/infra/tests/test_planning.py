@@ -65,7 +65,12 @@ def report():
 class PlanningTests(unittest.TestCase):
     def setUp(self):
         environment = patch.dict(
-            os.environ, {"GITHUB_EVENT_NAME": "issue_comment", "GITHUB_RUN_ATTEMPT": "1"}
+            os.environ,
+            {
+                "GITHUB_EVENT_NAME": "issue_comment",
+                "GITHUB_RUN_ATTEMPT": "1",
+                "GITHUB_RUN_ID": "123",
+            },
         )
         environment.start()
         self.addCleanup(environment.stop)
@@ -101,10 +106,10 @@ class PlanningTests(unittest.TestCase):
         validate_report(report(), c)
         payload = {
             "action": "created",
-            "issue": {"number": 10, "pull_request": {}},
+            "issue": {"number": 10, "pull_request": {}, "body": "<!-- agent-plan:issue=7 -->"},
             "comment": {
                 "id": 3,
-                "body": "/discuss-plan refine",
+                "body": "/discuss revise plan",
                 "user": {"type": "User", "login": "qa"},
             },
         }
@@ -208,13 +213,14 @@ class PlanningTests(unittest.TestCase):
         e["comment"]["body"] = "/create-plan now"
         self.assertIsNone(command(e, "issue_comment"))
         e["issue"]["pull_request"] = {}
-        for body in ("/discuss-plan change acceptance", "/discuss-plan\nchange acceptance"):
+        e["issue"]["body"] = "<!-- agent-plan:issue=7 -->"
+        for body in ("/discuss change plan acceptance", "/discuss\nchange plan acceptance"):
             e["comment"]["body"] = body
             self.assertEqual(command(e, "issue_comment"), "discuss-plan")
-        for body in ("/discuss-plan", "/discuss-planish change", "text /discuss-plan change"):
+        for body in ("/discuss", "/discussish change plan", "text /discuss change plan"):
             e["comment"]["body"] = body
             self.assertIsNone(command(e, "issue_comment"))
-        e["comment"]["body"] = "/discuss-plan change"
+        e["comment"]["body"] = "/discuss change plan"
         e["comment"]["user"]["type"] = "Bot"
         self.assertIsNone(command(e, "issue_comment"))
 
@@ -264,7 +270,7 @@ class PlanningTests(unittest.TestCase):
                 if mode == "discuss-plan"
                 else None
             )
-            payload = {"comment": {"id": 8, "body": "/discuss-plan refine"}} if pr else {}
+            payload = {"comment": {"id": 8, "body": "/discuss revise plan"}} if pr else {}
             with self.subTest(mode=mode), tempfile.TemporaryDirectory() as folder:
                 previous = Path.cwd()
                 try:
@@ -301,10 +307,12 @@ class PlanningTests(unittest.TestCase):
 
         api = API()
         with self.assertRaises(ValueError):
-            github_plan.write_plan_commit(api, "a" * 40, "api/main.go", "malicious", 10)
+            github_plan.write_plan_commit(
+                api, "a" * 40, "api/main.go", "malicious", "feat: plan fix"
+            )
         self.assertEqual(api.calls, [])
         path = identity(7)[1]
-        github_plan.write_plan_commit(api, "a" * 40, path, "plan", 10)
+        github_plan.write_plan_commit(api, "a" * 40, path, "plan", "feat: plan fix")
         tree = next(body for endpoint, body in api.calls if endpoint == "/git/trees")
         self.assertEqual([e["path"] for e in tree["tree"]], [path])
         commit = api.calls[-1][1]
@@ -337,18 +345,75 @@ class PlanningTests(unittest.TestCase):
     def test_create_plan_publishes_only_markdown_and_draft_refs_pr(self):
         self.exercise_publication("create-plan")
 
-    def test_discuss_plan_uses_fast_forward_and_same_fixed_file(self):
+    def test_discuss_updates_plan_with_fast_forward_and_same_fixed_file(self):
         self.exercise_publication("discuss-plan")
+
+    def test_discuss_amendment_start_is_idempotent_and_failure_edits_status(self):
+        payload = {
+            "action": "created",
+            "issue": {"number": 10, "pull_request": {}, "body": "<!-- agent-plan:issue=7 -->"},
+            "comment": {
+                "id": 3,
+                "body": "/discuss Поправь план: добавь тест",
+                "user": {"type": "User"},
+            },
+        }
+
+        class API:
+            def __init__(self):
+                self.comments, self.writes = [], []
+
+            def pages(self, path):
+                return self.comments
+
+            def request(self, path, body, method=None):
+                self.writes.append((path, body, method))
+                if method is None:
+                    self.comments.append(
+                        {"id": 33, "user": {"login": "github-actions[bot]"}, **body}
+                    )
+
+        api = API()
+        with (
+            patch.object(github_plan, "GitHub", return_value=api),
+            patch.object(github_plan, "event", return_value=payload),
+            patch.object(
+                github_plan, "selected", return_value=("discuss-plan", issue(), {"number": 10})
+            ),
+            patch.dict(os.environ, {"PLAN_JOB_RESULT": "failure"}),
+        ):
+            github_plan.start()
+            github_plan.start()
+            github_plan.publish()
+        self.assertEqual(len(api.writes), 2)
+        self.assertEqual(api.writes[-1][0], "/issues/comments/33")
+        self.assertEqual(api.writes[-1][2], "PATCH")
+        self.assertIn("ошибкой", api.writes[-1][1]["body"])
 
     def test_legacy_plan_publication_keeps_exact_branch(self):
         self.exercise_publication("discuss-plan", "codex/issue-7-plan")
 
-    def exercise_publication(self, mode, branch=None):
+    def test_discuss_reuses_commit_with_exact_request_link(self):
+        self.exercise_publication(
+            "discuss-plan",
+            existing_message=f"feat: update fix plan\n\nRequest: https://github.com/{github_plan.REPOSITORY}/pull/10#issuecomment-3",
+            expect_commit=False,
+        )
+
+    def test_discuss_does_not_confuse_another_request_link(self):
+        self.exercise_publication(
+            "discuss-plan",
+            existing_message=f"feat: update fix plan\n\nRequest: https://github.com/{github_plan.REPOSITORY}/pull/10#issuecomment-30",
+        )
+
+    def exercise_publication(
+        self, mode, branch=None, existing_message="Existing commit", expect_commit=True
+    ):
         c = context()
         c.update(
             mode=mode,
             request_id=3,
-            request_body="/create-plan" if mode == "create-plan" else "/discuss-plan revise tests",
+            request_body="/create-plan" if mode == "create-plan" else "/discuss revise plan tests",
         )
         pr = None
         if mode == "discuss-plan":
@@ -362,6 +427,14 @@ class PlanningTests(unittest.TestCase):
                 self.writes = []
 
             def pages(self, path):
+                if path == "/issues/10/comments":
+                    return [
+                        {
+                            "id": 33,
+                            "user": {"login": "github-actions[bot]"},
+                            "body": "<!-- agent-plan-discussion:3 -->\n\nStarted",
+                        }
+                    ]
                 return []
 
             def request(self, path, body=None, method=None):
@@ -373,13 +446,13 @@ class PlanningTests(unittest.TestCase):
                 if path.startswith("/git/ref/"):
                     raise urllib.error.HTTPError("https://api.github.com", 404, "Absent", {}, None)
                 if path.startswith("/git/commits/"):
-                    return {"tree": {"sha": "b" * 40}, "message": "Existing commit"}
+                    return {"tree": {"sha": "b" * 40}, "message": existing_message}
                 raise AssertionError("Unexpected API read " + path)
 
         api = API()
         payload = {
             "issue": {"number": 10 if pr else 7},
-            "comment": {"id": 3, "body": c["request_body"]},
+            "comment": {"id": 3, "body": c["request_body"], "user": {"login": "qa"}},
         }
         with tempfile.TemporaryDirectory() as folder:
             previous = Path.cwd()
@@ -395,14 +468,32 @@ class PlanningTests(unittest.TestCase):
                     github_plan.publish()
             finally:
                 os.chdir(previous)
+        if not expect_commit:
+            self.assertEqual(len(api.writes), 1)
+            self.assertEqual(api.writes[0][0], "/issues/comments/33")
+            self.assertEqual(api.writes[0][2], "PATCH")
+            return
         commit = next(body for path, body, method in api.writes if path == "/git/commits")
-        self.assertTrue(commit["message"].startswith("chore: "))
+        verb = "create" if mode == "create-plan" else "update"
+        subject = f"feat: {verb} fix plan for #7: handle empty prediction"
+        self.assertEqual(commit["message"].splitlines()[0], subject)
+        self.assertTrue(commit["message"].isascii())
+        self.assertIn("\nRefs #7\n", commit["message"])
+        route = "pull/10" if pr else "issues/7"
+        url = f"https://github.com/{github_plan.REPOSITORY}/{route}#issuecomment-3"
+        self.assertIn("Request: " + url, commit["message"].splitlines())
+        self.assertIn(
+            "Requested by @qa via " + ("/discuss" if pr else "/create-plan"), commit["message"]
+        )
+        self.assertNotIn("Closes", commit["message"])
         tree = next(body for path, body, method in api.writes if path == "/git/trees")
         self.assertEqual(len(tree["tree"]), 1)
         self.assertEqual(tree["tree"][0]["path"], identity(7)[1])
         if mode == "create-plan":
             request = next(body for path, body, method in api.writes if path == "/pulls")
             self.assertTrue(request["draft"])
+            self.assertEqual(request["title"], "ML: " + subject)
+            self.assertIn(f"[комментарием @qa]({url})", request["body"])
             self.assertEqual(request["head"], "runner/fix/handle_empty_prediction/issue_7")
             self.assertIn("Refs #7", request["body"])
             self.assertNotIn("Closes", request["body"])
@@ -429,6 +520,40 @@ class PlanningTests(unittest.TestCase):
             r[field] = value
             with self.assertRaises(ValueError):
                 validate_report(r, context())
+
+    def test_source_references_link_to_exact_commit_files_and_line_ranges(self):
+        r = report()
+        r["evidence"] = [
+            ".agent/infra/planning/plan_policy.py:58–60: exact comparison",
+            "`.agent/infra/planning/github_plan.py:89–107,114-127`: collection",
+            ".github/workflows/issue-planning.yml:13-17 and AGENTS.md:1",
+            "ml/predict.py:2 returns a result",
+        ]
+        markdown = render(r, context())
+        base = f"https://github.com/{github_plan.REPOSITORY}/blob/" + "a" * 40
+        for path, anchor in (
+            (".agent/infra/planning/plan_policy.py", "#L58-L60"),
+            (".agent/infra/planning/github_plan.py", "#L89-L107"),
+            (".agent/infra/planning/github_plan.py", "#L114-L127"),
+            (".github/workflows/issue-planning.yml", "#L13-L17"),
+            ("AGENTS.md", "#L1"),
+            ("ml/predict.py", "#L2"),
+        ):
+            with self.subTest(path=path, anchor=anchor):
+                self.assertIn(f"]({base}/{path}{anchor})", markdown)
+        self.assertIn("exact comparison", markdown)
+        self.assertIn("collection", markdown)
+        self.assertNotIn("/blob/main/", markdown)
+
+    def test_render_keeps_existing_links_and_invalid_references_unchanged(self):
+        r = report()
+        existing = "[plan_policy.py:58](https://example.test/already-linked)"
+        invalid = "../secret.py:1, file.py:0, file.py:9-2, INFRA:123"
+        r["evidence"] = [existing, invalid, "ml/predict.py:2 returns a result"]
+        markdown = render(r, context())
+        self.assertIn(existing, markdown)
+        self.assertIn(invalid, markdown)
+        self.assertIn("/ml/predict.py#L2)", markdown)
 
 
 if __name__ == "__main__":

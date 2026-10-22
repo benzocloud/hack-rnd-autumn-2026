@@ -14,7 +14,7 @@ jobs:
       github.run_attempt == 1 &&
       (github.event_name == 'issues' ||
       (!github.event.issue.pull_request && github.event.comment.body == '/create-plan') ||
-      (github.event.issue.pull_request && startsWith(github.event.comment.body, '/discuss-plan')))
+      (github.event.issue.pull_request && startsWith(github.event.comment.body, '/discuss')))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -35,18 +35,19 @@ jobs:
 
   announce:
     needs: authorize
-    if: needs.authorize.outputs.requested == 'true' && github.event_name == 'issues'
+    if: needs.authorize.outputs.requested == 'true' && (github.event_name == 'issues' || github.event.issue.pull_request)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: read
       issues: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, Node.js 24
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Announce Issue scope analysis
+      - name: Announce scope analysis or plan amendment
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 .agent/infra/planning/github_plan.py start

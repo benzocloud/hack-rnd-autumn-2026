@@ -5,6 +5,7 @@ import json
 import re
 import sys
 from pathlib import Path
+from urllib.parse import quote
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "review"))
 from review_policy import REPOSITORY, SHA, safe_path
@@ -40,7 +41,6 @@ SCHEMA = {
 }
 
 SCHEMA["properties"]["affected_files"]["items"]["pattern"] = r"^[^\s]+$"
-
 
 REVIEW_MODES = ("per-stage", "after-all")
 STAGE_STATUSES = ("Не начат", "В работе", "На ревью", "Принят")
@@ -83,6 +83,51 @@ STAGED_SCHEMA["required"] = [name for name in SCHEMA["required"] if name != "ste
     "stages",
 ]
 
+SOURCE_REFERENCE = re.compile(
+    r"(?P<link>\[[^\]\n]*\]\([^\n)]*\))"
+    r"|(?<![\w/`])(?P<tick>`?)"
+    r"(?P<path>(?:[\w.-]+/)+[\w.-]+|[\w.-]*\.[\w.-]+)"
+    r":(?P<ranges>[1-9][0-9]*(?:[-–][1-9][0-9]*)?"
+    r"(?:,\s*[1-9][0-9]*(?:[-–][1-9][0-9]*)?)*)"
+    r"(?P=tick)(?![\w–-])"
+)
+
+
+def discussion_command(payload, event_name, attempt="1"):
+    comment = payload.get("comment", {})
+    if (
+        attempt != "1"
+        or event_name != "issue_comment"
+        or payload.get("action") != "created"
+        or comment.get("user", {}).get("type") != "User"
+    ):
+        return None
+    body = comment.get("body") or ""
+    for name in ("question", "discuss"):
+        prefix = "/" + name
+        rest = body[len(prefix) :] if body.startswith(prefix) else ""
+        if rest and rest[0].isspace() and rest.strip():
+            return name, rest.strip()
+    return None
+
+
+def plan_edit_requested(text):
+    # Bind the leading action to the plan itself; a later mention is not consent.
+    plan = r"(?:(?:the|this)[ \t]+)?plan\b"
+    return bool(
+        "?" not in text
+        and re.match(
+            r"^(?:(?:поправь|поправить|исправь|исправить|измени|изменить|обнови|обновить|дополни|перепиши|уточни)[ \t]+(?:этот[ \t]+)?план\b"
+            r"|добавь[ \t]+в[ \t]+(?:этот[ \t]+)?план\b"
+            r"|(?:убери|удали)[ \t]+из[ \t]+(?:этого[ \t]+)?плана\b"
+            rf"|(?:update|revise|edit|change|amend|rewrite|clarify)[ \t]+{plan}"
+            rf"|add[ \t]+to[ \t]+{plan}"
+            rf"|remove[ \t]+from[ \t]+{plan})",
+            text,
+            re.I,
+        )
+    )
+
 
 def command(payload, event_name, attempt="1"):
     if attempt != "1":
@@ -100,9 +145,14 @@ def command(payload, event_name, attempt="1"):
     body = comment.get("body", "")
     if "pull_request" not in issue and body == "/create-plan":
         return "create-plan"
-    if "pull_request" in issue and body.startswith("/discuss-plan"):
-        rest = body[len("/discuss-plan") :]
-        if rest and rest[0].isspace() and rest.strip():
+    discussion = discussion_command(payload, event_name, attempt)
+    if "pull_request" in issue and discussion:
+        name, text = discussion
+        if (
+            name == "discuss"
+            and plan_edit_requested(text)
+            and re.search(r"<!-- agent-plan:issue=[1-9][0-9]* -->", issue.get("body") or "")
+        ):
             return "discuss-plan"
     return None
 
@@ -302,12 +352,36 @@ def validate_staged_report(
             raise ValueError("Cannot discard an implementation stage already in progress")
 
 
+def source_links(text, sha):
+    def replace(match):
+        if match.group("link"):
+            return match[0]
+        path = match["path"]
+        try:
+            safe_path(path)
+        except ValueError:
+            return match[0]
+        links = []
+        for span in match["ranges"].split(","):
+            span = span.strip()
+            bounds = re.split("[-–]", span)
+            start, end = int(bounds[0]), int(bounds[-1])
+            if end < start:
+                return match[0]
+            anchor = f"#L{start}" + (f"-L{end}" if len(bounds) == 2 else "")
+            url = f"https://github.com/{REPOSITORY}/blob/{sha}/{quote(path, safe='/')}{anchor}"
+            links.append(f"[`{path}:{span}`]({url})")
+        return ", ".join(links)
+
+    return SOURCE_REFERENCE.sub(replace, text)
+
+
 def render(report, context):
     validate_report(report, context)
     lines = [
         f"# План исправления Issue #{context['issue_number']}",
-        report["summary"],
-        f"Исходники: `{report['source_sha']}`. Статус: `{report['status']}`.",
+        source_links(report["summary"], report["source_sha"]),
+        f"Исходники: [`{report['source_sha']}`](https://github.com/{REPOSITORY}/commit/{report['source_sha']}). Статус: `{report['status']}`.",
         "Это оценка и план. Реализация требует отдельного решения разработчика. GBrain недоступен; анализ статический, тесты не запускались.",
     ]
     labels = (
@@ -321,5 +395,9 @@ def render(report, context):
         "Открытые вопросы",
     )
     for name, label in zip(LISTS, labels):
-        lines += ["## " + label, "\n".join("- " + value for value in report[name]) or "Нет."]
+        lines += [
+            "## " + label,
+            "\n".join("- " + source_links(value, report["source_sha"]) for value in report[name])
+            or "Нет.",
+        ]
     return "\n\n".join(lines) + "\n"

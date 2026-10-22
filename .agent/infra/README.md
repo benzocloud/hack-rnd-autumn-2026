@@ -1,9 +1,9 @@
 # Agent infrastructure
 
 Status **2026-10-22**: Codex Plus runner installed on `runner.brokebyte.me`;
-The initial infrastructure PR has been merged into `main`. The extension in
-`globalarray/chore/improve_agent_workflows` (optional Issue, full discussion,
-editable progress report and descriptive runner branches) is not yet published. GBrain is deferred. Fadwix containers, config, networks, ports,
+The infrastructure and subsequent workflow extensions have been merged into
+`main`. The new conversation commands described below are implemented locally;
+their matching runner adapters/profile have not been deployed. GBrain is deferred. Fadwix containers, config, networks, ports,
 Docker and kernel settings were not changed; no reboot was performed.
 
 ## Responsibility boundaries
@@ -14,13 +14,14 @@ Docker and kernel settings were not changed; no reboot was performed.
 | `runner/` | Restricted SSH, resource limits, sandbox, shared inference and transport | `install-workflow.py`, `review_dispatch.py`, `job.py`, `github_api.py`, `prepare-review.py` |
 | `review/` | PR context, skill routing, report validation and advisory publication | `github_review.py`, `ssh_review.py`, `review_policy.py`, `smoke-review.py` |
 | `planning/` | Issue assessment and plan-only branch/PR lifecycle | `github_plan.py`, `ssh_plan.py`, `plan_policy.py` |
+| `conversation/` | Read-only Issue/PR questions, context and replies | `github_conversation.py`, `ssh_conversation.py`, `conversation_policy.py` |
 | `skills/` | Pinned upstream instruction sources and installation | `install-skills.py`, `skills.json` |
 | `gbrain/` | Deferred memory service, credentials, backup and timer | `configure.py`, `backup.py`, `hackrnd-gbrain*` units |
 | `tests/` | Safety and protocol regression checks | `test_*.py` |
 
 GitHub events and job permissions belong in `.github/workflows/`; human/agent
 policy belongs in `.agent/workflows/` and accepted decisions. Runtime adapters
-are deployed with the same `runner/`, `review/`, `planning/` boundaries under
+are deployed with the same `runner/`, `review/`, `planning/`, `conversation/` boundaries under
 `/opt/hackrnd-agent/`. Binaries/releases and pinned skill sources remain under
 `bin/`, `releases/`, `skill-sources/`. Mutable state belongs only in private
 `/var/lib/hackrnd-review/` and future `/var/lib/hackrnd-gbrain/`.
@@ -42,13 +43,28 @@ are deployed with the same `runner/`, `review/`, `planning/` boundaries under
   that comment with the report or a failure/cancellation status and Actions link,
   including when analysis or artifact retrieval fails.
   Exact `/create-plan` in the Issue creates `runner/fix/<short_description>/issue_N` with only
-  `.agent/plans/issue-N-fix.md` and a draft PR. `/discuss-plan <changes>` in that
-  managed PR revises only the plan. Both commands require a human with write,
+  `.agent/plans/issue-N-fix.md` and a draft PR. `/discuss Поправь план: <changes>` in that
+  managed PR revises only the plan and edits one progress comment with its outcome. Both commands require a human with write,
   maintain or admin permission. No implementation, approval, merge or deployment.
   Plan PRs use `Refs #N`, avoiding automatic Issue closure when a plan merges.
-  Plan commits use `chore:` under `.agent/workflows/git-conventions.md`.
+  Plan commits and draft PR titles use `feat:` with the Issue number and a short
+  English fix description under `.agent/workflows/git-conventions.md`. Commit
+  bodies identify the requester/command and link directly to the originating
+  Issue/PR comment via `Request:`; the same link guards against duplicate commits.
 - `infra-checks.yml`: run stdlib safety tests for infrastructure changes on
   pushes/PRs. Application Go/Python/frontend/Buf CI awaits actual project code.
+- `agent-conversation.yml`: `/question <question>` and ordinary `/discuss <message>`
+  in open Issues/same-repository PRs. Read descriptions, all conversation/review/
+  inline comments/replies and directly linked Issues, with complete pagination.
+  Recheck source and discussion before editing the original progress comment.
+  `/question` selects `gpt-6-luna`/low and supplies bounded context/source in the
+  prompt with shell tools disabled; tool-use events invalidate the answer.
+  `/discuss` selects `gpt-6.1-sol`/low for read-only source inspection. Its explicit
+  managed-plan amendments route exclusively through `issue-planning.yml`.
+  The old plan-specific slash command is removed. Replies include SHA-bound
+  source links and measured CLI token usage when present. Both use the common
+  Plus Codex/ChatGPT Work quota; no separate free ChatGPT Chat mode is claimed.
+  Conversation publishers have only contents read and comment write permissions.
 
 GitHub-hosted context jobs use read tokens. The fixed SSH invocation receives
 no GitHub token. A separate GitHub-hosted publisher has only the write permissions
@@ -148,6 +164,16 @@ existing authorized keys. It reloads systemd units without restarting Fadwix.
 Store the private key in GitHub `AGENT_REVIEW_SSH_KEY`, and a host key verified
 through a trusted channel in `AGENT_REVIEW_KNOWN_HOSTS`. Never commit private
 keys, tokens or OAuth state. Never use an unverified keyscan as the trust source.
+
+For the conversation rollout, install `conversation/`, updated `runner/job.py`,
+`runner/review_dispatch.py`, the permission profile and both planning adapters
+together, before enabling the new default-branch workflows. Use the existing
+public key; hold `/var/lib/hackrnd-review/review.lock` while updating adapters,
+and back up the prior root-owned adapters/profile for rollback. The new dispatcher
+allowlist has six fixed commands; the four-command installed pilot above is the
+previous state. Verify selected model access, shell-tool exclusion and source
+read/auth denial as the unprivileged user before publishing test commands.
+No live rollout or inference with the new conversation workers is claimed yet.
 
 ## Pins and source references
 

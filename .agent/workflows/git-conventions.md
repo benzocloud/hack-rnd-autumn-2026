@@ -23,7 +23,7 @@
 | `test` | Добавление и исправление тестов | `test: isolate GitHub event fixtures` |
 | `build` | Сборка, упаковка и зависимости | `build: update Go toolchain` |
 | `ci` | Конфигурация и скрипты CI/CD | `ci: configure agent review workflow` |
-| `chore` | Прочие служебные изменения, настройки и автоматические планы | `chore: update Issue fix plan (request 123)` |
+| `chore` | Прочие служебные изменения и настройки | `chore: update local development settings` |
 | `revert` | Откат ранее внесённого изменения | `revert: remove prediction cache` |
 
 Разрешённые типы: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`,
@@ -31,7 +31,25 @@
 изменения; `chore` использовать, когда остальные типы не подходят.
 Не подменять описание заглушкой вроде `update` или `changes`. Заголовок должен
 объяснять, что изменилось; разные задачи не объединять ради одного коммита.
-Для созданного агентом плана: `chore: update Issue fix plan (request N)`.
+По решению разработчика автоматические коммиты планов и их draft PR используют
+`feat:`. Заголовок: `feat: create fix plan for #N: <short English description>`
+при создании или `feat: update fix plan for #N: <short English description>`
+при изменении. Описание берётся из проверенного `branch_description`, слова
+разделяются пробелами; номер комментария в заголовок не включается.
+В теле — `Refs #N`, автор и команда запроса, затем `Request: <comment permalink>`.
+Для `/create-plan` ссылка ведёт на комментарий в Issue, для `/discuss` — в PR
+плана. Полная строка `Request:` также служит признаком уже обработанного запроса.
+Пример:
+
+```text
+feat: create fix plan for #5: expand regression coverage
+
+Refs #5
+Requested by @qa via /create-plan.
+
+Request: https://github.com/benzocloud/hack-rnd-autumn-2026/issues/5#issuecomment-6345106574
+```
+
 Префиксы PR `ML:`, `INFRA:`, `INFRA/ML:` управляют скоупом/skills (ADR-012)
 и не добавляются перед типом коммита.
 
@@ -46,7 +64,7 @@
 `runner/fix/<short_description>/issue_N`
 (например, `runner/fix/handle_empty_input/issue_123`). Краткое английское описание
 должно отражать смысл исправления; номер Issue — отдельный последний сегмент.
-Для `/discuss-plan` существующее имя ветки сохраняется.
+При изменении плана через `/discuss` существующее имя ветки сохраняется.
 
 Не выдумывать nickname, remote или базовую ветку; проверять новое имя через
 `git check-ref-format --branch`. Существующие ветки открытых PR не
@@ -56,8 +74,8 @@
 Перед коммитом проверить итоговый diff, новые файлы и состав индекса; включать
 только согласованный результат и не затрагивать чужую незавершённую работу.
 Commit/push — после явного апрува предъявленного результата согласно п. 5
-`.agent/instructions.md`. Команды `/create-plan` и `/discuss-plan` уже дают
-разрешение на соответствующие плановые коммиты/ветку/PR; отдельное подтверждение
+`.agent/instructions.md`. Команда `/create-plan` и явная просьба изменить план через `/discuss` в его
+управляемом PR уже дают разрешение на соответствующие плановые коммиты/ветку/PR; отдельное подтверждение
 для каждого такого запуска не требуется.
 
 Апрув разрешает согласованный commit/push, но не merge в main или deployment.

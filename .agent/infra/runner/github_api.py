@@ -61,7 +61,14 @@ def event():
 
 
 def invoke_json(command):
-    if command not in {"agent-review", "agent-scope", "agent-create-plan", "agent-discuss-plan"}:
+    if command not in {
+        "agent-review",
+        "agent-scope",
+        "agent-create-plan",
+        "agent-discuss-plan",
+        "agent-question",
+        "agent-discuss",
+    }:
         raise ValueError("Unknown fixed command")
     key = Path(os.environ["RUNNER_TEMP"]) / "agent-key"
     known = Path(os.environ["RUNNER_TEMP"]) / "agent-known-hosts"

@@ -12,6 +12,8 @@ COMMANDS = {
     "agent-scope": "planning/ssh_plan.py",
     "agent-create-plan": "planning/ssh_plan.py",
     "agent-discuss-plan": "planning/ssh_plan.py",
+    "agent-question": "conversation/ssh_conversation.py",
+    "agent-discuss": "conversation/ssh_conversation.py",
 }
 
 

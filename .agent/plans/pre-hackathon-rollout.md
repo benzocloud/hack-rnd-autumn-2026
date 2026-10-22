@@ -67,7 +67,7 @@ performed. GBrain hardware changes are deferred. Open work below is not represen
 ## Phase 5a — Issue assessment and plan automation (ADR-013)
 - [x] Implement every-Issue static fix-boundary analysis and Issue report, without QA filters.
 - [x] Implement authorized `/create-plan`: plan-only branch and draft PR linked with `Refs #N`.
-- [x] Implement `/discuss-plan <changes>` updates in the same managed plan PR; reject PRs containing implementation changes.
+- [x] Implement `/discuss <explicit plan amendment>` updates in the same managed plan PR; reject PRs containing implementation changes.
 - [x] Separate read-only model analysis from GitHub write publisher; derive plan path from Issue number and reject stale source/Issue context.
 - [x] Organize infrastructure by responsibility (ADR-014); update installers, workflow paths and safety checks.
 - [x] Provision restricted SSH secrets; owner enabled organization policy and repository Actions PR creation was verified enabled, with default read token.
