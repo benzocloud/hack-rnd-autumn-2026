@@ -82,6 +82,51 @@ def authorize():
     output(requested=str(request is not None).lower())
 
 
+def scope_marker(payload):
+    return f"<!-- agent-scope-request:{int(payload['issue']['id'])} -->"
+
+
+def scope_status(api, payload, body=None):
+    marker = scope_marker(payload)
+    comments = [
+        item
+        for item in api.pages(f"/issues/{int(payload['issue']['number'])}/comments")
+        if item.get("user", {}).get("login") == "github-actions[bot]"
+        and (item.get("body") or "").startswith(marker + "\n")
+    ]
+    if len(comments) > 1:
+        raise ValueError("Duplicate Issue scope status comments")
+    if body is None:
+        return comments[0] if comments else None
+    if not comments:
+        raise ValueError("Issue scope status comment is missing; refusing a duplicate result")
+    api.request(
+        f"/issues/comments/{int(comments[0]['id'])}",
+        {"body": marker + "\n\n" + body + "\n\n" + scope_run_link()},
+        method="PATCH",
+    )
+
+
+def scope_run_link():
+    return f"[Actions run](https://github.com/{REPOSITORY}/actions/runs/{int(os.environ['GITHUB_RUN_ID'])})"
+
+
+def start():
+    api, payload = GitHub(), event()
+    request = selected(api, payload)
+    if request is None or request[0] != "scope":
+        raise ValueError("Expected an authorized Issue scope request")
+    if scope_status(api, payload) is None:
+        api.request(
+            f"/issues/{request[1]['number']}/comments",
+            {
+                "body": scope_marker(payload)
+                + "\n\n⏳ **Начал оценку границ исправления** — собираю контекст Issue и изучаю исходники.\n\n"
+                + scope_run_link()
+            },
+        )
+
+
 def default_source(api):
     branch = api.request("")["default_branch"]
     sha = api.request("/commits/" + urllib.parse.quote(branch, safe=""))["sha"]
@@ -225,6 +270,38 @@ def write_plan_commit(api, parent, path, markdown, request_id):
 
 def publish():
     api, payload = GitHub(), event()
+    scope = (
+        command(
+            payload,
+            os.environ.get("GITHUB_EVENT_NAME", "issue_comment"),
+            os.environ.get("GITHUB_RUN_ATTEMPT", "1"),
+        )
+        == "scope"
+    )
+    result = os.environ.get("PLAN_JOB_RESULT", "success")
+    if result != "success" or os.environ.get("PLAN_REQUESTED") == "false":
+        if not scope:
+            raise ValueError("No completed plan was produced")
+        status = "отменён" if result == "cancelled" else "завершился ошибкой"
+        scope_status(
+            api,
+            payload,
+            f"⚠️ **Анализ Issue {status}**. Итоговая оценка не опубликована; подробности в Actions.",
+        )
+        return
+    try:
+        publish_result(api, payload)
+    except Exception:
+        if scope:
+            scope_status(
+                api,
+                payload,
+                "⚠️ **Оценка Issue не опубликована** — ответ runner не прошёл проверку, контекст изменился или публикация завершилась ошибкой. Подробности в Actions.",
+            )
+        raise
+
+
+def publish_result(api, payload):
     package = json.loads(Path("plan-result.json").read_text())
     context, report = package["context"], package["report"]
     validate_report(report, context)
@@ -261,14 +338,12 @@ def publish():
         print("Already published this request")
         return
     if mode == "scope":
-        api.request(
-            f"/issues/{issue['number']}/comments",
-            {
-                "body": marker
-                + "\n\n"
-                + markdown
-                + "\nДля ветки и draft PR с планом: `/create-plan`. Изменения плана обсуждаются в его PR командой `/discuss-plan <изменения>`."
-            },
+        scope_status(
+            api,
+            payload,
+            "✅ **Оценка границ исправления завершена**\n\n"
+            + markdown
+            + "\nДля ветки и draft PR с планом: `/create-plan`. Изменения плана обсуждаются в его PR командой `/discuss-plan <изменения>`.",
         )
         return
     if mode == "create-plan":
@@ -326,6 +401,10 @@ def publish():
 
 
 if __name__ == "__main__":
-    {"authorize": authorize, "prepare": prepare, "invoke": invoke, "publish": publish}[
-        sys.argv[1]
-    ]()
+    {
+        "authorize": authorize,
+        "start": start,
+        "prepare": prepare,
+        "invoke": invoke,
+        "publish": publish,
+    }[sys.argv[1]]()
