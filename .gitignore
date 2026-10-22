@@ -1,2 +1,8 @@
 # Local reference checkouts linked from this workspace.
 /references/
+
+# Local Python tooling and caches.
+.venv/
+.ruff_cache/
+__pycache__/
+*.py[cod]

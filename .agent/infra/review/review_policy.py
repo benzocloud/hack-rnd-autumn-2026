@@ -1,6 +1,7 @@
 """Shared validation for the GitHub orchestrator and fixed SSH entrypoint."""
-from pathlib import PurePosixPath
+
 import re
+from pathlib import PurePosixPath
 
 REPOSITORY = "benzocloud/hack-rnd-autumn-2026"
 BASE_SKILLS = ["caveman-review", "ponytail-review"]
@@ -8,16 +9,21 @@ SHA = re.compile(r"[0-9a-f]{40}\Z")
 
 
 def is_request(event, event_name="issue_comment", attempt="1"):
-    return (event_name == "issue_comment" and attempt == "1"
-            and event.get("action") == "created"
-            and bool(event.get("issue", {}).get("pull_request"))
-            and event.get("comment", {}).get("body") == "/agent-review"
-            and event.get("comment", {}).get("user", {}).get("type") == "User")
+    return (
+        event_name == "issue_comment"
+        and attempt == "1"
+        and event.get("action") == "created"
+        and bool(event.get("issue", {}).get("pull_request"))
+        and event.get("comment", {}).get("body") == "/agent-review"
+        and event.get("comment", {}).get("user", {}).get("type") == "User"
+    )
 
 
 def skills_for(title, files):
-    go = any(p.endswith(".go") or PurePosixPath(p).name in
-             {"go.mod", "go.sum", "go.work", "go.work.sum"} for p in files)
+    go = any(
+        p.endswith(".go") or PurePosixPath(p).name in {"go.mod", "go.sum", "go.work", "go.work.sum"}
+        for p in files
+    )
     if title.startswith("INFRA/ML:"):
         scope, require_go = "INFRA/ML", True
     elif title.startswith("ML:"):
@@ -30,7 +36,8 @@ def skills_for(title, files):
 def scope_conflict(context):
     return context["title"].startswith("ML:") and any(
         p.endswith(".go") or PurePosixPath(p).name in {"go.mod", "go.sum", "go.work", "go.work.sum"}
-        for p in context["files"])
+        for p in context["files"]
+    )
 
 
 def safe_path(value):
@@ -56,20 +63,45 @@ def validate_context(context):
         raise ValueError("Missing required task/CI context; issues must be a list (possibly empty)")
 
 
-FINDING = {"type": "object", "additionalProperties": False, "properties": {
-    "severity": {"type": "string", "enum": ["BLOCKER", "MAJOR", "MINOR"]},
-    "file": {"type": "string"}, "line": {"type": "integer"},
-    "evidence": {"type": "string"}, "impact": {"type": "string"}, "fix": {"type": "string"},
-}, "required": ["severity", "file", "line", "evidence", "impact", "fix"]}
-REPORT_SCHEMA = {"type": "object", "additionalProperties": False, "properties": {
-    "head_sha": {"type": "string"}, "base_sha": {"type": "string"},
-    "scope": {"type": "string"}, "status": {"type": "string", "enum": ["complete", "incomplete"]},
-    "memory": {"type": "string", "enum": ["unavailable"]},
-    "skills": {"type": "array", "items": {"type": "string"}},
-    "checks": {"type": "array", "items": {"type": "string"}},
-    "limitations": {"type": "array", "items": {"type": "string"}},
-    "findings": {"type": "array", "items": FINDING},
-}, "required": ["head_sha", "base_sha", "scope", "status", "memory", "skills", "checks", "limitations", "findings"]}
+FINDING = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "severity": {"type": "string", "enum": ["BLOCKER", "MAJOR", "MINOR"]},
+        "file": {"type": "string"},
+        "line": {"type": "integer"},
+        "evidence": {"type": "string"},
+        "impact": {"type": "string"},
+        "fix": {"type": "string"},
+    },
+    "required": ["severity", "file", "line", "evidence", "impact", "fix"],
+}
+REPORT_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "head_sha": {"type": "string"},
+        "base_sha": {"type": "string"},
+        "scope": {"type": "string"},
+        "status": {"type": "string", "enum": ["complete", "incomplete"]},
+        "memory": {"type": "string", "enum": ["unavailable"]},
+        "skills": {"type": "array", "items": {"type": "string"}},
+        "checks": {"type": "array", "items": {"type": "string"}},
+        "limitations": {"type": "array", "items": {"type": "string"}},
+        "findings": {"type": "array", "items": FINDING},
+    },
+    "required": [
+        "head_sha",
+        "base_sha",
+        "scope",
+        "status",
+        "memory",
+        "skills",
+        "checks",
+        "limitations",
+        "findings",
+    ],
+}
 
 
 def validate_report(report, context):
@@ -88,7 +120,9 @@ def validate_report(report, context):
         raise ValueError("Go skills are forbidden for standalone ML:")
     if report["status"] == "complete" and scope_conflict(context):
         raise ValueError("ML: conflicts with Go changes; review must be incomplete")
-    if report["status"] == "complete" and not set(context["required_skills"]).issubset(report["skills"]):
+    if report["status"] == "complete" and not set(context["required_skills"]).issubset(
+        report["skills"]
+    ):
         raise ValueError("Missing required skills")
     if not isinstance(report["findings"], list) or len(report["findings"]) > 30:
         raise ValueError("Invalid findings")
@@ -96,10 +130,16 @@ def validate_report(report, context):
         if set(finding) != set(FINDING["required"]):
             raise ValueError("Invalid finding shape")
         safe_path(finding["file"])
-        if finding["file"] not in context["files"] or type(finding["line"]) is not int or finding["line"] < 1:
+        if (
+            finding["file"] not in context["files"]
+            or type(finding["line"]) is not int
+            or finding["line"] < 1
+        ):
             raise ValueError("Finding must reference a changed file and positive line")
         if finding["severity"] not in ("BLOCKER", "MAJOR", "MINOR"):
             raise ValueError("Invalid severity")
-        if any(not isinstance(finding[k], str) or not finding[k].strip() or len(finding[k]) > 3000
-               for k in ("evidence", "impact", "fix")):
+        if any(
+            not isinstance(finding[k], str) or not finding[k].strip() or len(finding[k]) > 3000
+            for k in ("evidence", "impact", "fix")
+        ):
             raise ValueError("Invalid finding details")

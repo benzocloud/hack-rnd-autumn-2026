@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Fixed PR review adapter: archive/context data only, no supplied commands."""
+
 import json
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "runner"))
-from job import MAX_INPUT, workspace, load_skills, infer, extract_snapshot
-from review_policy import REPORT_SCHEMA, validate_context, validate_report, scope_conflict
+from job import MAX_INPUT, infer, load_skills, workspace
+from job import extract_snapshot as extract_snapshot
+from review_policy import REPORT_SCHEMA, scope_conflict, validate_context, validate_report
 
 
 def main():
@@ -51,7 +54,10 @@ Copy head_sha, base_sha and scope exactly from context.json. Finding paths are
 relative to source/ and must omit the source/ prefix.
 Never claim CI/tests ran locally. Never write, approve, merge or deploy.
 """
-        prompt += "\nPinned required skill instructions supplied by the trusted worker:\n" + (job / "required-skills.md").read_text()
+        prompt += (
+            "\nPinned required skill instructions supplied by the trusted worker:\n"
+            + (job / "required-skills.md").read_text()
+        )
         report = infer(job, schema, prompt, ml=context["scope"] == "ML")
         validate_report(report, context)
         for finding in report["findings"]:
@@ -66,4 +72,4 @@ if __name__ == "__main__":
         main()
     except Exception as error:
         print(f"Agent review failed: {type(error).__name__}: {error}", file=sys.stderr)
-        raise SystemExit(1)
+        raise SystemExit(1) from error

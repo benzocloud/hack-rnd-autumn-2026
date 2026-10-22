@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Fetch pinned skill files only; never execute upstream installers or hooks."""
+
 import json
 import os
-from pathlib import Path
 import pwd
 import subprocess
+from pathlib import Path
 
 
 def main():
@@ -19,16 +20,27 @@ def main():
         source = root / name
         if not source.exists():
             subprocess.run(["git", "init", str(source)], check=True, capture_output=True)
-            subprocess.run(["git", "-C", str(source), "remote", "add", "origin", spec["repository"]], check=True)
-        subprocess.run(["git", "-C", str(source), "fetch", "--depth=1", "origin", spec["commit"]], check=True, timeout=120)
+            subprocess.run(
+                ["git", "-C", str(source), "remote", "add", "origin", spec["repository"]],
+                check=True,
+            )
+        subprocess.run(
+            ["git", "-C", str(source), "fetch", "--depth=1", "origin", spec["commit"]],
+            check=True,
+            timeout=120,
+        )
         subprocess.run(["git", "-C", str(source), "checkout", "--detach", "FETCH_HEAD"], check=True)
-        actual = subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip()
+        actual = subprocess.check_output(
+            ["git", "-C", str(source), "rev-parse", "HEAD"], text=True
+        ).strip()
         if actual != spec["commit"]:
             raise RuntimeError(f"Skill {name} differs from pinned commit")
         installed = []
         for item in spec["paths"]:
             candidate = source / item
-            directories = [candidate] if (candidate / "SKILL.md").is_file() else sorted(candidate.iterdir())
+            directories = (
+                [candidate] if (candidate / "SKILL.md").is_file() else sorted(candidate.iterdir())
+            )
             for folder in directories:
                 if not (folder / "SKILL.md").is_file():
                     continue

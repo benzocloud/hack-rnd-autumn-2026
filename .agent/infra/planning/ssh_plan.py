@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Fixed planning adapter. The model emits JSON; only GitHub's publisher writes."""
+
 import json
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "runner"))
-from job import MAX_INPUT, workspace, infer
+from job import MAX_INPUT, infer, workspace
 from plan_policy import SCHEMA, validate_context, validate_report
 
 
@@ -60,4 +62,4 @@ if __name__ == "__main__":
         main()
     except Exception as error:
         print(f"Agent planning failed: {type(error).__name__}: {error}", file=sys.stderr)
-        raise SystemExit(1)
+        raise SystemExit(1) from error

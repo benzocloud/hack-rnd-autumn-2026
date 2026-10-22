@@ -201,11 +201,30 @@ then rehearse scope, plan creation, discussion and review on test objects.
 
 ## Checks, remaining activation and rollback
 
+Install the pinned development tools in a local virtual environment:
+
 ```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install -r .agent/infra/requirements-dev.txt
+```
+
+Ruff checks Python syntax, unused/undefined names, imports, bug-prone patterns
+and simplifications (including SIM117) using root `ruff.toml`. The same pinned
+version checks formatting locally and in CI. The Python target remains 3.9;
+reference checkouts and generated protobuf bindings are excluded. Python edits
+anywhere in the repository and lint configuration changes trigger infra checks.
+
+```sh
+.venv/bin/ruff check .
+.venv/bin/ruff format --check .
 python3 -B -m unittest discover -s .agent/infra/tests -p 'test_*.py' -v
 actionlint .github/workflows/*.yml
 git diff --check
 ```
+
+To apply safe lint fixes and formatting locally, run `.venv/bin/ruff check --fix .`
+then `.venv/bin/ruff format .` and inspect the diff before publication. CI checks
+only; it does not rewrite files.
 
 `review/smoke-review.py` is a separate trusted fixture diagnostic for default
 Codex config and unavailable-memory disclosure. It never publishes to GitHub.

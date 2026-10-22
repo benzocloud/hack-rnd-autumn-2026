@@ -6,6 +6,8 @@
 4. Check existing branches/PRs and contract dependencies. For Go services, consult `.agent/references/go-services.md` and name the applicable reference/pattern in the plan; disclose unavailable local reference checkouts.
 5. Present a plan: scope, touched files, API/proto changes, tests, risks, unresolved questions. Wait for developer approval unless autonomy explicitly requested.
 6. Implement in dedicated branch/worktree; run relevant tests, lint and Buf checks.
+   For Python, run `ruff check .` and `ruff format --check .` with the pinned
+   tooling from `.agent/infra/requirements-dev.txt`; setup is in the infra README.
 7. Record useful verified findings with Issue/PR/commit provenance if permitted.
 8. Follow `.agent/workflows/git-conventions.md` for commit messages and publication. Developer decides when to push and open PR. After review, validate and fix findings; push updated SHA.
 
