@@ -32,6 +32,27 @@ from plan_policy import (
 MARKER = re.compile(r"<!-- agent-plan:issue=(\d+) -->")
 
 
+def validate_managed_pr(api, pr, number):
+    _, path = identity(number)
+    match = MARKER.search(pr.get("body") or "")
+    if not match or int(match[1]) != number or dialogue_root(pr, pr) != number:
+        raise ValueError("Plan PR does not identify its canonical Issue")
+    if (
+        pr["state"] != "open"
+        or (pr["head"].get("repo") or {}).get("full_name") != REPOSITORY
+        or not is_plan_branch(pr["head"]["ref"], number)
+    ):
+        raise ValueError("Only open same-repository managed plan PRs are accepted")
+    files = api.pages(f"/pulls/{pr['number']}/files")
+    if (
+        len(files) != 1
+        or files[0]["filename"] != path
+        or pr["changed_files"] != 1
+        or files[0].get("status") == "removed"
+    ):
+        raise ValueError("Plan PR contains implementation changes; edit it manually")
+
+
 def selected(api, payload):
     mode = command(
         payload,
@@ -62,18 +83,7 @@ def selected(api, payload):
         if not match:
             raise ValueError("/discuss requires a managed plan PR")
         number = int(match[1])
-        if dialogue_root(pr, pr) != number:
-            raise ValueError("Plan PR does not identify its canonical Issue")
-        _, path = identity(number)
-        if (
-            pr["state"] != "open"
-            or pr["head"].get("repo", {}).get("full_name") != REPOSITORY
-            or not is_plan_branch(pr["head"]["ref"], number)
-        ):
-            raise ValueError("Only open same-repository managed plan PRs are accepted")
-        files = api.pages(f"/pulls/{pr['number']}/files")
-        if len(files) != 1 or files[0]["filename"] != path or pr["changed_files"] != 1:
-            raise ValueError("Plan PR contains implementation changes; edit it manually")
+        validate_managed_pr(api, pr, number)
     issue = api.request(f"/issues/{number}")
     if "pull_request" in issue or issue["state"] not in (
         ("open", "closed") if mode == "discuss-plan" else ("open",)
@@ -335,6 +345,49 @@ def write_plan_commit(api, parent, path, markdown, message):
     )["sha"]
 
 
+def handoff_plan(api, payload, issue, pr):
+    number = issue["number"]
+    pr = api.request(f"/pulls/{pr['number']}")
+    validate_managed_pr(api, pr, number)
+    if not existing_plan(api, pr, identity(number)[1]).strip():
+        raise ValueError("Managed plan is empty; refusing Issue handoff")
+    link = f"https://github.com/{REPOSITORY}/pull/{pr['number']}"
+    marker = f"<!-- agent-plan-handoff:issue={number}:pr={pr['number']} -->"
+    comments = [
+        comment
+        for comment in api.pages(f"/issues/{number}/comments")
+        if comment.get("user", {}).get("login") == "github-actions[bot]"
+        and (comment.get("body") or "").startswith(marker + "\n")
+    ]
+    if len(comments) > 1:
+        raise ValueError("Duplicate plan handoff comments")
+    if not comments or f"]({link})" not in comments[0]["body"]:
+        body = {
+            "body": marker + f"\n\nПлан исправления: [PR #{pr['number']}]({link}).\n\n"
+            "Работа продолжается в PR с планом. Закрытие Issue означает передачу "
+            "в обсуждение плана, а не готовность исправления.\n\n"
+            f"[Исходный запрос](https://github.com/{REPOSITORY}/issues/{number}"
+            f"#issuecomment-{int(payload['comment']['id'])})."
+        }
+        if comments:
+            api.request(f"/issues/comments/{comments[0]['id']}", body, method="PATCH")
+        else:
+            api.request(f"/issues/{number}/comments", body)
+    current_pr = api.request(f"/pulls/{pr['number']}")
+    validate_managed_pr(api, current_pr, number)
+    if current_pr["head"]["sha"] != pr["head"]["sha"] or current_pr.get("body") != pr.get("body"):
+        raise ValueError("Plan PR changed during handoff; retry from the Issue")
+    current = api.request(f"/issues/{number}")
+    if fingerprint({**current, "state": issue["state"]}) != fingerprint(issue):
+        raise ValueError("Issue changed during plan handoff; refusing to close")
+    if current["state"] == "open":
+        closed = api.request(f"/issues/{number}", {"state": "closed"}, method="PATCH")
+        if closed.get("number") != number or closed.get("state") != "closed":
+            raise ValueError("Issue closure was not confirmed; plan PR and link are preserved")
+    elif current["state"] != "closed":
+        raise ValueError("Unexpected Issue state during plan handoff")
+
+
 def publish():
     api, payload = GitHub(), event()
     mode = command(
@@ -344,6 +397,20 @@ def publish():
     )
     scope = mode == "scope"
     result = os.environ.get("PLAN_JOB_RESULT", "success")
+    if (
+        mode == "create-plan"
+        and result == "success"
+        and os.environ.get("PLAN_REQUESTED") == "false"
+    ):
+        request = selected(api, payload)
+        if request is None:
+            raise ValueError("Plan handoff is no longer authorized")
+        _, issue, _ = request
+        plans = managed_prs(api, issue["number"])
+        if len(plans) != 1:
+            raise ValueError("Expected exactly one existing plan PR for handoff")
+        handoff_plan(api, payload, issue, plans[0])
+        return
     if result != "success" or os.environ.get("PLAN_REQUESTED") == "false":
         if not scope and mode != "discuss-plan":
             raise ValueError("No completed plan was produced")
@@ -445,10 +512,9 @@ def publish_result(api, payload):
     if mode == "create-plan":
         existing = managed_prs(api, issue["number"])
         if existing:
-            api.request(
-                f"/issues/{issue['number']}/comments",
-                {"body": marker + "\nПлан уже существует: " + existing[0]["html_url"]},
-            )
+            if len(existing) != 1:
+                raise ValueError("Expected exactly one existing plan PR for handoff")
+            handoff_plan(api, payload, issue, existing[0])
             return
         try:
             api.request("/git/ref/heads/" + branch)
@@ -478,10 +544,7 @@ def publish_result(api, payload):
                 "CI не подтверждён; создание PR через GITHUB_TOKEN само по себе не запускает другие workflow.",
             },
         )
-        api.request(
-            f"/issues/{issue['number']}/comments",
-            {"body": marker + "\nСоздан черновик PR с планом: " + created["html_url"]},
-        )
+        handoff_plan(api, payload, issue, created)
     else:
         # New commit has the exact reviewed head as parent. force=false makes a
         # concurrent branch update fail rather than overwriting another edit.

@@ -117,5 +117,6 @@ large-plan fix passed an installed-worker check, not a new live model call.
 Restricted SSH fixtures cover standalone ML and combined INFRA/ML routing;
 Go/gopls, hostile input, full changed-SHA/failure/auth rehearsals and sustained
 operation remain unverified. Main is not protected (GitHub API checked
-2026-10-22). ADR-021 stages 1–2 are local work, not deployed; stage 3 remains
-unstarted. See `.agent/infra/README.md` for exact evidence and limits.
+2026-10-22). ADR-021 stages 1–3 are implemented locally, not deployed; final
+developer review and coordinated publication/installation remain pending.
+See `.agent/infra/README.md` for exact evidence and limits.

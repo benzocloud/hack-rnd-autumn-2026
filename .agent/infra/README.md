@@ -82,7 +82,7 @@ tests also passed on the server, and the installed worker passed a projection
 check as the unprivileged reviewer without model inference. A real GitHub
 question about a large managed plan has not yet been repeated after this fix.
 
-Local ADR-021 stages 1–2, not deployed: questions, ordinary discussion, Issue
+Local ADR-021 stages 1–3, not deployed: questions, ordinary discussion, Issue
 assessment, plan creation/amendment and explicit PR review rebuild the Issue
 dialogue with related same-repository PRs, including closed history.
 Only formal references in a PR description or its managed-plan marker define
@@ -100,9 +100,21 @@ is bounded at 160,000 characters; reactions and display metadata alone do not
 invalidate a result. Common validation lives in `review/review_policy.py`, while
 the GitHub-only collector and substantive comparison stay in `runner/github_dialogue.py`.
 These stages change all analysis contexts: update GitHub orchestration, workers
-and policies together before activation. Issue closure is later work.
-Local verification: all 113 infrastructure tests, Ruff lint/format and whitespace
-checks passed, with model/SSH/GitHub analysis and publication calls mocked.
+and policies together before activation.
+`/create-plan` now links the verified open plan-only PR before closing its Issue.
+The fixed file must exist and be nonempty at the PR head; deleted plans fail.
+One stable bot handoff comment is reused or repaired, with an exact clickable PR
+link and a clear statement that closure is plan handoff, not a completed fix.
+If the PR exists after a link/closure failure, a new authorized command can retry
+without another model call or Git write. Closed, ambiguous or implementation PRs
+leave the Issue open. A branch created before a failed PR creation is preserved;
+without a managed PR it still requires manual recovery, never an overwrite.
+The publish job now runs for successful existing-plan preparation even when
+inference was skipped; no result artifact is downloaded or consumed in that path.
+Only the existing planning publisher with `issues: write` closes the Issue.
+Local verification: all 124 infrastructure tests, Ruff lint/format, actionlint
+and whitespace checks passed, with model/SSH/GitHub analysis and publication
+calls mocked.
 
 GitHub-hosted context jobs use read tokens. The fixed SSH invocation receives
 no GitHub token. A separate GitHub-hosted publisher has only the write permissions
@@ -416,11 +428,22 @@ rehearsal; visible text above the unchanged bound still requires `/discuss`.
 The live static reviewer also disclosed denied `rg` execution and the absence of
 the trusted root copy of `local-development.md`; it used read-only inspection.
 
-ADR-021's shared Issue/PR dialogue is local work in stages 1–2 for all analysis
-commands; Issue closure after publishing a plan PR link remains stage 3 in
-`.agent/plans/shared-issue-dialogue.md`. None of that
-follow-up is installed yet. Fadwix, GBrain, Docker and host-wide settings are
-outside this rollout.
+ADR-021's shared dialogue and Issue handoff are implemented locally in
+`.agent/plans/shared-issue-dialogue.md`; final developer review and a coordinated
+rollout are still pending. None of that follow-up is installed yet. Fadwix,
+GBrain, Docker and host-wide settings are outside this rollout.
+
+For the approved ADR-021 rollout, suspend only the three agent workflows before
+merging the updated orchestration. Back up installed adapters/profile and compare
+their hashes with the pinned candidate. Under the existing review lock, install
+the matching review/planning/conversation workers and policies; the shared
+`review_policy.py` validates all three contexts. Keep `github_dialogue.py` on the
+trusted GitHub side, outside model jobs. Verify the existing auth/sandbox and the
+new context schema before re-enabling workflows. Rehearse a disposable Issue →
+plan PR → linked/closed Issue → discussion/amendment/review from that PR. A
+retry check can simulate link/closure failure with mocks; any live model checks
+are manual and consume quota. On failure, restore matching GitHub and runner
+versions together. This is an installation plan, not evidence of deployment.
 
 If activation fails, leave agent workflows suspended and restore both the prior
 GitHub orchestration and the corresponding runner adapters/profile together.
@@ -459,7 +482,8 @@ Private diagnostics live in `/var/lib/hackrnd-review/checks/`, not Git/artifacts
 Validate report content, source/SHA/skill scope and expected findings; CLI exit 0
 alone is insufficient.
 
-Remaining: ADR-021 integration and Issue handoff; live changed-SHA re-review and
+Remaining: final ADR-021 review, publication and coordinated rollout;
+live changed-SHA re-review and
 large-plan question rehearsals; source-link validation; required CI/human branch
 rules; Plus renewal/quota/revocation and sustained operation. Do not equate local
 or SSH fixture tests with deployed GitHub behavior.

@@ -53,6 +53,10 @@ class PlanningAPI:
     def request(self, path, body=None, raw=False, method=None):
         if body is not None:
             self.writes.append((path, copy.deepcopy(body), method))
+            if path == "/issues/7":
+                assert method == "PATCH" and body == {"state": "closed"}
+                self.issue.update(body)
+                return copy.deepcopy(self.issue)
             if path == "/git/trees":
                 assert [item["path"] for item in body["tree"]] == [identity(7)[1]]
                 sha = f"tree-{len(self.trees)}"
@@ -114,7 +118,7 @@ class PlanningAPI:
         if path == "/pulls/3":
             return copy.deepcopy(self.sibling)
         if path == "/pulls/10":
-            return self.pr
+            return copy.deepcopy(self.pr)
         if path.startswith("/tarball/"):
             assert raw
             return b"source snapshot fixture"
@@ -266,6 +270,7 @@ class PlanningCycleTests(unittest.TestCase):
                 self.assertIn("Refs #7", api.pr["body"])
                 self.assertEqual(len([p for p, _, _ in api.writes if p == "/pulls"]), 1)
                 self.assertIn(api.pr["html_url"], api.comments[7][-1]["body"])
+                self.assertEqual(api.issue["state"], "closed")
 
                 previous = copy.deepcopy(first)
                 if review_mode == "after-all":
@@ -310,6 +315,7 @@ class PlanningCycleTests(unittest.TestCase):
                 self.assertEqual(api.writes[-1][2], "PATCH")
 
                 # A repeated create request reuses detection without spending inference.
+                api.issue["state"] = "open"  # Developer reopened the handed-off task.
                 payload = api.request_event(7, "/create-plan")
                 with (
                     patch.object(github_plan, "GitHub", return_value=api),
@@ -319,8 +325,12 @@ class PlanningCycleTests(unittest.TestCase):
                     redirect_stdout(io.StringIO()),
                 ):
                     github_plan.prepare()
+                    with patch.dict(os.environ, {"PLAN_REQUESTED": "false"}):
+                        github_plan.publish()
                 invoke.assert_not_called()
                 self.assertEqual((folder / "duplicate-output").read_text(), "requested=false\n")
+                self.assertEqual(api.issue["state"], "closed")
+                self.assertEqual(len([p for p, _, _ in api.writes if p == "/pulls"]), 1)
 
     def test_source_change_during_analysis_aborts_before_git_writes(self):
         with temporary_workdir() as folder:
@@ -345,6 +355,7 @@ class PlanningCycleTests(unittest.TestCase):
             updated = plan_report()
             updated["source_sha"] = api.pr["head"]["sha"]
             original_branch = api.pr["head"]["ref"]
+            before_amendment = len(api.writes)
             collected = self.cycle(
                 api,
                 api.request_event(10, "/discuss Поправь план: уточни проверки"),
@@ -357,7 +368,9 @@ class PlanningCycleTests(unittest.TestCase):
                 collected["related_prs"][0]["pr_review_comments"][0]["in_reply_to_id"], 300
             )
             self.assertEqual(api.pr["head"]["ref"], original_branch)
-            self.assertFalse(any(path == "/issues/7" for path, _, _ in api.writes))
+            self.assertFalse(
+                any(path == "/issues/7" for path, _, _ in api.writes[before_amendment:])
+            )
             self.assertEqual(
                 api.writes[-1][0], "/issues/comments/" + str(api.comments[10][-1]["id"])
             )

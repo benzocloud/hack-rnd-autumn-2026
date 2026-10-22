@@ -470,8 +470,15 @@ class PlanningTests(unittest.TestCase):
         class API:
             def __init__(self):
                 self.writes = []
+                self.issue = issue()
+                self.issue_comments = []
+                self.created = None
 
             def pages(self, path):
+                if path == "/issues/7/comments":
+                    return self.issue_comments
+                if path == "/pulls/10/files":
+                    return [{"filename": identity(7)[1]}]
                 if path == "/issues/10/comments":
                     return [
                         {
@@ -486,8 +493,30 @@ class PlanningTests(unittest.TestCase):
                 if body is not None:
                     self.writes.append((path, body, method))
                     if path == "/pulls":
-                        return {"number": 10, "html_url": "https://github.com/example/plan/10"}
+                        self.created = {
+                            **body,
+                            "number": 10,
+                            "state": "open",
+                            "changed_files": 1,
+                            "head": {
+                                "sha": "c" * 40,
+                                "ref": body["head"],
+                                "repo": {"full_name": github_plan.REPOSITORY},
+                            },
+                        }
+                        return self.created
+                    if path == "/issues/7/comments":
+                        comment = {"id": 34, **body, "user": {"login": "github-actions[bot]"}}
+                        self.issue_comments.append(comment)
+                        return comment
+                    if path == "/issues/7":
+                        self.issue.update(body)
+                        return self.issue
                     return {"sha": "c" * 40}
+                if path == "/pulls/10":
+                    return self.created
+                if path == "/issues/7":
+                    return self.issue
                 if path.startswith("/git/ref/"):
                     raise urllib.error.HTTPError("https://api.github.com", 404, "Absent", {}, None)
                 if path.startswith("/git/commits/"):
