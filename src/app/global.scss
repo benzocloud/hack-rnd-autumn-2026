@@ -1,0 +1,36 @@
+$green1: #00FF1A;
+$green2: #288C21;
+$red: #D80000;
+$white: #FFFFFF;
+$gray1: #E2E2E2;
+$blue: #00E1FF;
+$gray2: #CECECE;
+$background: #EAEAEA;
+$text: #000000;
+$placeholder: #929292;
+$font-family: Arial, Helvetica, sans-serif;
+$text-title: 38px;
+$text-input: 24px;
+$text-button: 26px;
+$text-body: 22px;
+
+$colors: (
+    "green1": $green1,
+    "green2": $green2,
+    "red": $red,
+    "white": $white,
+    "gray1": $gray1,
+    "blue": $blue,
+    "gray2": $gray2,
+    "background": $background,
+);
+
+$typography: (
+    "font-family": $font-family,
+    "title": $text-title,
+    "input": $text-input,
+    "button": $text-button,
+    "body": $text-body,
+);
+
+$transition-duration: 0.3s;

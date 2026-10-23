@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+build
+.git
+.agent
+.agents
+.codex
+.github
+.env*
+*.log
+*.tsbuildinfo
+Dockerfile
+compose.yaml
+.dockerignore

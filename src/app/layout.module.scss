@@ -1,0 +1,14 @@
+@use "./global" as global;
+
+.root {
+    min-height: 100%;
+    background-color: global.$background;
+}
+
+.body {
+    min-width: 320px;
+    min-height: 100dvh;
+    margin: 0;
+    background-color: global.$background;
+    font-family: global.$font-family;
+}

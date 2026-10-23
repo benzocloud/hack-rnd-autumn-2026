@@ -1,0 +1,16 @@
+@use "../../app/global" as global;
+
+.status {
+    display: grid;
+    min-height: 100dvh;
+    padding: 30px 10px;
+    place-items: center;
+    color: global.$text;
+    text-align: center;
+}
+
+.message {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}

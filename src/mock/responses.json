@@ -1,0 +1,320 @@
+[
+    {
+        "method": "GET",
+        "path": "/auth/csrf",
+        "status": 200,
+        "body": "CsrfToken"
+    },
+    {
+        "method": "GET",
+        "path": "/auth/personal-data-consent",
+        "status": 200,
+        "body": "PersonalDataConsentDocument"
+    },
+    {
+        "method": "POST",
+        "path": "/auth/register",
+        "status": 202,
+        "body": "Acknowledgement"
+    },
+    {
+        "method": "POST",
+        "path": "/auth/login",
+        "status": 200,
+        "body": "Session"
+    },
+    {
+        "method": "POST",
+        "path": "/auth/verify-email",
+        "status": 200,
+        "body": "Acknowledgement"
+    },
+    {
+        "method": "POST",
+        "path": "/auth/resend-verification",
+        "status": 202,
+        "body": "Acknowledgement"
+    },
+    {
+        "method": "POST",
+        "path": "/auth/forgot-password",
+        "status": 202,
+        "body": "Acknowledgement"
+    },
+    {
+        "method": "POST",
+        "path": "/auth/reset-password",
+        "status": 200,
+        "body": "Acknowledgement"
+    },
+    {
+        "method": "POST",
+        "path": "/auth/logout",
+        "status": 204
+    },
+    {
+        "method": "GET",
+        "path": "/me",
+        "status": 200,
+        "body": "User"
+    },
+    {
+        "method": "GET",
+        "path": "/companies",
+        "status": 200,
+        "body": "CompanyList"
+    },
+    {
+        "method": "POST",
+        "path": "/companies",
+        "status": 201,
+        "body": "Company"
+    },
+    {
+        "method": "GET",
+        "path": "/companies/{company_id}",
+        "status": 200,
+        "body": "Company"
+    },
+    {
+        "method": "PATCH",
+        "path": "/companies/{company_id}",
+        "status": 200,
+        "body": "Company"
+    },
+    {
+        "method": "GET",
+        "path": "/companies/{company_id}/members",
+        "status": 200,
+        "body": "MembershipList"
+    },
+    {
+        "method": "DELETE",
+        "path": "/companies/{company_id}/members/{user_id}",
+        "status": 204
+    },
+    {
+        "method": "GET",
+        "path": "/companies/{company_id}/invitations",
+        "status": 200,
+        "body": "InvitationList"
+    },
+    {
+        "method": "POST",
+        "path": "/companies/{company_id}/invitations",
+        "status": 201,
+        "body": "Invitation"
+    },
+    {
+        "method": "DELETE",
+        "path": "/companies/{company_id}/invitations/{invitation_id}",
+        "status": 204
+    },
+    {
+        "method": "GET",
+        "path": "/me/invitations",
+        "status": 200,
+        "body": "InvitationList"
+    },
+    {
+        "method": "POST",
+        "path": "/me/invitations/{invitation_id}/accept",
+        "status": 200,
+        "body": "Company"
+    },
+    {
+        "method": "POST",
+        "path": "/me/invitations/{invitation_id}/decline",
+        "status": 200,
+        "body": "Invitation"
+    },
+    {
+        "method": "GET",
+        "path": "/companies/{company_id}/account",
+        "status": 200,
+        "body": "Account"
+    },
+    {
+        "method": "PUT",
+        "path": "/companies/{company_id}/account/balance",
+        "status": 200,
+        "body": "Account"
+    },
+    {
+        "method": "GET",
+        "path": "/companies/{company_id}/categories",
+        "status": 200,
+        "body": "CategoryList"
+    },
+    {
+        "method": "GET",
+        "path": "/companies/{company_id}/transactions",
+        "status": 200,
+        "body": "TransactionList"
+    },
+    {
+        "method": "POST",
+        "path": "/companies/{company_id}/transactions",
+        "status": 201,
+        "body": "Transaction"
+    },
+    {
+        "method": "PATCH",
+        "path": "/companies/{company_id}/transactions/{transaction_id}/category",
+        "status": 200,
+        "body": "Transaction"
+    },
+    {
+        "method": "GET",
+        "path": "/companies/{company_id}/imports",
+        "status": 200,
+        "body": "ImportList"
+    },
+    {
+        "method": "POST",
+        "path": "/companies/{company_id}/imports",
+        "status": 202,
+        "body": "ImportAccepted"
+    },
+    {
+        "method": "GET",
+        "path": "/companies/{company_id}/imports/{import_id}",
+        "status": 200,
+        "body": "Import"
+    },
+    {
+        "method": "GET",
+        "path": "/companies/{company_id}/imports/{import_id}/issues",
+        "status": 200,
+        "body": "ImportIssueList"
+    },
+    {
+        "method": "POST",
+        "path": "/companies/{company_id}/imports/{import_id}/commit",
+        "status": 200,
+        "body": "ImportApplied"
+    },
+    {
+        "method": "GET",
+        "path": "/companies/{company_id}/external-providers",
+        "status": 200,
+        "body": "ExternalProviderList"
+    },
+    {
+        "method": "GET",
+        "path": "/companies/{company_id}/connections",
+        "status": 200,
+        "body": "ConnectionList"
+    },
+    {
+        "method": "POST",
+        "path": "/companies/{company_id}/connections",
+        "status": 201,
+        "body": "Connection"
+    },
+    {
+        "method": "DELETE",
+        "path": "/companies/{company_id}/connections/{connection_id}",
+        "status": 204
+    },
+    {
+        "method": "POST",
+        "path": "/companies/{company_id}/connections/{connection_id}/sync",
+        "status": 202,
+        "body": "ImportAccepted"
+    },
+    {
+        "method": "GET",
+        "path": "/companies/{company_id}/payments",
+        "status": 200,
+        "body": "PaymentList"
+    },
+    {
+        "method": "POST",
+        "path": "/companies/{company_id}/payments",
+        "status": 201,
+        "body": "Payment"
+    },
+    {
+        "method": "GET",
+        "path": "/companies/{company_id}/payments/{payment_id}",
+        "status": 200,
+        "body": "Payment"
+    },
+    {
+        "method": "PATCH",
+        "path": "/companies/{company_id}/payments/{payment_id}",
+        "status": 200,
+        "body": "Payment"
+    },
+    {
+        "method": "DELETE",
+        "path": "/companies/{company_id}/payments/{payment_id}",
+        "status": 204
+    },
+    {
+        "method": "GET",
+        "path": "/companies/{company_id}/payments/{payment_id}/matches",
+        "status": 200,
+        "body": "MatchList"
+    },
+    {
+        "method": "POST",
+        "path": "/companies/{company_id}/payments/{payment_id}/matches",
+        "status": 201,
+        "body": "Match"
+    },
+    {
+        "method": "DELETE",
+        "path": "/companies/{company_id}/payments/{payment_id}/matches/{match_id}",
+        "status": 204
+    },
+    {
+        "method": "GET",
+        "path": "/companies/{company_id}/forecasts",
+        "status": 200,
+        "body": "ForecastList"
+    },
+    {
+        "method": "POST",
+        "path": "/companies/{company_id}/forecasts",
+        "status": 202,
+        "body": "ForecastAccepted"
+    },
+    {
+        "method": "GET",
+        "path": "/companies/{company_id}/forecasts/{forecast_id}",
+        "status": 200,
+        "body": "ForecastSucceeded"
+    },
+    {
+        "method": "GET",
+        "path": "/companies/{company_id}/forecasts/{forecast_id}/comparison",
+        "status": 200,
+        "body": "Comparison"
+    },
+    {
+        "method": "GET",
+        "path": "/companies/{company_id}/forecasts/{forecast_id}/plan-fact",
+        "status": 200,
+        "body": "PlanFact"
+    },
+    {
+        "method": "GET",
+        "path": "/companies/{company_id}/scenarios",
+        "status": 200,
+        "body": "ScenarioList"
+    },
+    {
+        "method": "POST",
+        "path": "/companies/{company_id}/scenarios",
+        "status": 202,
+        "body": "ScenarioAccepted"
+    },
+    {
+        "method": "GET",
+        "path": "/companies/{company_id}/scenarios/{scenario_id}",
+        "status": 200,
+        "body": "Scenario"
+    }
+]

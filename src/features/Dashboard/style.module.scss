@@ -1,0 +1,204 @@
+@use "../../app/global" as global;
+
+.dashboard {
+    display: grid;
+    grid-template-columns: minmax(0, 617fr) minmax(0, 577fr);
+    align-items: start;
+    gap: 40px;
+    width: 100%;
+    max-width: 1254px;
+    margin-inline: auto;
+    padding: 40px 10px;
+    color: global.$text;
+}
+
+.hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.summary {
+    display: grid;
+    gap: 30px;
+    min-width: 0;
+}
+
+.card,
+.chartCard {
+    min-width: 0;
+    border-radius: 30px;
+    background-color: global.$white;
+    box-shadow: 0 4px 4px rgb(0 0 0 / 25%);
+}
+
+.card {
+    padding: 20px 30px;
+    font-size: 20px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+
+    h2 {
+        margin: 0 0 8px;
+        color: global.$placeholder;
+        font-size: inherit;
+        font-weight: 400;
+    }
+
+    p {
+        margin: 0;
+    }
+}
+
+.danger {
+    color: global.$red;
+}
+
+.success {
+    color: global.$green2;
+}
+
+.chartCard {
+    padding: 10px;
+}
+
+.chartArea {
+    min-width: 0;
+}
+
+.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 280px;
+    padding: 24px;
+    border-radius: 20px;
+    background-color: global.$green2;
+    color: global.$white;
+    text-align: center;
+
+    p {
+        margin: 0;
+    }
+}
+
+.periods {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding-top: 6px;
+}
+
+.periodOptions {
+    display: flex;
+    gap: 4px;
+}
+
+.period {
+    position: relative;
+    min-width: 58px;
+    min-height: 40px;
+    padding: 8px 4px;
+    border: 0;
+    border-radius: 10px;
+    background: none;
+    color: global.$placeholder;
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1.4;
+    cursor: pointer;
+    transition: color global.$transition-duration;
+
+    &[aria-pressed="true"] {
+        color: global.$text;
+    }
+
+    &:hover:not(:disabled),
+    &:focus-visible {
+        color: global.$text;
+    }
+
+    &:focus-visible {
+        outline: 2px solid global.$green2;
+        outline-offset: 2px;
+    }
+
+    &:disabled {
+        cursor: not-allowed;
+    }
+}
+
+.contentHidden {
+    visibility: hidden;
+}
+
+.periodSpinner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.retry {
+    padding: 8px 10px 10px;
+}
+
+@media (max-width: 800px) {
+    .dashboard {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 24px;
+        max-width: 650px;
+        padding-block: 24px;
+    }
+
+    .chartCard {
+        grid-row: 1;
+    }
+
+    .summary {
+        grid-row: 2;
+        gap: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard {
+        gap: 20px;
+        padding-block: 20px;
+    }
+
+    .card {
+        padding: 20px;
+        border-radius: 24px;
+        font-size: 18px;
+    }
+
+    .chartCard {
+        padding: 8px;
+        border-radius: 24px;
+    }
+
+    .placeholder {
+        min-height: 260px;
+        border-radius: 16px;
+    }
+
+    .period {
+        min-width: 66px;
+        min-height: 44px;
+        font-size: 14px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .period {
+        transition: none;
+    }
+}

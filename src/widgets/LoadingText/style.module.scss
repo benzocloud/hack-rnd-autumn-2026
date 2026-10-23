@@ -1,0 +1,25 @@
+.dots {
+    display: inline-block;
+    width: 1em;
+    white-space: nowrap;
+    clip-path: inset(0 100% 0 0);
+    animation: reveal-dots 1.2s ease-in infinite;
+}
+
+@keyframes reveal-dots {
+    0% {
+        clip-path: inset(0 100% 0 0);
+    }
+
+    85%,
+    100% {
+        clip-path: inset(0 0 0 0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dots {
+        clip-path: none;
+        animation: none;
+    }
+}

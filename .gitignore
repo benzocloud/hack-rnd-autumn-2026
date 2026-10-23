@@ -17,3 +17,14 @@ __pycache__/
 # Private local MCP configuration and credentials.
 /.codex/config.toml
 /.agent/local/
+
+# Next.js and local environment.
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+.env*
+!.env.example
+npm-debug.log*
