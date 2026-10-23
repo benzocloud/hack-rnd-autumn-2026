@@ -1,7 +1,8 @@
 openapi: "3.1.0"
+x-auth-contract: "../auth/contract.md"
 info:
-  title: "Cash Flow Frontend → Go API"
-  version: "0.1.1"
+  title: "Saldo Frontend → Go API"
+  version: "0.1.2"
   description: "Review baseline, 2026-10-23. A saved REST proposal, not implemented endpoints, accepted ADR, or evidence of a working integration. Browser calls Go API only; Core/ML protobuf boundaries remain separate. Paths are relative to /api/v1.\n\nScope: self-service small-business account, one default account per company, owner/financier company roles, file/manual input, explicitly mocked external adapters, forecasts, four what-if templates, plan-fact. RUB-only is a provisional adapter/MVP convention: dataset contains no currency. Email/password, cookie session, seven-day invitations, numerical input/upload caps and below_zero_eod proxy are proposed defaults requiring owner review. Actual FNS/1C DTO research immediately follows owner approval of this saved REST baseline; mock schemas are NOT claims about their official APIs.\n\nSecurity: same-origin deployment only in this baseline. Secure HttpOnly SameSite=Lax __Host- cookie, server session, synchronizer CSRF on ALL writes including public login/register/recovery. GET /auth/csrf establishes pre-auth context; send credentials and X-CSRF-Token thereafter. Exact trusted Origin/Referer validation; no wildcard credentialed CORS. Rotate session after login and obtain fresh CSRF token. API must not expose Auth/Core databases or trust role/company/source IDs sent by browser. Auth unavailable: fail closed. Company membership is checked live on every scoped read/write, including polling/downloads; financial operations owner/financier, administration owner only. Cross-tenant resources return 404. Email verification required for company operations. Auth tokens/passwords/financial contents never logged; errors include request_id, not stack traces.\n\nConsistency: IDs opaque, all money exact decimal integer strings in minor units. Positive movement plus direction differs from signed balance. Date-only business dates use Europe/Moscow, timestamp strings UTC Z. Do not use JS floating point for financial arithmetic. All lists cursor-based with stable sort (by resource date then ID unless documented); cursors bind filters and tenant. Financial data version increments on facts, dated balances, categories, known payments, matches and imported facts; connections/invitation cosmetics do not mutate prediction snapshots. Reads include dated provenance/freshness; no balance claims live bank access.\n\nJob semantics: HTTP 202 only after durable input/job saved. Retried idempotent create/job requests reuse resource; same key different semantic payload/file bytes is 409. Stored resource is truth; transport errors never mean job failure. Imports first preview, then explicit atomic commit with optimistic versions. No silent partial rows, inferred tenant access, duplicate economic counting or invented balancing transactions. Identical external IDs dedup only inside scoped source; content-similar different IDs warn. Historical forecasts filter all factual/features past cutoff and preserve point-in-time known obligations. A negative balance is an EOD indicator; overdraft limit and actual unpaid obligation are unknown.\n\nAll application responses, including errors, should use Cache-Control:no-store; JSON content type application/json. No merge/deploy or implemented behavior is implied by this file. Delivery infrastructure, provider DTO mapping and calibrated ML uncertainty remain separate reviewed work."
 servers:
   -
@@ -38,7 +39,7 @@ paths:
       summary: "Get a pre-authenticated or session CSRF token"
       tags:
         - "Auth"
-      description: "Same-origin browser call with credentials. Sets/uses pre-auth or authenticated cookie and returns synchronizer token. Cache-Control:no-store. Cross-origin callers cannot read token; no wildcard credentialed CORS."
+      description: "Same-origin browser call with credentials. Sets/uses pre-auth or authenticated cookie and returns synchronizer token. Stage-3.1 policy values are proposed in docs/auth/contract.md: 10-minute pre-auth, 24-hour absolute session, 30-minute idle session. Auth owns CSRF state; API owns exact Origin/Referer and cookie transport. Cache-Control:no-store. Cross-origin callers cannot read token; no wildcard credentialed CORS."
       responses:
         "200":
           "$ref": "#/components/responses/SuccessCsrfTokenCookie"
@@ -78,7 +79,7 @@ paths:
       summary: "Register a personal account"
       tags:
         - "Auth"
-      description: "Creates account pending contact verification only after a separate active consent confirmation. Frontend first fetches GET /auth/personal-data-consent, displays that full standalone text with an unchecked, separate checkbox, and sends personal_data_consent.accepted=true plus the displayed document_version and document_sha256. Missing confirmation or accepted other than true is 422 CONSENT_REQUIRED; malformed fields are 422 VALIDATION_ERROR. A syntactically valid unknown/retired version or digest different from the server's current document is 409 CONSENT_DOCUMENT_CHANGED: fetch and display the current document, clear the checkbox, and require a new explicit confirmation; never silently retry with a new version/hash. If the registry or evidence store is unavailable, return 503 and create no account. At account commit, validate the still-current server-owned version/hash and atomically persist the new account and consent evidence: consent_id, account_id, immutable text/version/hash, server accepted_at and confirmation method. Do not accept client-supplied evidence timestamps or IDs: accepted_at/consent_id are server-owned and disallowed in this request. No account or verification-mail job may be committed on consent failure; password and rejected request contents are never logged. Queue verification delivery only after the account/evidence commit. Generic 202 for an existing address after the same consent validation; an unauthenticated registration retry must not overwrite that account's existing consent or append an acceptance on its behalf. No company or bank connection is created. Rate limit by IP+normalized email; no mock claim that mail was delivered."
+      description: "Creates account pending contact verification only after a separate active consent confirmation. Frontend first fetches GET /auth/personal-data-consent, displays that full standalone text with an unchecked, separate checkbox, and sends personal_data_consent.accepted=true plus the displayed document_version and document_sha256. Missing confirmation or accepted other than true is 422 CONSENT_REQUIRED; malformed fields are 422 VALIDATION_ERROR. A syntactically valid unknown/retired version or digest different from the server's current document is 409 CONSENT_DOCUMENT_CHANGED: fetch and display the current document, clear the checkbox, and require a new explicit confirmation; never silently retry with a new version/hash. If the registry or evidence store is unavailable, return 503 and create no account. At account commit, validate the still-current server-owned version/hash and atomically persist the new account and consent evidence: consent_id, account_id, immutable text/version/hash, server accepted_at and confirmation method. Do not accept client-supplied evidence timestamps or IDs: accepted_at/consent_id are server-owned and disallowed in this request. No account or verification-mail job may be committed on consent failure; password and rejected request contents are never logged. Persist the encrypted delivery intent in the same account/evidence transaction; dispatch only committed intents after commit. Generic 202 for an existing address after the same consent validation; an unauthenticated registration retry must not overwrite that account's existing consent or append an acceptance on its behalf. No company or bank connection is created. Rate limit by IP+normalized email; no mock claim that mail was delivered."
       responses:
         "202":
           "$ref": "#/components/responses/SuccessAcknowledgement"
@@ -133,7 +134,7 @@ paths:
       summary: "Sign in"
       tags:
         - "Auth"
-      description: "Email/password; generic credentials error. Rotates session and invalidates pre-auth CSRF token. Unverified account may log in to verify/logout/me, but company and financial endpoints require verified email. GET /auth/csrf again after successful login."
+      description: "Email/password; generic credentials error. Rotates session and invalidates pre-auth CSRF token. Unverified account may log in to verify/logout/me, but company and financial endpoints require verified email. GET /auth/csrf again after successful login. The stage-3.1 profile under review uses Auth-owned credential_version: session creation rechecks it under the same user lock used by password reset; Auth checks it on every later authorization. The API does not copy credential_version or expose cookie material in JSON."
       responses:
         "200":
           "$ref": "#/components/responses/SuccessSessionCookie"
@@ -319,7 +320,7 @@ paths:
               description: "Expire session cookie."
               schema:
                 type: "string"
-                example: "__Host-cashflow_session=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax"
+                example: "__Host-saldo_session=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax"
         "400":
           "$ref": "#/components/responses/Error400"
         "401":
@@ -705,7 +706,7 @@ paths:
       summary: "Accept invitation"
       tags:
         - "Members"
-      description: "Verified recipient must match invited registered account; validates current pending state/version/expiry. Acceptance and membership coherence recoverable on retry. Within the retained history window, already accepted by same user returns same Company; revoked/expired/declined returns 409. After the Invitation history deadline return 404; deleting accepted invitation history does not revoke the separately stored membership. Retries never extend retention."
+      description: "Verified recipient must match invited registered account; validates current pending state/version/expiry. Acceptance and membership coherence recoverable on retry. Within the retained history window, already accepted by same user with a still-active membership returns the same Company; if that membership was later removed, return 409 MEMBERSHIP_REVOKED and never recreate it from invitation history; revoked/expired/declined returns 409. After the Invitation history deadline return 404; deleting accepted invitation history does not revoke the separately stored membership. Retries never extend retention."
       responses:
         "200":
           "$ref": "#/components/responses/SuccessCompany"
@@ -2004,7 +2005,7 @@ components:
     cookieSession:
       type: "apiKey"
       in: "cookie"
-      name: "__Host-cashflow_session"
+      name: "__Host-saldo_session"
       description: "Opaque server-side session cookie; Secure, HttpOnly, SameSite=Lax, Path=/. Only same-origin browser traffic in this baseline. CSRF header is additionally required on all writes."
   parameters:
     company_id:
@@ -2322,10 +2323,10 @@ components:
               "$ref": "#/components/examples/CsrfToken"
       headers:
         Set-Cookie:
-          description: "Set/rotate session cookie: __Host-cashflow_session; Secure; HttpOnly; SameSite=Lax; Path=/. Values/tokens are not returned in JSON."
+          description: "Set/rotate session cookie: __Host-saldo_session; Secure; HttpOnly; SameSite=Lax; Path=/. Values/tokens are not returned in JSON."
           schema:
             type: "string"
-            example: "__Host-cashflow_session=opaque-session-value; Path=/; Secure; HttpOnly; SameSite=Lax"
+            example: "__Host-saldo_session=opaque-session-value; Path=/; Secure; HttpOnly; SameSite=Lax"
     SuccessAcknowledgement:
       description: "Acknowledgement"
       content:
@@ -2346,10 +2347,10 @@ components:
               "$ref": "#/components/examples/Session"
       headers:
         Set-Cookie:
-          description: "Set/rotate session cookie: __Host-cashflow_session; Secure; HttpOnly; SameSite=Lax; Path=/. Values/tokens are not returned in JSON."
+          description: "Set/rotate session cookie: __Host-saldo_session; Secure; HttpOnly; SameSite=Lax; Path=/. Values/tokens are not returned in JSON."
           schema:
             type: "string"
-            example: "__Host-cashflow_session=opaque-session-value; Path=/; Secure; HttpOnly; SameSite=Lax"
+            example: "__Host-saldo_session=opaque-session-value; Path=/; Secure; HttpOnly; SameSite=Lax"
     SuccessUser:
       description: "User"
       content:
@@ -4635,6 +4636,7 @@ components:
           examples:
             - "cmp_123"
         company_name:
+          description: "Presentation snapshot read from Core when the invitation was created; later company renames do not mutate invitation history."
           type: "string"
           minLength: 1
           maxLength: 160

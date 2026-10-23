@@ -6,7 +6,9 @@ Conversation/staged-plan support from
 Current adapters and profile match [PR #12](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/12)
 merge `12b8ff93b091e55fddc452dcfbba845f92092795`; Russian review messages were
 verified through GitHub in PR #11. All agent workflows are enabled; live checks and remaining limits
-are recorded below. GBrain is deferred. Fadwix containers, config, networks, ports,
+are recorded below. Update **2026-10-23**: shared GBrain is deployed on the separate
+`gbrain.brokebyte.me` host; [setup, current pin and verification](gbrain/README.md).
+Existing runner MCP remains disabled until separately connected. Fadwix containers, config, networks, ports,
 Docker and kernel settings were not changed; no reboot was performed.
 
 ## Responsibility boundaries
@@ -19,7 +21,7 @@ Docker and kernel settings were not changed; no reboot was performed.
 | `planning/` | Issue assessment and plan-only branch/PR lifecycle | `github_plan.py`, `ssh_plan.py`, `plan_policy.py` |
 | `conversation/` | Read-only Issue/PR questions, context and replies | `github_conversation.py`, `ssh_conversation.py`, `conversation_policy.py` |
 | `skills/` | Pinned upstream instruction sources and installation | `install-skills.py`, `skills.json` |
-| `gbrain/` | Deferred memory service, credentials, backup and timer | `configure.py`, `backup.py`, `hackrnd-gbrain*` units |
+| `gbrain/` | Dedicated shared HTTPS memory, local MCP setup, credentials and backups | `deploy.py`, `setup-local.py`, `backup.py`, one `hackrnd-gbrain.service` and backup units |
 | `tests/` | Safety and protocol regression checks | `test_*.py` |
 
 GitHub events and job permissions belong in `.github/workflows/`; human/agent
@@ -237,7 +239,7 @@ pins upstream commits/licenses. No upstream installer or hooks are executed.
 | GitHub Actions | [checkout v7.0.1](https://github.com/actions/checkout/releases/tag/v7.0.1), [upload-artifact v7.0.2](https://github.com/actions/upload-artifact/releases/tag/v7.0.2), [download-artifact v8.0.2](https://github.com/actions/download-artifact/releases/tag/v8.0.2); full commit pins in workflows, native Node.js 24 runtime verified in each `action.yml` |
 | Codex + companions | [OpenAI 0.163.0](https://github.com/openai/codex/releases/tag/rust-v0.163.0) |
 | Bun (deferred path) | [1.4.3](https://github.com/oven-sh/bun/releases/tag/bun-v1.4.3) |
-| GBrain | [garrytan/gbrain 0.60.366.0](https://github.com/garrytan/gbrain/releases/tag/v0.60.366.0), `c94425368cd5b9eb321a724cfd462e6b52bdd4d2` |
+| GBrain (dedicated host) | [garrytan/gbrain 0.60.409.0](https://github.com/garrytan/gbrain/releases/tag/v0.60.409.0), `3deb0563bb6215c83613d903702f378c2c9be798`; artifact SHA-256 in `gbrain/versions.json`. Older runner bootstrap artifacts are historical, inactive |
 | caveman-review | JuliusBrussee/caveman, Apache-2.0; exact SHA in `skills/skills.json` |
 | ponytail-review | DietrichGebert/ponytail, MIT; exact SHA in `skills/skills.json` |
 | Go suite | samber/cc-skills-golang, MIT; `golang-how-to` plus applicable secondary skills |
@@ -250,25 +252,19 @@ checked against official source/releases. References: [Bun CPU requirements](htt
 [Git refs, force=false](https://docs.github.com/en/rest/git/refs),
 [Actions organization policy](https://docs.github.com/en/organizations/managing-organization-settings/disabling-or-limiting-github-actions-for-your-organization).
 
-## Deferred memory and recovery
+## Shared memory and recovery
 
-On compatible hardware only: `bootstrap/bootstrap.py --with-gbrain`, then
-`gbrain/configure.py`. GBrain uses pinned source/frozen dependencies with lifecycle
-scripts disabled. On this VM, diagnostic Bun/GBrain artifacts exist but have
-never constituted an operational memory service. Initialize authenticated
-localhost MCP before explicitly enabling it; keep `required=false`.
+Canonical deployment: [gbrain/README.md](gbrain/README.md),
+`https://gbrain.brokebyte.me/mcp` on `193.233.244.17`, independent of the runner.
+Only the dedicated host was provisioned; no Fadwix services were changed.
+There is one server unit and one native backup job/timer, without a parallel
+`standalone/` configuration or legacy `configure.py`.
 
-Future MCP binds `127.0.0.1:3131/mcp`. Grant developers separate identities/private
-network access; never distribute root. Reviewer token must be server-enforced
-read-only. Keep root admin/writer tokens under `/etc/hackrnd-agent/` (`0700`) and
-reviewer token private (`0600`). Token loading is not enabled in the current jobs.
-
-Before claiming memory ready, verify unauthenticated denial, writer/read access,
-reviewer write denial, persistence, and two-client retrieval with provenance.
-Native PGLite backup stops only `hackrnd-gbrain.service` and restarts on failure;
-restore only into a new private directory. Backup may contain secrets: establish
-private encrypted off-host retention. Neither backup/restore nor MCP has passed
-its rehearsal. Prepared GBrain unit/timer are inactive.
+GBrain is a supplemental service with `required=false` in local Codex.
+The runner's old diagnostic artifacts and disabled MCP configuration are not
+this deployment; do not run the old `bootstrap.py --with-gbrain` path to enable it.
+Developer and reviewer credentials are separate; see the runbook for private
+file locations, actual acceptance checks and recovery limitations.
 
 ## Extension rollout
 
