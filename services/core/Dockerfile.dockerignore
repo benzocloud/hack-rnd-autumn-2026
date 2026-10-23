@@ -1,0 +1,7 @@
+**
+!LICENSE
+!services/
+!services/core/
+!services/core/**
+services/core/.env
+services/core/.env.*

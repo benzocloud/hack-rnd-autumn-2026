@@ -1,0 +1,74 @@
+version: '3.48'
+
+vars:
+  GO_TOOLCHAIN: go1.27.3
+  GOLANGCI_LINT: '{{.GOLANGCI_LINT | default "golangci-lint"}}'
+  GOLANGCI_LINT_VERSION: 2.15.0
+
+tasks:
+  default:
+    desc: List available commands
+    cmds:
+      - task --list
+
+  check:
+    desc: Run build, formatting, unit/race tests, vet and lint in order
+    cmds:
+      - task: build
+      - task: fmt-check
+      - task: test
+      - task: race
+      - task: vet
+      - task: lint
+
+  build:
+    desc: Build all Core packages
+    cmds:
+      - GOTOOLCHAIN={{.GO_TOOLCHAIN}} go build ./...
+
+  test:
+    desc: Run unit tests without a database
+    cmds:
+      - GOTOOLCHAIN={{.GO_TOOLCHAIN}} go test ./...
+
+  race:
+    desc: Run unit tests with the race detector
+    cmds:
+      - GOTOOLCHAIN={{.GO_TOOLCHAIN}} go test -race ./...
+
+  vet:
+    desc: Run go vet
+    cmds:
+      - GOTOOLCHAIN={{.GO_TOOLCHAIN}} go vet ./...
+
+  fmt:
+    desc: Format Go source files
+    cmds:
+      - GOTOOLCHAIN={{.GO_TOOLCHAIN}} go fmt ./...
+
+  fmt-check:
+    desc: Check formatting without changing files
+    cmds:
+      - |
+        export GOTOOLCHAIN={{.GO_TOOLCHAIN}}
+        formatter="$(go env GOROOT)/bin/gofmt"
+        unformatted="$("$formatter" -l .)" || exit 1
+        test -z "$unformatted" || { echo "$unformatted"; exit 1; }
+
+  lint:
+    desc: Run the pinned golangci-lint release
+    preconditions:
+      - sh: |
+          version="$("{{.GOLANGCI_LINT}}" --version)" || exit 1
+          case "$version" in
+            *"version {{.GOLANGCI_LINT_VERSION}} "*) ;;
+            *) exit 1 ;;
+          esac
+        msg: 'Install golangci-lint v{{.GOLANGCI_LINT_VERSION}}; see README.md'
+    cmds:
+      - GOTOOLCHAIN={{.GO_TOOLCHAIN}} "{{.GOLANGCI_LINT}}" run ./...
+
+  integration:
+    desc: PostgreSQL tests are deferred until stage 2.3
+    cmds:
+      - echo "PostgreSQL integration tests are not implemented until stage 2.3"; exit 1
