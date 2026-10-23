@@ -3,7 +3,15 @@
 
 # Participant data and generated ML results remain local.
 /data/cashflow/
+/dataset/
 /services/ml/artifacts/
+
+# Local agent skills.
+/.agent/skills/
+/skills-lock.json
+
+# Local expert questions; keep outside published plans.
+/.agent/plans/case-expert-questions.md
 
 # Local Python tooling and caches.
 .venv/
