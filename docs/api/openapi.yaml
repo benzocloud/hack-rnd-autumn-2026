@@ -1,7 +1,7 @@
 openapi: "3.1.0"
 info:
   title: "Cash Flow Frontend → Go API"
-  version: "0.1.0"
+  version: "0.1.1"
   description: "Review baseline, 2026-10-23. A saved REST proposal, not implemented endpoints, accepted ADR, or evidence of a working integration. Browser calls Go API only; Core/ML protobuf boundaries remain separate. Paths are relative to /api/v1.\n\nScope: self-service small-business account, one default account per company, owner/financier company roles, file/manual input, explicitly mocked external adapters, forecasts, four what-if templates, plan-fact. RUB-only is a provisional adapter/MVP convention: dataset contains no currency. Email/password, cookie session, seven-day invitations, numerical input/upload caps and below_zero_eod proxy are proposed defaults requiring owner review. Actual FNS/1C DTO research immediately follows owner approval of this saved REST baseline; mock schemas are NOT claims about their official APIs.\n\nSecurity: same-origin deployment only in this baseline. Secure HttpOnly SameSite=Lax __Host- cookie, server session, synchronizer CSRF on ALL writes including public login/register/recovery. GET /auth/csrf establishes pre-auth context; send credentials and X-CSRF-Token thereafter. Exact trusted Origin/Referer validation; no wildcard credentialed CORS. Rotate session after login and obtain fresh CSRF token. API must not expose Auth/Core databases or trust role/company/source IDs sent by browser. Auth unavailable: fail closed. Company membership is checked live on every scoped read/write, including polling/downloads; financial operations owner/financier, administration owner only. Cross-tenant resources return 404. Email verification required for company operations. Auth tokens/passwords/financial contents never logged; errors include request_id, not stack traces.\n\nConsistency: IDs opaque, all money exact decimal integer strings in minor units. Positive movement plus direction differs from signed balance. Date-only business dates use Europe/Moscow, timestamp strings UTC Z. Do not use JS floating point for financial arithmetic. All lists cursor-based with stable sort (by resource date then ID unless documented); cursors bind filters and tenant. Financial data version increments on facts, dated balances, categories, known payments, matches and imported facts; connections/invitation cosmetics do not mutate prediction snapshots. Reads include dated provenance/freshness; no balance claims live bank access.\n\nJob semantics: HTTP 202 only after durable input/job saved. Retried idempotent create/job requests reuse resource; same key different semantic payload/file bytes is 409. Stored resource is truth; transport errors never mean job failure. Imports first preview, then explicit atomic commit with optimistic versions. No silent partial rows, inferred tenant access, duplicate economic counting or invented balancing transactions. Identical external IDs dedup only inside scoped source; content-similar different IDs warn. Historical forecasts filter all factual/features past cutoff and preserve point-in-time known obligations. A negative balance is an EOD indicator; overdraft limit and actual unpaid obligation are unknown.\n\nAll application responses, including errors, should use Cache-Control:no-store; JSON content type application/json. No merge/deploy or implemented behavior is implied by this file. Delivery infrastructure, provider DTO mapping and calibrated ML uncertainty remain separate reviewed work."
 servers:
   -
@@ -53,13 +53,32 @@ paths:
         "503":
           "$ref": "#/components/responses/Error503"
       security: []
+  "/auth/personal-data-consent":
+    get:
+      operationId: "getPersonalDataConsentDocument"
+      summary: "Get the current standalone personal data consent"
+      tags:
+        - "Auth"
+      description: "Public, no login required; Cache-Control:no-store. Returns the complete standalone Markdown consent shown before registration, its current immutable version and SHA-256. The digest covers the UTF-8 text with LF line endings and no BOM, not JSON escaping or rendered HTML. Each version identifies exactly one text; changing text requires a new version. The registry must include actual operator/processor details before real use; the current 0.1.1-mock document is for synthetic demo data only. Failure to load the current document is 503; never substitute an empty document or preselect acceptance."
+      security: []
+      responses:
+        "200":
+          description: "Current standalone document and server-owned identity"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PersonalDataConsentDocument"
+        "429":
+          "$ref": "#/components/responses/Error429"
+        "503":
+          "$ref": "#/components/responses/Error503"
   "/auth/register":
     post:
       operationId: "register"
       summary: "Register a personal account"
       tags:
         - "Auth"
-      description: "Creates account pending contact verification; sends a one-time confirmation link through configured delivery. Generic response for an existing address; no company or bank connection is created. Password is never logged. Rate limit by IP+normalized email; no mock claim that mail was delivered."
+      description: "Creates account pending contact verification only after a separate active consent confirmation. Frontend first fetches GET /auth/personal-data-consent, displays that full standalone text with an unchecked, separate checkbox, and sends personal_data_consent.accepted=true plus the displayed document_version and document_sha256. Missing confirmation or accepted other than true is 422 CONSENT_REQUIRED; malformed fields are 422 VALIDATION_ERROR. A syntactically valid unknown/retired version or digest different from the server's current document is 409 CONSENT_DOCUMENT_CHANGED: fetch and display the current document, clear the checkbox, and require a new explicit confirmation; never silently retry with a new version/hash. If the registry or evidence store is unavailable, return 503 and create no account. At account commit, validate the still-current server-owned version/hash and atomically persist the new account and consent evidence: consent_id, account_id, immutable text/version/hash, server accepted_at and confirmation method. Do not accept client-supplied evidence timestamps or IDs: accepted_at/consent_id are server-owned and disallowed in this request. No account or verification-mail job may be committed on consent failure; password and rejected request contents are never logged. Queue verification delivery only after the account/evidence commit. Generic 202 for an existing address after the same consent validation; an unauthenticated registration retry must not overwrite that account's existing consent or append an acceptance on its behalf. No company or bank connection is created. Rate limit by IP+normalized email; no mock claim that mail was delivered."
       responses:
         "202":
           "$ref": "#/components/responses/SuccessAcknowledgement"
@@ -68,9 +87,29 @@ paths:
         "403":
           "$ref": "#/components/responses/Error403"
         "409":
-          "$ref": "#/components/responses/Error409"
+          description: "Consent version is unknown/retired or its digest is not the current document; no account is created"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+              example:
+                error:
+                  code: "CONSENT_DOCUMENT_CHANGED"
+                  message: "Заново прочитайте и подтвердите актуальный текст согласия."
+                  field_errors: []
+                  request_id: "req_123"
         "422":
-          "$ref": "#/components/responses/Error422"
+          description: "CONSENT_REQUIRED for missing/non-true confirmation; VALIDATION_ERROR for malformed fields; no account is created"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+              example:
+                error:
+                  code: "CONSENT_REQUIRED"
+                  message: "Требуется отдельное подтверждение согласия."
+                  field_errors: []
+                  request_id: "req_123"
         "429":
           "$ref": "#/components/responses/Error429"
         "503":
@@ -532,7 +571,7 @@ paths:
       summary: "List company invitations"
       tags:
         - "Members"
-      description: "Owner only; live server-side permission check. "
+      description: "Owner only; live server-side permission check. Completed invitation history follows the Invitation schema: at most 30 calendar days after its first terminal transition. At the deadline rows are excluded even if physical cleanup is delayed; ordinary cleanup must remove stored personal data and copies by that same deadline. No indefinite history."
       responses:
         "200":
           "$ref": "#/components/responses/SuccessInvitationList"
@@ -560,7 +599,7 @@ paths:
       summary: "Invite a registered financier"
       tags:
         - "Members"
-      description: "Owner only; live server-side permission check. Existing pending invite for same company+email reused; no duplicate membership. Generic 422 INVITATION_NOT_AVAILABLE for ineligible recipient. Expiry provisionally seven days, explicit acceptance mandatory."
+      description: "Owner only; live server-side permission check. Existing pending invite for same company+email reused without extending expiry; no duplicate membership. Generic 422 INVITATION_NOT_AVAILABLE for ineligible recipient. Expiry provisionally seven days, explicit acceptance mandatory. A completed invitation is never revived: a new invitation is a new resource and does not extend the old resource's 30-day history deadline."
       responses:
         "201":
           "$ref": "#/components/responses/SuccessInvitation"
@@ -605,7 +644,7 @@ paths:
       summary: "Revoke a pending invitation"
       tags:
         - "Members"
-      description: "Owner only; live server-side permission check. Pending→revoked; repeated revoke is safe. Accepted invitation cannot be revoked to remove member: use member deletion. Expired/declined invitations remain history."
+      description: "Owner only; live server-side permission check. Pending→revoked; repeated revoke is safe within the history window and never resets its deadline. Accepted invitation cannot be revoked to remove member: use member deletion. All terminal invitation history is limited to 30 calendar days from the first terminal transition, as defined by Invitation; expired history is excluded and scoped invitation mutations return 404 after that deadline."
       responses:
         "204":
           description: "Completed; no body."
@@ -634,7 +673,7 @@ paths:
       summary: "List invitations to current account"
       tags:
         - "Members"
-      description: "Verified registered recipient only; no selected company necessary and no access to company financials before acceptance."
+      description: "Verified registered recipient only; no selected company necessary and no access to company financials before acceptance. Completed history has the same 30-calendar-day deadline as the owner list; expired history is excluded and deleted under Invitation retention rules."
       responses:
         "200":
           "$ref": "#/components/responses/SuccessInvitationList"
@@ -666,7 +705,7 @@ paths:
       summary: "Accept invitation"
       tags:
         - "Members"
-      description: "Verified recipient must match invited registered account; validates current pending state/version/expiry. Acceptance and membership coherence recoverable on retry. Already accepted by same user returns same Company; revoked/expired/declined returns 409."
+      description: "Verified recipient must match invited registered account; validates current pending state/version/expiry. Acceptance and membership coherence recoverable on retry. Within the retained history window, already accepted by same user returns same Company; revoked/expired/declined returns 409. After the Invitation history deadline return 404; deleting accepted invitation history does not revoke the separately stored membership. Retries never extend retention."
       responses:
         "200":
           "$ref": "#/components/responses/SuccessCompany"
@@ -709,7 +748,7 @@ paths:
       summary: "Decline invitation"
       tags:
         - "Members"
-      description: "Only matching verified recipient. pending→declined, repeated decline reuses state; version conflict 409."
+      description: "Only matching verified recipient. pending→declined, repeated decline reuses state within the retained history window without resetting its deadline; version conflict 409. After the Invitation history deadline return 404."
       responses:
         "200":
           "$ref": "#/components/responses/SuccessInvitation"
@@ -2595,6 +2634,10 @@ components:
         email: "owner@example.com"
         password: "example-password-only"
         display_name: "Иван"
+        personal_data_consent:
+          accepted: true
+          document_version: "0.1.1-mock"
+          document_sha256: "48413fceb8ec4768b1a8c38b0906cbbefa97db4d768d5c0e33c88b7a4c798b0c"
     Acknowledgement:
       value:
         message: "Если адрес зарегистрирован, инструкции будут отправлены."
@@ -4213,6 +4256,50 @@ components:
         - "email"
         - "display_name"
         - "email_verified"
+    PersonalDataConsentDocument:
+      type: "object"
+      additionalProperties: false
+      description: "Current server-owned standalone consent. Version and digest identify the full text displayed to the user; registry text is immutable per version. Source for this demo revision: docs/legal/personal-data-consent.md."
+      properties:
+        document_version:
+          type: "string"
+          minLength: 1
+          maxLength: 64
+          examples:
+            - "0.1.1-mock"
+        document_sha256:
+          type: "string"
+          pattern: "^[a-f0-9]{64}$"
+          description: "Lowercase SHA-256 hex of the exact UTF-8 text with LF line endings and no BOM. Server computes it from its immutable document, never from a client-uploaded replacement."
+        text:
+          type: "string"
+          minLength: 1
+          description: "Complete standalone consent in Markdown, including its version and operator/processor details; must be shown before the separate checkbox can be confirmed."
+      required:
+        - "document_version"
+        - "document_sha256"
+        - "text"
+    PersonalDataConsentAcceptance:
+      type: "object"
+      additionalProperties: false
+      description: "Separate affirmative confirmation of the displayed current consent. Server compares version/hash with its own registry at account commit and records server-owned evidence atomically with the new account. This payload does not authorize advertising or consent for other people."
+      properties:
+        accepted:
+          type: "boolean"
+          const: true
+        document_version:
+          type: "string"
+          minLength: 1
+          maxLength: 64
+          examples:
+            - "0.1.1-mock"
+        document_sha256:
+          type: "string"
+          pattern: "^[a-f0-9]{64}$"
+      required:
+        - "accepted"
+        - "document_version"
+        - "document_sha256"
     RegisterRequest:
       type: "object"
       additionalProperties: false
@@ -4236,10 +4323,13 @@ components:
           maxLength: 120
           examples:
             - "Иван"
+        personal_data_consent:
+          "$ref": "#/components/schemas/PersonalDataConsentAcceptance"
       required:
         - "email"
         - "password"
         - "display_name"
+        - "personal_data_consent"
     LoginRequest:
       type: "object"
       additionalProperties: false
@@ -4530,6 +4620,7 @@ components:
     Invitation:
       type: "object"
       additionalProperties: false
+      description: "Pending lifetime is seven days. For accepted/declined/revoked/expired, record the first terminal transition internally and retain invitation history for at most 30 calendar days from that instant; expiration uses expires_at, not the time a cleanup job notices it. Reads/retries/new invitations never restart this clock. Remove history from owner/recipient lists and return 404 for scoped invitation mutations at the deadline; ordinary deletion from storage, caches and backups must finish by the same deadline. Earlier applicable erasure requirements take precedence. Any legally required exceptional retention is blocked, minimal, separately justified and not available as ordinary API history. Accepted membership is a separate record and survives invitation-history deletion."
       properties:
         id:
           type: "string"
