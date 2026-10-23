@@ -14,6 +14,8 @@
 
 12. Owner-selected Go style: omit redundant per-file copyright, SPDX and "Adapted from" headers when the repository LICENSE already covers the source, and omit boilerplate `Package ...` comments that merely restate the package's obvious purpose. Keep applicable license notices in LICENSE/NOTICE and reference provenance in the reference documentation; preserve any specifically required third-party notices. Use source comments for contracts, resource ownership, limitations and non-obvious reasoning. This preference takes precedence over generic skill advice to add boilerplate comments.
 
+13. Owner-selected Go constructor style: extract multi-step input validation into a private `validate<Entity>` helper beside the entity, for example `validateBalanceObservation`. The constructor calls validation, then performs normalization and constructs the value. Preserve validation order and returned errors when extracting existing checks; a single simple guard does not require a separate helper.
+
 Issue assessment and plan commands: `.agent/workflows/issue-planning.md`.
 
 Git work follows `.agent/workflows/git-conventions.md`. For Go service work, consult `.agent/references/go-services.md`; references guide adaptation and do not override accepted ADRs or ADR-012 skill routing.
