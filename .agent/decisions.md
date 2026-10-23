@@ -28,15 +28,20 @@
 
 - **ADR-021 (Accepted, 2026-10-22):** Use an Issue as the canonical dialogue for explicitly associated same-repository PRs. Rebuild complete published discussion from GitHub for each request; replies stay at the request origin. Root association comes from formal Issue references in PR descriptions, never incidental comment mentions; reject ambiguous roots. A PR without an Issue keeps its own dialogue. Include closed related threads as history, bind code evidence to the request source SHA, and retain comment authors/chronology/review locations. History does not itself grant approval or write authority. After a successful `/create-plan`, publish its PR link in the Issue and only then close that Issue; closed Issues remain accessible to conversation and plan revisions in their PR. Preserve plan-only authority and explicit review trigger. No persistent model process, database, GBrain rollout or silent history truncation is added. This supersedes ADR-013's Issue lifecycle after plan handoff.
 
+
 - **ADR-022 (Accepted, 2026-10-23):** For the initial Go Core, the owner selected manual constructor wiring in `internal/app`, RUB-only money in kopecks, one connected financial account per company in MVP, and a service-local `services/core/pkg/log`. The account represents the covered bank account, not consolidated company cash; Company and BankAccount remain separate. RUB is the product/adapter convention because the provided dataset has no currency. These choices do not approve the entire REST/Auth proposal, select PostgreSQL libraries/toolchain, or accept an implementation stage. The first Core domain/persistence stage is detailed for review in `.agent/plans/go-core-foundation.md`.
 
+- **ADR-023 (Accepted, 2026-10-23):** Owner authorized shared GBrain at `https://gbrain.brokebyte.me/mcp` for local development, on a dedicated host separate from runner/Fadwix. Use individual authenticated HTTPS credentials: developer read/write, reviewer server-enforced read-only, separate protected owner credential. Local agents recall relevant memory before planning/implementation and remember verified findings with provenance; Git/ADRs remain authoritative and unavailability is a disclosed fallback, never a reason to fabricate memory. This supersedes ADR-010's rollout deferral and ADR-007's private-network-only proposal for local access; it does not enable the existing runner MCP or weaken its read-only policy. Deployment pin, setup and verification are recorded in `.agent/infra/gbrain/README.md`.
+
 ## Pending verification (not accepted implementation facts)
-- GBrain runtime on compatible hardware, authenticated endpoint, persistence/restore and actual server-enforced reviewer write denial. Selected source documents scoped tokens and MCP; configuration remains untested.
+- Encrypted off-host GBrain backup retention and connection of the existing review runner remain open; dedicated-host runtime, HTTPS authentication, persistence/restore and server-enforced reviewer write denial passed on 2026-10-23 (see `.agent/infra/gbrain/README.md`).
 - Full Go/gopls and GBrain/PR compatibility of pinned review skills; trusted fixture invocation succeeded separately from end-to-end review.
 - Codex CLI ChatGPT Plus unattended session renewal, current terms and rate limits under this team's server/CI conditions. Owner selected a Plus pilot; API billing is not configured.
 - Proto generation configuration, CI triggers, deployment secrets and branch rules.
 
 ## Implementation observations (2026-10-22; not new ADRs)
+
+The GBrain runtime statements below describe the old runner on 2026-10-22. The dedicated host deployed on 2026-10-23 supersedes that rollout deferral under ADR-023; see `.agent/infra/gbrain/README.md` for current checks.
 
 - Owner identified `runner.brokebyte.me` as a test host and authorized installation while explicitly prohibiting changes to its Fadwix infrastructure. It is not an isolated untrusted-PR execution environment yet.
 - Codex CLI 0.163.0 authenticated as dedicated `hackrnd-review` through the owner's ChatGPT Plus subscription using Brave and an SSH callback forward. Login status and actual noninteractive inference succeeded. Read-only command sandbox allowed reads and denied writes.
