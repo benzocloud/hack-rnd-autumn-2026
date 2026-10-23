@@ -1,0 +1,102 @@
+SOURCE: https://git.ruodoo.ru/ruodoo-public/public/raw/commit/dd10b7dde5935d4da35943e7ec9a26d169b9bee6/rsbu_fns_reporting/data/schemas/UT_UVISCHSUMNAL_1_263_00_05_03_01.xsd
+FORMAT: 5.03, KND 1110355; public repository copy, not downloaded from FNS.
+EXTRACTION: schema subtrees only; no taxpayer values or generated XML invoice.
+LIMIT: fragments, not a standalone schema or a complete notification.
+
+<xs:element xmlns:ns1="http://purl.oclc.org/dsdl/schematron" xmlns:ns2="http://www.unisoftware.ru/schematron-extensions" xmlns:xs="http://www.w3.org/2001/XMLSchema" name="УвИсчСумНалог" maxOccurs="unbounded">
+								<xs:annotation>
+									
+									<xs:appinfo>
+										<ns1:pattern name="Проверка наличия КППДекл">
+											<ns1:rule context="УвИсчСумНалог">
+												
+												<ns1:assert test="(@КППДекл and ../СвНП/НПЮЛ) or (not(../СвНП/НПЮЛ))                     ">
+													<ns2:error code="0400300003" path="" value-of-select="">
+                                                                          Отсутствует элемент Файл/Документ/УвИсчСумНалог/@КППДекл при наличии элемента Файл/Документ/СвНП/НПЮЛ
+                                                                   </ns2:error>
+												</ns1:assert>
+											</ns1:rule>
+										</ns1:pattern>
+									</xs:appinfo>
+									
+									<xs:documentation>Уведомление об исчисленных суммах налогов, авансовых платежей по налогам, сборов, страховых взносов</xs:documentation>
+								</xs:annotation>
+								<xs:complexType>
+									<xs:attribute name="КППДекл" type="КППТип" use="optional">
+										<xs:annotation>
+											<xs:documentation>КПП, указанный в соответствующей налоговой декларации (расчете)</xs:documentation>
+										</xs:annotation>
+									</xs:attribute>
+									<xs:attribute name="ОКТМО" type="ОКТМОТип" use="required">
+										<xs:annotation>
+											<xs:documentation>Код по ОКТМО</xs:documentation>
+										</xs:annotation>
+									</xs:attribute>
+									<xs:attribute name="КБК" type="КБКТип" use="required">
+										<xs:annotation>
+											<xs:documentation>Код бюджетной классификации</xs:documentation>
+										</xs:annotation>
+									</xs:attribute>
+									<xs:attribute name="СумНалогАванс" use="required">
+										<xs:annotation>
+											<xs:documentation>Сумма налога, авансовых платежей по налогу, сбора, страховых взносов</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:decimal">
+												<xs:totalDigits value="17" />
+												<xs:fractionDigits value="2" />
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:attribute>
+									<xs:attribute name="Период" use="required">
+										<xs:annotation>
+											<xs:documentation>Отчетный (налоговый) период</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:length value="2" />
+												<xs:enumeration value="21" />
+												<xs:enumeration value="31" />
+												<xs:enumeration value="33" />
+												<xs:enumeration value="34" />
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:attribute>
+									<xs:attribute name="НомерМесКварт" use="required">
+										<xs:annotation>
+											<xs:documentation>Номер месяца (квартала)</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:string">
+												<xs:length value="2" />
+												<xs:enumeration value="01" />
+												<xs:enumeration value="02" />
+												<xs:enumeration value="03" />
+												<xs:enumeration value="04" />
+												<xs:enumeration value="11" />
+												<xs:enumeration value="12" />
+												<xs:enumeration value="13" />
+											</xs:restriction>
+										</xs:simpleType>
+									</xs:attribute>
+									<xs:attribute name="Год" use="required">
+										<xs:annotation>
+											<xs:documentation>Отчетный (календарный) год</xs:documentation>
+										</xs:annotation>
+										<xs:simpleType>
+											<xs:restriction base="xs:gYear" />
+										</xs:simpleType>
+									</xs:attribute>
+								</xs:complexType>
+							</xs:element>
+						
+<xs:simpleType xmlns:xs="http://www.w3.org/2001/XMLSchema" name="ДатаТип">
+		<xs:annotation>
+			<xs:documentation>Дата в формате ДД.ММ.ГГГГ (01.01.1900 - 31.12.2099)</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:length value="10" />
+			<xs:pattern value="((((0[1-9]{1}|1[0-9]{1}|2[0-8]{1})\.(0[1-9]{1}|1[0-2]{1}))|((29|30)\.(01|0[3-9]{1}|1[0-2]{1}))|(31\.(01|03|05|07|08|10|12)))\.((19|20)[0-9]{2}))|(29\.02\.((19|20)(((0|2|4|6|8)(0|4|8))|((1|3|5|7|9)(2|6)))))" />
+		</xs:restriction>
+	</xs:simpleType>
+	

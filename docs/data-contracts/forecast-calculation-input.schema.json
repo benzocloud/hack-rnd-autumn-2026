@@ -1,0 +1,1004 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ForecastCalculationInputDTO v0.1.0 (review draft)",
+  "description": "Core-owned immutable calculation fixture for dataset replay and demonstrations. Extends the information carried by REST ForecastInput without changing it. Not yet the canonical Core-to-ML protobuf or a new REST endpoint.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "0.1.0"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "history_backtest",
+        "scenario_demo"
+      ]
+    },
+    "company_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "company_profile": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/DatasetCompanyProfile"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "input": {
+      "$ref": "#/$defs/ForecastInput"
+    },
+    "history": {
+      "$ref": "#/$defs/CalculationHistory"
+    },
+    "known_payments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/KnownPayment"
+      }
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Category"
+      }
+    },
+    "quality_issues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ImportIssue"
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "mode",
+    "company_id",
+    "company_profile",
+    "input",
+    "history",
+    "known_payments",
+    "categories",
+    "quality_issues"
+  ],
+  "$defs": {
+    "ForecastInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "snapshot_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "examples": [
+            "snap_123"
+          ]
+        },
+        "data_version": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*$",
+          "description": "Opaque decimal integer version encoded as a string. Compare for equality; do not increment in the browser.",
+          "examples": [
+            "42"
+          ]
+        },
+        "cutoff_date": {
+          "type": "string",
+          "format": "date",
+          "examples": [
+            "2026-10-23"
+          ]
+        },
+        "data_as_of": {
+          "type": "string",
+          "format": "date",
+          "examples": [
+            "2026-10-23"
+          ]
+        },
+        "start_date": {
+          "type": "string",
+          "format": "date",
+          "examples": [
+            "2026-10-24"
+          ]
+        },
+        "end_date": {
+          "type": "string",
+          "format": "date",
+          "examples": [
+            "2026-11-22"
+          ]
+        },
+        "horizon_days": {
+          "type": "integer",
+          "examples": [
+            30
+          ],
+          "minimum": 30,
+          "maximum": 90
+        },
+        "currency": {
+          "type": "string",
+          "enum": [
+            "RUB"
+          ],
+          "examples": [
+            "RUB"
+          ],
+          "description": "Provisional MVP convention, not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
+        },
+        "account_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "examples": [
+            "acc_123"
+          ]
+        },
+        "opening_balance": {
+          "$ref": "#/$defs/Money"
+        },
+        "balance_as_of": {
+          "type": "string",
+          "format": "date",
+          "examples": [
+            "2026-10-23"
+          ]
+        },
+        "risk_definition": {
+          "type": "string",
+          "enum": [
+            "below_zero_eod"
+          ],
+          "examples": [
+            "below_zero_eod"
+          ]
+        },
+        "model_context": {
+          "$ref": "#/$defs/ModelContext"
+        }
+      },
+      "required": [
+        "snapshot_id",
+        "data_version",
+        "cutoff_date",
+        "data_as_of",
+        "start_date",
+        "end_date",
+        "horizon_days",
+        "currency",
+        "account_id",
+        "opening_balance",
+        "balance_as_of",
+        "risk_definition",
+        "model_context"
+      ],
+      "description": "Immutable snapshot. Historical mode excludes facts and derived features after cutoff_date. start_date must equal cutoff_date+1 calendar day; data_as_of is latest usable factual coverage; balance_as_of must equal cutoff_date. opening_balance is a dated accepted EOD observation at cutoff, never a silent carry-forward of an earlier balance. Missing cutoff EOD causes BALANCE_AS_OF_UNAVAILABLE; no assumption of zero unobserved cashflow. A new explicit manual dated balance on an unobserved date may supply an onboarding/later-cutoff anchor with its provenance/quality warning, without changing the transaction-history source binding; a same-date statement observation cannot be overwritten. Known future payments in backtests require point-in-time availability; dataset has no such labels. below_zero_eod is a transparent negative-EOD-balance proxy, not a verified unpaid-obligation metric or credit-limit-aware insolvency prediction. Horizon counts calendar days, timezone company Europe/Moscow."
+    },
+    "Money": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "amount_minor": {
+          "type": "string",
+          "pattern": "^-?(?:0|[1-9][0-9]*)$",
+          "description": "Exact signed integer minor units encoded as decimal text; no exponent or decimal point. RUB has 100 minor units.",
+          "examples": [
+            "5000000"
+          ]
+        },
+        "currency": {
+          "type": "string",
+          "enum": [
+            "RUB"
+          ],
+          "examples": [
+            "RUB"
+          ],
+          "description": "Provisional MVP convention, not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
+        }
+      },
+      "required": [
+        "amount_minor",
+        "currency"
+      ],
+      "description": "Signed amount, used for balances and deltas. Negative balance may be overdraft; not proof that a bank payment was rejected."
+    },
+    "ModelContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "examples": [
+            "ctx_123"
+          ]
+        },
+        "model_name": {
+          "type": "string",
+          "examples": [
+            "candidate_model"
+          ]
+        },
+        "model_version": {
+          "type": "string",
+          "examples": [
+            "model-build-1"
+          ]
+        },
+        "preprocessing_version": {
+          "type": "string",
+          "examples": [
+            "prep-1"
+          ]
+        },
+        "configuration_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "examples": [
+            "cfg_123"
+          ]
+        },
+        "random_seed": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9]+$",
+          "examples": [
+            "12345"
+          ]
+        },
+        "trajectory_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "examples": [
+            1000
+          ],
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "model_name",
+        "model_version",
+        "preprocessing_version",
+        "configuration_id",
+        "random_seed",
+        "trajectory_count"
+      ],
+      "description": "Opaque immutable calculation context pinned before first inference. No claim that candidate model is implemented or probability calibrated. Scenario/retry reuse it; if unavailable fail MODEL_CONTEXT_UNAVAILABLE, never silently substitute current model. Optional stochastic parameters are null for deterministic methods."
+    },
+    "Transaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "examples": [
+            "txn_123"
+          ]
+        },
+        "account_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "examples": [
+            "acc_123"
+          ]
+        },
+        "operation_date": {
+          "type": "string",
+          "format": "date",
+          "examples": [
+            "2026-10-23"
+          ]
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "inflow",
+            "outflow"
+          ],
+          "examples": [
+            "inflow"
+          ]
+        },
+        "amount": {
+          "$ref": "#/$defs/PositiveMoney"
+        },
+        "counterparty_inn": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^(?:[0-9]{10}|[0-9]{12})$",
+          "examples": [
+            "0012345678"
+          ]
+        },
+        "counterparty_name": {
+          "type": "string",
+          "maxLength": 500,
+          "examples": [
+            "Контрагент"
+          ]
+        },
+        "payment_purpose": {
+          "type": "string",
+          "maxLength": 2000,
+          "examples": [
+            "Оплата аренды"
+          ]
+        },
+        "category_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 128,
+          "examples": [
+            "cat_rent"
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*$",
+          "description": "Opaque decimal integer version encoded as a string. Compare for equality; do not increment in the browser.",
+          "examples": [
+            "42"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$",
+          "examples": [
+            "2026-10-23T12:00:00Z"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "account_id",
+        "operation_date",
+        "direction",
+        "amount",
+        "counterparty_inn",
+        "counterparty_name",
+        "payment_purpose",
+        "category_id",
+        "source",
+        "version",
+        "created_at"
+      ],
+      "description": "A factual operation, not a planned payment. Blank dataset purpose/INN is represented as empty purpose/null INN with quality warning, not guessed data. Amount is positive; direction supplies sign. Raw balance_eod is a dated account observation, not added once per row."
+    },
+    "PositiveMoney": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "amount_minor": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*$",
+          "description": "Strictly positive integer minor units encoded as decimal text.",
+          "examples": [
+            "1000000"
+          ]
+        },
+        "currency": {
+          "type": "string",
+          "enum": [
+            "RUB"
+          ],
+          "examples": [
+            "RUB"
+          ],
+          "description": "Provisional MVP convention, not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
+        }
+      },
+      "required": [
+        "amount_minor",
+        "currency"
+      ],
+      "description": "Strictly positive movement amount; direction is a separate field."
+    },
+    "Source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "file",
+            "manual",
+            "mock_external"
+          ],
+          "examples": [
+            "file"
+          ]
+        },
+        "source_system": {
+          "type": "string",
+          "minLength": 1,
+          "examples": [
+            "dataset_v1"
+          ]
+        },
+        "source_company_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 128,
+          "examples": [
+            "C001"
+          ],
+          "description": "External dataset/provider company ID, NEVER the tenant ID and never a permission grant."
+        },
+        "external_operation_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 128,
+          "examples": [
+            "OP0000001"
+          ]
+        },
+        "external_payment_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 128,
+          "examples": [
+            "EXT_PAY_123"
+          ],
+          "description": "External expected-payment ID, distinct from factual operation ID. Null for facts/manual records."
+        },
+        "import_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 128,
+          "examples": [
+            "imp_123"
+          ]
+        },
+        "connection_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 128,
+          "examples": [
+            "con_123"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "source_system",
+        "source_company_id",
+        "external_operation_id",
+        "external_payment_id",
+        "import_id",
+        "connection_id"
+      ],
+      "description": "External identity is scoped to target company+account+source_system+external company+record kind+external record ID. Facts use external_operation_id with external_payment_id=null; expectations use external_payment_id with external_operation_id=null; manual records have both null. Operation and expected-payment IDs remain separate namespaces. In addition to scoped deduplication, the account has ONE transaction_source in MVP: file/imported operations and external balance observations from another source namespace or manual history mixing return 409 FACTUAL_SOURCE_CONFLICT without writes. First accepted import also binds one source_company_id per source_system/account, including planned-payments-only sources; selecting another company in the same source gives 409 SOURCE_BINDING_CONFLICT. First manual transaction binds manual_v1; a manual dated balance is a separate explicit observation and does not bind/change history authority. Connections or previews alone do not bind. Same scoped ID with changed economic content blocks commit; suspected equal content under distinct IDs warns and is never deleted automatically. Supplemental integrations may supply planned_payments only when explicitly selected in record_kinds; no silently discarded factual records."
+    },
+    "BalanceObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date",
+          "examples": [
+            "2026-10-23"
+          ]
+        },
+        "balance": {
+          "$ref": "#/$defs/Money"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "statement_eod",
+            "manual"
+          ],
+          "examples": [
+            "statement_eod"
+          ]
+        }
+      },
+      "required": [
+        "date",
+        "balance",
+        "source"
+      ],
+      "description": "One EOD value per account/date, repeated CSV balance_eod is not summed. Conflicting values for the same account/day block commit; jumps across dates create quality warnings and do not invent balancing operations."
+    },
+    "Payment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "examples": [
+            "pay_123"
+          ]
+        },
+        "account_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "examples": [
+            "acc_123"
+          ]
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "inflow",
+            "outflow"
+          ],
+          "examples": [
+            "inflow"
+          ]
+        },
+        "amount": {
+          "$ref": "#/$defs/PositiveMoney"
+        },
+        "remaining_amount": {
+          "$ref": "#/$defs/NonnegativeMoney"
+        },
+        "scheduled_date": {
+          "type": "string",
+          "format": "date",
+          "examples": [
+            "2026-10-30"
+          ]
+        },
+        "counterparty_name": {
+          "type": "string",
+          "maxLength": 500,
+          "examples": [
+            "Арендодатель"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 2000,
+          "examples": [
+            "Аренда помещения"
+          ]
+        },
+        "category_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 128,
+          "examples": [
+            "cat_rent"
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "planned",
+            "partially_matched",
+            "matched",
+            "cancelled"
+          ],
+          "examples": [
+            "planned"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*$",
+          "description": "Opaque decimal integer version encoded as a string. Compare for equality; do not increment in the browser.",
+          "examples": [
+            "42"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$",
+          "examples": [
+            "2026-10-23T12:00:00Z"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "account_id",
+        "direction",
+        "amount",
+        "remaining_amount",
+        "scheduled_date",
+        "counterparty_name",
+        "description",
+        "category_id",
+        "source",
+        "status",
+        "version",
+        "created_at"
+      ],
+      "description": "Expected occurrence (one payment), not a fact or recurrence rule. Past planned date remains overdue until explicitly matched/cancelled; do not infer payment from date. Forecast uses remaining amount once, after reconciliation with learned regularity. Imported expectations retain external provenance. cancelled/matched amounts excluded from future known cashflows."
+    },
+    "NonnegativeMoney": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "amount_minor": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]*)$",
+          "examples": [
+            "0"
+          ]
+        },
+        "currency": {
+          "type": "string",
+          "enum": [
+            "RUB"
+          ],
+          "examples": [
+            "RUB"
+          ],
+          "description": "Provisional MVP convention, not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
+        }
+      },
+      "required": [
+        "amount_minor",
+        "currency"
+      ]
+    },
+    "Category": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "examples": [
+            "cat_rent"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "examples": [
+            "Аренда"
+          ]
+        },
+        "direction": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "inflow",
+            "outflow",
+            null
+          ],
+          "examples": [
+            "inflow"
+          ]
+        },
+        "semantic_kind": {
+          "type": "string",
+          "enum": [
+            "operating_expense",
+            "sales_receipt",
+            "tax",
+            "financing",
+            "own_transfer",
+            "other"
+          ],
+          "examples": [
+            "operating_expense"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "direction",
+        "semantic_kind"
+      ]
+    },
+    "ImportIssue": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "MISSING_COUNTERPARTY_INN",
+            "EMPTY_PAYMENT_PURPOSE",
+            "SUSPECTED_CONTENT_DUPLICATE",
+            "BALANCE_DISCONTINUITY",
+            "SHORT_HISTORY",
+            "DUPLICATE_EXTERNAL_ID",
+            "CONFLICTING_EXTERNAL_ID",
+            "INVALID_ROW",
+            "UNSUPPORTED_CURRENCY",
+            "MULTIPLE_SOURCE_COMPANIES",
+            "FACTUAL_SOURCE_CONFLICT",
+            "SOURCE_BINDING_CONFLICT"
+          ],
+          "examples": [
+            "MISSING_COUNTERPARTY_INN"
+          ]
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "warning",
+            "blocking"
+          ],
+          "examples": [
+            "warning"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "examples": [
+            "ИНН контрагента отсутствует"
+          ]
+        },
+        "row_number": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "examples": [
+            2
+          ],
+          "minimum": 2
+        },
+        "field": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "examples": [
+            "counterparty_inn"
+          ]
+        },
+        "related_external_operation_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "examples": [
+              "OP0000001"
+            ]
+          }
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "message",
+        "row_number",
+        "field",
+        "related_external_operation_ids"
+      ],
+      "description": "CSV row numbers count header as row 1. Warnings are surfaced and acknowledged; blockers prevent commit. Repeated identical scoped external IDs are counted as already present, not new operations. Different contents under same ID block. Similar content under different IDs is only a warning. FACTUAL_SOURCE_CONFLICT and SOURCE_BINDING_CONFLICT always have severity=blocking and can_commit=false; they are never warning-only duplicates.",
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "enum": [
+                  "FACTUAL_SOURCE_CONFLICT",
+                  "SOURCE_BINDING_CONFLICT"
+                ]
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "severity": {
+                "const": "blocking"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "DatasetCompanyProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source_company_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "company_name": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "company_inn": {
+          "type": "string",
+          "pattern": "^(?:[0-9]{10}|[0-9]{12})$"
+        },
+        "legal_form": {
+          "type": "string",
+          "enum": [
+            "ООО",
+            "ИП"
+          ]
+        },
+        "industry": {
+          "type": "string",
+          "maxLength": 500
+        }
+      },
+      "required": [
+        "source_company_id",
+        "company_name",
+        "company_inn",
+        "legal_form",
+        "industry"
+      ],
+      "description": "Optional synthetic dataset metadata. Do not feed full-dataset last_operation_date/operations_count into historical features. Static availability of these attributes is an explicit dataset assumption."
+    },
+    "CalculationHistory": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "start_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "end_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "operation_availability_policy": {
+          "type": "string",
+          "const": "operation_date_eod_assumed"
+        },
+        "absent_day_policy": {
+          "type": "string",
+          "const": "unknown"
+        },
+        "transactions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Transaction"
+          }
+        },
+        "balance_observations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/BalanceObservation"
+          }
+        }
+      },
+      "required": [
+        "start_date",
+        "end_date",
+        "operation_availability_policy",
+        "absent_day_policy",
+        "transactions",
+        "balance_observations"
+      ],
+      "description": "Frozen selected history through cutoff. No dense zero-filled days are implied. Technical created_at is ingestion time and does not prove historical business knowledge. Current profile is dataset replay, not a general live-source availability policy."
+    },
+    "PaymentAvailability": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "known_as_of_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "basis": {
+          "type": "string",
+          "enum": [
+            "source_version_history",
+            "demo_assumption"
+          ]
+        },
+        "evidence_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        }
+      },
+      "required": [
+        "known_as_of_date",
+        "basis",
+        "evidence_ref"
+      ],
+      "description": "Business knowledge date of the entire payment version, including remainder, status and scheduled date; distinct from ingestion time. demo_assumption is forbidden in scored historical backtests."
+    },
+    "KnownPayment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "payment": {
+          "$ref": "#/$defs/Payment"
+        },
+        "availability": {
+          "$ref": "#/$defs/PaymentAvailability"
+        }
+      },
+      "required": [
+        "payment",
+        "availability"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "history_backtest"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "known_payments": {
+            "items": {
+              "properties": {
+                "availability": {
+                  "properties": {
+                    "basis": {
+                      "const": "source_version_history"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

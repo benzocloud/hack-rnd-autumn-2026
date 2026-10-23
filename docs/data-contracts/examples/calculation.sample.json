@@ -1,0 +1,224 @@
+{
+  "schema_version": "0.1.0",
+  "mode": "scenario_demo",
+  "company_id": "co_fixture_C001",
+  "company_profile": {
+    "source_company_id": "C001",
+    "company_name": "ООО «Грузоперевозки-063»",
+    "company_inn": "0098524470",
+    "legal_form": "ООО",
+    "industry": "Грузоперевозки"
+  },
+  "input": {
+    "snapshot_id": "snap_C001_2024-10-02_scenario_demo",
+    "data_version": "1",
+    "cutoff_date": "2024-10-02",
+    "data_as_of": "2024-10-02",
+    "start_date": "2024-10-03",
+    "end_date": "2024-11-01",
+    "horizon_days": 30,
+    "currency": "RUB",
+    "account_id": "acc_fixture_C001",
+    "opening_balance": {
+      "amount_minor": "152771404",
+      "currency": "RUB"
+    },
+    "balance_as_of": "2024-10-02",
+    "risk_definition": "below_zero_eod",
+    "model_context": {
+      "id": "ctx_contract_fixture",
+      "model_name": "contract_fixture_only",
+      "model_version": "not-a-trained-model",
+      "preprocessing_version": "dto-0.1.0",
+      "configuration_id": "cfg_contract_fixture",
+      "random_seed": null,
+      "trajectory_count": null
+    }
+  },
+  "history": {
+    "start_date": "2024-10-01",
+    "end_date": "2024-10-02",
+    "operation_availability_policy": "operation_date_eod_assumed",
+    "absent_day_policy": "unknown",
+    "transactions": [
+      {
+        "id": "txn_C001-000001",
+        "account_id": "acc_fixture_C001",
+        "operation_date": "2024-10-01",
+        "direction": "outflow",
+        "amount": {
+          "amount_minor": "99000",
+          "currency": "RUB"
+        },
+        "counterparty_inn": "0068275202",
+        "counterparty_name": "ПАО «Банк»",
+        "payment_purpose": "Комиссия за ведение счета за сентябрь 2024 г. Без НДС",
+        "category_id": null,
+        "source": {
+          "kind": "file",
+          "source_system": "dataset_v1",
+          "source_company_id": "C001",
+          "external_operation_id": "C001-000001",
+          "external_payment_id": null,
+          "import_id": "imp_dataset_fixture",
+          "connection_id": null
+        },
+        "version": "1",
+        "created_at": "2026-10-23T20:00:00Z"
+      },
+      {
+        "id": "txn_C001-000002",
+        "account_id": "acc_fixture_C001",
+        "operation_date": "2024-10-02",
+        "direction": "inflow",
+        "amount": {
+          "amount_minor": "17089206",
+          "currency": "RUB"
+        },
+        "counterparty_inn": "0048401219",
+        "counterparty_name": "ООО «Элеватор-242»",
+        "payment_purpose": "Оплата по УПД № 279 от 19.08.2024. НДС не облагается",
+        "category_id": null,
+        "source": {
+          "kind": "file",
+          "source_system": "dataset_v1",
+          "source_company_id": "C001",
+          "external_operation_id": "C001-000002",
+          "external_payment_id": null,
+          "import_id": "imp_dataset_fixture",
+          "connection_id": null
+        },
+        "version": "1",
+        "created_at": "2026-10-23T20:00:00Z"
+      },
+      {
+        "id": "txn_C001-000003",
+        "account_id": "acc_fixture_C001",
+        "operation_date": "2024-10-02",
+        "direction": "inflow",
+        "amount": {
+          "amount_minor": "11200000",
+          "currency": "RUB"
+        },
+        "counterparty_inn": "0053443398",
+        "counterparty_name": "ООО «Дистрибьютор-307»",
+        "payment_purpose": "Частичная оплата по УПД № 296 от 02.09.2024. НДС не облагается.",
+        "category_id": null,
+        "source": {
+          "kind": "file",
+          "source_system": "dataset_v1",
+          "source_company_id": "C001",
+          "external_operation_id": "C001-000003",
+          "external_payment_id": null,
+          "import_id": "imp_dataset_fixture",
+          "connection_id": null
+        },
+        "version": "1",
+        "created_at": "2026-10-23T20:00:00Z"
+      }
+    ],
+    "balance_observations": [
+      {
+        "date": "2024-10-01",
+        "balance": {
+          "amount_minor": "124482198",
+          "currency": "RUB"
+        },
+        "source": "statement_eod"
+      },
+      {
+        "date": "2024-10-02",
+        "balance": {
+          "amount_minor": "152771404",
+          "currency": "RUB"
+        },
+        "source": "statement_eod"
+      }
+    ]
+  },
+  "known_payments": [
+    {
+      "payment": {
+        "id": "pay_DEMO-INVOICE-001",
+        "account_id": "acc_fixture_C001",
+        "direction": "inflow",
+        "amount": {
+          "amount_minor": "10000000",
+          "currency": "RUB"
+        },
+        "remaining_amount": {
+          "amount_minor": "10000000",
+          "currency": "RUB"
+        },
+        "scheduled_date": "2024-10-07",
+        "counterparty_name": "Учебный покупатель",
+        "description": "Вымышленный будущий счёт, отсутствующий в датасете",
+        "status": "planned",
+        "category_id": null,
+        "source": {
+          "kind": "mock_external",
+          "source_system": "demo_planned_payments_v1",
+          "source_company_id": "C001",
+          "external_operation_id": null,
+          "external_payment_id": "DEMO-INVOICE-001",
+          "import_id": "imp_mock_fixture",
+          "connection_id": "con_mock_fixture"
+        },
+        "version": "1",
+        "created_at": "2026-10-23T20:00:00Z"
+      },
+      "availability": {
+        "known_as_of_date": "2024-10-02",
+        "basis": "demo_assumption",
+        "evidence_ref": "Manually authored demonstration; excluded from scored historical evaluation"
+      }
+    },
+    {
+      "payment": {
+        "id": "pay_DEMO-RENT-001",
+        "account_id": "acc_fixture_C001",
+        "direction": "outflow",
+        "amount": {
+          "amount_minor": "8000000",
+          "currency": "RUB"
+        },
+        "remaining_amount": {
+          "amount_minor": "8000000",
+          "currency": "RUB"
+        },
+        "scheduled_date": "2024-10-10",
+        "counterparty_name": "Учебный арендодатель",
+        "description": "Вымышленный расход; не выведен из будущих операций датасета",
+        "status": "planned",
+        "category_id": null,
+        "source": {
+          "kind": "mock_external",
+          "source_system": "demo_planned_payments_v1",
+          "source_company_id": "C001",
+          "external_operation_id": null,
+          "external_payment_id": "DEMO-RENT-001",
+          "import_id": "imp_mock_fixture",
+          "connection_id": "con_mock_fixture"
+        },
+        "version": "1",
+        "created_at": "2026-10-23T20:00:00Z"
+      },
+      "availability": {
+        "known_as_of_date": "2024-10-02",
+        "basis": "demo_assumption",
+        "evidence_ref": "Manually authored demonstration; excluded from scored historical evaluation"
+      }
+    }
+  ],
+  "categories": [],
+  "quality_issues": [
+    {
+      "code": "SHORT_HISTORY",
+      "severity": "warning",
+      "message": "Сокращённый пример формы DTO: 2 наблюдаемых дня; достаточность для ML не заявляется",
+      "row_number": null,
+      "field": null,
+      "related_external_operation_ids": []
+    }
+  ]
+}
