@@ -1,11 +1,11 @@
 # Pre-hackathon infrastructure rollout plan
 
-**Status:** In progress (2026-10-22). GitHub review, Issue planning and conversation workflows are active on main. Runner adapters/profile match PR #12 merge `12b8ff93b091e55fddc452dcfbba845f92092795`. Real Issue/plan/discussion/review cycles passed on disposable Issue #8 and PR #9; Russian review comments passed on PR #11. All 90 infrastructure tests passed on the server after PR #12, plus an installed-worker check without inference. GBrain is deferred and optional (ADR-010). Review requires `/agent-review` (ADR-011) and title-based skill routing (ADR-012). Main protection, full re-review/failure/auth rehearsals and ADR-021 remain open. **Owner:** Tech Lead. **Deadline:** Complete before hackathon starts. **Objective:** local Codex planning and independent server-side PR review working end-to-end, with shared memory added later.
+**Status:** In progress (2026-10-22). GitHub review, Issue planning and conversation workflows are active on main. Runner adapters/profile match PR #12 merge `12b8ff93b091e55fddc452dcfbba845f92092795`. Real Issue/plan/discussion/review cycles passed on disposable Issue #8 and PR #9; Russian review comments passed on PR #11. All 90 infrastructure tests passed on the server after PR #12, plus an installed-worker check without inference. GBrain remains optional (ADR-010); the dedicated HTTPS service was deployed on 2026-10-23 under ADR-023. Review requires `/agent-review` (ADR-011) and title-based skill routing (ADR-012). Main protection, full re-review/failure/auth rehearsals and ADR-021 remain open. **Owner:** Tech Lead. **Deadline:** Complete before hackathon starts. **Objective:** local Codex planning and independent server-side PR review working end-to-end, with shared memory added later.
 
 Implementation, pins, evidence and continuation steps: `.agent/infra/README.md`.
 Owner confirmed this is a test host and authorized installation while requiring
 Fadwix infrastructure to remain untouched. No stop/reboot or Fadwix changes were
-performed. GBrain hardware changes are deferred. Open work below is not represented as complete.
+performed. The original runner CPU remains unchanged; shared memory now runs on the separate GBrain host. Open work below is not represented as complete.
 
 ## Phase 0 — Decisions and access (blocking)
 - [ ] Confirm GitHub organization/repo, maintainers, PR conventions and human reviewers.
@@ -24,9 +24,12 @@ performed. GBrain hardware changes are deferred. Open work below is not represen
 - [x] Provision scoped GitHub Actions tokens for metadata reads and separate comment/plan publication; model jobs receive no GitHub token.
 **Exit:** sample Issue + PR can be retrieved with correct permissions.
 
-## Phase 2 — GBrain shared memory (deferred follow-up; not a runner prerequisite)
+## Phase 2 — GBrain shared memory (dedicated host; not a runner prerequisite)
 - [ ] Install and pin an audited GBrain release on persistent agent infrastructure; verify actual commands and MCP endpoint from that version's docs.
-  - Selected `garrytan/gbrain` 0.60.366.0, pinned source and targeted integration inspection recorded. Initialization blocked: guest reports QEMU CPU 2.5+ without `sse4_2`; no active GBrain service/database/tokens.
+  - Historical 2026-10-22: runner initialization was blocked by missing SSE4.2.
+    Update 2026-10-23: owner selected separate `gbrain.brokebyte.me`; compatible AMD
+    CPU verified, pinned `0.60.409.0` binary installed, HTTPS MCP and scoped clients
+    are operational. Detailed checks and open recovery items: `.agent/infra/gbrain/README.md`.
 - [ ] Restrict access to private authenticated network (e.g. Tailscale plus TLS), not public unauthenticated MCP.
 - [ ] Configure durable storage, backups, restore test, service health and restart policy.
 - [ ] Create individual developer identities/grants if supported; reviewer credential must be **server-enforced read-only**.
