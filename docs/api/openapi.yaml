@@ -1,6 +1,6 @@
 openapi: "3.1.0"
 info:
-  title: "Cash Flow Frontend → Go API"
+  title: "Saldo Frontend → Go API"
   version: "0.1.1"
   description: "Review baseline, 2026-10-23. A saved REST proposal, not implemented endpoints, accepted ADR, or evidence of a working integration. Browser calls Go API only; Core/ML protobuf boundaries remain separate. Paths are relative to /api/v1.\n\nScope: self-service small-business account, one default account per company, owner/financier company roles, file/manual input, explicitly mocked external adapters, forecasts, four what-if templates, plan-fact. RUB-only is a provisional adapter/MVP convention: dataset contains no currency. Email/password, cookie session, seven-day invitations, numerical input/upload caps and below_zero_eod proxy are proposed defaults requiring owner review. Actual FNS/1C DTO research immediately follows owner approval of this saved REST baseline; mock schemas are NOT claims about their official APIs.\n\nSecurity: same-origin deployment only in this baseline. Secure HttpOnly SameSite=Lax __Host- cookie, server session, synchronizer CSRF on ALL writes including public login/register/recovery. GET /auth/csrf establishes pre-auth context; send credentials and X-CSRF-Token thereafter. Exact trusted Origin/Referer validation; no wildcard credentialed CORS. Rotate session after login and obtain fresh CSRF token. API must not expose Auth/Core databases or trust role/company/source IDs sent by browser. Auth unavailable: fail closed. Company membership is checked live on every scoped read/write, including polling/downloads; financial operations owner/financier, administration owner only. Cross-tenant resources return 404. Email verification required for company operations. Auth tokens/passwords/financial contents never logged; errors include request_id, not stack traces.\n\nConsistency: IDs opaque, all money exact decimal integer strings in minor units. Positive movement plus direction differs from signed balance. Date-only business dates use Europe/Moscow, timestamp strings UTC Z. Do not use JS floating point for financial arithmetic. All lists cursor-based with stable sort (by resource date then ID unless documented); cursors bind filters and tenant. Financial data version increments on facts, dated balances, categories, known payments, matches and imported facts; connections/invitation cosmetics do not mutate prediction snapshots. Reads include dated provenance/freshness; no balance claims live bank access.\n\nJob semantics: HTTP 202 only after durable input/job saved. Retried idempotent create/job requests reuse resource; same key different semantic payload/file bytes is 409. Stored resource is truth; transport errors never mean job failure. Imports first preview, then explicit atomic commit with optimistic versions. No silent partial rows, inferred tenant access, duplicate economic counting or invented balancing transactions. Identical external IDs dedup only inside scoped source; content-similar different IDs warn. Historical forecasts filter all factual/features past cutoff and preserve point-in-time known obligations. A negative balance is an EOD indicator; overdraft limit and actual unpaid obligation are unknown.\n\nAll application responses, including errors, should use Cache-Control:no-store; JSON content type application/json. No merge/deploy or implemented behavior is implied by this file. Delivery infrastructure, provider DTO mapping and calibrated ML uncertainty remain separate reviewed work."
 servers:
@@ -319,7 +319,7 @@ paths:
               description: "Expire session cookie."
               schema:
                 type: "string"
-                example: "__Host-cashflow_session=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax"
+                example: "__Host-saldo_session=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax"
         "400":
           "$ref": "#/components/responses/Error400"
         "401":
@@ -2004,7 +2004,7 @@ components:
     cookieSession:
       type: "apiKey"
       in: "cookie"
-      name: "__Host-cashflow_session"
+      name: "__Host-saldo_session"
       description: "Opaque server-side session cookie; Secure, HttpOnly, SameSite=Lax, Path=/. Only same-origin browser traffic in this baseline. CSRF header is additionally required on all writes."
   parameters:
     company_id:
@@ -2322,10 +2322,10 @@ components:
               "$ref": "#/components/examples/CsrfToken"
       headers:
         Set-Cookie:
-          description: "Set/rotate session cookie: __Host-cashflow_session; Secure; HttpOnly; SameSite=Lax; Path=/. Values/tokens are not returned in JSON."
+          description: "Set/rotate session cookie: __Host-saldo_session; Secure; HttpOnly; SameSite=Lax; Path=/. Values/tokens are not returned in JSON."
           schema:
             type: "string"
-            example: "__Host-cashflow_session=opaque-session-value; Path=/; Secure; HttpOnly; SameSite=Lax"
+            example: "__Host-saldo_session=opaque-session-value; Path=/; Secure; HttpOnly; SameSite=Lax"
     SuccessAcknowledgement:
       description: "Acknowledgement"
       content:
@@ -2346,10 +2346,10 @@ components:
               "$ref": "#/components/examples/Session"
       headers:
         Set-Cookie:
-          description: "Set/rotate session cookie: __Host-cashflow_session; Secure; HttpOnly; SameSite=Lax; Path=/. Values/tokens are not returned in JSON."
+          description: "Set/rotate session cookie: __Host-saldo_session; Secure; HttpOnly; SameSite=Lax; Path=/. Values/tokens are not returned in JSON."
           schema:
             type: "string"
-            example: "__Host-cashflow_session=opaque-session-value; Path=/; Secure; HttpOnly; SameSite=Lax"
+            example: "__Host-saldo_session=opaque-session-value; Path=/; Secure; HttpOnly; SameSite=Lax"
     SuccessUser:
       description: "User"
       content:

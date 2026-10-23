@@ -1,4 +1,4 @@
-# Codex entrypoint
+# Saldo — Codex entrypoint
 
 Read `.agent/instructions.md` and `.agent/decisions.md` before planning or reviewing.
 Commit conventions: `.agent/workflows/git-conventions.md`.
