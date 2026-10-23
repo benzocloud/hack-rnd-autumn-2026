@@ -1,5 +1,5 @@
 [Unit]
-Description=Daily Hackrnd GBrain backup
+Description=Daily private Hackrnd GBrain backup
 
 [Timer]
 OnCalendar=*-*-* 03:00:00 UTC
