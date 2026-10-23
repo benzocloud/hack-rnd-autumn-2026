@@ -1,6 +1,10 @@
 # Local reference checkouts linked from this workspace.
 /references/
 
+# Participant data and generated ML results remain local.
+/data/cashflow/
+/services/ml/artifacts/
+
 # Local Python tooling and caches.
 .venv/
 .ruff_cache/
