@@ -1,0 +1,10 @@
+gbrain.brokebyte.me {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+	}
+	reverse_proxy 127.0.0.1:3131 {
+		flush_interval -1
+	}
+}

@@ -18,3 +18,7 @@
 .ruff_cache/
 __pycache__/
 *.py[cod]
+
+# Private local MCP configuration and credentials.
+/.codex/config.toml
+/.agent/local/
