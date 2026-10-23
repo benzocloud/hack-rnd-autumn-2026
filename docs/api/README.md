@@ -1,4 +1,4 @@
-# REST Frontend ↔ Go API: передача frontend-разработчику
+# Saldo: REST Frontend ↔ Go API, передача frontend-разработчику
 
 Дата: 2026-10-23. Версия контракта: `0.1.1`.
 Источник маршрутов, тел запросов/ответов и ограничений —
@@ -8,8 +8,8 @@
 сценарии и не заменяет схемы.
 REST-пути вида `/companies/…` ниже указаны относительно префикса `/api/v1`.
 
-Контекст: [архитектурный план](../../.agent/plans/cash-flow-architecture.md),
-[описание продукта](../../.agent/plans/cash-flow-product.md),
+Контекст: [архитектурный план](../../.agent/plans/saldo-architecture.md),
+[описание продукта](../../.agent/plans/saldo-product.md),
 [результаты локальной проверки](../../.agent/references/dataset-profile.md).
 Исходный README находится в локальном `dataset/README.md`; публикация датасета
 этой поставкой не определяется.
