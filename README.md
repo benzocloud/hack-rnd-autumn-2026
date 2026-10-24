@@ -1,4 +1,4 @@
-![Баннер Saldo Analytics](./frontend/README/banner.png)
+![Баннер Saldo Analytics](./README/banner.png)
 
 # Документация к приложению Saldo Analytics
 
@@ -29,7 +29,7 @@ Saldo Analytics — сервис финансового прогнозирова
 
 ## Быстрый запуск
 
-Для разработки и проверок используй Node.js 24 и npm. Все команды ниже выполняются из каталога `frontend/`.
+Для разработки и проверок используй Node.js 24 и npm. Все команды ниже выполняются из корня фронтенда.
 
 ```bash
 npm ci
