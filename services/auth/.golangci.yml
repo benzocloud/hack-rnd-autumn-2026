@@ -1,0 +1,69 @@
+version: "2"
+run:
+  go: "1.27"
+  concurrency: 4
+  timeout: 5m
+  tests: true
+  build-tags:
+    - integration
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 50
+
+linters:
+  default: none
+  enable:
+    - govet
+    - staticcheck
+    - unused
+    - errcheck
+    - errorlint
+    - nilerr
+    - copyloopvar
+    - durationcheck
+    - reassign
+    - gocritic
+    - whitespace
+    - godot
+    - misspell
+    - dupword
+    - predeclared
+    - errname
+    - asciicheck
+    - nestif
+    - unconvert
+    - ineffassign
+    - bidichk
+    - bodyclose
+    - noctx
+    - fatcontext
+    - sloglint
+    - loggercheck
+    - testifylint
+    - thelper
+    - usetesting
+    - exptostd
+    - usestdlibvars
+    - exhaustive
+    - nolintlint
+  settings:
+    errcheck:
+      check-type-assertions: true
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+  exclusions:
+    generated: disable
+    presets: []
+
+formatters:
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/benzocloud/hack-rnd-autumn-2026/services/auth
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: disable

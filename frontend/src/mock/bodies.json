@@ -1,0 +1,1550 @@
+{
+    "CsrfToken": {
+        "csrf_token": "example-csrf-token-1234567890",
+        "expires_at": "2026-10-23T12:30:00Z"
+    },
+    "Acknowledgement": {
+        "message": "Если адрес зарегистрирован, инструкции будут отправлены."
+    },
+    "Session": {
+        "user": {
+            "id": "usr_123",
+            "email": "owner@example.com",
+            "display_name": "Иван",
+            "email_verified": true
+        },
+        "expires_at": "2026-10-24T12:00:00Z"
+    },
+    "User": {
+        "id": "usr_123",
+        "email": "owner@example.com",
+        "display_name": "Иван",
+        "email_verified": true
+    },
+    "CompanyList": {
+        "items": [
+            {
+                "id": "019a0c65-9800-7000-8000-000000000004",
+                "name": "Кофейня",
+                "inn": "001234567890",
+                "currency": "RUB",
+                "timezone": "Europe/Moscow",
+                "membership": {
+                    "role": "owner"
+                },
+                "default_account_id": "019a0c65-9800-7000-8000-000000000001",
+                "version": "42",
+                "created_at": "2026-10-23T12:00:00Z"
+            }
+        ],
+        "next_cursor": null
+    },
+    "Company": {
+        "id": "019a0c65-9800-7000-8000-000000000004",
+        "name": "Кофейня",
+        "inn": "001234567890",
+        "currency": "RUB",
+        "timezone": "Europe/Moscow",
+        "membership": {
+            "role": "owner"
+        },
+        "default_account_id": "019a0c65-9800-7000-8000-000000000001",
+        "version": "42",
+        "created_at": "2026-10-23T12:00:00Z"
+    },
+    "MembershipList": {
+        "items": [
+            {
+                "user_id": "usr_123",
+                "email": "owner@example.com",
+                "display_name": "Иван",
+                "role": "owner",
+                "joined_at": "2026-10-23T12:00:00Z"
+            }
+        ],
+        "next_cursor": null
+    },
+    "InvitationList": {
+        "items": [
+            {
+                "id": "inv_123",
+                "company_id": "019a0c65-9800-7000-8000-000000000004",
+                "company_name": "Кофейня",
+                "email": "financier@example.com",
+                "role": "financier",
+                "status": "pending",
+                "created_at": "2026-10-23T12:00:00Z",
+                "expires_at": "2026-10-30T12:00:00Z",
+                "version": "42"
+            }
+        ],
+        "next_cursor": null
+    },
+    "Invitation": {
+        "id": "inv_123",
+        "company_id": "019a0c65-9800-7000-8000-000000000004",
+        "company_name": "Кофейня",
+        "email": "financier@example.com",
+        "role": "financier",
+        "status": "pending",
+        "created_at": "2026-10-23T12:00:00Z",
+        "expires_at": "2026-10-30T12:00:00Z",
+        "version": "42"
+    },
+    "Account": {
+        "id": "019a0c65-9800-7000-8000-000000000001",
+        "company_id": "019a0c65-9800-7000-8000-000000000004",
+        "name": "Основной счёт",
+        "currency": "RUB",
+        "balance": {
+            "amount_minor": "5000000",
+            "currency": "RUB"
+        },
+        "balance_as_of": "2026-10-23",
+        "balance_source": "manual",
+        "data_version": "42",
+        "transaction_source": {
+            "mode": "manual",
+            "source_system": "manual_v1",
+            "source_company_id": null
+        }
+    },
+    "CategoryList": {
+        "items": [
+            {
+                "id": "019a0c65-9800-7000-8000-000000000002",
+                "name": "Аренда",
+                "direction": "inflow",
+                "semantic_kind": "operating_expense"
+            }
+        ],
+        "next_cursor": null
+    },
+    "TransactionList": {
+        "items": [
+            {
+                "id": "019a0c65-9800-7000-8000-00000000000f",
+                "account_id": "019a0c65-9800-7000-8000-000000000001",
+                "operation_date": "2026-10-23",
+                "direction": "outflow",
+                "amount": {
+                    "amount_minor": "1000000",
+                    "currency": "RUB"
+                },
+                "counterparty_inn": "0012345678",
+                "counterparty_name": "Контрагент",
+                "payment_purpose": "Оплата аренды",
+                "category_id": "019a0c65-9800-7000-8000-000000000002",
+                "source": {
+                    "kind": "file",
+                    "source_system": "dataset_v1",
+                    "source_company_id": "C001",
+                    "external_operation_id": "OP0000001",
+                    "external_payment_id": null,
+                    "import_id": "019a0c65-9800-7000-8000-000000000008",
+                    "connection_id": null
+                },
+                "version": "42",
+                "created_at": "2026-10-23T12:00:00Z"
+            }
+        ],
+        "next_cursor": null
+    },
+    "Transaction": {
+        "id": "019a0c65-9800-7000-8000-00000000000f",
+        "account_id": "019a0c65-9800-7000-8000-000000000001",
+        "operation_date": "2026-10-23",
+        "direction": "outflow",
+        "amount": {
+            "amount_minor": "1000000",
+            "currency": "RUB"
+        },
+        "counterparty_inn": "0012345678",
+        "counterparty_name": "Контрагент",
+        "payment_purpose": "Оплата аренды",
+        "category_id": "019a0c65-9800-7000-8000-000000000002",
+        "source": {
+            "kind": "file",
+            "source_system": "dataset_v1",
+            "source_company_id": "C001",
+            "external_operation_id": "OP0000001",
+            "external_payment_id": null,
+            "import_id": "019a0c65-9800-7000-8000-000000000008",
+            "connection_id": null
+        },
+        "version": "42",
+        "created_at": "2026-10-23T12:00:00Z"
+    },
+    "ImportList": {
+        "items": [
+            {
+                "id": "019a0c65-9800-7000-8000-000000000008",
+                "account_id": "019a0c65-9800-7000-8000-000000000001",
+                "source_kind": "file",
+                "adapter": "dataset_v1",
+                "source_company_id": "C001",
+                "connection_id": null,
+                "status": "preview_ready",
+                "version": "42",
+                "created_at": "2026-10-23T12:00:00Z",
+                "updated_at": "2026-10-23T12:00:00Z",
+                "preview": {
+                    "source_company_id": "C001",
+                    "source_system": "dataset_v1",
+                    "account_id": "019a0c65-9800-7000-8000-000000000001",
+                    "currency": "RUB",
+                    "period_start": "2024-10-01",
+                    "period_end": "2026-09-30",
+                    "row_count": 1483,
+                    "excluded_other_company_row_count": 0,
+                    "new_transaction_count": 1481,
+                    "already_present_count": 2,
+                    "new_payment_count": 0,
+                    "blocking_issue_count": 0,
+                    "warning_count": 1,
+                    "issues": [
+                        {
+                            "code": "MISSING_COUNTERPARTY_INN",
+                            "severity": "warning",
+                            "message": "ИНН контрагента отсутствует",
+                            "row_number": 2,
+                            "field": "counterparty_inn",
+                            "related_external_operation_ids": []
+                        }
+                    ],
+                    "issues_truncated": false,
+                    "balance_observations": [
+                        {
+                            "date": "2026-09-30",
+                            "balance": {
+                                "amount_minor": "5000000",
+                                "currency": "RUB"
+                            },
+                            "source": "statement_eod"
+                        }
+                    ],
+                    "base_data_version": "42",
+                    "can_commit": true,
+                    "preview_version": "42",
+                    "record_kinds": [
+                        "transactions",
+                        "balance_observations"
+                    ],
+                    "transaction_source": null,
+                    "would_bind_transaction_source": {
+                        "mode": "external",
+                        "source_system": "dataset_v1",
+                        "source_company_id": "C001"
+                    }
+                },
+                "applied_data_version": null,
+                "error": null,
+                "record_kinds": [
+                    "transactions",
+                    "balance_observations"
+                ]
+            }
+        ],
+        "next_cursor": null
+    },
+    "ImportAccepted": {
+        "id": "019a0c65-9800-7000-8000-000000000008",
+        "status": "queued",
+        "status_url": "/api/v1/companies/019a0c65-9800-7000-8000-000000000004/imports/019a0c65-9800-7000-8000-000000000008",
+        "poll_after_ms": 1000
+    },
+    "Import": {
+        "id": "019a0c65-9800-7000-8000-000000000008",
+        "account_id": "019a0c65-9800-7000-8000-000000000001",
+        "source_kind": "file",
+        "adapter": "dataset_v1",
+        "source_company_id": "C001",
+        "connection_id": null,
+        "status": "preview_ready",
+        "version": "42",
+        "created_at": "2026-10-23T12:00:00Z",
+        "updated_at": "2026-10-23T12:00:00Z",
+        "preview": {
+            "source_company_id": "C001",
+            "source_system": "dataset_v1",
+            "account_id": "019a0c65-9800-7000-8000-000000000001",
+            "currency": "RUB",
+            "period_start": "2024-10-01",
+            "period_end": "2026-09-30",
+            "row_count": 1483,
+            "excluded_other_company_row_count": 0,
+            "new_transaction_count": 1481,
+            "already_present_count": 2,
+            "new_payment_count": 0,
+            "blocking_issue_count": 0,
+            "warning_count": 1,
+            "issues": [
+                {
+                    "code": "MISSING_COUNTERPARTY_INN",
+                    "severity": "warning",
+                    "message": "ИНН контрагента отсутствует",
+                    "row_number": 2,
+                    "field": "counterparty_inn",
+                    "related_external_operation_ids": []
+                }
+            ],
+            "issues_truncated": false,
+            "balance_observations": [
+                {
+                    "date": "2026-09-30",
+                    "balance": {
+                        "amount_minor": "5000000",
+                        "currency": "RUB"
+                    },
+                    "source": "statement_eod"
+                }
+            ],
+            "base_data_version": "42",
+            "can_commit": true,
+            "preview_version": "42",
+            "record_kinds": [
+                "transactions",
+                "balance_observations"
+            ],
+            "transaction_source": null,
+            "would_bind_transaction_source": {
+                "mode": "external",
+                "source_system": "dataset_v1",
+                "source_company_id": "C001"
+            }
+        },
+        "applied_data_version": null,
+        "error": null,
+        "record_kinds": [
+            "transactions",
+            "balance_observations"
+        ]
+    },
+    "ImportIssueList": {
+        "items": [
+            {
+                "code": "MISSING_COUNTERPARTY_INN",
+                "severity": "warning",
+                "message": "ИНН контрагента отсутствует",
+                "row_number": 2,
+                "field": "counterparty_inn",
+                "related_external_operation_ids": []
+            }
+        ],
+        "next_cursor": null
+    },
+    "ImportApplied": {
+        "id": "019a0c65-9800-7000-8000-000000000008",
+        "account_id": "019a0c65-9800-7000-8000-000000000001",
+        "source_kind": "file",
+        "adapter": "dataset_v1",
+        "source_company_id": "C001",
+        "connection_id": null,
+        "status": "applied",
+        "version": "43",
+        "created_at": "2026-10-23T12:00:00Z",
+        "updated_at": "2026-10-23T12:00:00Z",
+        "preview": {
+            "source_company_id": "C001",
+            "source_system": "dataset_v1",
+            "account_id": "019a0c65-9800-7000-8000-000000000001",
+            "currency": "RUB",
+            "period_start": "2024-10-01",
+            "period_end": "2026-09-30",
+            "row_count": 1483,
+            "excluded_other_company_row_count": 0,
+            "new_transaction_count": 1481,
+            "already_present_count": 2,
+            "new_payment_count": 0,
+            "blocking_issue_count": 0,
+            "warning_count": 1,
+            "issues": [
+                {
+                    "code": "MISSING_COUNTERPARTY_INN",
+                    "severity": "warning",
+                    "message": "ИНН контрагента отсутствует",
+                    "row_number": 2,
+                    "field": "counterparty_inn",
+                    "related_external_operation_ids": []
+                }
+            ],
+            "issues_truncated": false,
+            "balance_observations": [
+                {
+                    "date": "2026-09-30",
+                    "balance": {
+                        "amount_minor": "5000000",
+                        "currency": "RUB"
+                    },
+                    "source": "statement_eod"
+                }
+            ],
+            "base_data_version": "42",
+            "can_commit": true,
+            "preview_version": "42",
+            "record_kinds": [
+                "transactions",
+                "balance_observations"
+            ],
+            "transaction_source": null,
+            "would_bind_transaction_source": {
+                "mode": "external",
+                "source_system": "dataset_v1",
+                "source_company_id": "C001"
+            }
+        },
+        "applied_data_version": "43",
+        "error": null,
+        "record_kinds": [
+            "transactions",
+            "balance_observations"
+        ]
+    },
+    "ExternalProviderList": {
+        "items": [
+            {
+                "id": "demo_accounting",
+                "name": "Учётная система — Mock (1С-подобный сценарий)",
+                "mode": "mock",
+                "capabilities": [
+                    "transactions",
+                    "planned_payments",
+                    "balance_observations"
+                ],
+                "adapter": "demo_accounting_v1"
+            },
+            {
+                "id": "demo_tax",
+                "name": "Налоговые обязательства — Mock (сценарий ФНС)",
+                "mode": "mock",
+                "capabilities": [
+                    "planned_payments"
+                ],
+                "adapter": "demo_tax_v1"
+            }
+        ],
+        "next_cursor": null
+    },
+    "ConnectionList": {
+        "items": [
+            {
+                "id": "019a0c65-9800-7000-8000-000000000005",
+                "company_id": "019a0c65-9800-7000-8000-000000000004",
+                "account_id": "019a0c65-9800-7000-8000-000000000001",
+                "provider_id": "demo_accounting",
+                "mode": "mock",
+                "display_name": "Демо 1С",
+                "source_company_id": "C001",
+                "status": "ready",
+                "created_at": "2026-10-23T12:00:00Z",
+                "version": "42"
+            }
+        ],
+        "next_cursor": null
+    },
+    "Connection": {
+        "id": "019a0c65-9800-7000-8000-000000000005",
+        "company_id": "019a0c65-9800-7000-8000-000000000004",
+        "account_id": "019a0c65-9800-7000-8000-000000000001",
+        "provider_id": "demo_accounting",
+        "mode": "mock",
+        "display_name": "Демо 1С",
+        "source_company_id": "C001",
+        "status": "ready",
+        "created_at": "2026-10-23T12:00:00Z",
+        "version": "42"
+    },
+    "PaymentList": {
+        "items": [
+            {
+                "id": "019a0c65-9800-7000-8000-00000000000a",
+                "account_id": "019a0c65-9800-7000-8000-000000000001",
+                "direction": "outflow",
+                "amount": {
+                    "amount_minor": "8000000",
+                    "currency": "RUB"
+                },
+                "remaining_amount": {
+                    "amount_minor": "8000000",
+                    "currency": "RUB"
+                },
+                "scheduled_date": "2026-10-30",
+                "counterparty_name": "Арендодатель",
+                "description": "Аренда помещения",
+                "category_id": "019a0c65-9800-7000-8000-000000000002",
+                "source": {
+                    "kind": "manual",
+                    "source_system": "manual_v1",
+                    "source_company_id": null,
+                    "external_operation_id": null,
+                    "import_id": null,
+                    "connection_id": null,
+                    "external_payment_id": null
+                },
+                "status": "planned",
+                "version": "42",
+                "created_at": "2026-10-23T12:00:00Z"
+            }
+        ],
+        "next_cursor": null
+    },
+    "Payment": {
+        "id": "019a0c65-9800-7000-8000-00000000000a",
+        "account_id": "019a0c65-9800-7000-8000-000000000001",
+        "direction": "outflow",
+        "amount": {
+            "amount_minor": "8000000",
+            "currency": "RUB"
+        },
+        "remaining_amount": {
+            "amount_minor": "8000000",
+            "currency": "RUB"
+        },
+        "scheduled_date": "2026-10-30",
+        "counterparty_name": "Арендодатель",
+        "description": "Аренда помещения",
+        "category_id": "019a0c65-9800-7000-8000-000000000002",
+        "source": {
+            "kind": "manual",
+            "source_system": "manual_v1",
+            "source_company_id": null,
+            "external_operation_id": null,
+            "import_id": null,
+            "connection_id": null,
+            "external_payment_id": null
+        },
+        "status": "planned",
+        "version": "42",
+        "created_at": "2026-10-23T12:00:00Z"
+    },
+    "MatchList": {
+        "items": [
+            {
+                "id": "019a0c65-9800-7000-8000-000000000009",
+                "payment_id": "019a0c65-9800-7000-8000-00000000000a",
+                "transaction_id": "019a0c65-9800-7000-8000-00000000000f",
+                "amount": {
+                    "amount_minor": "1000000",
+                    "currency": "RUB"
+                },
+                "created_at": "2026-10-23T12:00:00Z"
+            }
+        ],
+        "next_cursor": null
+    },
+    "Match": {
+        "id": "019a0c65-9800-7000-8000-000000000009",
+        "payment_id": "019a0c65-9800-7000-8000-00000000000a",
+        "transaction_id": "019a0c65-9800-7000-8000-00000000000f",
+        "amount": {
+            "amount_minor": "1000000",
+            "currency": "RUB"
+        },
+        "created_at": "2026-10-23T12:00:00Z"
+    },
+    "ForecastList": {
+        "items": [
+            {
+                "id": "019a0c65-9800-7000-8000-000000000006",
+                "status": "queued",
+                "cutoff_date": "2026-09-30",
+                "start_date": "2026-10-01",
+                "end_date": "2026-10-30",
+                "created_at": "2026-10-23T12:00:00Z",
+                "is_stale": false,
+                "scenario_id": null
+            }
+        ],
+        "next_cursor": null
+    },
+    "ForecastAccepted": {
+        "id": "019a0c65-9800-7000-8000-000000000006",
+        "status": "queued",
+        "status_url": "/api/v1/companies/019a0c65-9800-7000-8000-000000000004/forecasts/019a0c65-9800-7000-8000-000000000006",
+        "poll_after_ms": 1000
+    },
+    "ForecastSucceeded": {
+        "id": "019a0c65-9800-7000-8000-000000000006",
+        "company_id": "019a0c65-9800-7000-8000-000000000004",
+        "created_at": "2026-10-23T12:00:00Z",
+        "completed_at": "2026-10-23T12:00:00Z",
+        "is_stale": false,
+        "current_data_version": "42",
+        "input": {
+            "snapshot_id": "019a0c65-9800-7000-8000-00000000000e",
+            "data_version": "42",
+            "cutoff_date": "2026-09-30",
+            "data_as_of": "2026-09-30",
+            "start_date": "2026-10-01",
+            "end_date": "2026-10-30",
+            "horizon_days": 30,
+            "currency": "RUB",
+            "account_id": "019a0c65-9800-7000-8000-000000000001",
+            "opening_balance": {
+                "amount_minor": "5000000",
+                "currency": "RUB"
+            },
+            "balance_as_of": "2026-09-30",
+            "risk_definition": "below_zero_eod",
+            "model_context": {
+                "id": "019a0c65-9800-7000-8000-000000000010",
+                "model_name": "candidate_model",
+                "model_version": "model-build-1",
+                "preprocessing_version": "prep-1",
+                "configuration_id": "cfg_123",
+                "random_seed": "12345",
+                "trajectory_count": 1000
+            }
+        },
+        "readiness": {
+            "status": "ready",
+            "history_days": 730,
+            "observed_days": 500,
+            "quality_issues": [],
+            "limitations": [
+                "Лимит овердрафта неизвестен; отрицательный EOD — индикатор, не факт неплатежа"
+            ]
+        },
+        "scenario_id": null,
+        "status": "succeeded",
+        "result": {
+            "metrics": {
+                "first_gap": {
+                    "date": "2026-10-07",
+                    "shortfall": {
+                        "amount_minor": "4000000",
+                        "currency": "RUB"
+                    }
+                },
+                "max_shortfall": {
+                    "amount_minor": "4000000",
+                    "currency": "RUB"
+                },
+                "minimum_balance": {
+                    "amount_minor": "-4000000",
+                    "currency": "RUB"
+                },
+                "closing_balance": {
+                    "amount_minor": "1000000",
+                    "currency": "RUB"
+                },
+                "gap_probability": {
+                    "value": null,
+                    "unavailable_reason": "not_estimated"
+                }
+            },
+            "daily_points": [
+                {
+                    "date": "2026-10-01",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "5000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-02",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "5000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-03",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "5000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-04",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "5000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-05",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "5000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-06",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "5000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-07",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "9000000",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "-4000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-08",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "-4000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-09",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "-4000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-10",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "-4000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-11",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "-4000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-12",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "-4000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-13",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "-4000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-14",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "-4000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-15",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "-4000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-16",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "-4000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-17",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "-4000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-18",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "-4000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-19",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "-4000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-20",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "-4000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-21",
+                    "inflow": {
+                        "amount_minor": "5000000",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "1000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-22",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "1000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-23",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "1000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-24",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "1000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-25",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "1000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-26",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "1000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-27",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "1000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-28",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "1000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-29",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "1000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                },
+                {
+                    "date": "2026-10-30",
+                    "inflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "outflow": {
+                        "amount_minor": "0",
+                        "currency": "RUB"
+                    },
+                    "balance": {
+                        "amount_minor": "1000000",
+                        "currency": "RUB"
+                    },
+                    "balance_lower": null,
+                    "balance_upper": null,
+                    "negative_balance_probability": {
+                        "value": null,
+                        "unavailable_reason": "not_estimated"
+                    }
+                }
+            ],
+            "components": [
+                {
+                    "id": "component_rent",
+                    "occurrence_id": "occurrence_rent",
+                    "kind": "known_payment",
+                    "direction": "outflow",
+                    "date": "2026-10-07",
+                    "amount": {
+                        "amount_minor": "9000000",
+                        "currency": "RUB"
+                    },
+                    "remaining_amount": {
+                        "amount_minor": "9000000",
+                        "currency": "RUB"
+                    },
+                    "category_id": "019a0c65-9800-7000-8000-000000000002",
+                    "payment_id": "019a0c65-9800-7000-8000-00000000000c",
+                    "recurrence_group_id": null,
+                    "source": {
+                        "kind": "manual",
+                        "source_system": "manual_v1",
+                        "source_company_id": null,
+                        "external_operation_id": null,
+                        "import_id": null,
+                        "connection_id": null,
+                        "external_payment_id": null
+                    },
+                    "scenario_eligible": true
+                },
+                {
+                    "id": "component_123",
+                    "occurrence_id": "occurrence_123",
+                    "kind": "known_payment",
+                    "direction": "inflow",
+                    "date": "2026-10-21",
+                    "amount": {
+                        "amount_minor": "5000000",
+                        "currency": "RUB"
+                    },
+                    "remaining_amount": {
+                        "amount_minor": "5000000",
+                        "currency": "RUB"
+                    },
+                    "category_id": "019a0c65-9800-7000-8000-000000000003",
+                    "payment_id": "019a0c65-9800-7000-8000-00000000000b",
+                    "recurrence_group_id": null,
+                    "source": {
+                        "kind": "manual",
+                        "source_system": "manual_v1",
+                        "source_company_id": null,
+                        "external_operation_id": null,
+                        "import_id": null,
+                        "connection_id": null,
+                        "external_payment_id": null
+                    },
+                    "scenario_eligible": true
+                }
+            ],
+            "scenario_capabilities": {
+                "delay_receipt": true,
+                "reduce_sales": false,
+                "one_off_expense": true,
+                "increase_recurring_expenses": false,
+                "unavailable_reason": "В примере не выделены моделируемая выручка и регулярные расходы"
+            },
+            "recommendations": [],
+            "assumptions": [],
+            "effective_occurrences": [
+                {
+                    "effective_occurrence_id": "eff_rent_original",
+                    "component_id": "component_rent",
+                    "occurrence_id": "occurrence_rent",
+                    "payment_id": "019a0c65-9800-7000-8000-00000000000c",
+                    "direction": "outflow",
+                    "date": "2026-10-07",
+                    "remaining_amount": {
+                        "amount_minor": "9000000",
+                        "currency": "RUB"
+                    },
+                    "in_horizon": true,
+                    "response_action_eligible": true
+                },
+                {
+                    "effective_occurrence_id": "eff_receipt_original",
+                    "component_id": "component_123",
+                    "occurrence_id": "occurrence_123",
+                    "payment_id": "019a0c65-9800-7000-8000-00000000000b",
+                    "direction": "inflow",
+                    "date": "2026-10-21",
+                    "remaining_amount": {
+                        "amount_minor": "5000000",
+                        "currency": "RUB"
+                    },
+                    "in_horizon": true,
+                    "response_action_eligible": true
+                }
+            ]
+        },
+        "error": null
+    },
+    "Comparison": {
+        "reference_forecast_id": "019a0c65-9800-7000-8000-000000000006",
+        "candidate_forecast_id": "019a0c65-9800-7000-8000-000000000007",
+        "snapshot_id": "019a0c65-9800-7000-8000-00000000000e",
+        "model_context_id": "019a0c65-9800-7000-8000-000000000010",
+        "is_stale": false,
+        "reference_metrics": {
+            "first_gap": {
+                "date": "2026-10-07",
+                "shortfall": {
+                    "amount_minor": "4000000",
+                    "currency": "RUB"
+                }
+            },
+            "max_shortfall": {
+                "amount_minor": "4000000",
+                "currency": "RUB"
+            },
+            "minimum_balance": {
+                "amount_minor": "-4000000",
+                "currency": "RUB"
+            },
+            "closing_balance": {
+                "amount_minor": "1000000",
+                "currency": "RUB"
+            },
+            "gap_probability": {
+                "value": null,
+                "unavailable_reason": "not_estimated"
+            }
+        },
+        "candidate_metrics": {
+            "first_gap": {
+                "date": "2026-10-07",
+                "shortfall": {
+                    "amount_minor": "4000000",
+                    "currency": "RUB"
+                }
+            },
+            "max_shortfall": {
+                "amount_minor": "4000000",
+                "currency": "RUB"
+            },
+            "minimum_balance": {
+                "amount_minor": "-4000000",
+                "currency": "RUB"
+            },
+            "closing_balance": {
+                "amount_minor": "1000000",
+                "currency": "RUB"
+            },
+            "gap_probability": {
+                "value": null,
+                "unavailable_reason": "not_estimated"
+            }
+        },
+        "delta_max_shortfall": {
+            "amount_minor": "0",
+            "currency": "RUB"
+        },
+        "delta_minimum_balance": {
+            "amount_minor": "0",
+            "currency": "RUB"
+        },
+        "delta_closing_balance": {
+            "amount_minor": "0",
+            "currency": "RUB"
+        },
+        "delta_gap_probability": null,
+        "delta_first_gap_days": 0
+    },
+    "PlanFact": {
+        "forecast_id": "019a0c65-9800-7000-8000-000000000006",
+        "actual_data_version": "42",
+        "period_start": "2026-10-01",
+        "period_end": "2026-10-01",
+        "coverage": {
+            "status": "partial",
+            "observed_through": "2026-10-01",
+            "missing_dates": [
+                "2026-10-01"
+            ],
+            "warnings": [
+                "Полнота выписки за день не подтверждена"
+            ]
+        },
+        "daily_points": [
+            {
+                "date": "2026-10-01",
+                "planned_inflow": {
+                    "amount_minor": "0",
+                    "currency": "RUB"
+                },
+                "planned_outflow": {
+                    "amount_minor": "0",
+                    "currency": "RUB"
+                },
+                "planned_balance": {
+                    "amount_minor": "5000000",
+                    "currency": "RUB"
+                },
+                "actual_inflow": null,
+                "actual_outflow": null,
+                "actual_balance": null,
+                "balance_delta": null,
+                "coverage": "unavailable"
+            }
+        ],
+        "mean_absolute_balance_error": null
+    },
+    "ScenarioList": {
+        "items": [
+            {
+                "id": "019a0c65-9800-7000-8000-00000000000d",
+                "name": "Клиент задержит оплату",
+                "base_forecast_id": "019a0c65-9800-7000-8000-000000000006",
+                "comparison_parent_scenario_id": null,
+                "forecast_id": "019a0c65-9800-7000-8000-000000000007",
+                "changes": [
+                    {
+                        "id": "chg_delay",
+                        "type": "delay_receipt",
+                        "target": {
+                            "component_id": "component_123",
+                            "occurrence_id": "occurrence_123"
+                        },
+                        "amount": {
+                            "amount_minor": "1000000",
+                            "currency": "RUB"
+                        },
+                        "new_date": "2026-10-28"
+                    }
+                ],
+                "response_action": null,
+                "out_of_horizon_occurrence_ids": [],
+                "created_at": "2026-10-23T12:00:00Z"
+            }
+        ],
+        "next_cursor": null
+    },
+    "ScenarioAccepted": {
+        "id": "019a0c65-9800-7000-8000-00000000000d",
+        "forecast_id": "019a0c65-9800-7000-8000-000000000007",
+        "status": "queued",
+        "status_url": "/api/v1/companies/019a0c65-9800-7000-8000-000000000004/forecasts/019a0c65-9800-7000-8000-000000000007",
+        "poll_after_ms": 1000
+    },
+    "Scenario": {
+        "id": "019a0c65-9800-7000-8000-00000000000d",
+        "name": "Клиент задержит оплату",
+        "base_forecast_id": "019a0c65-9800-7000-8000-000000000006",
+        "comparison_parent_scenario_id": null,
+        "forecast_id": "019a0c65-9800-7000-8000-000000000007",
+        "changes": [
+            {
+                "id": "chg_delay",
+                "type": "delay_receipt",
+                "target": {
+                    "component_id": "component_123",
+                    "occurrence_id": "occurrence_123"
+                },
+                "amount": {
+                    "amount_minor": "1000000",
+                    "currency": "RUB"
+                },
+                "new_date": "2026-10-28"
+            }
+        ],
+        "response_action": null,
+        "out_of_horizon_occurrence_ids": [],
+        "created_at": "2026-10-23T12:00:00Z"
+    },
+    "PersonalDataConsentDocument": {
+        "document_version": "saldo-2026-10-24",
+        "document_sha256": "319775c0d911506c0d1962e163111a1fc697722545049923863de2f0b6479f41",
+        "text": "# Согласие на обработку персональных данных\n\nВерсия: **saldo-2026-10-24**. Редакция от **24 октября 2026 года**.\n\nПроект документа для сервиса **Saldo Analytics**.\n\n## 1. Кому предоставляется согласие\n\nЯ свободно, своей волей и в своём интересе предоставляю оператору **ПАО КБ «Центр-инвест»**\nсогласие на обработку моих персональных данных в сервисе **Saldo Analytics** на следующих условиях:\n\n| Сведения об операторе | Значение |\n| --- | --- |\n| Полное наименование | Публичное акционерное общество коммерческий банк «Центр-инвест» |\n| Сокращённое наименование | ПАО КБ «Центр-инвест» |\n| ИНН | 6163011391 |\n| ОГРН | 1026100001949 |\n| КПП | 616301001 |\n| Адрес оператора и почтовых обращений | 344000, г. Ростов-на-Дону, пр. Соколова, 62 |\n| Сервис | Saldo Analytics |\n| Официальный сайт банка | [centrinvest.ru](https://www.centrinvest.ru/) |\n| Контакты банка | [Официальная страница контактов](https://www.centrinvest.ru/about/contacts) |\n\nРеквизиты проверены по [официальным сведениям банка](https://www.centrinvest.ru/files/about/requisites.pdf).\n\nЯ могу ознакомиться с [Политикой конфиденциальности](privacy-policy.md).\nНастоящее согласие оформляется самостоятельно, отдельно от принятия\nпользовательского соглашения, ознакомления с Политикой и иных документов,\nв соответствии со\n[статьёй 9 152-ФЗ](https://legalacts.ru/doc/152_FZ-o-personalnyh-dannyh/glava-2/statja-9/).\n\n## 2. Цель и мои данные\n\n**Цель — предоставить мне персональный доступ к сервису прогнозирования\nденежных потоков и обслуживать моё использование сервиса.** Это включает\nрегистрацию, подтверждение email, вход, восстановление доступа, участие\nв выбранных рабочих пространствах, принятие приглашений и получение\nнеобходимых сервисных сообщений.\n\nСогласие распространяется только на следующие относящиеся ко мне данные:\n\n1. Email, отображаемое имя, ID пользователя, статус подтверждения email.\n2. Данные входа в необходимом объёме: защищённое представление пароля,\n   идентификаторы и сроки сессий, события подтверждения и восстановления.\n   Хранение пароля в открытом виде и его включение в журналы не разрешаются.\n3. Мои членства в компаниях: ID компании, роль `owner`/`financier`, даты\n   участия, сведения об адресованных мне или созданных мной приглашениях;\n   название и ИНН моего ИП, если я сам указываю эти сведения.\n4. Контакт для ответа и текст добровольно направленного мной обращения\n   по использованию сервиса, если я отдельно подтверждаю это согласие\n   при отправке такого обращения. Лишние сведения и данные других людей\n   не должны включаться в обращение.\n5. Минимальные технические сведения о моих действиях: IP-адрес, тип браузера,\n   время и вид события, ID аккаунта/сессии, версия подтверждённого текста\n   и сведения о подтверждении или отзыве согласия.\n\nСостав данных зависит от используемой функции; указание необязательного поля\nне становится обязательным из-за наличия этого согласия.\n\n## 3. Действия, способы обработки и получатели\n\nРазрешаю сбор, запись, систематизацию, накопление, хранение, уточнение,\nизвлечение, использование, предоставление доступа в указанных ниже пределах,\nблокирование, удаление и уничтожение перечисленных данных. Предусмотрены\nавтоматизированная обработка и необходимая работа уполномоченных сотрудников\nс моими обращениями.\n\nВнутри выбранной компании мои имя, email и роль доступны участникам в объёме,\nнеобходимом для совместной работы и управления доступом. Это не разрешение\nпубликовать мой профиль для неограниченного круга лиц.\n\nОбработку осуществляет оператор ПАО КБ «Центр-инвест». Доступ предоставляется его уполномоченным сотрудникам в пределах служебных обязанностей.\n\nПривлечение других обработчиков требует указания их наименований, адресов и конкретных функций в отдельной актуальной редакции документа и надлежащего правового основания. Общее разрешение на передачу данных неопределённым будущим партнёрам не предоставляется. Трансграничная передача настоящим согласием не разрешается.\n\n## 4. Границы согласия\n\nНастоящее согласие не распространяется на:\n\n- Данные сотрудников, клиентов и контрагентов в загружаемых выписках,\n  назначениях и календаре. Я не выражаю согласие от их имени; для такой\n  обработки нужны собственное основание компании и поручение сервису.\n- Рекламные рассылки, необязательную аналитику, продажу данных и публикацию\n  для неограниченного круга лиц.\n- Биометрические и специальные категории данных, банковские пароли\n  и платёжные коды.\n- Обучение общих моделей на клиентских выписках и передачу этих выписок\n  внешним генеративным AI-сервисам.\n- Исключительно автоматизированные решения, затрагивающие мои права\n  и законные интересы, в том числе решения о выдаче кредита.\n\nСервисные письма ограничены доступом, безопасностью и запрошенными действиями\nв сервисе; рекламное содержание этим согласием не разрешается.\n\n## 5. Срок и отзыв\n\nСогласие действует с момента моего отдельного подтверждения до наиболее\nраннего события: достижения цели, прекращения обслуживания моего аккаунта\nили получения оператором моего отзыва. Для добровольного обращения цель\nзавершается при его рассмотрении; обычная переписка хранится не дольше\nпроектного срока 90 календарных дней после закрытия обращения, если ранее\nне наступило основание для удаления.\n\nЯ могу отозвать согласие полностью или в соответствующей части, направив\nзаявление оператору ПАО КБ «Центр-инвест» по почтовому адресу\n**344000, г. Ростов-на-Дону, пр. Соколова, 62** с пометкой «Отзыв согласия на обработку персональных\nданных». В заявлении указываются email или ID аккаунта, требование и данные\nдля безопасной проверки личности. Пароль и банковские коды не требуются.\n\nПосле отзыва оператор прекращает обработку на основании этого согласия\nи при отсутствии самостоятельного законного основания уничтожает данные\nв срок до 30 дней с даты получения отзыва. Для требования о прекращении\nобработки применяется отдельный срок: до 10 рабочих дней с возможным\nмотивированным продлением до 5 рабочих дней и предусмотренными законом\nисключениями. Подробный порядок определён\n[статьёй 21 152-ФЗ](https://www.consultant.ru/document/cons_doc_LAW_61801/d3fe43a7c415353b17faab255bc0de92bea127da/).\n\nЕсли отдельные сведения необходимо сохранить на самостоятельном законном\nосновании, оператор определяет его, ограничивает состав и срок хранения\nи объясняет это при обращении. В частности, минимальные доказательства\nсогласия и его отзыва могут сохраняться для защиты прав; проектный\nпредел — 3 года после прекращения обработки при подтверждённом основании.\nЭто не разрешает сохранять весь аккаунт или продолжать все его функции.\n\nОтказ или отзыв может сделать недоступными только действия, для которых\nнеобходимые данные больше нельзя законно обрабатывать. Доступ к публичным\nюридическим документам сохраняется.\n\n## 6. Как выражается согласие\n\nДля обычных данных, когда закон не требует специальной письменной формы,\nя выражаю согласие отдельным активным действием после возможности прочитать\nи сохранить этот текст. Предлагаемая формулировка отдельной отметки:\n\n> ☐ Я даю согласие на обработку моих персональных данных на условиях\n> отдельного документа «Согласие на обработку персональных данных»,\n> версия saldo-2026-10-24.\n\nОтметка не проставляется заранее и не объединяется с принятием других\nдокументов. Само нажатие «Зарегистрироваться» без отдельного подтверждения,\nпосещение сайта или молчание не считаются согласием.\n\nПодтверждение фиксируется отдельно от ознакомления с политикой конфиденциальности. После изменения текста требуется новое самостоятельное подтверждение. Фиксация отметки сама по себе не заменяет письменную форму в случаях,\nкогда её требует закон.\n"
+    },
+    "EmailVerificationChallenge": {
+        "message": "Если подтверждение требуется, письмо с кодом будет отправлено.",
+        "challenge_id": "550e8400-e29b-41d4-a716-446655440000",
+        "expires_at": "2026-10-23T12:10:00Z"
+    }
+}

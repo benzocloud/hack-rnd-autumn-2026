@@ -1,0 +1,10 @@
+[Unit]
+Description=Check the Saldo frontend TLS certificate twice daily
+
+[Timer]
+OnCalendar=*-*-* 03,15:15:00
+RandomizedDelaySec=1800
+Persistent=true
+
+[Install]
+WantedBy=timers.target

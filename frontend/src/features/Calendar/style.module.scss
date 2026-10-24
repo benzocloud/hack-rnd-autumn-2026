@@ -1,0 +1,41 @@
+@use "../../app/global" as global;
+@use "../../app/finance" as finance;
+
+.page { @include finance.page; }
+.stack { @include finance.stack; }
+.form { @include finance.form; }
+.row { @include finance.row; }
+.table { @include finance.table; }
+.scroll { overflow-x: auto; }
+.filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); align-items: end; gap: 16px; }
+.actions { @include finance.row; justify-content: flex-end; margin-top: 20px; }
+.money { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.inflow { color: global.$green2; }
+.outflow { color: global.$red; }
+.muted { color: #626262; font-size: 14px; line-height: 1.5; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 20px; }
+.item { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 18px 0; border-bottom: 1px solid global.$gray1; overflow-wrap: anywhere; }
+.item:last-child { border: 0; }
+.item h3 { margin: 0 0 8px; font-size: 18px; }
+.item p { margin: 0; }
+.inlineLink { color: global.$green2; text-decoration: none; transition: opacity global.$transition-duration; &:hover { opacity: 0.4; } }
+.chart { height: 360px; min-width: 0; padding: 10px; overflow: hidden; border-radius: 20px; background: global.$green2; }
+.stat { margin: 8px 0; font-size: 28px; font-weight: 700; }
+@media (max-width: 600px) {
+    .chart { height: 290px; padding: 0; }
+    .table { min-width: 620px; }
+    .filters { grid-template-columns: 1fr 1fr; }
+    .actions { justify-content: stretch; > * { flex: 1; } }
+}
+@media (max-width: 380px) { .filters { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .inlineLink { transition: none; } }
+
+.calendarToolbar { @include finance.row; justify-content: space-between; margin-bottom: 24px; h2 { margin: 0; font-size: 20px; text-transform: capitalize; } }
+.calendarGrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.weekday { padding: 8px; text-align: center; font-size: 14px; color: #626262; }
+.day { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; min-height: 88px; padding: 12px; border: 1px solid transparent; border-radius: 12px; background: global.$background; color: global.$text; font: inherit; cursor: pointer; transition: background-color global.$transition-duration, border-color global.$transition-duration; &:hover { border-color: global.$text; } &[aria-pressed="true"] { background: global.$green1; } &[aria-current="date"] { border-color: global.$green2; } small { font-size: 12px; } }
+.dayDots { display: flex; gap: 4px; }
+.inflowDot, .outflowDot { width: 6px; height: 6px; border-radius: 50%; background: global.$green2; }
+.outflowDot { background: global.$red; }
+@media (max-width: 600px) { .calendarGrid { gap: 4px; } .day { min-height: 62px; padding: 8px 4px; gap: 5px; align-items: center; small { display: none; } } .calendarToolbar h2 { font-size: 16px; } }
+@media (prefers-reduced-motion: reduce) { .day { transition: none; } }

@@ -1,0 +1,210 @@
+name: Go Core CI
+
+on:
+  pull_request:
+    paths: ['services/core/**', '.github/workflows/go-core-ci.yml', 'LICENSE']
+  push:
+    branches: [main]
+    paths: ['services/core/**', '.github/workflows/go-core-ci.yml', 'LICENSE']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: go-core-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  lint:
+    name: Core lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: services/core/go.mod
+          cache: false
+      - uses: go-task/setup-task@a00fbb05ce67b35648be3c78cbc9fd85354c757e # v2.2.0
+        with:
+          version: '3.48.0'
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.15.0
+          working-directory: services/core
+          install-only: true
+          skip-cache: true
+      - name: Check formatting, vet and lint
+        working-directory: services/core
+        run: |
+          task fmt-check
+          task vet
+          task lint
+          go vet -tags=integration ./...
+          golangci-lint run --build-tags=integration ./...
+
+  test:
+    name: Core tests
+    needs: lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:18.6-alpine@sha256:898c60cb390d1085bc97bdd6a1ae968757421df394b071848b52b1c09c89d6a5
+        env:
+          POSTGRES_USER: core_test
+          POSTGRES_PASSWORD: core_test_only
+          POSTGRES_DB: saldo_core_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U core_test -d saldo_core_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: services/core/go.mod
+          cache: false
+      - name: Test with the race detector and shuffled order
+        working-directory: services/core
+        run: go test -race -shuffle=on -count=1 ./...
+      - name: Mark the disposable Core database
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: >-
+          docker exec "$POSTGRES_CONTAINER" psql -U core_test -d saldo_core_test
+          --set ON_ERROR_STOP=1
+          --command "ALTER DATABASE saldo_core_test SET saldo.test_database TO 'saldo-core-integration'"
+      - name: Apply Core migrations
+        working-directory: services/core
+        env:
+          GOOSE_DRIVER: postgres
+          GOOSE_DBSTRING: postgres://core_test:core_test_only@127.0.0.1:5432/saldo_core_test?sslmode=disable
+        run: go run github.com/pressly/goose/v3/cmd/goose@v3.29.0 -dir migrations up
+      - name: Test PostgreSQL commands and replay with the race detector
+        working-directory: services/core
+        env:
+          CORE_POSTGRES_HOST: 127.0.0.1
+          CORE_POSTGRES_PORT: '5432'
+          CORE_POSTGRES_USER: core_test
+          CORE_POSTGRES_PASSWORD: core_test_only
+          CORE_POSTGRES_DATABASE: saldo_core_test
+          CORE_POSTGRES_SSL_MODE: disable
+        run: go test -tags=integration -race -shuffle=on -count=1 -timeout=90s ./...
+
+  build:
+    name: Core build
+    needs: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      runtime-ready: ${{ steps.image-target.outputs.runtime-ready }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: services/core/go.mod
+          cache: false
+      - uses: go-task/setup-task@a00fbb05ce67b35648be3c78cbc9fd85354c757e # v2.2.0
+        with:
+          version: '3.48.0'
+      - name: Verify module files
+        working-directory: services/core
+        run: |
+          go mod tidy
+          changes="$(git status --porcelain -- go.mod go.sum)"
+          if [[ -n "$changes" ]]; then
+            printf '%s\n' "$changes"
+            echo 'Run go mod tidy and commit the module files.' >&2
+            exit 1
+          fi
+      - name: Build packages
+        working-directory: services/core
+        run: task build
+      - name: Check reachable vulnerabilities
+        working-directory: services/core
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+      - name: Select the available image target
+        id: image-target
+        run: |
+          if [[ -f services/core/cmd/core/main.go ]]; then
+            echo 'target=runtime' >> "$GITHUB_OUTPUT"
+            echo 'runtime-ready=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'target=build' >> "$GITHUB_OUTPUT"
+            echo 'runtime-ready=false' >> "$GITHUB_OUTPUT"
+            echo '::notice::Core cmd/core is not implemented; checking the build target only. GHCR publishing is skipped.'
+            echo 'Core: проверяется Docker target `build`. Публикация в GHCR пропущена до реализации `cmd/core`.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Validate the container build without publishing
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: services/core/Dockerfile
+          target: ${{ steps.image-target.outputs.target }}
+          platforms: linux/amd64
+          push: false
+
+  publish:
+    name: Core GHCR publish
+    needs: build
+    if: >-
+      needs.build.outputs.runtime-ready == 'true' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set the image name
+        id: image
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: echo "name=ghcr.io/${REPOSITORY,,}/core" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish the runtime image
+        id: publish
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: services/core/Dockerfile
+          target: runtime
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ steps.image.outputs.name }}:sha-${{ github.sha }}
+            ${{ steps.image.outputs.name }}:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.licenses=MIT
+      - name: Report the published image
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}
+          DIGEST: ${{ steps.publish.outputs.digest }}
+        run: printf 'Опубликован Core `%s@%s` (commit `%s`).\n' "$IMAGE" "$DIGEST" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"

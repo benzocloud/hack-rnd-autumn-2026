@@ -1,0 +1,91 @@
+version: '3.48'
+
+vars:
+  GO_TOOLCHAIN: go1.27.3
+  GOLANGCI_LINT: '{{.GOLANGCI_LINT | default "golangci-lint"}}'
+  GOLANGCI_LINT_VERSION: 2.15.0
+  GOOSE: '{{.GOOSE | default "goose"}}'
+  GOOSE_VERSION: 3.29.0
+
+tasks:
+  default:
+    desc: List available commands
+    cmds:
+      - task --list
+
+  check:
+    desc: Run build, formatting, unit/race tests, vet and lint in order
+    cmds:
+      - task: build
+      - task: fmt-check
+      - task: test
+      - task: race
+      - task: vet
+      - task: lint
+
+  build:
+    desc: Build all Core packages
+    cmds:
+      - GOTOOLCHAIN={{.GO_TOOLCHAIN}} go build ./...
+
+  test:
+    desc: Run unit tests without a database
+    cmds:
+      - GOTOOLCHAIN={{.GO_TOOLCHAIN}} go test ./...
+
+  race:
+    desc: Run unit tests with the race detector
+    cmds:
+      - GOTOOLCHAIN={{.GO_TOOLCHAIN}} go test -race ./...
+
+  vet:
+    desc: Run go vet
+    cmds:
+      - GOTOOLCHAIN={{.GO_TOOLCHAIN}} go vet ./...
+
+  fmt:
+    desc: Format Go source files
+    cmds:
+      - GOTOOLCHAIN={{.GO_TOOLCHAIN}} "{{.GOLANGCI_LINT}}" fmt ./...
+
+  fmt-check:
+    desc: Check formatting without changing files
+    cmds:
+      - |
+        export GOTOOLCHAIN={{.GO_TOOLCHAIN}}
+        diff="$("{{.GOLANGCI_LINT}}" fmt --diff ./...)" || { printf '%s\n' "$diff"; exit 1; }
+        test -z "$diff" || { printf '%s\n' "$diff"; exit 1; }
+
+  lint:
+    desc: Run the pinned golangci-lint release
+    preconditions:
+      - sh: |
+          version="$("{{.GOLANGCI_LINT}}" --version)" || exit 1
+          case "$version" in
+            *"version {{.GOLANGCI_LINT_VERSION}} "*) ;;
+            *) exit 1 ;;
+          esac
+        msg: 'Install golangci-lint v{{.GOLANGCI_LINT_VERSION}}; see README.md'
+    cmds:
+      - GOTOOLCHAIN={{.GO_TOOLCHAIN}} "{{.GOLANGCI_LINT}}" run ./...
+
+  integration:
+    desc: Run implemented PostgreSQL regressions against the dedicated marked test DB
+    cmds:
+      - GOTOOLCHAIN={{.GO_TOOLCHAIN}} go test -tags=integration -race -count=1 ./...
+
+  migrate-up:
+    desc: Apply migrations separately from startup (GOOSE_DBSTRING must be set securely)
+    silent: true
+    preconditions:
+      - sh: |
+          version="$("{{.GOOSE}}" -version)" || exit 1
+          case "$version" in
+            *"v{{.GOOSE_VERSION}}"*) ;;
+            *) exit 1 ;;
+          esac
+        msg: 'Install goose v{{.GOOSE_VERSION}}; see README.md'
+      - sh: test -n "$GOOSE_DBSTRING"
+        msg: Set GOOSE_DBSTRING securely for the intended database
+    cmds:
+      - GOOSE_DRIVER=postgres "{{.GOOSE}}" -dir migrations up

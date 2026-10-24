@@ -1,0 +1,11 @@
+@use "./global" as global;
+
+.page {
+    min-height: calc(100dvh - 99px);
+}
+
+@media (max-width: 480px) {
+    .page {
+        min-height: calc(100dvh - 60px);
+    }
+}
