@@ -69,6 +69,9 @@ func (s *captureStore) SaveAccount(_ context.Context, account *ledger.BankAccoun
 	s.account = account
 	return nil
 }
+func (s *captureStore) CarryHistoryCoverage(context.Context, ledger.Scope, int64, int64) error {
+	return nil
+}
 func (s *captureStore) FindPayment(context.Context, ledger.Scope, uuid.UUID, ledger.Source) (domain.ExpectedPayment, int64, bool, error) {
 	return s.payment, s.revision, s.paymentFound, nil
 }

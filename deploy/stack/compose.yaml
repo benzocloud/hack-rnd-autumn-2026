@@ -63,7 +63,7 @@ services:
     <<: *runtime
     image: ${API_IMAGE:?Set immutable API_IMAGE}
     env_file: [api.env]
-    volumes: [./pki/api:/tls:ro]
+    volumes: [./pki/api:/tls:ro, api-import-spool:/var/lib/saldo/import-spool]
     networks:
       private: {}
       frontend: {aliases: [saldo-api]}
@@ -73,6 +73,7 @@ services:
 
 volumes:
   data:
+  api-import-spool:
 
 networks:
   private: {internal: true}

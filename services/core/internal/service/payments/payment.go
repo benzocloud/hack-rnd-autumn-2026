@@ -27,6 +27,7 @@ type CreatePaymentResult struct {
 
 type paymentStore interface {
 	accountStore
+	CarryHistoryCoverage(context.Context, ledger.Scope, int64, int64) error
 	FindPayment(context.Context, ledger.Scope, uuid.UUID, ledger.Source) (domain.ExpectedPayment, int64, bool, error)
 	InsertPayment(context.Context, domain.ExpectedPayment, int64) error
 }
@@ -111,6 +112,7 @@ func createPayment(ctx context.Context, store paymentStore, cmd CreateCommand, r
 			return CreatePaymentResult{}, err
 		}
 	}
+	previousRevision := account.DataVersion()
 	if err := account.AdvanceDataVersion(); err != nil {
 		return CreatePaymentResult{}, err
 	}
@@ -118,6 +120,9 @@ func createPayment(ctx context.Context, store paymentStore, cmd CreateCommand, r
 		return CreatePaymentResult{}, err
 	}
 	if err := store.InsertPayment(ctx, record, account.DataVersion()); err != nil {
+		return CreatePaymentResult{}, err
+	}
+	if err := store.CarryHistoryCoverage(ctx, record.Data().Scope, previousRevision, account.DataVersion()); err != nil {
 		return CreatePaymentResult{}, err
 	}
 	return CreatePaymentResult{PaymentID: record.Data().ID, PaymentVersion: record.Version(), DataVersion: account.DataVersion()}, nil

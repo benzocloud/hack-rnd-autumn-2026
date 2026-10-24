@@ -3,6 +3,7 @@ package forecastjobs
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -20,12 +21,25 @@ func (r *repository) LockDataVersion(ctx context.Context, scope ledger.Scope) (i
 }
 
 func (r *repository) ReadCoverage(ctx context.Context, scope ledger.Scope, revision int64, from, through ledger.Date) (domain.JobCoverage, bool, error) {
+	var kind sql.NullString
 	var first, last, reference string
-	err := r.tx.QueryRowxContext(ctx, queryReadCoverage, scope.CompanyID, scope.AccountID, revision, string(from), string(through)).Scan(&first, &last, &reference)
+	var version int64
+	var limitations []byte
+	err := r.tx.QueryRowxContext(ctx, queryReadCoverage, scope.CompanyID, scope.AccountID, revision, string(from), string(through)).Scan(&kind, &first, &last, &reference, &version, &limitations)
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.JobCoverage{}, false, nil
 	}
-	return domain.JobCoverage{From: ledger.Date(first), Through: ledger.Date(last), Reference: reference}, err == nil, storage.StorageError(err)
+	if err != nil {
+		return domain.JobCoverage{}, false, storage.StorageError(err)
+	}
+	if !kind.Valid {
+		return domain.JobCoverage{}, false, storage.ErrUnavailable
+	}
+	var decoded []string
+	if json.Unmarshal(limitations, &decoded) != nil {
+		return domain.JobCoverage{}, false, storage.ErrUnavailable
+	}
+	return domain.JobCoverage{Kind: kind.String, From: ledger.Date(first), Through: ledger.Date(last), Reference: reference, DataVersion: version, Limitations: decoded}, true, nil
 }
 
 func (r *repository) ReadJob(ctx context.Context, scope ledger.Scope, id uuid.UUID) (domain.Job, error) {

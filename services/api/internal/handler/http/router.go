@@ -45,11 +45,16 @@ func New(auth authClient, origin string, logger *slog.Logger, ready func(context
 
 // CoreClients is the composing application's typed transport boundary.
 type CoreClients struct {
-	Companies interface {
+	Imports     corev1.ImportsServiceClient
+	ImportSpool *ImportSpool
+	Companies   interface {
 		ReadCompany(context.Context, *corev1.ReadCompanyRequest, ...grpc.CallOption) (*corev1.ReadCompanyResponse, error)
 	}
 	Ledger interface {
 		GetDefaultAccount(context.Context, *corev1.GetDefaultAccountRequest, ...grpc.CallOption) (*corev1.GetDefaultAccountResponse, error)
+		ListCategories(context.Context, *corev1.ListCategoriesRequest, ...grpc.CallOption) (*corev1.ListCategoriesResponse, error)
+		ListTransactions(context.Context, *corev1.ListTransactionsRequest, ...grpc.CallOption) (*corev1.ListTransactionsResponse, error)
+		UpdateTransactionCategory(context.Context, *corev1.UpdateTransactionCategoryRequest, ...grpc.CallOption) (*corev1.UpdateTransactionCategoryResponse, error)
 	}
 	Forecasts interface {
 		ListForecasts(context.Context, *corev1.ListForecastsRequest, ...grpc.CallOption) (*corev1.ListForecastsResponse, error)

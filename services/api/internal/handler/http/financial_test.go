@@ -106,6 +106,7 @@ func succeeded(f *financialFixture) {
 	for i := 0; i < 30; i++ {
 		result.DailyPoints = append(result.DailyPoints, &corev1.ForecastPoint{Date: start.AddDate(0, 0, i).Format(time.DateOnly), Inflow: rub(0), Outflow: rub(0), Balance: rub(0), NegativeBalanceProbability: unavailableProbability()})
 	}
+	f.forecast.Input.HistoryCoverage = &corev1.HistoryCoverage{Kind: corev1.HistoryCoverageKind_HISTORY_COVERAGE_KIND_CERTIFIED, FromDate: "2026-07-26", ThroughDate: "2026-10-23", Reference: "certified-fixture", DataVersion: f.forecast.Input.DataVersion}
 	f.forecast.State = &corev1.Forecast_Succeeded{Succeeded: &corev1.ForecastSucceeded{CompletedAt: timestamppb.New(f.forecast.CreatedAt.AsTime().Add(time.Second)), Result: result}}
 }
 func TestFinancialContractResponses(t *testing.T) {
@@ -387,6 +388,7 @@ func TestForecastRejectsIncompleteOrForeignResult(t *testing.T) {
 		"missing model":          func(f *corev1.Forecast) { f.Input.ModelContext = nil },
 		"future cutoff end":      func(f *corev1.Forecast) { f.Input.EndDate = "2026-11-23" },
 		"missing readiness":      func(f *corev1.Forecast) { f.Readiness = nil },
+		"unproven coverage":      func(f *corev1.Forecast) { f.Input.HistoryCoverage = nil },
 		"insufficient succeeded": func(f *corev1.Forecast) { f.Readiness.Status = "insufficient" },
 		"wrong closing balance":  func(f *corev1.Forecast) { f.GetSucceeded().Result.Metrics.ClosingBalance = rub(1) },
 		"wrong minimum balance":  func(f *corev1.Forecast) { f.GetSucceeded().Result.Metrics.MinimumBalance = rub(-1) },

@@ -1040,7 +1040,7 @@ paths:
       summary: Upload CSV for asynchronous validation
       tags:
       - Imports
-      description: 'dataset_v1 only: UTF-8 BOM tolerated/expected, semicolon separator, ISO dates, decimal ruble amounts with dot. Required columns: company_id,operation_id,operation_date,amount,direction,counterparty_inn,counterparty_name,payment_purpose,balance_eod. Dataset amount must be positive with at most two decimal places; map Поступление→inflow, Списание→outflow, parse exact decimal to minor units. INN remains text with leading zeros. Empty purpose/INN allowed with warnings. Explicit source_company_id selects rows of exactly one external company; aggregate file rows for other source companies are not imported and excluded count shown as warning, no tenant creation. Dataset file always selects record_kinds=[transactions,balance_observations]. First successful commit atomically binds the single account transaction_source to external (dataset_v1, selected source_company_id); another factual namespace or manual history gives 409 FACTUAL_SOURCE_CONFLICT. This authority also governs external balance imports. Per-source source_company_id is separately immutable (409 SOURCE_BINDING_CONFLICT); supplemental sources may coexist only for explicitly selected planned_payments. No binding is acquired by upload or preview alone. No mixed-company rows can mutate another tenant. Up to 100 MiB/300000 CSV data rows; HTTP multipart envelope <=101 MiB with exactly one file part and bounded known fields. File/row/envelope limit gives 413 PAYLOAD_TOO_LARGE, no partial acceptance; API/Core account/global staging quota exhaustion gives 429 RATE_LIMITED. The original bytes and queued job are durable before 202. API private disk spool is deleted after transfer/refusal; Core staging cleanup preserves resource, provenance and idempotency receipt. Persist bytes+job before 202; no facts applied until preview commit. Equivalent aggregate/per-company inputs deduplicate by scoped external operation ID, independent of filename/hash. Invalid source selection/format gives failed import or 422 before enqueue, never silent success.'
+      description: 'dataset_v1 only: UTF-8 BOM tolerated/expected, semicolon separator, ISO dates, decimal ruble amounts with dot. Required columns: company_id,operation_id,operation_date,amount,direction,counterparty_inn,counterparty_name,payment_purpose,balance_eod. Dataset amount must be positive with at most two decimal places; map Поступление→inflow, Списание→outflow, parse exact decimal to minor units. INN remains text with leading zeros. Empty purpose/INN allowed with warnings. Explicit source_company_id selects rows of exactly one external company; aggregate file rows for other source companies are not imported and excluded count shown as warning, no tenant creation. Dataset file always selects record_kinds=[transactions,balance_observations]. First successful commit atomically binds the single account transaction_source to external (dataset_v1, selected source_company_id); another factual namespace or manual history gives 409 FACTUAL_SOURCE_CONFLICT. This authority also governs external balance imports. Per-source source_company_id is separately immutable (409 SOURCE_BINDING_CONFLICT); supplemental sources may coexist only for explicitly selected planned_payments. No binding is acquired by upload or preview alone. No mixed-company rows can mutate another tenant. Up to 100 MiB/300000 CSV data rows; each logical CSV record (including quoted multiline text) is bounded to 64 KiB; a longer record fails validation. Preview supports at most 1000 distinct EOD dates: additional dates remain in private staging but preview carries a blocking INVALID_ROW on balance_eod and the displayed balances are incomplete; it cannot be committed.  HTTP multipart envelope <=101 MiB with exactly one file part and bounded known fields. File/row/envelope limit gives 413 PAYLOAD_TOO_LARGE, no partial acceptance; API/Core account/global staging quota exhaustion gives 429 RATE_LIMITED. The original bytes and queued job are durable before 202. API private disk spool is deleted after transfer/refusal; Core staging cleanup preserves resource, provenance and idempotency receipt. Persist bytes+job before 202; no facts applied until preview commit. Equivalent aggregate/per-company inputs deduplicate by scoped external operation ID, independent of filename/hash. Invalid source selection/format gives failed import or 422 before enqueue, never silent success.'
       responses:
         '202':
           $ref: '#/components/responses/SuccessImportAccepted'
@@ -5174,9 +5174,12 @@ components:
           examples:
             - "42"
         created_at:
-          type: "string"
+          type:
+            - "string"
+            - "null"
           format: "date-time"
           pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$"
+          description: "Persisted creation time in UTC, or null when unknown for a legacy operation predating creation-time storage. Reads and category changes preserve that unknown value; never substitute the read/update time."
           examples:
             - "2026-10-23T12:00:00Z"
       required:
@@ -5191,7 +5194,6 @@ components:
         - "category_id"
         - "source"
         - "version"
-        - "created_at"
       description: "A factual operation, not a planned payment. Blank dataset purpose/INN is represented as empty purpose/null INN with quality warning, not guessed data. Amount is positive; direction supplies sign. Raw balance_eod is a dated account observation, not added once per row."
     CreateTransactionRequest:
       type: object

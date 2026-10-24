@@ -174,6 +174,7 @@ def main():
             "API_HTTP_KEY": "/tls/server.key",
             "API_CORE_ADDRESS": "core:50052",
             "API_CORE_SERVER_NAME": "core",
+            "API_IMPORT_SPOOL_DIR": "/var/lib/saldo/import-spool",
         },
     )
     print("Saldo private PKI and credentials provisioned; values not printed")

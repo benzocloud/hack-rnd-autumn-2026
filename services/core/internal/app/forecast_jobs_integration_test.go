@@ -80,7 +80,7 @@ func seedForecastHistory(t *testing.T, f *manualBalanceFixture, coverage bool) (
 	}
 	revision = result.DataVersion
 	if coverage {
-		if _, err := f.app.db.ExecContext(t.Context(), "INSERT INTO core_history_coverage(company_id,account_id,data_version,from_date,through_date,reference) VALUES($1,$2,$3,$4,$5,$6)", f.scope.CompanyID, f.scope.AccountID, revision, cutoff.AddDate(0, 0, -89).Format(time.DateOnly), cutoff.Format(time.DateOnly), "complete synthetic integration fixture, 180 known operations"); err != nil {
+		if _, err := f.app.db.ExecContext(t.Context(), "INSERT INTO core_history_coverage(company_id,account_id,data_version,from_date,through_date,reference,kind) VALUES($1,$2,$3,$4,$5,$6,'certified')", f.scope.CompanyID, f.scope.AccountID, revision, cutoff.AddDate(0, 0, -89).Format(time.DateOnly), cutoff.Format(time.DateOnly), "complete synthetic integration fixture, 180 known operations"); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -258,7 +258,7 @@ func TestForecastCoverageAndFailureStates(t *testing.T) {
 	if err := f.app.db.GetContext(t.Context(), &revision, "SELECT data_version FROM core_accounts WHERE company_id=$1", f.scope.CompanyID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.app.db.ExecContext(t.Context(), "INSERT INTO core_history_coverage(company_id,account_id,data_version,from_date,through_date,reference) VALUES($1,$2,$3,$4,$5,'test complete fixture')", f.scope.CompanyID, f.scope.AccountID, revision, date.AddDate(0, 0, -89).Format(time.DateOnly), cutoff); err != nil {
+	if _, err := f.app.db.ExecContext(t.Context(), "INSERT INTO core_history_coverage(company_id,account_id,data_version,from_date,through_date,reference,kind) VALUES($1,$2,$3,$4,$5,'test complete fixture','certified')", f.scope.CompanyID, f.scope.AccountID, revision, date.AddDate(0, 0, -89).Format(time.DateOnly), cutoff); err != nil {
 		t.Fatal(err)
 	}
 	request.HorizonDays = 90

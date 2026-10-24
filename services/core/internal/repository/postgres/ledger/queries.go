@@ -34,3 +34,21 @@ var queryTransactionCreatedAt string
 
 //go:embed sql/category_exists.sql
 var queryCategoryExists string
+
+//go:embed sql/list_categories.sql
+var queryListCategories string
+
+//go:embed sql/category.sql
+var queryCategory string
+
+//go:embed sql/list_transaction_views.sql
+var queryListTransactionViews string
+
+//go:embed sql/read_transaction_view.sql
+var queryReadTransactionView string
+
+//go:embed sql/save_transaction_category.sql
+var querySaveTransactionCategory string
+
+//go:embed sql/carry_history_coverage.sql
+var queryCarryHistoryCoverage string

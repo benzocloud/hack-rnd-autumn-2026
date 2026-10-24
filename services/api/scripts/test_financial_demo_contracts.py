@@ -103,6 +103,15 @@ class FinancialDemoContractTests(unittest.TestCase):
         )
         self.reject("HistoryCoverage", proof | {"kind": "unknown"})
 
+    def test_transaction_creation_time_preserves_legacy_unknown(self):
+        transaction = copy.deepcopy(self.spec["components"]["examples"]["Transaction"]["value"])
+        self.validate("Transaction", transaction)
+        transaction["created_at"] = None
+        self.validate("Transaction", transaction)
+        for invalid in ["", "not-a-timestamp", "2026-10-25", 0]:
+            with self.subTest(created_at=invalid):
+                self.reject("Transaction", transaction | {"created_at": invalid})
+
     def test_synthetic_read_context_and_request_authority(self):
         request = {"cutoff_date": "2026-09-30", "horizon_days": 30}
         self.validate("CreateForecastRequest", request)
