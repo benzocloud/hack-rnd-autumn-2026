@@ -1,0 +1,124 @@
+syntax = "proto3";
+package core.v1;
+
+import "auth/v1/auth.proto";
+import "core/v1/common.proto";
+import "core/v1/forecasting.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1;corev1";
+
+// Same API-only financial authorization as ForecastingService. Simulations
+// never alter Ledger/Payments, execute transfers or create real bank requests.
+service ScenariosService {
+  rpc CreateScenario(CreateScenarioRequest) returns (CreateScenarioResponse);
+  rpc GetScenario(GetScenarioRequest) returns (GetScenarioResponse);
+  rpc ListScenarios(ListScenariosRequest) returns (ListScenariosResponse);
+}
+message OccurrenceTarget {
+  string component_id = 1;
+  string occurrence_id = 2;
+}
+message DelayReceiptChange {
+  string id = 1;
+  OccurrenceTarget target = 2;
+  Money amount = 3;
+  string new_date = 4;
+}
+message ReduceSalesChange {
+  string id = 1;
+  repeated OccurrenceTarget targets = 2;
+  string period_start = 3;
+  string period_end = 4;
+  uint32 reduction_basis_points = 5;
+}
+message OneOffExpenseChange {
+  string id = 1;
+  string date = 2;
+  Money amount = 3;
+  string description = 4;
+  optional string category_id = 5;
+}
+message IncreaseRecurringExpensesChange {
+  string id = 1;
+  repeated OccurrenceTarget targets = 2;
+  string effective_date = 3;
+  // Exactly one. New amount is the total, not a surcharge. Percent uses bp.
+  oneof adjustment {
+    uint32 increase_basis_points = 4;
+    Money new_amount = 5;
+  }
+}
+// Branch name is the REST discriminator "type"; do not duplicate it as string.
+message ScenarioChange {
+  oneof change {
+    DelayReceiptChange delay_receipt = 1;
+    ReduceSalesChange reduce_sales = 2;
+    OneOffExpenseChange one_off_expense = 3;
+    IncreaseRecurringExpensesChange increase_recurring_expenses = 4;
+  }
+}
+message ReschedulePaymentPart {
+  string effective_occurrence_id = 1;
+  Money amount = 2;
+  string new_date = 3;
+  string feasibility_condition = 4;
+}
+message IndependentScenario {
+  string base_forecast_id = 1;
+  repeated ScenarioChange changes = 2;
+}
+// Inherits snapshot/model/entire stress from parent. API must never supply a
+// replacement base_forecast_id or changes along with the response action.
+message ResponseScenario {
+  string comparison_parent_scenario_id = 1;
+  ReschedulePaymentPart response_action = 2;
+}
+message Scenario {
+  string id = 1;
+  string name = 2;
+  string base_forecast_id = 3;
+  optional string comparison_parent_scenario_id = 4;
+  string forecast_id = 5;
+  repeated ScenarioChange changes = 6;
+  ReschedulePaymentPart response_action = 7;
+  repeated string out_of_horizon_occurrence_ids = 8;
+  google.protobuf.Timestamp created_at = 9;
+}
+message ScenarioAccepted {
+  string id = 1;
+  string forecast_id = 2;
+  ForecastStatus status = 3;
+  uint32 poll_after_ms = 4;
+}
+message CreateScenarioRequest {
+  auth.v1.WriteContext context = 1;
+  AccountScope scope = 2;
+  string idempotency_key = 3;
+  string name = 4;
+  oneof scenario {
+    IndependentScenario independent = 5;
+    ResponseScenario response = 6;
+  }
+}
+message CreateScenarioResponse {
+  ScenarioAccepted accepted = 1;
+}
+message GetScenarioRequest {
+  auth.v1.BrowserContext context = 1;
+  AccountScope scope = 2;
+  string scenario_id = 3;
+}
+message GetScenarioResponse {
+  Scenario scenario = 1;
+}
+message ListScenariosRequest {
+  auth.v1.BrowserContext context = 1;
+  AccountScope scope = 2;
+  PageRequest page = 3;
+  optional string base_forecast_id = 4;
+}
+message ListScenariosResponse {
+  repeated Scenario items = 1;
+  PageResponse pagination = 2;
+}

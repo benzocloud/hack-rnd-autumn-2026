@@ -15,6 +15,11 @@ demo-profile подтверждения email с любым шестизначн
 запросы проходят настоящий API/Core/ML. Это исключение поведения для демо,
 не изменение форматов OpenAPI и не утверждение готовности server-side реализации.
 
+Локальная реализация [Go API](../../services/api/README.md) покрывает десять
+auth/account endpoints через настоящий mTLS gRPC transport к тестовому Auth;
+[отчёт проверок](../../services/api/verification.md). Это не готовность всех
+54 операций, настоящего Auth, финансового backend или production deployment.
+
 Контекст: [архитектурный план](../../.agent/plans/saldo-architecture.md),
 [описание продукта](../../.agent/plans/saldo-product.md),
 [результаты локальной проверки](../../.agent/references/dataset-profile.md).

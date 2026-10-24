@@ -1,0 +1,2 @@
+# Preserve downloaded windows-1251 XSD bytes and its original CRLF endings.
+.agent/references/external-data-examples/UT_UVISCHSUMNAL_1_263_00_05_03_01.xsd -text whitespace=cr-at-eol

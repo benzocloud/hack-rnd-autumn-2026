@@ -1,0 +1,33 @@
+version: v2
+inputs:
+  - directory: .
+    paths: [proto/core/v1, proto/auth/v1]
+plugins:
+  - local: ["go", "run", "google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.12"]
+    out: services/api/internal/gen
+    opt:
+      - paths=source_relative
+      - Mcore/v1/common.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1
+      - Mcore/v1/company.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1
+      - Mcore/v1/errors.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1
+      - Mcore/v1/forecasting.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1
+      - Mcore/v1/imports.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1
+      - Mcore/v1/integrations.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1
+      - Mcore/v1/ledger.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1
+      - Mcore/v1/payments.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1
+      - Mcore/v1/scenarios.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1
+      - Mauth/v1/auth.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/auth/v1
+  - local: ["go", "run", "google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2"]
+    out: services/api/internal/gen
+    opt:
+      - paths=source_relative
+      - Mcore/v1/common.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1
+      - Mcore/v1/company.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1
+      - Mcore/v1/errors.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1
+      - Mcore/v1/forecasting.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1
+      - Mcore/v1/imports.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1
+      - Mcore/v1/integrations.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1
+      - Mcore/v1/ledger.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1
+      - Mcore/v1/payments.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1
+      - Mcore/v1/scenarios.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1
+      - Mauth/v1/auth.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/auth/v1

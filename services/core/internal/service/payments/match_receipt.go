@@ -28,10 +28,11 @@ type matchBody struct {
 	Currency                             string
 	ExpectedVersion, ExpectedDataVersion int64
 	At                                   time.Time
+	ExpectedTransactionVersion           int64 `json:",omitempty"`
 }
 
 func matchRequest(cmd MatchCommand) matchBody {
 	return matchBody{Scope: cmd.Scope, ID: cmd.ID, PaymentID: cmd.PaymentID, TransactionID: cmd.TransactionID,
 		Amount: cmd.Amount.Minor(), Currency: cmd.Amount.Currency(), ExpectedVersion: cmd.ExpectedVersion,
-		ExpectedDataVersion: cmd.ExpectedDataVersion, At: cmd.At.UTC()}
+		ExpectedDataVersion: cmd.ExpectedDataVersion, At: cmd.At.UTC(), ExpectedTransactionVersion: cmd.ExpectedTransactionVersion}
 }

@@ -56,3 +56,19 @@ func TestReceiptCompatibility(t *testing.T) {
 		})
 	}
 }
+
+func TestMatchTransactionVersionChangesFingerprint(t *testing.T) {
+	cmd := MatchCommand{ExpectedTransactionVersion: 1}
+	first, err := json.Marshal(matchRequest(cmd))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.ExpectedTransactionVersion = 2
+	second, err := json.Marshal(matchRequest(cmd))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sha256.Sum256(first) == sha256.Sum256(second) {
+		t.Fatal("transaction version missing from semantic payload")
+	}
+}

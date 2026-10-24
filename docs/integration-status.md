@@ -2,12 +2,20 @@
 
 Дата сверки: 24.10.2026. Этот документ описывает реализованные части и их
 границы. Разработчик Go API самостоятельно составляет план исполнения.
+Предложенный [план первой реализации Go API](../.agent/plans/go-api-implementation.md)
+содержит учёт этапов. По последующему Goal разработчика API реализован локально:
+десять auth/account endpoints и отдельный mTLS gRPC test Auth;
+[проверки и ограничения](../services/api/verification.md). Этапы ожидают человеческого
+ревью; настоящий Auth и Core transport остаются отдельными зависимостями.
 
 Новый приоритет владельца: сдача **25 октября, 12:00 МСК**,
 [план D1–D4](../.agent/plans/demo-integration.md) — объединить готовые части
 в настоящий финансовый сценарий. ADR-028 разрешает отдельный явно включённый
 mock подтверждения email в изолированном демо; его server-side реализация
 ещё не проверена. Существующий общий frontend-mock не является этой интеграцией.
+Локальный [план API первого финансового прохода](../.agent/plans/go-api-financial-integration.md)
+содержит проверенную карту RPC, минимальные REST-маршруты и запрос потребностей
+к владельцам Core/ML/Auth; новые этапы пока не начаты и ожидают согласования.
 
 ## Исходные PR
 
@@ -18,6 +26,13 @@ mock подтверждения email в изолированном демо; е
 | Go API | [#16](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/16), `3746e6e` | Существующий контекст Auth-интеграции и границ ответственности; собственного API-кода пока нет |
 | ML | [#15](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/15), `decdbf3` | Локальные Python baseline, диагностика и исследования; без HTTP/gRPC сервера |
 | Frontend | [#21](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/21), `25e714e` | Next.js, страницы, HTTP-клиент, browser-local mock, тесты и Docker/CI; remote `frontend` и PR head сверены, оба указывают на этот SHA |
+
+Продолжение ML: реализованы canonical [protobuf](../proto/ml/v1/forecast.proto)
+и Python gRPC-сервис `mean_90` по готовому snapshot. Есть проверка версий,
+денежной арифметики, mTLS/идентичности Core и локального сетевого вызова.
+Это дополняет историческую строку PR #15. Core ML-клиент проверен реальным
+вызовом Python по mTLS; автоматическая подготовка 90-дневного входа и сохранение
+готового прогноза ещё не реализованы. Команды и ограничения: [ML RPC](../services/ml/GRPC_CONTRACT.md).
 
 История исходных веток сохраняется merge-коммитами. Их авторские ветки не
 переписываются. Статусы принятия этапов сохраняются в соответствующих планах;
@@ -45,10 +60,10 @@ mock подтверждения email в изолированном демо; е
 
 | Компонент | Отсутствующий результат |
 | --- | --- |
-| Go API | Исполняемый сервис, HTTP handlers/middleware, cookie/CSRF/Origin, Auth/Core adapters и проверка полного browser flow |
+| Go API | Десять auth/account handlers, HTTP lifecycle и mTLS Auth adapter проверены локально с test Auth; нужны реальный Auth E2E и будущая Core-интеграция |
 | Auth | Бизнес-RPC регистрации/входа/подтверждения/reset, consent/outbox/email delivery, компании/членства/приглашения; этапы 3.3–3.6 не начаты |
-| Core | Transport, Auth access adapter, company bootstrap/read/update и durable onboarding receipt для Auth; forecast orchestration. FinancialSnapshot (2.4) реализован, проверен и принят владельцем для включения в эту поставку; это внутренний снимок, не готовый прогноз |
-| ML | Согласованный protobuf adapter/service над прогнозом; вход от Core snapshot, а не обращение Go API к CSV/CLI |
+| Core | Transport, Auth access adapter, company bootstrap/read/update и durable onboarding receipt для Auth; forecast orchestration. FinancialSnapshot (2.4) принят и находится в main; подготовлены API → Core proto и проверенный Go ML-клиент, handlers ещё не реализованы |
+| ML | Подключение Python gRPC через Go-клиент к orchestration/90-дневной coverage, согласование будущего календаря без двойного учёта, обоснованная вероятность и provisioned mTLS |
 | End-to-end | Реальная цепочка Frontend → API → Auth/Core → ML, provisioned TLS/credentials и согласованная проверка результата |
 
 Текущая Core Company содержит ID; наличие таблицы ещё не даёт company profile
@@ -71,3 +86,18 @@ Frontend при push в `main` публикует mock-образ в GHCR; SSH d
 только явным `workflow_dispatch` на `main`. Общий merge не обновляет сервер.
 Core GHCR runtime publish остаётся пропущен до появления `cmd/core`.
 Инфраструктура Fadwix в этой поставке не меняется.
+
+
+### Объединение Core и ML — 24.10.2026
+
+По поручению владельца PR #27 (`994ed6e`) включён обычным merge в ветку PR #29.
+ML Predict дополнен финансовой реализацией и DTO; отдельного ML RPC нет.
+Полный API → Core контракт сохраняет все 54 REST operationId.
+Конфликт документации разрешён с сохранением принятого FinancialSnapshot 2.4.
+Сеть/handlers/Auth/bootstrap и финансовый E2E этим объединением не объявляются
+готовыми. Runtime provisioning/deployment не выполнялись.
+
+Свежая финансовая модель ML из PR #27 `49a7862` включается в ту же поставку.
+Два исходных endpoint сведены к одному Predict с явной версией модели;
+calendar replacement/components и empirical bands проверяются отдельно.
+Вероятность не откалибрована, Core worker/HTTP orchestration ещё не подключены.

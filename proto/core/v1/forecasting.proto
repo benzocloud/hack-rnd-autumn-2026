@@ -1,0 +1,281 @@
+syntax = "proto3";
+package core.v1;
+
+import "auth/v1/auth.proto";
+import "core/v1/common.proto";
+import "core/v1/errors.proto";
+import "core/v1/imports.proto";
+import "core/v1/ledger.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1;corev1";
+
+// API mTLS, FINANCIAL_READ for reads and FINANCIAL_WRITE/CSRF for create.
+// Create durably enqueues, never blocks HTTP for inference. Worker calls ML
+// outside SQL Tx. Model selection/version/seed is owned and frozen by Core.
+// Product jobs use ForecastService/Predict with a pinned financial-capable
+// model (ADR-029), even with an empty calendar. No implicit baseline fallback.
+service ForecastingService {
+  rpc CreateForecast(CreateForecastRequest) returns (CreateForecastResponse);
+  rpc GetForecast(GetForecastRequest) returns (GetForecastResponse);
+  rpc ListForecasts(ListForecastsRequest) returns (ListForecastsResponse);
+  rpc CompareForecasts(CompareForecastsRequest) returns (CompareForecastsResponse);
+  rpc GetPlanFact(GetPlanFactRequest) returns (GetPlanFactResponse);
+}
+enum ForecastStatus {
+  FORECAST_STATUS_UNSPECIFIED = 0;
+  FORECAST_STATUS_QUEUED = 1;
+  FORECAST_STATUS_RUNNING = 2;
+  FORECAST_STATUS_SUCCEEDED = 3;
+  FORECAST_STATUS_FAILED = 4;
+}
+message ForecastModelContext {
+  string id = 1;
+  string model_name = 2;
+  string model_version = 3;
+  string preprocessing_version = 4;
+  string configuration_id = 5;
+  // Decimal unsigned integer string: preserve arbitrary seed without float.
+  optional string random_seed = 6;
+  optional uint32 trajectory_count = 7;
+}
+message ForecastInput {
+  string snapshot_id = 1;
+  int64 data_version = 2;
+  string cutoff_date = 3;
+  string data_as_of = 4;
+  string start_date = 5;
+  string end_date = 6;
+  uint32 horizon_days = 7;
+  string currency = 8;
+  string account_id = 9;
+  Money opening_balance = 10;
+  string balance_as_of = 11;
+  // Exactly "below_zero_eod"; unknown overdraft never silently changes it.
+  string risk_definition = 12;
+  ForecastModelContext model_context = 13;
+}
+message ForecastReadiness {
+  // ready / limited / insufficient; unknown coverage cannot be ready.
+  string status = 1;
+  uint32 history_days = 2;
+  uint32 observed_days = 3;
+  repeated ImportIssue quality_issues = 4;
+  repeated string limitations = 5;
+}
+// Exactly one branch required. Zero is a valid estimated probability, never
+// evidence that an absent model estimate means no risk. Estimates must be finite.
+message Probability {
+  oneof estimate {
+    double value = 1;
+    string unavailable_reason = 2;
+  }
+}
+message CashGap {
+  string date = 1;
+  Money shortfall = 2;
+}
+message ForecastMetrics {
+  CashGap first_gap = 1;
+  Money max_shortfall = 2;
+  Money minimum_balance = 3;
+  Money closing_balance = 4;
+  Probability gap_probability = 5;
+}
+message ForecastPoint {
+  string date = 1;
+  Money inflow = 2;
+  Money outflow = 3;
+  Money balance = 4;
+  Money balance_lower = 5;
+  Money balance_upper = 6;
+  Probability negative_balance_probability = 7;
+}
+message Evidence {
+  string type = 1;
+  string resource_id = 2;
+  RecordSource source = 3;
+  string description = 4;
+}
+message Recommendation {
+  string id = 1;
+  string title = 2;
+  string explanation = 3;
+  string feasibility_condition = 4;
+  repeated Evidence evidence = 5;
+  optional string suggested_action = 6;
+}
+message ForecastComponent {
+  string id = 1;
+  string occurrence_id = 2;
+  string kind = 3;
+  Direction direction = 4;
+  string date = 5;
+  Money amount = 6;
+  Money remaining_amount = 7;
+  optional string category_id = 8;
+  optional string payment_id = 9;
+  optional string recurrence_group_id = 10;
+  RecordSource source = 11;
+  bool scenario_eligible = 12;
+}
+message ScenarioCapabilities {
+  bool delay_receipt = 1;
+  bool reduce_sales = 2;
+  bool one_off_expense = 3;
+  bool increase_recurring_expenses = 4;
+  optional string unavailable_reason = 5;
+}
+// Post-stress split; response actions target this exact server-issued identity.
+message EffectiveOccurrence {
+  string effective_occurrence_id = 1;
+  string component_id = 2;
+  string occurrence_id = 3;
+  optional string payment_id = 4;
+  Direction direction = 5;
+  string date = 6;
+  Money remaining_amount = 7;
+  bool in_horizon = 8;
+  bool response_action_eligible = 9;
+}
+message ForecastResult {
+  ForecastMetrics metrics = 1;
+  repeated ForecastPoint daily_points = 2;
+  repeated ForecastComponent components = 3;
+  ScenarioCapabilities scenario_capabilities = 4;
+  repeated Recommendation recommendations = 5;
+  repeated string assumptions = 6;
+  repeated EffectiveOccurrence effective_occurrences = 7;
+}
+message ForecastPending {
+  // Only QUEUED or RUNNING. Completed/result/error map to REST null.
+  ForecastStatus status = 1;
+}
+message ForecastSucceeded {
+  google.protobuf.Timestamp completed_at = 1;
+  ForecastResult result = 2;
+}
+message ForecastFailed {
+  google.protobuf.Timestamp completed_at = 1;
+  OperationError error = 2;
+}
+// Core validates exactly one state, mandatory child fields and consistent dates.
+// Immutable result/input are kept even if current_data_version makes it stale.
+message Forecast {
+  string id = 1;
+  string company_id = 2;
+  google.protobuf.Timestamp created_at = 3;
+  bool is_stale = 4;
+  int64 current_data_version = 5;
+  ForecastInput input = 6;
+  ForecastReadiness readiness = 7;
+  optional string scenario_id = 8;
+  oneof state {
+    ForecastPending pending = 9;
+    ForecastSucceeded succeeded = 10;
+    ForecastFailed failed = 11;
+  }
+}
+message ForecastSummary {
+  string id = 1;
+  ForecastStatus status = 2;
+  string cutoff_date = 3;
+  string start_date = 4;
+  string end_date = 5;
+  google.protobuf.Timestamp created_at = 6;
+  bool is_stale = 7;
+  optional string scenario_id = 8;
+}
+message ForecastAccepted {
+  string id = 1;
+  // Always QUEUED in this frozen acceptance, including idempotent replay.
+  ForecastStatus status = 2;
+  uint32 poll_after_ms = 3;
+}
+message CreateForecastRequest {
+  auth.v1.WriteContext context = 1;
+  AccountScope scope = 2;
+  string idempotency_key = 3;
+  string cutoff_date = 4;
+  // REST 30..90; unsupported model horizon fails explicitly, never truncates.
+  uint32 horizon_days = 5;
+}
+message CreateForecastResponse {
+  ForecastAccepted accepted = 1;
+}
+message GetForecastRequest {
+  auth.v1.BrowserContext context = 1;
+  AccountScope scope = 2;
+  string forecast_id = 3;
+}
+message GetForecastResponse {
+  Forecast forecast = 1;
+}
+message ListForecastsRequest {
+  auth.v1.BrowserContext context = 1;
+  AccountScope scope = 2;
+  PageRequest page = 3;
+  bool include_scenarios = 4;
+}
+message ListForecastsResponse {
+  repeated ForecastSummary items = 1;
+  PageResponse pagination = 2;
+}
+message Comparison {
+  string reference_forecast_id = 1;
+  string candidate_forecast_id = 2;
+  string snapshot_id = 3;
+  string model_context_id = 4;
+  bool is_stale = 5;
+  ForecastMetrics reference_metrics = 6;
+  ForecastMetrics candidate_metrics = 7;
+  Money delta_max_shortfall = 8;
+  Money delta_minimum_balance = 9;
+  Money delta_closing_balance = 10;
+  optional double delta_gap_probability = 11;
+  optional int32 delta_first_gap_days = 12;
+}
+message CompareForecastsRequest {
+  auth.v1.BrowserContext context = 1;
+  AccountScope scope = 2;
+  string candidate_forecast_id = 3;
+  string reference_forecast_id = 4;
+}
+message CompareForecastsResponse {
+  Comparison comparison = 1;
+}
+message ActualCoverage {
+  string status = 1;
+  optional string observed_through = 2;
+  repeated string missing_dates = 3;
+  repeated string warnings = 4;
+}
+message PlanFactPoint {
+  string date = 1;
+  Money planned_inflow = 2;
+  Money planned_outflow = 3;
+  Money planned_balance = 4;
+  Money actual_inflow = 5;
+  Money actual_outflow = 6;
+  Money actual_balance = 7;
+  Money balance_delta = 8;
+  string coverage = 9;
+}
+message PlanFact {
+  string forecast_id = 1;
+  int64 actual_data_version = 2;
+  string period_start = 3;
+  string period_end = 4;
+  ActualCoverage coverage = 5;
+  repeated PlanFactPoint daily_points = 6;
+  Money mean_absolute_balance_error = 7;
+}
+message GetPlanFactRequest {
+  auth.v1.BrowserContext context = 1;
+  AccountScope scope = 2;
+  string forecast_id = 3;
+  DateRange dates = 4;
+}
+message GetPlanFactResponse {
+  PlanFact plan_fact = 1;
+}

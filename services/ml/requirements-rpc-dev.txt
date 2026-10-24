@@ -1,0 +1,4 @@
+-r requirements-rpc.txt
+grpcio-tools==1.78.0
+setuptools==80.9.0
+cryptography==46.0.5
