@@ -56,6 +56,11 @@ linters:
   exclusions:
     generated: disable
     presets: []
+    rules:
+      # protoc-gen-go-grpc emits framework-validated dispatch assertions and a
+      # service descriptor comment. Regenerate this file; never hand-edit it.
+      - path: ^internal/gen/auth/v1/auth_grpc\.pb\.go$
+        linters: [errcheck, godot]
 
 formatters:
   settings:

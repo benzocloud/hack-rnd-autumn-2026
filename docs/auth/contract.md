@@ -527,3 +527,13 @@ Auth handlers, consent/outbox, email delivery и runtime сценарии биз
 Переход к 3.2 явно разрешён владельцем. Перед 3.3 требуется принятие результата
 3.2; согласование с API/Core bootstrap/UpdateCompany остаётся перед интеграцией.
 Два агентских ревью и успешные тесты не заменяют апрув следующего этапа.
+
+## Реализация среза D1/Auth
+
+Серверный профиль, текущие минимальные RPC, read-only поле
+`GetSecurityContextResponse.email_verification_mode` / REST `CsrfToken.email_verification_mode`,
+явная UI-маркировка и оставшиеся onboarding зависимости описаны в
+[отчёте D1/Auth](demo-integration.md). Режим выбирает только конфигурация Auth,
+не REST/protobuf request. Demo-подтверждение хранится отдельно от strict proof;
+переход в strict не превращает mock в реальное владение почтой.
+Статус среза и проверки фиксируются отдельно от исторического основания 3.2.
