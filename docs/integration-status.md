@@ -3,6 +3,12 @@
 Дата сверки: 24.10.2026. Этот документ описывает реализованные части и их
 границы. Разработчик Go API самостоятельно составляет план исполнения.
 
+Новый приоритет владельца: сдача **25 октября, 12:00 МСК**,
+[план D1–D4](../.agent/plans/demo-integration.md) — объединить готовые части
+в настоящий финансовый сценарий. ADR-028 разрешает отдельный явно включённый
+mock подтверждения email в изолированном демо; его server-side реализация
+ещё не проверена. Существующий общий frontend-mock не является этой интеграцией.
+
 ## Исходные PR
 
 | Компонент | PR и исходный head | Что включено |
@@ -41,7 +47,7 @@
 | --- | --- |
 | Go API | Исполняемый сервис, HTTP handlers/middleware, cookie/CSRF/Origin, Auth/Core adapters и проверка полного browser flow |
 | Auth | Бизнес-RPC регистрации/входа/подтверждения/reset, consent/outbox/email delivery, компании/членства/приглашения; этапы 3.3–3.6 не начаты |
-| Core | Transport, Auth access adapter, company bootstrap/read/update и durable onboarding receipt для Auth; snapshot/forecast orchestration, этап 2.4 не начат |
+| Core | Transport, Auth access adapter, company bootstrap/read/update и durable onboarding receipt для Auth; forecast orchestration. FinancialSnapshot (2.4) реализован, проверен и принят владельцем для включения в эту поставку; это внутренний снимок, не готовый прогноз |
 | ML | Согласованный protobuf adapter/service над прогнозом; вход от Core snapshot, а не обращение Go API к CSV/CLI |
 | End-to-end | Реальная цепочка Frontend → API → Auth/Core → ML, provisioned TLS/credentials и согласованная проверка результата |
 
