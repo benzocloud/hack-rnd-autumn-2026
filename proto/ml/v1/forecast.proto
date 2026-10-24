@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package ml.v1;
+
+option go_package = "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/ml/v1;mlv1";
+
+// Private Core -> ML interface. Core owns authorization, a consistent input
+// snapshot, persistence and authoritative balance/risk calculations.
+service ForecastService {
+  rpc Predict(PredictRequest) returns (PredictResponse);
+}
+
+enum DaySource {
+  DAY_SOURCE_UNSPECIFIED = 0;
+  DAY_SOURCE_OBSERVED = 1;
+  DAY_SOURCE_VERIFIED_NO_OPERATIONS = 2;
+}
+
+// ISO dates are company-local business dates, not timestamps. Core must reject
+// unresolved gaps/duplicates before constructing these consecutive daily points.
+message HistoricalDay {
+  string date = 1;
+  optional int64 inflow_minor = 2;
+  optional int64 outflow_minor = 3;
+  optional int64 closing_balance_minor = 4;
+  DaySource source = 5;
+}
+
+message ModelContext {
+  string model_name = 1;
+  string model_version = 2;
+  string preprocessing_version = 3;
+}
+
+// Reserved input for explicit rejection until calendar reconciliation is agreed.
+// A full history-only baseline must not be blindly added to known payments.
+message KnownPayment {
+  string payment_id = 1;
+  string date = 2;
+  int64 inflow_minor = 3;
+  int64 outflow_minor = 4;
+}
+
+message ForecastSnapshot {
+  string snapshot_id = 1;
+  string company_id = 2;
+  string account_id = 3;
+  uint64 data_version = 4;
+  string currency = 5;
+  string cutoff_date = 6;
+  optional int64 initial_balance_minor = 7;
+  repeated HistoricalDay history = 8;
+  repeated KnownPayment known_payments = 9;
+}
+
+message PredictRequest {
+  ForecastSnapshot snapshot = 1;
+  uint32 horizon_days = 2;
+  ModelContext model = 3;
+}
+
+message ForecastDay {
+  string date = 1;
+  int64 inflow_minor = 2;
+  int64 outflow_minor = 3;
+  // Mathematical reference only. Core independently checks the identity and
+  // owns the final financial result; this is not a database balance observation.
+  int64 reference_balance_minor = 4;
+}
+
+message PredictResponse {
+  string snapshot_id = 1;
+  string company_id = 2;
+  string account_id = 3;
+  uint64 data_version = 4;
+  ModelContext model = 5;
+  string currency = 6;
+  string cutoff_date = 7;
+  string start_date = 8;
+  repeated ForecastDay days = 9;
+  // below_zero_eod, not proven insolvency. Absence means no negative reference
+  // balance in the horizon; no calibrated probability is available.
+  optional string first_negative_balance_date = 10;
+  bool history_only_includes_recurring_flows = 11;
+  repeated string warnings = 12;
+}
