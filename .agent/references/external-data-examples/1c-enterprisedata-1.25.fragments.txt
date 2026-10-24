@@ -1,0 +1,78 @@
+SOURCE: https://its.1c.ru/db/files/1CITS/EXE/EnterpriseDataFiles/EnterpriseDataFiles.zip
+VERSION: 1.25; archive member: EnterpriseDataFiles/XSDschemeEntepriseData1_25.zip :: XSDschemeEntepriseData1_25.xsd
+EXTRACTION: XML subtrees serialized from the downloaded official XSD. No business values added.
+LIMIT: fragments, not a standalone schema or a valid complete exchange message. tns references remain external.
+
+<xs:complexType xmlns:xs="http://www.w3.org/2001/XMLSchema" name="Документ.ЗаказКлиента.ЭтапыОплаты.Строка">
+		<xs:sequence>
+			<xs:element name="НомерСтрокиДокумента" type="tns:ТипНомерСтроки" minOccurs="0" />
+			<xs:element name="ВариантОплаты" type="tns:ВариантыОплаты" />
+			<xs:element name="ФормаОплаты" type="tns:ФормыОплаты" />
+			<xs:element name="ДатаПлатежа" type="xs:date" />
+			<xs:element name="ПроцентПлатежа" type="tns:ТипСумма" minOccurs="0" />
+			<xs:element name="СуммаПлатежа" type="tns:ТипСумма" />
+			<xs:element name="КоличествоДнейОтсрочки" type="tns:ТипКоличество" minOccurs="0" />
+			<xs:element name="ИдентификаторСтроки" type="tns:ТипИдентификаторСтроки" minOccurs="0" />
+			<xs:any namespace="##any" processContents="lax" minOccurs="0" maxOccurs="unbounded" />
+		</xs:sequence>
+		<xs:anyAttribute namespace="##any" processContents="lax" />
+	</xs:complexType>
+
+<xs:complexType xmlns:xs="http://www.w3.org/2001/XMLSchema" name="ОбщиеСвойстваЗаявокНаОперацииСДС">
+		<xs:sequence>
+			<xs:element name="Статус" type="tns:СтатусыЗаявокНаРасходДС" minOccurs="0" />
+			<xs:element name="Сумма" type="tns:ТипСумма" />
+			<xs:element name="Валюта" type="tns:КлючевыеСвойстваВалюта" />
+			<xs:element name="НазначениеПлатежа" type="xs:string" minOccurs="0" />
+			<xs:element name="КрайнийСрокПлатежа" type="xs:date" minOccurs="0" />
+			<xs:element name="УтвержденнаяДатаПлатежа" type="xs:date" minOccurs="0" />
+			<xs:element name="ИдентификаторПлатежа" minOccurs="0">
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="25" />
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="КтоЗаявил" type="tns:КлючевыеСвойстваПользователь" minOccurs="0" />
+			<xs:element name="КтоРешил" type="tns:КлючевыеСвойстваПользователь" minOccurs="0" />
+			<xs:element name="Заметки" type="xs:string" minOccurs="0" />
+			<xs:element name="Подразделение" type="tns:КлючевыеСвойстваПодразделение" minOccurs="0" />
+			<xs:any namespace="##any" processContents="lax" minOccurs="0" maxOccurs="unbounded" />
+		</xs:sequence>
+		<xs:anyAttribute namespace="##any" processContents="lax" />
+	</xs:complexType>
+
+<xs:complexType xmlns:xs="http://www.w3.org/2001/XMLSchema" name="ОбщиеСвойстваПБДС">
+		<xs:sequence>
+			<xs:element name="ДатаВыписки" type="xs:date" />
+			<xs:element name="ДатаВходящегоДокумента" type="xs:date" minOccurs="0" />
+			<xs:element name="НомерВходящегоДокумента" type="tns:ТипНомерДокумента" minOccurs="0" />
+			<xs:element name="ТипПлатежногоДокумента" type="tns:ТипыПлатежныхДокументов" minOccurs="0" />
+			<xs:element name="Валюта" type="tns:КлючевыеСвойстваВалюта" />
+			<xs:element name="Сумма" type="tns:ТипСумма" />
+			<xs:element name="БанковскийСчетОрганизации" type="tns:КлючевыеСвойстваБанковскийСчет" />
+			<xs:element name="НазначениеПлатежа" type="xs:string" minOccurs="0" />
+			<xs:element name="Подразделение" type="tns:КлючевыеСвойстваПодразделение" minOccurs="0" />
+			<xs:any namespace="##any" processContents="lax" minOccurs="0" maxOccurs="unbounded" />
+		</xs:sequence>
+		<xs:anyAttribute namespace="##any" processContents="lax" />
+	</xs:complexType>
+
+<xs:complexType xmlns:xs="http://www.w3.org/2001/XMLSchema" name="КлючевыеСвойстваПБДСРасчетыСКонтрагентами">
+		<xs:sequence>
+			<xs:element name="СсылкаВнешняяНавигационная" type="tns:ТипСсылкаВнешняяНавигационная" minOccurs="0" />
+			<xs:element name="Ссылка" type="tns:ДокументСсылка.ПБДСРасчетыСКонтрагентами" minOccurs="0" />
+			<xs:element name="Дата" type="xs:dateTime" />
+			<xs:element name="Номер" type="tns:ТипНомерДокумента" />
+			<xs:element name="Организация" type="tns:КлючевыеСвойстваОрганизация" />
+			<xs:any namespace="##any" processContents="lax" minOccurs="0" maxOccurs="unbounded" />
+		</xs:sequence>
+		<xs:anyAttribute namespace="##any" processContents="lax" />
+	</xs:complexType>
+
+<xs:simpleType xmlns:xs="http://www.w3.org/2001/XMLSchema" name="ТипСумма">
+		<xs:restriction base="xs:decimal">
+			<xs:totalDigits value="15" />
+			<xs:fractionDigits value="2" />
+		</xs:restriction>
+	</xs:simpleType>
