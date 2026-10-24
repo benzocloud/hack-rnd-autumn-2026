@@ -9,7 +9,7 @@ import (
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/repository/postgres/record"
 )
 
-const SchemaVersion = 1
+const SchemaVersion = 2
 
 type schemaRepository struct {
 	db           sqlx.ExtContext

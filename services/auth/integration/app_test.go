@@ -58,7 +58,7 @@ func TestRealDatabaseReadinessAndServiceRestart(t *testing.T) {
 			t.Fatal("real service never became ready")
 		}
 		// Liveness survives schema incompatibility; readiness must fail closed.
-		if _, err := db.Exec(t.Context(), "UPDATE goose_db_version SET version_id=99 WHERE version_id=1"); err != nil {
+		if _, err := db.Exec(t.Context(), "UPDATE goose_db_version SET version_id=99 WHERE version_id=2"); err != nil {
 			stopService(t, cancel, done)
 			t.Fatal(err)
 		}
@@ -77,7 +77,7 @@ func TestRealDatabaseReadinessAndServiceRestart(t *testing.T) {
 				t.Fatalf("%s: %d", tc.path, response.StatusCode)
 			}
 		}
-		if _, err := db.Exec(t.Context(), "UPDATE goose_db_version SET version_id=1 WHERE version_id=99"); err != nil {
+		if _, err := db.Exec(t.Context(), "UPDATE goose_db_version SET version_id=2 WHERE version_id=99"); err != nil {
 			stopService(t, cancel, done)
 			t.Fatal(err)
 		}

@@ -281,3 +281,23 @@
     white-space: pre-wrap;
     font: inherit;
 }
+
+.demoNotice,
+.modeError {
+    margin: 0 0 28px;
+    padding: 16px;
+    border: 2px solid global.$green2;
+    border-radius: 16px;
+    font-size: 16px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+
+    p {
+        margin: 8px 0 0;
+    }
+}
+
+.modeError .link {
+    margin-top: 8px;
+    font-size: inherit;
+}

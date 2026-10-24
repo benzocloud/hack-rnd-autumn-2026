@@ -4460,6 +4460,11 @@ components:
       type: "object"
       additionalProperties: false
       properties:
+        email_verification_mode:
+          type: "string"
+          enum: ["strict", "demo"]
+          readOnly: true
+          description: "Server-owned email confirmation profile. Missing means strict. Demo marks ADR-028 mock confirmation for explicitly allowed test accounts; it does not prove mailbox ownership or bypass password, session, CSRF or company checks. The browser cannot select or enable this profile."
         csrf_token:
           type: "string"
           minLength: 16

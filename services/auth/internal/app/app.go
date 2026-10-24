@@ -20,7 +20,7 @@ type database interface {
 
 func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	listenerConfig := &net.ListenConfig{}
-	return run(ctx, cfg, logger, func(ctx context.Context) (database, error) { return openDatabase(ctx, cfg) },
+	return run(ctx, cfg, logger, func(ctx context.Context) (database, error) { return New(ctx, cfg) },
 		func(network, address string) (net.Listener, error) {
 			return listenerConfig.Listen(ctx, network, address)
 		})
@@ -39,6 +39,11 @@ func run(ctx context.Context, cfg config.Config, logger *slog.Logger, open func(
 		return errors.New("auth startup: schema mismatch; run migrations")
 	}
 	cancelStartup()
+	stopRPC, rpcErrors, err := startRPC(ctx, db, cfg)
+	if err != nil {
+		return errors.New("auth startup: private RPC unavailable")
+	}
+	defer stopRPC()
 	if ctx.Err() != nil {
 		return nil
 	}
@@ -59,6 +64,18 @@ func run(ctx context.Context, cfg config.Config, logger *slog.Logger, open func(
 	go func() { served <- server.Serve(listener) }()
 	logger.Info("auth health listener started", "address", listener.Addr().String())
 	select {
+	case rpcErr := <-rpcErrors:
+		ready.Store(false)
+		cancelServer()
+		_ = server.Close()
+		healthErr := <-served
+		if healthErr != nil && !errors.Is(healthErr, http.ErrServerClosed) {
+			return errors.New("auth health server stopped unexpectedly")
+		}
+		if rpcErr != nil {
+			return errors.New("auth private RPC failed")
+		}
+		return errors.New("auth private RPC stopped unexpectedly")
 	case err := <-served:
 		ready.Store(false)
 		cancelServer()

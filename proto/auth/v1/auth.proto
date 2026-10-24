@@ -234,6 +234,9 @@ message GetSecurityContextRequest {
 }
 message GetSecurityContextResponse {
   SecurityContext context = 1;
+  // Server-owned UI metadata: "strict" (default) or "demo" for ADR-028.
+  // Never accepted in a request and never grants authentication or company access.
+  string email_verification_mode = 2;
 }
 
 message RegisterRequest {

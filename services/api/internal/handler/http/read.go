@@ -43,8 +43,13 @@ func (h *handler) csrf(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, 503, "DEPENDENCY_UNAVAILABLE", nil)
 		return
 	}
+	mode := p.GetEmailVerificationMode()
+	if mode != "" && mode != "strict" && mode != "demo" {
+		writeError(w, r, 503, "DEPENDENCY_UNAVAILABLE", nil)
+		return
+	}
 	setCookie(w, c.GetCookieToken(), c.GetCookieExpiresAt().AsTime())
-	writeJSON(w, 200, csrf{c.GetCsrfToken(), c.GetCookieExpiresAt().AsTime().UTC().Format(time.RFC3339Nano)})
+	writeJSON(w, 200, csrf{Token: c.GetCsrfToken(), Expires: c.GetCookieExpiresAt().AsTime().UTC().Format(time.RFC3339Nano), EmailVerificationMode: mode})
 }
 func (h *handler) me(w http.ResponseWriter, r *http.Request) {
 	p, err := h.auth.GetCurrentAccount(r.Context(), &authv1.GetCurrentAccountRequest{Context: browser(r)})

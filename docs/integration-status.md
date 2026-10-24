@@ -11,8 +11,9 @@
 Новый приоритет владельца: сдача **25 октября, 12:00 МСК**,
 [план D1–D4](../.agent/plans/demo-integration.md) — объединить готовые части
 в настоящий финансовый сценарий. ADR-028 разрешает отдельный явно включённый
-mock подтверждения email в изолированном демо; его server-side реализация
-ещё не проверена. Существующий общий frontend-mock не является этой интеграцией.
+mock подтверждения email в изолированном демо. Минимальный server-side срез
+реализован и проверен отдельно в [отчёте D1/Auth](auth/demo-integration.md),
+ожидает ревью владельцем. Существующий общий frontend-mock не является этой интеграцией.
 Локальный [план API первого финансового прохода](../.agent/plans/go-api-financial-integration.md)
 содержит проверенную карту RPC, минимальные REST-маршруты и запрос потребностей
 к владельцам Core/ML/Auth; новые этапы пока не начаты и ожидают согласования.
@@ -60,15 +61,16 @@ mock подтверждения email в изолированном демо; е
 
 | Компонент | Отсутствующий результат |
 | --- | --- |
-| Go API | Десять auth/account handlers, HTTP lifecycle и mTLS Auth adapter проверены локально с test Auth; нужны реальный Auth E2E и будущая Core-интеграция |
-| Auth | Бизнес-RPC регистрации/входа/подтверждения/reset, consent/outbox/email delivery, компании/членства/приглашения; этапы 3.3–3.6 не начаты |
+| Go API | Десять auth/account handlers и mTLS Auth adapter; D1/Auth дополнительно проверил настоящий HTTPS API → Auth → PostgreSQL flow и server-owned mode passthrough. Полный финансовый Core/browser E2E ещё требуется |
+| Auth | D1/Auth добавляет минимальные RPC регистрации/входа/сессии/доступа, DB consent registry/evidence и изолированный demo-profile; результат на отдельном ревью. Core onboarding/receipt, email delivery/outbox, reset и приглашения остаются; полные этапы 3.3–3.6 не объявляются завершёнными |
 | Core | Transport, Auth access adapter, company bootstrap/read/update и durable onboarding receipt для Auth; forecast orchestration. FinancialSnapshot (2.4) принят и находится в main; подготовлены API → Core proto и проверенный Go ML-клиент, handlers ещё не реализованы |
 | ML | Подключение Python gRPC через Go-клиент к orchestration/90-дневной coverage, согласование будущего календаря без двойного учёта, обоснованная вероятность и provisioned mTLS |
 | End-to-end | Реальная цепочка Frontend → API → Auth/Core → ML, provisioned TLS/credentials и согласованная проверка результата |
 
 Текущая Core Company содержит ID; наличие таблицы ещё не даёт company profile
-с name/ИНН/timezone/version. Auth health/readiness подтверждают каркас и БД,
-но не работоспособность Register/Login. ML evaluation использует будущую цель
+с name/ИНН/timezone/version. Auth health/readiness подтверждают только каркас и БД;
+работоспособность минимальных RPC проверяется отдельно в срезе D1/Auth,
+а общий API/Core/browser E2E не следует из health 200. ML evaluation использует будущую цель
 только офлайн; его нельзя подставлять вместо inference. Вероятность у baseline
 не рассчитана и не должна превращаться в фиктивное число.
 

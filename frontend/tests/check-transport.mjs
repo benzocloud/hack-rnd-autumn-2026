@@ -7,7 +7,7 @@ const calls = [];
 const transport = async ( config ) => {
     calls.push(config);
 
-    return { config, status: 200, statusText: "OK", headers: {}, data: config.url === "/auth/csrf" ? { csrf_token: "real-csrf", expires_at: "2099-01-01T00:00:00Z" } : { real: true } };
+    return { config, status: 200, statusText: "OK", headers: {}, data: config.url === "/auth/csrf" ? { csrf_token: "real-csrf", expires_at: "2099-01-01T00:00:00Z", email_verification_mode: "demo" } : { real: true } };
 };
 
 
@@ -43,3 +43,9 @@ assert.equal(calls.at(-1).withCredentials, true);
 await authService.resendVerification({ data: { email: "test@example.com" } });
 assert.equal(calls.at(-1).url, "/auth/resend-verification");
 assert.deepEqual(JSON.parse(calls.at(-1).data), { email: "test@example.com" });
+
+const securityContext = await authService.getCsrfToken();
+assert.equal(securityContext.email_verification_mode, "demo");
+assert.equal(calls.at(-1).url, "/auth/csrf");
+assert.equal(calls.at(-1).method, "get");
+assert.equal(calls.at(-1).data, undefined, "Reading the profile never selects it in a request");

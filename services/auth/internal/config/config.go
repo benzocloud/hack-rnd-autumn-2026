@@ -14,13 +14,21 @@ import (
 )
 
 type Config struct {
-	databaseURL     string
-	Environment     string
-	HTTPAddress     string
-	StartupTimeout  time.Duration
-	QueryTimeout    time.Duration
-	ShutdownTimeout time.Duration
-	MaxConnections  int
+	codeHMACKey           []byte
+	csrfHMACKey           []byte
+	GRPCAddress           string
+	GRPCCertFile          string
+	GRPCKeyFile           string
+	GRPCCAFile            string
+	DemoEmailVerification bool
+	DemoTestEmails        []string
+	databaseURL           string
+	Environment           string
+	HTTPAddress           string
+	StartupTimeout        time.Duration
+	QueryTimeout          time.Duration
+	ShutdownTimeout       time.Duration
+	MaxConnections        int
 }
 
 func (c Config) Format(w fmt.State, _ rune) { _, _ = io.WriteString(w, "AuthConfig{secrets:redacted}") }
@@ -69,6 +77,9 @@ func Load(getenv func(string) string) (Config, error) {
 			return Config{}, errors.New("AUTH_DB_MAX_CONNECTIONS must be between 1 and 100")
 		}
 		c.MaxConnections = n
+	}
+	if err := c.loadRPC(getenv); err != nil {
+		return Config{}, err
 	}
 	if _, err := c.ConnectionConfig(); err != nil {
 		return Config{}, err

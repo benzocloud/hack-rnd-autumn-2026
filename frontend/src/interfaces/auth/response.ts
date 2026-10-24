@@ -26,6 +26,7 @@ interface ISession {
 
 
 interface ICsrfToken {
+    email_verification_mode?: "strict" | "demo";
     csrf_token: string;
     expires_at: string;
 }
