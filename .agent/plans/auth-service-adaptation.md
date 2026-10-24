@@ -35,6 +35,30 @@ PostgreSQL lifecycle в `internal/app/postgres`, приватные реализ
 consumer-side interfaces, SQL/queries.go и полный lint модуля с тестами.
 Это исправление текущего 3.2, а не начало следующего этапа.
 
+### Синхронизация с API-планом PR #16
+
+По поручению владельца 24.10.2026 контекст прочитан в порядке
+[PR #16 — передача интеграции API](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/16)
+→ [PR #17 — Auth](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/17).
+При возобновлении работы повторять эту сверку по актуальным SHA и обсуждениям;
+таблица API-плана задаёт ответственность, а точный wire-профиль —
+[Auth-контракт](../../docs/auth/contract.md), OpenAPI и auth.proto.
+
+- API/@Prosteyshiyyy: HTTP, cookie `__Host-saldo_session`, Origin/Referer,
+  передача BrowserContext/WriteContext, clients, mapping и company orchestration.
+  В API-план включён `GET /auth/personal-data-consent` перед регистрацией;
+  версия/хеш принятия передаются в Auth без согласия, подставленного API.
+- Auth: credentials, security contexts/sessions, проверка CSRF/consent и прав,
+  credential_version, verify/reset, memberships/invitations, intent/outbox.
+  Email verification — шесть цифр/10 минут; reset — отдельная ссылка.
+- Core: Company/BankAccount, durable bootstrap/receipt, read и owner-only
+  UpdateCompany с version conflict. Core сам проверяет актуальный доступ через Auth.
+
+Исправление двух устаревших мест API-плана (имя cookie и отсутствие consent GET)
+не меняет корректный Auth wire-контракт. Оно не переносит API-реализацию в Auth
+и не объявляет готовыми business RPC. Текущий 3.2 остаётся «На ревью»;
+синхронизация планов не является принятием 3.2 или разрешением начать 3.3.
+
 ## 1. Цель и проверенное текущее состояние
 
 Получить отдельный Auth-сервис Saldo: регистрация, подтверждение email, вход,
