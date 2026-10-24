@@ -5,7 +5,8 @@
 Подэтап 2.3 включён в main: sqlx pool,
 миграции, атомарные операции Ledger/Payments и persistent idempotency.
 Подэтап 2.4 принят разработчиком 2026-10-24: FinancialSnapshot.
-Прикладная сборка находится в `internal/app`; HTTP/gRPC ещё не реализованы.
+Прикладная сборка находится в `internal/app`; приватный gRPC CompanyService
+и `cmd/core` реализованы локально. Финансовые gRPC handlers пока не реализованы.
 Сервер остаётся в следующих подэтапах
 [плана](../../.agent/plans/go-core-foundation.md).
 
@@ -227,16 +228,15 @@ Dockerfile адаптирует multi-stage/scratch подход из
 Контекст — **корень репозитория**; `Dockerfile.dockerignore` допускает только
 Core и LICENSE и исключает `.env*`, dataset и локальные референсы.
 
-Сейчас `cmd/core` отсутствует: CI проверяет target `build` и явно пропускает
-публикацию. Проверка пакетов в контейнере из корня:
+`cmd/core` реализован в C2: CI выбирает target `runtime`. Проверка только пакетов
+в контейнере из корня:
 
 ```sh
 docker build --target build -f services/core/Dockerfile .
 ```
 
-После реализации `services/core/cmd/core/main.go` CI автоматически проверит
-полный target `runtime`. Если компиляция не пройдёт, публикации не будет.
-Локальная сборка будущего runtime:
+Если компиляция target `runtime` не пройдёт, публикации не будет.
+Локальная сборка runtime:
 
 ```sh
 docker build --target runtime -f services/core/Dockerfile -t core:local .
@@ -353,3 +353,52 @@ The test creates temporary certificates, starts the real Python server on an
 OS-selected loopback port with mTLS and a `saldo-core` SAN, checks the prediction,
 and terminates its own process. The ordinary CI unit job does not run Python;
 missing integration environment variables cause an explicit skip.
+
+### Company bootstrap and private gRPC
+
+`internal/service/company` coordinates one app-owned transaction that reserves
+an Auth command and inserts Company, one default BankAccount and its profile.
+An immutable bootstrap record stores the original spec/hash/account, including
+after later profile changes. Identical retries re-authorize and reuse the record;
+a changed command cannot create a second account. The Auth company UUIDv7 is
+reused; Core generates only its account UUIDv7.
+
+The fingerprint matches Auth's fixed Go JSON `name,inn,currency,timezone` order,
+including null INN and standard JSON escaping. Repositories receive an existing
+sqlx transaction, store domain models and keep SQL/embeds/row mapping separate.
+Migration `00004_company_bootstrap.sql` adds profiles and bootstrap records without
+backfilling invented metadata for legacy ID-only companies.
+
+C1 is accepted. C2 adds `CreateCompanyBootstrap`, `GetCompanyCreationResult`,
+`ReadCompany` and `UpdateCompany` through a private mTLS CompanyService.
+Only API/Auth peers can bootstrap; only Auth can recover a receipt; only API can
+read/update the profile. Exact URI SANs come from verified certificates, never
+metadata. Read/update recheck Auth with the original browser/write context;
+bootstrap rechecks the durable Auth command on every attempt, including replay.
+Profile PATCH uses its own positive version/CAS, preserves omitted fields,
+supports explicit INN removal, and changes neither receipt nor account data_version.
+
+`cmd/core` loads `config.Load()` and `config.LoadRPC()`, then `app/server.Run`
+owns TLS files, one Auth connection, the application DB pool, listener and bounded
+graceful shutdown. Certificates must permit both server/client authentication,
+include `spiffe://saldo.local/core` and match clients' configured Core server name.
+The Auth certificate must include `spiffe://saldo.local/auth` and match
+`CORE_AUTH_SERVER_NAME`. Files/keys are provisioned outside Git; migrations run
+separately before startup. Plaintext transport and reflection are not enabled.
+
+| RPC setting | Meaning |
+| --- | --- |
+| `CORE_GRPC_ADDRESS` | Required bind host:port |
+| `CORE_AUTH_ADDRESS` | Required Auth host:port |
+| `CORE_AUTH_SERVER_NAME` | Required verified TLS DNS name of Auth |
+| `CORE_MTLS_CA_FILE` | Required PEM operator CA bundle |
+| `CORE_MTLS_CERT_FILE` | Required PEM Core certificate chain |
+| `CORE_MTLS_KEY_FILE` | Required private key file |
+| `CORE_AUTH_TIMEOUT` | Default 3s, positive and at most 3s |
+
+`app.New` remains an internal foundation constructor with a nil authorizer,
+so bootstrap there fails closed. The runtime explicitly uses
+`app.NewWithCompanyAuthorizer` with the real gRPC client. SQL transactions never
+contain an Auth network call. Runtime tests use a contract-compatible Auth test
+service: real Auth recovery/membership finalization and deployment are not yet
+verified. See [C1/C2 plan](../../.agent/plans/core-company-bootstrap.md).
