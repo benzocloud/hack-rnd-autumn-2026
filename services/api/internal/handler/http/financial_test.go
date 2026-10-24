@@ -147,6 +147,10 @@ func TestFinancialContractResponses(t *testing.T) {
 	f.forecast.GetSucceeded().Result.Metrics.GapProbability = &corev1.Probability{Estimate: &corev1.Probability_Value{Value: 0}}
 	capture(f, "GET", financialRoot+"/forecasts/"+forecastID, "/api/v1/companies/{company_id}/forecasts/{forecast_id}", "", 200)
 	f.forecast.State = &corev1.Forecast_Failed{Failed: &corev1.ForecastFailed{CompletedAt: timestamppb.New(f.forecast.CreatedAt.AsTime().Add(time.Second)), Error: &corev1.OperationError{Code: "INSUFFICIENT_HISTORY", Message: "PRIVATE", RequestId: "safe-request", FieldErrors: []*corev1.OperationFieldError{{Field: "cutoff_date", Code: "BAD", Message: "PRIVATE"}}}}}
+	failedResponse := financialRequest(f.handler(), "GET", financialRoot+"/forecasts/"+forecastID, "")
+	if failedResponse.Code != 200 || !strings.Contains(failedResponse.Body.String(), "Недостаточно подтверждённой истории") || strings.Contains(failedResponse.Body.String(), "PRIVATE") {
+		t.Fatal("failed forecast lost safe public explanation", failedResponse.Code, failedResponse.Body.String())
+	}
 	capture(f, "GET", financialRoot+"/forecasts/"+forecastID, "/api/v1/companies/{company_id}/forecasts/{forecast_id}", "", 200)
 	for _, reason := range []string{"FORBIDDEN", "NOT_FOUND", "DEPENDENCY_UNAVAILABLE", "BALANCE_AS_OF_UNAVAILABLE"} {
 		rpc, httpCode := coreReasonStatus(reason)

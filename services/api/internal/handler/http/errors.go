@@ -32,7 +32,7 @@ func rpcError(w http.ResponseWriter, r *http.Request, err error) {
 		for _, f := range d.GetFieldViolations() {
 			switch f.GetField() {
 			case "email", "password", "display_name", "personal_data_consent", "challenge_id", "code", "token", "new_password":
-				fields = append(fields, fieldError{f.GetField(), code, "Проверьте поле."})
+				fields = append(fields, fieldError{f.GetField(), code, fieldMessage(f.GetField())})
 			}
 		}
 		writeError(w, r, httpStatus, code, fields)
@@ -74,5 +74,5 @@ func writeError(w http.ResponseWriter, r *http.Request, code int, reason string,
 	if fields == nil {
 		fields = []fieldError{}
 	}
-	writeJSON(w, code, errorResponse{errorDetail{reason, "Запрос не выполнен.", fields, r.Header.Get("X-Request-ID")}})
+	writeJSON(w, code, errorResponse{errorDetail{reason, errorMessage(reason), fields, r.Header.Get("X-Request-ID")}})
 }

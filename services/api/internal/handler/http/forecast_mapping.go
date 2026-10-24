@@ -18,10 +18,10 @@ func forecastDTO(f *corev1.Forecast) object {
 		fields := make([]fieldError, 0, len(e.FieldErrors))
 		for _, f := range e.FieldErrors {
 			if f != nil && contains(f.Field, "cutoff_date", "horizon_days", "account_id") {
-				fields = append(fields, fieldError{f.Field, e.Code, "Проверьте поле."})
+				fields = append(fields, fieldError{f.Field, e.Code, fieldMessage(f.Field)})
 			}
 		}
-		result["status"], result["completed_at"], result["error"] = "failed", utc(state.Failed.CompletedAt), errorDetail{e.Code, "Не удалось построить прогноз.", fields, e.RequestId}
+		result["status"], result["completed_at"], result["error"] = "failed", utc(state.Failed.CompletedAt), errorDetail{e.Code, errorMessage(e.Code), fields, e.RequestId}
 	}
 	return result
 }
