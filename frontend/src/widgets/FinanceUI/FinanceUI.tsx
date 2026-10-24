@@ -1,7 +1,10 @@
 "use client";
 
+import Dialog from "@mui/material/Dialog";
+import MenuItem from "@mui/material/MenuItem";
+import MuiSelect, { type SelectProps } from "@mui/material/Select";
 import Link from "next/link";
-import { useEffect, useId, useRef, type ButtonHTMLAttributes, type CSSProperties, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import { Children, isValidElement, useId, type ButtonHTMLAttributes, type CSSProperties, type InputHTMLAttributes, type OptionHTMLAttributes, type ReactElement, type ReactNode, type TextareaHTMLAttributes } from "react";
 
 import AuthButton from "../AuthButton/AuthButton";
 import LoadingText from "../LoadingText/LoadingText";
@@ -53,10 +56,40 @@ const Field = ( { label, hint, ...props }: InputHTMLAttributes<HTMLInputElement>
 };
 
 
-const Select = ( { label, children, hint, ...props }: SelectHTMLAttributes<HTMLSelectElement> & { label: string; hint?: string } ) => {
-    const id = useId();
+const SelectArrow = ( { className }: { className?: string } ) => (
+    <span className={`${className || ""} ${styles.selectArrow}`} aria-hidden="true"><Icon name="chevron-down" /></span>
+);
 
-    return <div className={styles.field}><label htmlFor={id}>{ label }</label><select {...props} id={id} aria-describedby={hint ? `${id}-hint` : undefined}>{ children }</select>{ hint && <small id={`${id}-hint`}>{ hint }</small> }</div>;
+
+const Select = ( { label, children, hint, className, ...props }: Omit<SelectProps<string>, "children" | "label"> & { label: string; hint?: string; children: ReactNode } ) => {
+    const id = useId();
+    const options = Children.toArray(children).filter(( child ): child is ReactElement<OptionHTMLAttributes<HTMLOptionElement>> => isValidElement(child) && child.type === "option");
+
+    return (
+        <div className={styles.field}>
+            <label id={`${id}-label`} htmlFor={id}>{ label }</label>
+            <MuiSelect
+                {...props}
+                id={id}
+                labelId={`${id}-label`}
+                aria-describedby={hint ? `${id}-hint` : undefined}
+                className={`${styles.select} ${className || ""}`}
+                defaultValue={props.defaultValue ?? String(options[0]?.props.value ?? "")}
+                IconComponent={SelectArrow}
+                displayEmpty
+                MenuProps={{
+                    transitionDuration: 300,
+                    slotProps: {
+                        paper: { className: styles.selectMenu },
+                        list: { className: styles.selectList },
+                    },
+                }}
+            >
+                { options.map(( option, index ) => <MenuItem key={option.key ?? index} className={styles.selectOption} value={String(option.props.value ?? "")} disabled={option.props.disabled}>{ option.props.children }</MenuItem>) }
+            </MuiSelect>
+            { hint && <small id={`${id}-hint`}>{ hint }</small> }
+        </div>
+    );
 };
 
 
@@ -68,20 +101,24 @@ const TextArea = ( { label, ...props }: TextareaHTMLAttributes<HTMLTextAreaEleme
 
 
 const Modal = ( { title, children, onClose, busy = false }: IChildren & { title: string; onClose: () => void; busy?: boolean } ) => {
-    const ref = useRef<HTMLDialogElement>(null);
     const id = useId();
 
-
-    useEffect(() => {
-        const dialog = ref.current;
-
-        dialog?.showModal();
-
-        return () => dialog?.close();
-    }, []);
-
-
-    return <dialog ref={ref} className={styles.dialog} aria-labelledby={id} onCancel={( event ) => { event.preventDefault(); if (!busy) { onClose(); } }} onClick={( event ) => { if (event.target === event.currentTarget && !busy) { onClose(); } }}><div className={styles.modalHeading}><h2 id={id}>{ title }</h2><button type="button" className={styles.close} onClick={onClose} disabled={busy} aria-label="Закрыть окно"><Icon name="x" /></button></div>{ children }</dialog>;
+    return (
+        <Dialog
+            open
+            maxWidth={false}
+            aria-labelledby={id}
+            transitionDuration={300}
+            onClose={() => { if (!busy) { onClose(); } }}
+            slotProps={{ paper: { className: styles.dialog }, backdrop: { className: styles.backdrop } }}
+        >
+            <div className={styles.modalHeading}>
+                <h2 id={id}>{ title }</h2>
+                <button type="button" className={styles.close} onClick={onClose} disabled={busy} aria-label="Закрыть окно"><Icon name="x" /></button>
+            </div>
+            { children }
+        </Dialog>
+    );
 };
 
 

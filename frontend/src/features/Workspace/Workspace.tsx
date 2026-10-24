@@ -76,7 +76,7 @@ const Workspace = () => {
 
     return (
         <main className={styles.page}>
-            <PageHeading title="Ваши компании" description="Выберите компанию, чтобы работать с её финансами. Данные разных компаний хранятся отдельно.">
+            <PageHeading title="Мои компании" description="Выберите компанию, чтобы работать с её финансами. Данные разных компаний хранятся отдельно.">
                 <ActionButton icon="plus" onClick={() => setCreating(true)}>Создать компанию</ActionButton>
             </PageHeading>
             <DataState loading={resource.loading} error={resource.error} onRetry={resource.reload}>

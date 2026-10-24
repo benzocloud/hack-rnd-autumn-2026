@@ -73,7 +73,7 @@ const CompanyShell = ( { children }: { children: ReactNode } ) => {
     return (
         <div className={styles.shell}>
             <div className={styles.companyLine}>
-                <Link href="/workspace" className={styles.back}><Icon name="arrow-left" />Все компании</Link>
+                <Link href="/workspace" className={styles.back}><Icon name="arrow-left" />Мои компании</Link>
                 { resource.data && <span>{ resource.data.company.name } · { resource.data.company.membership.role === "owner" ? "Владелец" : "Финансист" }</span> }
             </div>
             <DataState loading={resource.loading && !resource.data} error={resource.error} onRetry={resource.reload}>
