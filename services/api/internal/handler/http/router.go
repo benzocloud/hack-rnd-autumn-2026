@@ -12,10 +12,13 @@ import (
 
 	"google.golang.org/grpc"
 
+	corev1 "github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1"
+
 	authv1 "github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/auth/v1"
 )
 
 type authClient interface {
+	ListMemberships(context.Context, *authv1.ListMembershipsRequest, ...grpc.CallOption) (*authv1.ListMembershipsResponse, error)
 	GetPersonalDataConsent(context.Context, *authv1.GetPersonalDataConsentRequest, ...grpc.CallOption) (*authv1.GetPersonalDataConsentResponse, error)
 	GetSecurityContext(context.Context, *authv1.GetSecurityContextRequest, ...grpc.CallOption) (*authv1.GetSecurityContextResponse, error)
 	GetCurrentAccount(context.Context, *authv1.GetCurrentAccountRequest, ...grpc.CallOption) (*authv1.GetCurrentAccountResponse, error)
@@ -30,13 +33,33 @@ type authClient interface {
 
 type handler struct {
 	auth   authClient
+	core   CoreClients
 	origin string
 	logger *slog.Logger
 	ready  func(context.Context) bool
 }
 
 func New(auth authClient, origin string, logger *slog.Logger, ready func(context.Context) bool) http.Handler {
-	h := &handler{auth, origin, logger, ready}
+	return NewWithCore(auth, origin, logger, ready, CoreClients{})
+}
+
+// CoreClients is the composing application's typed transport boundary.
+type CoreClients struct {
+	Companies interface {
+		ReadCompany(context.Context, *corev1.ReadCompanyRequest, ...grpc.CallOption) (*corev1.ReadCompanyResponse, error)
+	}
+	Ledger interface {
+		GetDefaultAccount(context.Context, *corev1.GetDefaultAccountRequest, ...grpc.CallOption) (*corev1.GetDefaultAccountResponse, error)
+	}
+	Forecasts interface {
+		ListForecasts(context.Context, *corev1.ListForecastsRequest, ...grpc.CallOption) (*corev1.ListForecastsResponse, error)
+		CreateForecast(context.Context, *corev1.CreateForecastRequest, ...grpc.CallOption) (*corev1.CreateForecastResponse, error)
+		GetForecast(context.Context, *corev1.GetForecastRequest, ...grpc.CallOption) (*corev1.GetForecastResponse, error)
+	}
+}
+
+func NewWithCore(auth authClient, origin string, logger *slog.Logger, ready func(context.Context) bool, core CoreClients) http.Handler {
+	h := &handler{auth: auth, core: core, origin: origin, logger: logger, ready: ready}
 	routes := map[string]struct {
 		method string
 		fn     http.HandlerFunc
@@ -67,6 +90,10 @@ func New(auth authClient, origin string, logger *slog.Logger, ready func(context
 				return
 			}
 			writeJSON(rw, 200, map[string]string{"status": "ok"})
+			return
+		}
+		if h.financialRoute(rw, r) {
+			route = "/api/v1/companies/{company_id}"
 			return
 		}
 		endpoint, ok := routes[r.URL.Path]

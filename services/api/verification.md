@@ -1,5 +1,34 @@
 # Проверка Go API HTTP → gRPC
 
+## Текущий финансовый срез — 24.10.2026
+
+Ветка `globalarray/feat/api_financial_flow`, база `01ecfc0`; изменения локальные.
+План и границы: [go-api-hour-flow](../../.agent/plans/go-api-hour-flow.md).
+Последний полный scripts/check.sh завершился с exit 0 на macOS/arm64:
+Go 1.27.3, pinned Go plugins/lint и Python tooling из requirements-dev.txt.
+Auth/Core bindings совпадают с canonical protobuf; build/unit/race/vet/lint/Ruff
+и 3 data-contract tests прошли. Coverage: statements 89.75%, block lines 90.41%.
+Проверены 36 HTTP-ответов по неизменённому OpenAPI: 20 Auth через отдельные
+HTTPS/mTLS процессы, 16 финансовых через HTTP handlers с typed fixtures.
+Дополнительно TestFinancialHTTPThroughCoreMTLS проверяет финансовую HTTP→Core
+границу на настоящей mTLS-сети: scope/WriteContext/key, accepted/poll/success,
+повтор GET и недоступный Core. Это synthetic Core server, не production E2E.
+govulncheck: No vulnerabilities found; go mod verify: all modules verified.
+
+Локальные последовательные Caveman/Ponytail review завершены. Исправлен приём
+финансовых путей вне /api/v1/; regression tests запрещают вызов upstream.
+Настоящие Auth/Core jobs/ML, durable persistence и browser E2E этой проверкой
+не подтверждены. Commit/push/merge/deployment не выполнялись.
+
+Дополнение к текущему срезу: после исправления двух Caveman P2 (insufficient
+succeeded и несогласованные метрики) полный scripts/check.sh повторно завершился
+с exit 0. Непротиворечивые ready/limited и честный failed принимаются;
+противоречивые first_gap/minimum/closing/max_shortfall и MinInt64 отвергаются
+без исправления финансовых данных Core. Coverage: statements 89.79%,
+executable block lines 90.45%; lint 0 issues, race/mTLS/OpenAPI — PASS.
+
+## Исторический отчёт Auth API из исходной поставки
+
 Дата: 24.10.2026. Ветка: `prosteyshiyyy/goapi`.
 Проверены изменения поверх `038416f`; после синхронизации с main `31e7913`
 в merge `b00a828` API generation/build/tests повторно прошли. Все D1–D8 проверены

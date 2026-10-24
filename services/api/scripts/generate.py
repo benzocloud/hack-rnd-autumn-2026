@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate/check API-local bindings from canonical Auth protobuf, without touching other modules."""
+"""Generate/check API-local bindings from canonical Auth/Core protobuf, without touching other modules."""
 
 import argparse
 import re
@@ -15,7 +15,15 @@ def normalize(text):
 def generate(check):
     root = Path(__file__).resolve().parents[3]
     target = root / "services/api/internal/gen"
-    mapping = "Mauth/v1/auth.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/auth/v1"
+    sources = [
+        Path("proto/auth/v1/auth.proto"),
+        *sorted(Path(root / "proto/core/v1").glob("*.proto")),
+    ]
+    sources = [p.relative_to(root) if p.is_absolute() else p for p in sources]
+    mappings = [
+        f"M{p.relative_to('proto')}=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/{p.relative_to('proto').parent}"
+        for p in sources
+    ]
     with tempfile.TemporaryDirectory(prefix="saldo-api-proto-") as temporary:
         subprocess.run(
             [
@@ -24,11 +32,11 @@ def generate(check):
                 "proto",
                 f"--go_out={temporary}",
                 "--go_opt=paths=source_relative",
-                f"--go_opt={mapping}",
+                *[f"--go_opt={mapping}" for mapping in mappings],
                 f"--go-grpc_out={temporary}",
                 "--go-grpc_opt=paths=source_relative",
-                f"--go-grpc_opt={mapping}",
-                "proto/auth/v1/auth.proto",
+                *[f"--go-grpc_opt={mapping}" for mapping in mappings],
+                *map(str, sources),
             ],
             cwd=root,
             check=True,
@@ -44,7 +52,11 @@ def generate(check):
             else:
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 destination.write_bytes(generated.read_bytes())
-    print("Auth bindings match canonical protobuf" if check else "API Auth bindings generated")
+    print(
+        "Auth/Core bindings match canonical protobuf"
+        if check
+        else "API Auth/Core bindings generated"
+    )
 
 
 if __name__ == "__main__":

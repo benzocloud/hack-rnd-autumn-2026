@@ -49,3 +49,32 @@ func TestFromEnv(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestOptionalCoreConfiguration(t *testing.T) {
+	env := base()
+	env["API_CORE_ADDRESS"] = "127.0.0.1:8083"
+	cfg, err := FromEnv(func(k string) string { return env[k] })
+	if err != nil || cfg.CoreCA != cfg.CA || cfg.CoreCert != cfg.Cert || cfg.CoreKey != cfg.Key {
+		t.Fatal(cfg, err)
+	}
+	env["API_CORE_CA"], env["API_CORE_CERT"], env["API_CORE_KEY"], env["API_CORE_SERVER_NAME"] = "core-ca", "core-cert", "core-key", "saldo-core"
+	cfg, err = FromEnv(func(k string) string { return env[k] })
+	if err != nil || cfg.CoreCA != "core-ca" || cfg.CoreServerName != "saldo-core" {
+		t.Fatal(cfg, err)
+	}
+	for _, address := range []string{"invalid", ":8000", "127.0.0.1:0", "127.0.0.1:65536", "127.0.0.1:no"} {
+		env["API_CORE_ADDRESS"] = address
+		if _, err := FromEnv(func(k string) string { return env[k] }); err == nil {
+			t.Fatal(address)
+		}
+	}
+	delete(env, "API_CORE_ADDRESS")
+	if _, err := FromEnv(func(k string) string { return env[k] }); err == nil {
+		t.Fatal("orphan Core TLS accepted")
+	}
+	cfg.CoreAddress = "127.0.0.1:8083"
+	cfg.CoreCA = ""
+	if cfg.Validate() == nil {
+		t.Fatal("missing direct Core TLS")
+	}
+}

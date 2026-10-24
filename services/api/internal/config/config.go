@@ -11,6 +11,7 @@ import (
 
 type Config struct {
 	Address, Origin, AuthAddress, CA, Cert, Key, HTTPCert, HTTPKey string
+	CoreAddress, CoreServerName, CoreCA, CoreCert, CoreKey         string
 	RPCDeadline, SlowDeadline, ShutdownTimeout                     time.Duration
 }
 
@@ -18,6 +19,8 @@ func Load() (Config, error) { return FromEnv(os.Getenv) }
 
 func FromEnv(get func(string) string) (Config, error) {
 	c := Config{
+		CoreAddress: get("API_CORE_ADDRESS"), CoreServerName: get("API_CORE_SERVER_NAME"),
+		CoreCA: get("API_CORE_CA"), CoreCert: get("API_CORE_CERT"), CoreKey: get("API_CORE_KEY"),
 		Address: get("API_ADDRESS"), Origin: get("API_ORIGIN"), AuthAddress: get("API_AUTH_ADDRESS"),
 		CA: get("API_AUTH_CA"), Cert: get("API_AUTH_CERT"), Key: get("API_AUTH_KEY"),
 		HTTPCert: get("API_HTTP_CERT"), HTTPKey: get("API_HTTP_KEY"),
@@ -35,6 +38,17 @@ func FromEnv(get func(string) string) (Config, error) {
 			*target = d
 		}
 	}
+	if c.CoreAddress != "" {
+		if c.CoreCA == "" {
+			c.CoreCA = c.CA
+		}
+		if c.CoreCert == "" {
+			c.CoreCert = c.Cert
+		}
+		if c.CoreKey == "" {
+			c.CoreKey = c.Key
+		}
+	}
 	return c, c.Validate()
 }
 
@@ -42,6 +56,15 @@ func (c Config) Validate() error {
 	u, err := url.Parse(c.Origin)
 	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" || u.Opaque != "" {
 		return errors.New("API_ORIGIN must be an exact HTTPS origin")
+	}
+	if c.CoreAddress != "" {
+		host, port, err := net.SplitHostPort(c.CoreAddress)
+		n, numberErr := strconv.Atoi(port)
+		if err != nil || numberErr != nil || host == "" || n < 1 || n > 65535 || c.CoreCA == "" || c.CoreCert == "" || c.CoreKey == "" {
+			return errors.New("invalid Core address or mTLS configuration")
+		}
+	} else if c.CoreServerName != "" || c.CoreCA != "" || c.CoreCert != "" || c.CoreKey != "" {
+		return errors.New("core TLS configuration requires API_CORE_ADDRESS")
 	}
 	for _, address := range []string{c.Address, c.AuthAddress} {
 		host, port, splitErr := net.SplitHostPort(address)
