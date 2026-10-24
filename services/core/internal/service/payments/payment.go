@@ -12,7 +12,8 @@ import (
 )
 
 type CreateCommand struct {
-	Record              domain.PaymentData
+	Record domain.PaymentData
+	// Zero means no account CAS for manual creates; account locking still applies.
 	ExpectedDataVersion int64
 	ActorID             string
 	IdempotencyKey      string
@@ -79,7 +80,7 @@ func validateCreatePayment(cmd CreateCommand) error {
 	if err := validateActorAndKey(cmd.ActorID, cmd.IdempotencyKey, cmd.Record.Source.Kind == ledger.Manual); err != nil {
 		return err
 	}
-	if cmd.ExpectedDataVersion < 1 {
+	if cmd.ExpectedDataVersion < 0 || (cmd.ExpectedDataVersion == 0 && cmd.Record.Source.Kind != ledger.Manual) {
 		return ErrInvalid
 	}
 	return nil
@@ -102,7 +103,7 @@ func createPayment(ctx context.Context, store paymentStore, cmd CreateCommand, r
 			return CreatePaymentResult{PaymentID: stored.Data().ID, PaymentVersion: stored.Version(), DataVersion: revision}, nil
 		}
 	}
-	if account.DataVersion() != cmd.ExpectedDataVersion {
+	if cmd.ExpectedDataVersion > 0 && account.DataVersion() != cmd.ExpectedDataVersion {
 		return CreatePaymentResult{}, ErrStaleVersion
 	}
 	if record.Data().Source.Kind == ledger.Imported {
