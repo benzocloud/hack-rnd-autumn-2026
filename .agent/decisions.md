@@ -47,6 +47,8 @@
   already identifies feature-local application DTOs. The original acceptance
   and stage gates remain unchanged; this is not an approval of a new stage.
 
+- **ADR-028 (Accepted by owner for isolated demo, 2026-10-24):** Prioritize integration of existing frontend/API/Core/Auth/ML for the owner's deadline, 2026-10-25 12:00 Europe/Moscow. Temporarily allow mocked email confirmation accepting any six ASCII digits in an explicitly enabled isolated Auth demo profile with test accounts; ordinary/default mode retains strict verification. This is email confirmation, not a new MFA requirement. Preserve challenge/user binding, expiry, password checks, server sessions, CSRF and company authorization. A browser cannot enable the profile. Label the mock and keep financial requests real; a global frontend mock does not prove integration. Real email delivery/strict-code integration is deferred from this demo's critical path, not removed from the target contract. This is a scoped exception to ADR-027 for demo only; runtime implementation/configuration are not yet verified. See [delivery plan](plans/demo-integration.md).
+
 ## Pending verification (not accepted implementation facts)
 - Encrypted off-host GBrain backup retention and connection of the existing review runner remain open; dedicated-host runtime, HTTPS authentication, persistence/restore and server-enforced reviewer write denial passed on 2026-10-23 (see `.agent/infra/gbrain/README.md`).
 - Full Go/gopls and GBrain/PR compatibility of pinned review skills; trusted fixture invocation succeeded separately from end-to-end review.
