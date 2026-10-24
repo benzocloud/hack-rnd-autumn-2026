@@ -94,7 +94,11 @@ PR #17 и связанный PR #16 не имели comments/reviews/inline repl
   [OpenAPI](../../docs/api/openapi.yaml), [пояснения REST](../../docs/api/README.md).
   Публикация REST не заменяет принятие Auth-политик этапа 3.1.
 - Детализация основания Core в `.agent/plans/go-core-foundation.md` ведётся
-  отдельно и на момент публикации Auth-плана остаётся локальной работой.
+  отдельно; при исходной публикации Auth-плана это была локальная работа.
+  На 24.10.2026 Core опубликован отдельным
+  [PR #23](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/23) и включается
+  в общую поставку. Реализованы домен/storage и четыре финансовых use case,
+  но не transport, company bootstrap/read/update RPC или Auth access adapter.
   Необходимые результаты Core для Auth перечислены в 3.5 этого плана явно;
   их готовность подтверждается с разработчиком Core, а не наличием файла плана.
 - [Референсы](../references/go-services.md), [ADR](../decisions.md)
