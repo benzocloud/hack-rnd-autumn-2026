@@ -7,4 +7,3 @@ const appLinks = {
 
 
 export default appLinks;
-

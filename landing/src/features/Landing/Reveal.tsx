@@ -28,4 +28,3 @@ const Reveal = () => {
 
 
 export default Reveal;
-

@@ -32,4 +32,3 @@ const makeDemoForecast = ( period: number, scenario: DemoScenario = "base" ): IF
 
 
 export { makeDemoForecast, demoDate };
-

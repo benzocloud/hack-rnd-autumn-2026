@@ -37,4 +37,3 @@ const ForecastDemo = () => {
 
 
 export default ForecastDemo;
-

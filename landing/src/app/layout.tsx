@@ -32,4 +32,3 @@ const RootLayout = ( { children }: { children: ReactNode } ) => (
 
 export { metadata };
 export default RootLayout;
-

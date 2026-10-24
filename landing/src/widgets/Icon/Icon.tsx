@@ -9,4 +9,3 @@ const Icon = ( { name, size = 20 }: { name: string; size?: number } ) => (
 
 
 export default Icon;
-

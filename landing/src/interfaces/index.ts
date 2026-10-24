@@ -7,4 +7,3 @@ type DemoScenario = "base" | "delay" | "sales" | "expense" | "recurring";
 
 
 export type { IForecastPoint, DemoScenario };
-
