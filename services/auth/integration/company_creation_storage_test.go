@@ -278,3 +278,29 @@ func TestCompanyCreationOwnerConflictsPreserveRoles(t *testing.T) {
 		t.Fatal(member, err)
 	}
 }
+
+func TestCompanyCreationRecoveryScheduleUsesDatabaseClock(t *testing.T) {
+	cfg, db := scratch(t)
+	if err := app.Migrate(t.Context(), cfg); err != nil {
+		t.Fatal(err)
+	}
+	pool := openDatabase(t, cfg)
+	store := creationrepo.NewRepository(pool, cfg.QueryTimeout)
+	command := creationCommand(t)
+	command.CreatedAt = time.Now().UTC().Add(2 * time.Minute).Truncate(time.Microsecond)
+	if err := store.InsertCreation(t.Context(), command); err != nil {
+		t.Fatal(err)
+	}
+	token := uuid.New()
+	claimed, err := store.ClaimCreation(t.Context(), token)
+	if err != nil || claimed.ID != command.ID || claimed.LeaseToken != token {
+		t.Fatal("app clock delayed accepted command", claimed, err)
+	}
+	// Even with the same token, the DB rejects expiry; no app-clock check is needed.
+	if _, err := db.Exec(t.Context(), "UPDATE company_creation_commands SET lease_expires_at=clock_timestamp()-interval '1 second' WHERE id=$1", command.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.CompleteCreation(t.Context(), command.ID, uuid.Must(uuid.NewV7()), time.Now().UTC(), token); !errors.Is(err, domain.ErrLeaseLost) {
+		t.Fatal("expired DB lease accepted", err)
+	}
+}

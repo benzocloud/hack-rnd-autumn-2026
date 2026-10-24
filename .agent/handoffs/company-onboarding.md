@@ -17,7 +17,7 @@ Scope/invariants/checklist: [plan](../plans/company-onboarding.md). Issue не �
 Исходный checkout `prosteyshiyyy/goapi` не изменялся; отдельный worktree.
 Начальная база `fdee0ed`; main обновляется обычным merge перед каждым push.
 Последний включённый main `0f0ff73`, опубликованный head до A2 slice:
-`7f62b72a8ea802e679fcbdc1e45c7d75529bd443` (remote API ref проверен).
+`382fed69d3fe5885f62f3982a02568b73a65fbbd` (RPC/client remote API ref проверен).
 
 ## Состояние A0–A5
 
@@ -25,13 +25,14 @@ Scope/invariants/checklist: [plan](../plans/company-onboarding.md). Issue не �
 | --- | --- | --- | --- | --- |
 | A0 | На ревью владельца | Docs links/diff/fences, draft/remote SHA | Caveman/Ponytail без дефектов | Docs-only, runtime не требовался |
 | A1 | На ревью владельца | Полный Auth unit/real PG integration/race/shuffle/vet/build/lint | Два independent reviews `9463e40`, дефектов нет | Auth/Core gates `7f62b72` SUCCESS |
-| A2 | В работе: RPC/client slice, worker далее | Полный Auth gate, настоящие TLS tests, Buf/drift прошли | Два reviews текущего RPC/client diff, дефектов нет | Нового A2 SHA ещё нет; не переносить старый green |
+| A2 | На ревью владельца: recovery готов к push | Полный Auth gate, real PG recovery/race, TLS/Buf/drift | Два reviews RPC/client и recovery; clock-skew fix проверен | Новый recovery SHA требует CI |
 | A3 | Не начат | Нет POST /companies/E2E proof | Pending | Pending |
 | A4 | Не начат | PR40/43 из main сохранены; onboarding UI ещё не проверен | Pending | Pending |
 | A5 | Не начат | Нет полного register→owner→account→reload browser E2E | Pending | Pending |
 
-HTTP create пока отсутствует. Durable worker ещё отсутствует: сами storage leases
-не восстанавливают PREPARED после restart. Продукт/импорт/ML/MVP готовыми не объявлять.
+HTTP create пока отсутствует. Durable worker теперь реализован; Core в service
+integration ещё boundary fixture, полный Core/API/browser E2E остаётся A3/A5.
+Продукт/импорт/ML/MVP готовыми не объявлять.
 
 ## Что реализовано и чем подтверждено
 
@@ -85,7 +86,8 @@ exact generated drift, shell syntax, Python provision template compile и
 Ruff0.17.1 check/format для изменённого deploy template.
 Два read-only Caveman/Ponytail reviews RPC/client diff поверх7f62b72 — доказанных
 дефектов нет. Применены pinned Go grpc/security/context/testing/error skills.
-Recovery, real Core→PostgreSQL chain и полный browser E2E ещё pending.
+RPC/client опубликованы в `382fed6`; recovery завершён следующим diff ниже.
+Real Core→PostgreSQL chain и полный browser E2E ещё pending.
 
 ## Remote CI и предыдущий контекст
 
@@ -183,13 +185,52 @@ provision.py отказывается перезаписывать сущест�
 
 ## Следующие действия
 
-1. Опубликовать текущий проверенный RPC/client slice в тот же draft, проверить
-   remote SHA и новые CI failures; сохранить точный SHA в PR update после push.
-2. A2 recovery: ReconcileOne/worker receipt-first→bootstrap→receipt→общий finalizer;
-   без cookie, leases/fencing/backoff/shutdown, expired/reset session persistence,
-   disabled/deleted/quarantined guards. Отдельный checkpoint после проверки.
-3. A3 real POST/typed mapping/conformance/HTTPS→mTLS→PG; затем A4 current Workspace
-   retry/context/redirect без неподдержанных P1 dependencies и A5 real browser/E2E.
+1. Опубликовать recovery checkpoint после включения свежего main, проверить
+   remote SHA и CI; A2 оставить на ревью владельца без ожидания промежуточного ответа.
+2. A3: services/api/internal/handler/http/financial.go/router.go и feature-local
+   companies handler: Begin→Core bootstrap→Complete→Read→201, safe typed errors
+   и 503 timeout, conformance/full API check и реальный HTTPS/mTLS/PG сценарий.
+3. A4 current Workspace/useRequest/CompanySettings context/retry/redirect;
+   financial mocks off, затем A5 failures/restart/double-click/browser/reviews/CI.
 
 Known blockers продукта не подтверждены; remaining work выше не выполнен.
 Не создавать heartbeat/resume jobs; при явном takeover прекратить изменения/push.
+
+
+## A2 recovery checkpoint — проверенный diff поверх382fed6
+
+ReconcileOne берёт одну PREPARED-команду через DB-time 60s lease, commit claim,
+preflight user→command locks, затем вне Tx читает receipt; при отсутствии вызывает
+идемпотентный bootstrap и повторно читает receipt. Общий finalizer выполняет тот
+же атомарный owner/COMPLETED или quarantine. Cookie не нужна. Истечение/отзыв
+сессии и credential reset не отменяют принятую команду; disabled/deleted user
+карантинится до Core. При cancel остаётся durable lease для restart/reclaim.
+
+App владеет одним worker, ограничивает проход10s, poll1s, transient backoff1–60s;
+per-command backoff также1–60s. Root cancellation останавливает и join worker
+до RPC/client/DB Close; временный Core outage не останавливает Auth login.
+Lease token/presence проверяются в service, expiry — только SQL clock_timestamp
+CAS; неуспешный Complete откатывает InsertOwner той же Tx.
+
+В двух независимых Caveman/Ponytail reviews найден и исправлен MAJOR clock-skew:
+при Auth clock>=DB+60s свежая lease ошибочно считалась потерянной. Локальные expiry
+проверки удалены; initial next_attempt_at теперь DB clock_timestamp. Никаких
+published migrations задним числом не менялось (только repository INSERT).
+Новый unit regression при Auth clock+2min проходит; negative Go overlay со старым
+условием ожидаемо падает с PREPARED/no owner. Real PG regression доказывает
+немедленный claim при future CreatedAt и отказ same-token после DB lease expiry.
+Открытых доказанных замечаний после повторного review не осталось.
+
+На финальном recovery/clock-fix diff поверх382fed6 прошли exit0:
+full Auth unit/race/shuffle, full realPG integration/race/shuffle, vet/build,
+fmt/import/full-module lint0issues. Новые tests проверяют lost bootstrap reply,
+fresh service/pool restart, две replicas, expired/reset browser session при
+действующем recovery, disabled/deleted initiator, отсутствие membership при stale
+worker, re-read после bootstrap, cancellation и bounded lifecycle/backoff.
+Реальный Core receipt runtime всё ещё A3/A5 gate: здесь fixture Core boundary.
+
+Последний прочитанный CI382fed6: Auth lint/tests/build и Core contracts/lint/tests
+SUCCESS; Core build ещё IN_PROGRESS. Stack verify и image(api/auth/core/ml/
+frontend-real) SUCCESS, deploy SKIPPED. Эти image checks не означают deployment.
+Источники: Auth40137448722, Core40137448706, stack40137448719. Recovery diff ещё
+не покрыт этим старым CI и требует нового чтения после push.

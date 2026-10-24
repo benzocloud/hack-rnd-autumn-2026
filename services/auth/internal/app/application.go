@@ -20,6 +20,7 @@ import (
 )
 
 type accountOperations interface {
+	ReconcileOne(context.Context) (bool, error)
 	BeginCompanyCreation(context.Context, account.BeginCompanyCreationInput) (account.CreationCommand, error)
 	AuthorizeCompanyBootstrap(context.Context, account.AuthorizeCompanyBootstrapInput) (account.CreationCommand, error)
 	CompleteCompanyCreation(context.Context, account.CompleteCompanyCreationInput) (account.CreationCommand, error)

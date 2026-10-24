@@ -25,6 +25,7 @@ import (
 )
 
 type creationOperations interface {
+	ReconcileOne(context.Context) (bool, error)
 	BeginCompanyCreation(context.Context, account.BeginCompanyCreationInput) (account.CreationCommand, error)
 	CompleteCompanyCreation(context.Context, account.CompleteCompanyCreationInput) (account.CreationCommand, error)
 	AuthorizeCompanyBootstrap(context.Context, account.AuthorizeCompanyBootstrapInput) (account.CreationCommand, error)
@@ -32,13 +33,17 @@ type creationOperations interface {
 
 // This is a boundary fixture for A1. Real mTLS Core receipts are an A2/A5 gate.
 type creationCoreFixture struct {
-	read func(context.Context, uuid.UUID) (account.CreationReceipt, error)
+	read      func(context.Context, uuid.UUID) (account.CreationReceipt, error)
+	bootstrap func(context.Context, account.CreationCommand) error
 }
 
 func (c creationCoreFixture) GetCreationResult(ctx context.Context, id uuid.UUID) (account.CreationReceipt, error) {
 	return c.read(ctx, id)
 }
-func (c creationCoreFixture) BootstrapCompany(context.Context, account.CreationCommand) error {
+func (c creationCoreFixture) BootstrapCompany(ctx context.Context, command account.CreationCommand) error {
+	if c.bootstrap != nil {
+		return c.bootstrap(ctx, command)
+	}
 	return account.ErrUnavailable
 }
 

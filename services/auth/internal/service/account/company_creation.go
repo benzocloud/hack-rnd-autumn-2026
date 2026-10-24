@@ -244,7 +244,9 @@ func (s *service) finalizeCreation(ctx context.Context, snapshot domain.CompanyC
 		if command.State != domain.CreationPrepared {
 			return ErrUnavailable
 		}
-		if lease != uuid.Nil && (command.LeaseToken != lease || command.LeaseExpiresAt == nil || !s.now().Before(*command.LeaseExpiresAt)) {
+		// PostgreSQL owns lease expiry. The following SQL CAS also rolls back
+		// InsertOwner if this token expired while its RPC was in flight.
+		if lease != uuid.Nil && (command.LeaseToken != lease || command.LeaseExpiresAt == nil) {
 			return domain.ErrLeaseLost
 		}
 		if !s.creationInitiatorEnabled(user) || !matchingCreationReceipt(command, receipt) {

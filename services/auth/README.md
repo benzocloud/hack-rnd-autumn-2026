@@ -209,8 +209,16 @@ rollback owner/completion, leases/fencing и protected register/verify/login п�
 ошибке optional Core client. Test Core boundary fixtures не подтверждают полный
 runtime Auth→Core E2E; отдельные TLS tests доказывают CA/hostname/URI peer checks.
 
-Durable worker/lifecycle, HTTP POST /companies и Workspace path ещё в работе;
-receipt storage сам по себе не восстанавливает PREPARED после restart.
+При настроенном Core client приложение запускает один bounded recovery worker.
+Он восстанавливает PREPARED без cookie: receipt read → при отсутствии
+идемпотентный bootstrap → повторный receipt read → общий finalizer. PostgreSQL
+выдаёт/проверяет 60s lease и fencing token; expired/reset session не отменяет
+команду, disabled/deleted user карантинится до Core. Retries/backoff1s–60s,
+каждый проход ограничен10s; отменённая работа остаётся durable за lease. При
+shutdown приложение cancel/join worker до закрытия RPC/client/DB. SQL CAS,
+а не локальные часы Auth, определяет истечение lease.
+
+HTTP POST /companies и Workspace onboarding path ещё в работе.
 Точный актуальный checkpoint, выполненные gates и продолжение:
 [handoff](../../.agent/handoffs/company-onboarding.md),
 [draft PR #41](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/41).

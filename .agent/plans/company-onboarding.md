@@ -95,7 +95,7 @@ invitations, reset/email delivery, новые роли и полный redesign 
 | --- | --- | --- |
 | A0 | На ревью владельца | Удалённые plan/handoff и один проверенный draft PR |
 | A1 | На ревью владельца | Durable Auth command/repository и atomic owner finalization |
-| A2 | В работе | RPC, Core client и recovery после restart |
+| A2 | На ревью владельца | RPC, Core client и recovery после restart |
 | A3 | Не начат | Настоящий POST /companies, HTTPS/mTLS conformance |
 | A4 | Не начат | Workspace без блокирующей зависимости от invitations |
 | A5 | Не начат | Реальный полный сценарий, два ревью, CI, итоговый handoff |
@@ -143,12 +143,12 @@ canonical generated Core bindings только через generator; Core тол
 - [x] Begin/Authorize/Complete и точные mTLS peer checks, typed errors (RPC/client slice).
 - [x] Core client с app-owned connection/deadlines/Close и receipt validation.
 - [x] Общий finalizer; сеть вне locks/Tx, перепроверка после сети.
-- [ ] Durable worker: receipt-first, bootstrap fallback, lease/fencing,
+- [x] Durable worker: receipt-first, bootstrap fallback, lease/fencing,
   bounded backoff/retries/shutdown, quarantine, без cookie и произвольного TTL.
-- [ ] Missing/mismatched receipt, lost reply, restart в каждом переходе,
+- [x] Missing/mismatched receipt, lost reply, restart/rollback переходов,
   две реплики, disabled/deleted user, expired/reset session, quarantined command,
   unavailable dependencies и сохранённый login/verify.
-- [ ] Отдельные RPC/client и recovery checkpoints; два read-only review.
+- [x] RPC/client checkpoint `382fed6`; recovery готов к отдельному push. Два read-only reviews обоих slices завершены, clock-skew defect исправлен и проверен.
 
 Критерий: восстановление принятой PREPARED без браузера выдаёт ровно одну
 membership, небезопасный receipt/инициатор не выдаёт доступ.
