@@ -32,14 +32,15 @@ Remote checkpoint SHA следует проверять через ls-remote; SH
 | Этап | Статус | Tests | Review | CI |
 | --- | --- | --- | --- | --- |
 | A0 | На ревью владельца | Docs diff/links/stage markers/fences и staged diff --check прошли | Caveman/Ponytail A0: подтверждённых замечаний нет | Checks пусты для docs SHA `6bd70b2` |
-| A1 | Не начат | Не запускались | Pending | Не запускался |
+| A1 | В работе: repository slice | Auth unit/race + real PG integration/race/vet/build/lint прошли | Caveman/Ponytail: исправлен один CHECK blocker, других доказанных дефектов нет | Awaiting checkpoint CI |
 | A2 | Не начат | Не запускались | Pending | Не запускался |
 | A3 | Не начат | Не запускались | Pending | Не запускался |
 | A4 | Не начат | Не запускались | Pending | Не запускался |
 | A5 | Не начат | Не запускались | Pending | Не запускался |
 
-Есть только docs plan/handoff. Код, миграции, PKI/test topology и финансовые
-fixtures не менялись. Runtime suite для docs-only slice не запускался.
+A0 docs опубликованы. В текущем A1 diff — durable storage/domain/migration и
+regressions; app/RPC/finalizer/reconciler не подключены, HTTP create ещё отсутствует.
+Финансовых fixtures нет. Runtime suite docs-only A0 не требовался; A1 проверен ниже.
 
 Проверено на `fdee0ed` + docs diff:
 
@@ -135,13 +136,65 @@ PKI/local topology и config env для нового Auth→Core client пока
 
 ## Следующие действия
 
-1. A0 gate выполнен; продолжать в PR #41. Исторические descriptions/comments
-   PR #16/#31 прочитаны; единственный повтор после network timeout — inline #31.
-2. Подготовить pinned tools/отдельные test DB; runtime/product defects пока нет.
-3. A1: сопоставить account.checkContext/user locks и app-owned Tx с новым
-   feature-local command store; общие fingerprint fixtures и additive migration,
-   targeted real PostgreSQL concurrency/replay tests, ранний repository checkpoint.
+1. Продолжать A1 в PR #41 после repository checkpoint. Auth account.Work/app.New
+   должны связать новый command store и owner insert с существующим checkContext.
+2. Реализовать Begin/replay под user→session→command locks, затем общий finalizer
+   с receipt verification и user→command lock; никаких locks/Tx во время RPC.
+3. Проверить service-path concurrency/disabled/deleted/expired/revoked и перейти
+   к A2 RPC/client/recovery checkpoints по плану; не дублировать Core bootstrap.
 
 Продолжать все A0–A5 по поручению, не запрашивать промежуточное разрешение на
 согласованную работу. При недоступном первом gate сохранить честный checkpoint
 и сообщить blocker, не объявлять задачу завершённой.
+
+## A1 — repository checkpoint (2026-10-24)
+
+Проверенный снимок: `0bde7e61b7b5c0fda152875e55da624898518b7e` + A1 storage diff.
+Новая additive миграция `00003_company_creation.sql`; schema version 3, старые
+миграции не изменены. Команда UUIDv4, company UUIDv7, scoped key, normalized spec/
+fingerprint, PREPARED/COMPLETED/QUARANTINED, account/commit result и DB-time
+lease/backoff metadata. Нет каскадного удаления команды при удалении initiator.
+Новый command repository принимает DB/Tx, SQL/embed/record приватны; InsertOwner
+не повышает financier и не заменяет другого owner. Общие Auth/Core fixtures —
+`testdata/company-bootstrap-fingerprint-v1.json`, оба CI реагируют на их изменения.
+
+Пройдено (в cwd services/auth, GOTOOLCHAIN=go1.27.3):
+
+- `go test -race -shuffle=on -count=1 -timeout=90s ./...`.
+- `go test -race -tags=integration -shuffle=on -count=1 -timeout=90s ./...`:
+  настоящая marked PostgreSQL18.6, все integration прошли, не skipped.
+- `go vet -tags=integration ./...`, `go build ./...`.
+- `golangci-lint fmt ./...`, `golangci-lint run ./...`: 0 issues.
+- Дополнительный focused `./integration -run '^TestCompanyCreation'` с race/shuffle
+  проверяет owner uniqueness/role preservation после дополнения regression.
+- Cwd services/core: полный `golangci-lint fmt --diff ./...`, полный
+  `golangci-lint run ./...` (0 issues), `go test -race ./internal/domain/company`.
+  Полный Core runtime/PG gate — на A2/final, Core runtime здесь не менялся.
+
+Два независимых read-only reviewers (pinned caveman/ponytail + golang-how-to,
+database/error-handling/security/testing) нашли один blocker: nullable account_id
+CHECK запрещал PREPARED INSERT. Исправлен до публикации, реальные integration
+повторно прошли; других подтверждённых замечаний repository slice не осталось.
+Это не приёмка A1 целиком: production service finalizer ещё отсутствует.
+
+Воспроизведение isolated DB из корня repo (без production/чужих контейнеров):
+
+```sh
+docker run --rm --name saldo-onboarding-test-pg -e POSTGRES_USER=auth_test -e POSTGRES_DB=auth_test -e POSTGRES_HOST_AUTH_METHOD=trust -p 127.0.0.1::5432 -d postgres:18.6@sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6
+docker port saldo-onboarding-test-pg 5432
+docker exec saldo-onboarding-test-pg psql -U auth_test -d auth_test -c "ALTER DATABASE auth_test SET saldo.test_database = 'saldo-auth-integration';"
+```
+
+Задать AUTH_TEST_DATABASE_URL на loopback port из docker port, user auth_test,
+database auth_test, sslmode=disable (это disposable trust fixture, не credentials
+живой БД). Helper создаёт/удаляет только собственные random auth_test_* schemas.
+Проверено 2→3→2→3 и повторный up с сохранением существующего user; rollback
+schema 3 удаляет command table, использовать только в isolated test DB.
+Удаление своего fixture после проверок: `docker stop saldo-onboarding-test-pg`;
+`--rm` убирает только этот container, persistent volumes не создавались.
+
+Tooling воспроизводится без изменения go.mod:
+`GOTOOLCHAIN=go1.27.3 GOBIN=/tmp/saldo-onboarding-tools go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0`.
+Добавить этот каталог в PATH либо вызвать установленный binary по пути.
+Текущий worker/PKI/client config не создан; runtime CI надо читать после push,
+исторические green checks не доказательство нового SHA.

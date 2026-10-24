@@ -94,7 +94,7 @@ invitations, reset/email delivery, новые роли и полный redesign 
 | Этап | Статус | Проверяемый результат |
 | --- | --- | --- |
 | A0 | На ревью владельца | Удалённые plan/handoff и один проверенный draft PR |
-| A1 | Не начат | Durable Auth command/repository и atomic owner finalization |
+| A1 | В работе | Durable Auth command/repository и atomic owner finalization |
 | A2 | Не начат | RPC, Core client и recovery после restart |
 | A3 | Не начат | Настоящий POST /companies, HTTPS/mTLS conformance |
 | A4 | Не начат | Workspace без блокирующей зависимости от invitations |
@@ -124,12 +124,13 @@ repository SQL/embed/record, membership/user locks, общие fingerprint fixtu
 Ориентир: принятый cosmohack sqlx layout из Go references; исходники референсов
 не копировать, наличие локального checkout перед адаптацией проверить отдельно.
 
-- [ ] Реализовать validation/spec/fingerprint и persistent scoped idempotency;
+- [x] Реализовать validation/spec/fingerprint и persistent scoped idempotency;
   states PREPARED/COMPLETED/QUARANTINED, constraints/indexes/locks.
 - [ ] Atomic membership + completion; concurrency/replay и rollback без утечки result.
-- [ ] Проверить additive migration на отдельной marked Auth test DB;
+- [x] Проверить additive migration на отдельной marked Auth test DB;
   совместимость/up/repeated-up/rollback по действующим правилам, старые SQL не менять.
-- [ ] Unit/real PostgreSQL/race, два read-only review; отдельный repository checkpoint.
+- [x] Unit/real PostgreSQL/race, два read-only review repository slice.
+- [ ] Публикация repository checkpoint и подключение service/finalizer для завершения A1.
 
 Критерий: одинаковый ключ даёт одну команду/company, конфликт без новой записи;
 финализация атомарна и безопасна при конкуренции/disabled initiator.
