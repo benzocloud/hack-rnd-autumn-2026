@@ -1,0 +1,496 @@
+@use "../../app/global" as global;
+
+@font-face {
+    font-family: "Saldo Footer Inter";
+    font-style: normal;
+    font-weight: 300;
+    font-display: swap;
+    src: url("/fonts/inter/Inter-Light.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Saldo Footer Inter";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("/fonts/inter/Inter-Regular.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Saldo Footer Inter";
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url("/fonts/inter/Inter-Medium.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Saldo Footer Inter";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("/fonts/inter/Inter-Bold.woff2") format("woff2");
+}
+
+.footer {
+    width: 100%;
+    margin-top: auto;
+    padding: 64px 0 52px;
+    background-color: global.$footer-background;
+    color: global.$text;
+    font-family: global.$font-family-footer;
+    font-size: 16px;
+    line-height: 1;
+
+    a,
+    button {
+        cursor: pointer;
+
+        &:focus-visible {
+            outline: 2px solid global.$footer-accent;
+            outline-offset: 5px;
+        }
+    }
+
+    a {
+        color: inherit;
+        text-decoration: none;
+        transition: color global.$transition-duration;
+    }
+
+    h2 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 500;
+        line-height: 1.4;
+        text-transform: uppercase;
+    }
+
+    ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+}
+
+.container {
+    width: 100%;
+    max-width: 1240px;
+    margin-inline: auto;
+    padding-inline: 16px;
+}
+
+.top {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: repeat(2, 1fr);
+    column-gap: 16px;
+    margin-bottom: 42px;
+}
+
+.navigation {
+    display: contents;
+}
+
+.group0 {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.group1 {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.group2 {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.group3 {
+    grid-column: 2;
+    grid-row: 2;
+}
+
+.group4 {
+    grid-column: 3;
+    grid-row: 1;
+    transform: translateY(-5px);
+
+    .groupHeading {
+        min-height: 39.4px;
+    }
+
+    h2 a {
+        display: inline-block;
+    }
+
+    img {
+        display: block;
+        width: 34px;
+        height: 34px;
+    }
+
+    ul {
+        padding-top: 8px;
+    }
+}
+
+.group {
+    min-width: 0;
+
+    ul {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 64px;
+        padding: 16px 16px 0 0;
+    }
+
+    li {
+        padding-block: 8px;
+    }
+
+    li a {
+        font-size: 14px;
+        font-weight: 300;
+        line-height: 1.4;
+    }
+}
+
+.group4 ul {
+    padding-top: 8px;
+}
+
+.toggle,
+.morePhones {
+    display: none;
+}
+
+.phones {
+    grid-column: 4;
+    grid-row: 1;
+    min-width: 0;
+    margin-bottom: 16px;
+}
+
+.phone {
+    margin-bottom: 32px;
+
+    span {
+        display: block;
+        font-size: 14px;
+        font-weight: 300;
+        line-height: 2;
+    }
+
+    a {
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+}
+
+.online {
+    grid-column: 4;
+    grid-row: 2;
+    min-width: 0;
+}
+
+.onlineButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 246px;
+    height: 48px;
+    border: 1px solid global.$footer-accent;
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 1;
+    text-transform: uppercase;
+    transition: border-color global.$transition-duration !important;
+}
+
+.apps {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    max-width: 246px;
+    margin-block: 16px 24px !important;
+
+    li,
+    a,
+    img {
+        display: block;
+        width: 74px;
+        height: 74px;
+    }
+
+    a {
+        border: 0;
+        border-radius: 8px;
+        transition: opacity global.$transition-duration;
+    }
+}
+
+.social {
+    grid-column: 3;
+    grid-row: 2;
+    min-width: 0;
+
+    section + section {
+        margin-top: 44px;
+    }
+
+    h2 {
+        margin-bottom: 20px;
+        line-height: 1;
+    }
+}
+
+.socialLinks,
+.contactLinks {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    max-width: 170px;
+
+    a {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: global.$footer-social;
+        font-size: 12px;
+        line-height: 1;
+        transition: color global.$transition-duration;
+    }
+
+    img {
+        display: block;
+        flex-shrink: 0;
+        opacity: 0.255;
+        transition: opacity global.$transition-duration;
+    }
+
+    a:focus-visible img {
+        opacity: 1;
+    }
+}
+
+.telegram {
+    flex-basis: 100%;
+}
+
+.legal {
+    padding-top: 48px;
+    border-top: 1px solid global.$footer-border;
+    color: global.$footer-muted;
+    font-size: 14px;
+    line-height: 1.6;
+
+    > p {
+        margin: 0 16px 0 0;
+    }
+}
+
+.legalRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+
+    a,
+    p {
+        margin: 0 16px 0 0;
+    }
+}
+
+.disclosures {
+    margin-bottom: 16px;
+}
+
+.legal .cookies {
+    margin-block: 16px;
+}
+
+.credit a {
+    margin-left: 32px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .group a:hover,
+    .phone a:hover {
+        color: global.$footer-muted;
+    }
+
+    .onlineButton:hover {
+        border-color: global.$text;
+    }
+
+    .apps a:hover {
+        opacity: 0.8;
+    }
+
+    .socialLinks a:hover img,
+    .contactLinks a:hover img {
+        opacity: 1;
+    }
+
+    .legal a:hover {
+        color: global.$text;
+    }
+}
+
+@media (min-width: 781px) and (max-width: 1100px) {
+    .phone a {
+        font-size: clamp(16px, 1.72vw, 22px);
+    }
+}
+
+@media (max-width: 780px) {
+    .top {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .phones {
+        order: -1;
+    }
+
+    .group {
+        margin-bottom: 24px;
+
+        ul {
+            display: none;
+            margin-bottom: 0;
+
+            &.expanded {
+                display: flex;
+            }
+        }
+    }
+
+    .groupHeading {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .toggle {
+        position: relative;
+        display: block;
+        flex-shrink: 0;
+        width: 15px;
+        height: 15px;
+        margin-top: 3px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+
+        &::before {
+            position: absolute;
+            inset: -12px;
+            content: "";
+        }
+    }
+
+    .arrow {
+        display: block;
+        width: 15px;
+        height: 15px;
+        background: url("/icons/bank/footer/chevron-down-black.svg") center no-repeat;
+        transition: transform global.$transition-duration;
+    }
+
+    .toggle[aria-expanded="true"] .arrow,
+    .morePhones[aria-expanded="true"] .arrow {
+        transform: rotate(180deg);
+    }
+
+    .group4 .toggle {
+        margin-top: 12px;
+    }
+
+    .social {
+        margin-bottom: 24px;
+    }
+
+    .legalRow {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 540px) {
+    .phones {
+        position: relative;
+        min-height: 110px;
+        padding-bottom: 23px;
+    }
+
+    .morePhones {
+        position: absolute;
+        top: 70px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 300;
+        line-height: normal;
+        text-transform: uppercase;
+    }
+
+    .phone {
+        margin-bottom: 0;
+    }
+
+    .additionalPhones {
+        display: none;
+        margin-top: 48px;
+
+        &.expanded {
+            display: grid;
+            gap: 32px;
+        }
+    }
+
+    .legal {
+        font-size: 12px;
+
+        > p {
+            margin-bottom: 8px;
+        }
+    }
+
+    .legalRow {
+        display: block;
+
+        a {
+            display: inline-block;
+            margin-right: 24px;
+            margin-bottom: 8px;
+        }
+
+        p {
+            margin-bottom: 8px;
+        }
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .footer a,
+    .footer button,
+    .socialLinks img,
+    .contactLinks img,
+    .arrow {
+        transition: none !important;
+    }
+}
