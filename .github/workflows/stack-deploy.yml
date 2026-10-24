@@ -1,0 +1,133 @@
+name: Integrated Saldo deployment
+
+on:
+  push:
+    branches: [main]
+    paths: ['services/**', 'proto/**', 'frontend/**', 'deploy/stack/**', '.github/workflows/stack-deploy.yml']
+  workflow_dispatch:
+  pull_request:
+    paths: ['deploy/stack/**', '.github/workflows/stack-deploy.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: saldo-stack-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with: {go-version: '1.27.3', cache: false}
+      - name: Check each Go runtime
+        run: |
+          for service in api auth core; do
+            (cd "services/$service" && go test -race ./... && go vet ./...)
+          done
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with: {node-version: '24'}
+      - name: Verify frontend
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund && npm test && npm run typecheck && npm run lint
+      - name: Check deployment scripts
+        run: |
+          shellcheck deploy/stack/*.sh
+          python3 -m py_compile deploy/stack/*.py
+          python3 -m unittest discover -s deploy/stack -p 'test_*.py'
+
+  image:
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions: {contents: read, packages: write}
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [api, auth, core, ml, frontend-real]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+      - name: Select image build
+        id: build
+        env: {SERVICE: '${{ matrix.service }}'}
+        run: |
+          context=.
+          file=deploy/stack/Dockerfile.go
+          if [[ "$SERVICE" == ml ]]; then file=deploy/stack/Dockerfile.ml; fi
+          if [[ "$SERVICE" == frontend-real ]]; then context=frontend; file=frontend/Dockerfile; fi
+          echo "context=$context" >> "$GITHUB_OUTPUT"
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
+        id: image
+        with:
+          context: ${{ steps.build.outputs.context }}
+          file: ${{ steps.build.outputs.file }}
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ghcr.io/benzocloud/saldo-${{ matrix.service }}:sha-${{ github.sha }}
+          build-args: |
+            SERVICE=${{ matrix.service }}
+            developerMode=dev
+            NEXT_PUBLIC_API_URL=/api/v1
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+      - name: Save immutable digest
+        if: github.event_name != 'pull_request'
+        env: {DIGEST: '${{ steps.image.outputs.digest }}', SERVICE: '${{ matrix.service }}'}
+        run: |
+          [[ "$DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]
+          printf '%s\n' "$DIGEST" > "$SERVICE.digest"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: github.event_name != 'pull_request'
+        with: {name: 'digest-${{ matrix.service }}', path: '*.digest', retention-days: 7}
+
+  deploy:
+    needs: image
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: frontend-mock
+    permissions: {contents: read, packages: read}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with: {pattern: 'digest-*', merge-multiple: true}
+      - name: Deploy the complete immutable release
+        env:
+          DEPLOY_KEY: ${{ secrets.FRONTEND_DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.FRONTEND_DEPLOY_KNOWN_HOSTS }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY_USER: ${{ github.actor }}
+          REVISION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          umask 077
+          directory=$(mktemp -d)
+          trap 'rm -rf "$directory"' EXIT
+          printf '%s\n' "$DEPLOY_KEY" > "$directory/key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$directory/known_hosts"
+          digests=()
+          for service in api auth core ml frontend-real; do
+            digest=$(cat "$service.digest")
+            [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+            digests+=("$digest")
+          done
+          printf '%s\n' "$GHCR_TOKEN" | ssh -T -p 8321 -i "$directory/key" \
+            -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$directory/known_hosts" -o ConnectTimeout=15 \
+            -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+            saldo-deploy@brokebyte.me "deploy-stack $REVISION ${digests[*]} $REGISTRY_USER"
+      - name: Verify public API
+        run: curl --fail --silent --show-error --retry 5 https://saldo.brokebyte.me/api/v1/auth/personal-data-consent >/dev/null

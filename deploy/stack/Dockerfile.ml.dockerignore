@@ -1,0 +1,14 @@
+**
+!proto/
+!proto/ml/
+!proto/ml/**
+!services/
+!services/ml/
+!services/ml/requirements-rpc.txt
+!services/ml/requirements-rpc-dev.txt
+!services/ml/cashflow_rpc/
+!services/ml/cashflow_rpc/**
+!services/ml/cashflow_baseline/
+!services/ml/cashflow_baseline/**
+!services/ml/run_server.py
+**/__pycache__
