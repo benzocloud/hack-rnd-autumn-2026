@@ -25,6 +25,10 @@
     box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
 }
 
+.chart :global(.recharts-surface):focus:not(:focus-visible) {
+    outline: none;
+}
+
 @media (max-width: 480px) {
     .chart {
         height: var(--balance-chart-height, 260px);

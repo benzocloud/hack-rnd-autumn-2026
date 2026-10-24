@@ -327,7 +327,7 @@ const AuthForm = ( { mode, verificationPurpose = "register", resetToken = "" }: 
                         <div className={styles.consent}>
                             { consentFailed && <button type="button" onClick={() => void reloadConsentDocument()}>Повторить загрузку</button> }
                             <AuthCheckbox ref={consentRef} name="personal_data_consent" disabled={busy || !consentDocument}>
-                                Я согласен на обработку персональных данных по тексту выше
+                                Я согласен с <Link className={styles.legalLink} href="/personal-data-consent" target="_blank" rel="noopener">обработкой персональных данных</Link>
                             </AuthCheckbox>
 
                             <AuthCheckbox name="privacy_policy" disabled={busy}>
