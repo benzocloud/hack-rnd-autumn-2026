@@ -24,7 +24,7 @@ func openDatabase(ctx context.Context, cfg config.Config) (database, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &databaseResources{db: db, schema: postgres.NewRepository(db, cfg.QueryTimeout)}, nil
+	return &databaseResources{db: db, schema: postgres.NewSchemaRepository(db, cfg.QueryTimeout)}, nil
 }
 
 func (r *databaseResources) Close() { _ = r.db.Close() }

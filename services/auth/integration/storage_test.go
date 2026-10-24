@@ -20,6 +20,7 @@ import (
 	apppostgres "github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/app/postgres"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/config"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/repository/postgres"
+	userrepo "github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/repository/user"
 )
 
 // A random schema is owned by each test. Cleanup never drops the provided DB
@@ -105,8 +106,7 @@ func openDatabase(t *testing.T, cfg config.Config) *sqlx.DB {
 func TestMigrationsStorageRestartAndRollback(t *testing.T) {
 	cfg, db := scratch(t)
 	pool := openDatabase(t, cfg)
-	store := postgres.NewRepository(pool, cfg.QueryTimeout)
-	if !errors.Is(store.CheckSchema(t.Context()), postgres.ErrSchema) {
+	if !errors.Is(postgres.NewSchemaRepository(pool, cfg.QueryTimeout).CheckSchema(t.Context()), postgres.ErrSchema) {
 		t.Fatal("empty schema reported ready")
 	}
 	if err := app.Migrate(t.Context(), cfg); err != nil {
@@ -115,7 +115,7 @@ func TestMigrationsStorageRestartAndRollback(t *testing.T) {
 	if err := app.Migrate(t.Context(), cfg); err != nil {
 		t.Fatal("second migration was not idempotent")
 	}
-	if err := store.CheckSchema(t.Context()); err != nil {
+	if err := postgres.NewSchemaRepository(pool, cfg.QueryTimeout).CheckSchema(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 	var tables int
@@ -126,9 +126,9 @@ func TestMigrationsStorageRestartAndRollback(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	user := postgres.UserRecord{ID: id, Email: "owner@example.test", DisplayName: "Иван"}
+	user := userrepo.User{ID: id, Email: "owner@example.test", DisplayName: "Иван"}
 	if err := postgres.WithTx(t.Context(), pool, cfg.QueryTimeout, func(ctx context.Context, tx *sqlx.Tx) error {
-		return postgres.NewRepository(tx, cfg.QueryTimeout).InsertUser(ctx, user)
+		return userrepo.NewRepository(tx, cfg.QueryTimeout).InsertUser(ctx, user)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -136,18 +136,19 @@ func TestMigrationsStorageRestartAndRollback(t *testing.T) {
 		t.Fatal(err)
 	}
 	pool = openDatabase(t, cfg)
-	store = postgres.NewRepository(pool, cfg.QueryTimeout)
+	store := userrepo.NewRepository(pool, cfg.QueryTimeout)
 	got, err := store.UserByEmail(t.Context(), user.Email)
-	if err != nil || got.ID != id || got.CredentialVersion != 1 || got.EmailVerified {
+	if err != nil || got.ID != id || got.Email != user.Email || got.DisplayName != user.DisplayName ||
+		got.CredentialVersion != 1 || got.EmailVerified || got.State != "active" || got.CreatedAt.IsZero() {
 		t.Fatal("reopened repository lost or changed user")
 	}
-	if _, err := store.UserByEmail(t.Context(), "absent@example.test"); !errors.Is(err, postgres.ErrNotFound) {
+	if _, err := store.UserByEmail(t.Context(), "absent@example.test"); !errors.Is(err, userrepo.ErrNotFound) {
 		t.Fatal("missing user not distinguished")
 	}
 	sentinel := errors.New("rollback requested")
-	rollbackUser := postgres.UserRecord{ID: uuid.New(), Email: "rollback@example.test", DisplayName: "Rollback"}
+	rollbackUser := userrepo.User{ID: uuid.New(), Email: "rollback@example.test", DisplayName: "Rollback"}
 	err = postgres.WithTx(t.Context(), pool, cfg.QueryTimeout, func(ctx context.Context, tx *sqlx.Tx) error {
-		if err := postgres.NewRepository(tx, cfg.QueryTimeout).InsertUser(ctx, rollbackUser); err != nil {
+		if err := userrepo.NewRepository(tx, cfg.QueryTimeout).InsertUser(ctx, rollbackUser); err != nil {
 			return err
 		}
 		return sentinel
@@ -155,7 +156,7 @@ func TestMigrationsStorageRestartAndRollback(t *testing.T) {
 	if !errors.Is(err, sentinel) {
 		t.Fatal("transaction lost callback error")
 	}
-	if _, err := store.UserByEmail(t.Context(), rollbackUser.Email); !errors.Is(err, postgres.ErrNotFound) {
+	if _, err := store.UserByEmail(t.Context(), rollbackUser.Email); !errors.Is(err, userrepo.ErrNotFound) {
 		t.Fatal("callback error did not roll back")
 	}
 	ctx, cancel := context.WithCancel(t.Context())
@@ -169,9 +170,9 @@ func TestMigrationsStorageRestartAndRollback(t *testing.T) {
 
 	ctx, cancel = context.WithCancel(t.Context())
 	defer cancel()
-	cancelledUser := postgres.UserRecord{ID: uuid.New(), Email: "cancelled@example.test", DisplayName: "Cancelled"}
+	cancelledUser := userrepo.User{ID: uuid.New(), Email: "cancelled@example.test", DisplayName: "Cancelled"}
 	err = postgres.WithTx(ctx, pool, cfg.QueryTimeout, func(ctx context.Context, tx *sqlx.Tx) error {
-		if err := postgres.NewRepository(tx, cfg.QueryTimeout).InsertUser(ctx, cancelledUser); err != nil {
+		if err := userrepo.NewRepository(tx, cfg.QueryTimeout).InsertUser(ctx, cancelledUser); err != nil {
 			return err
 		}
 		cancel()
@@ -180,7 +181,7 @@ func TestMigrationsStorageRestartAndRollback(t *testing.T) {
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("cancellation before commit: got %v, want context.Canceled", err)
 	}
-	if _, err := store.UserByEmail(t.Context(), cancelledUser.Email); !errors.Is(err, postgres.ErrNotFound) {
+	if _, err := store.UserByEmail(t.Context(), cancelledUser.Email); !errors.Is(err, userrepo.ErrNotFound) {
 		t.Fatal("cancellation before commit did not roll back inserted user")
 	}
 }
@@ -191,13 +192,13 @@ func TestConcurrentEmailUniquenessAndStorageConstraints(t *testing.T) {
 		t.Fatal(err)
 	}
 	pool := openDatabase(t, cfg)
-	store := postgres.NewRepository(pool, cfg.QueryTimeout)
+	store := userrepo.NewRepository(pool, cfg.QueryTimeout)
 	results := make(chan error, 2)
 	var wg sync.WaitGroup
 	for range 2 {
 		wg.Go(func() {
 			results <- postgres.WithTx(t.Context(), pool, cfg.QueryTimeout, func(ctx context.Context, tx *sqlx.Tx) error {
-				return postgres.NewRepository(tx, cfg.QueryTimeout).InsertUser(ctx, postgres.UserRecord{ID: uuid.New(), Email: "same@example.test", DisplayName: "Same"})
+				return userrepo.NewRepository(tx, cfg.QueryTimeout).InsertUser(ctx, userrepo.User{ID: uuid.New(), Email: "same@example.test", DisplayName: "Same"})
 			})
 		})
 	}
@@ -208,7 +209,7 @@ func TestConcurrentEmailUniquenessAndStorageConstraints(t *testing.T) {
 		switch {
 		case err == nil:
 			success++
-		case errors.Is(err, postgres.ErrEmailExists):
+		case errors.Is(err, userrepo.ErrEmailExists):
 			conflict++
 		default:
 			t.Fatal(err)
@@ -228,9 +229,9 @@ func TestConcurrentEmailUniquenessAndStorageConstraints(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			err := postgres.WithTx(t.Context(), pool, cfg.QueryTimeout, func(ctx context.Context, tx *sqlx.Tx) error {
-				return postgres.NewRepository(tx, cfg.QueryTimeout).InsertUser(ctx, postgres.UserRecord{ID: tc.id, Email: tc.email, DisplayName: "Test"})
+				return userrepo.NewRepository(tx, cfg.QueryTimeout).InsertUser(ctx, userrepo.User{ID: tc.id, Email: tc.email, DisplayName: "Test"})
 			})
-			if !errors.Is(err, postgres.ErrInvalidRecord) {
+			if !errors.Is(err, userrepo.ErrInvalidRecord) {
 				t.Fatal("invalid ID/email passed database constraints")
 			}
 		})
@@ -267,7 +268,7 @@ func TestConcurrentEmailUniquenessAndStorageConstraints(t *testing.T) {
 	if _, err := db.Exec(t.Context(), "UPDATE goose_db_version SET version_id=99 WHERE version_id=1"); err != nil {
 		t.Fatal(err)
 	}
-	if !errors.Is(store.CheckSchema(t.Context()), postgres.ErrSchema) {
+	if !errors.Is(postgres.NewSchemaRepository(pool, cfg.QueryTimeout).CheckSchema(t.Context()), postgres.ErrSchema) {
 		t.Fatal("future schema version reported ready")
 	}
 }
@@ -286,8 +287,7 @@ func TestConcurrentMigrationCommands(t *testing.T) {
 		}
 	}
 	pool := openDatabase(t, cfg)
-	store := postgres.NewRepository(pool, cfg.QueryTimeout)
-	if err := store.CheckSchema(t.Context()); err != nil {
+	if err := postgres.NewSchemaRepository(pool, cfg.QueryTimeout).CheckSchema(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 }

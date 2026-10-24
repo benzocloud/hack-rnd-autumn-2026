@@ -13,8 +13,13 @@
 - Создание/config/Ping pool — в `internal/app/postgres`, Close — у composing app.
   pgx используется через `pgx/stdlib` как `database/sql` driver. Приватный repository
   принимает готовый DB/Tx; узкие интерфейсы объявляются у потребителей.
-  SQL и schema check — в `sql/`, embed — в `queries.go`; row mapping, операции,
-  transaction helper и error mapping разделены по ответственности.
+- Пользовательские операции — в `internal/repository/user`, запись БД с db-тегами —
+  в `user/record/user.go`, SQL — в `user/sql/`, embed — в `user/queries.go`.
+  Родительский пакет преобразует `record.User` в storage projection `user.User`.
+  Общие schema check, миграции, транзакции и ошибки остаются в
+  `internal/repository/postgres`; SQL schema check — в его собственном `sql/`,
+  запись версии схемы — в `postgres/record`. Ошибки пользователя принадлежат `user`.
+  Перенос пакетов не меняет SQL, миграции или Auth wire-контракт.
 - Defaults → environment → validation. TLS verify-full; plaintext только при
   explicit local + loopback. Ограничены pool, query/startup/shutdown и HTTP.
   Config formatting/slog/errors не выводят DSN/пароль или PostgreSQL Detail.
@@ -34,11 +39,40 @@
 consent/evidence/outbox, password hashing, verify/reset, memberships/invitations,
 Core orchestration и Resend sends остаются в 3.3–3.6. Каркас их не имитирует.
 
-## Проверка исправленного sqlx-снимка
+## Проверка разделения repository-пакетов
+
+По поручению владельца после `1bdbc21` выполнен структурный перенос в `user`,
+`user/record`, `user/sql` и отдельный schema repository. SQL и миграции не менялись.
+Обновлены DB/Tx-потребители и проверки ошибок; интеграционный тест дополнительно
+проверяет все поля прочитанного пользователя, включая кириллическое имя,
+состояние и время создания.
+
+Для этого переноса повторены:
+
+- `go test ./...` и `go test -tags=integration -count=1 -timeout=90s ./...`
+  с реальной PostgreSQL 18.6 на loopback — успешно. Покрыты fresh/repeated/concurrent
+  migrations, уникальность email, constraints, rollback, отмена до commit,
+  чтение после reopen, readiness и перезапуск Auth.
+- `golangci-lint 2.15.0 fmt` и `run ./...` со всеми тестами и integration tag —
+  **0 issues**; `go vet ./...`, `go vet -tags=integration ./...` и сборка обоих cmd — успешно.
+- `gopls check` всех Go-файлов с integration tag и format/import diff всех Go-файлов —
+  без диагностик и изменений. SQL пользователя сверены с исходником побайтно.
+- Два независимых read-only ревью: caveman-review и ponytail-review — без
+  доказанных дефектов. Уточнение Caveman о записи схемы/конструкторе внесено в README.
+  Ponytail самостоятельно повторил `go test -count=1 -shuffle=on ./...` и
+  `go vet -tags=integration ./...`, оба успешно. Это не GitHub approval.
+
+Ограничение локального race-check прежнее: нет CGO/C compiler. Результаты
+Linux CI проверяются отдельно для опубликованного SHA. Отдельный binary smoke
+с остановкой PostgreSQL для этого переноса не повторялся; прошлые результаты
+ниже относятся к предыдущим снимкам. 3.2 остаётся на ревью, 3.3 не начат.
+
+## Проверка sqlx-снимка `ad50d5b` до разделения repository-пакетов
 
 Исправление по [замечанию PR #17](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/17#issuecomment-6380966388)
-синхронизирует 3.2 с общими Go-правилами Core на `20d2adc`. Для исправленной
-редакции после `b102904` выполнены отдельные проверки:
+синхронизирует 3.2 с общими Go-правилами Core на `20d2adc`. Следующие проверки
+относятся к `ad50d5b7ae0f843a93bbf2fbe17f0b7380f71b2c` до последующего разделения
+repository-пакетов, а не автоматически подтверждают новую структуру:
 
 1. `golangci-lint v2.15.0`: `config verify`, format/import checks всех Go-файлов,
    включая integration, и `run ./...` с integration tag — **0 issues**.

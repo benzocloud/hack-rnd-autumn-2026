@@ -473,8 +473,13 @@ PostgreSQL 18, sqlx 1.4.0 с pgx/v5 5.11.0 только через `pgx/stdlib`
 grpc-go 1.84.0, protobuf-go 1.36.12. После ревью 3.2 согласованные Go-правила
 Core применяются к Auth: создание/config/Ping `*sqlx.DB` в `internal/app/postgres`,
 `Close` у composing app; приватные repository получают готовый `*sqlx.DB`/`*sqlx.Tx`,
-без native pgxpool. SQL хранится в `sql/`, embed — в package-local `queries.go`,
-интерфейсы — узкие и около потребителя. Полные правила — `.agent/instructions.md`.
+без native pgxpool. Репозитории разделяются по ответственности: пользовательские
+операции — в `internal/repository/user`, записи БД с db-тегами — в `user/record`,
+SQL — в `user/sql`, embed — в `user/queries.go`; преобразование записи в storage
+projection выполняет родительский пакет. `internal/repository/postgres` содержит
+общие миграции, schema check и транзакции. Интерфейсы — узкие и около потребителя.
+Полные правила — `.agent/instructions.md`. Это устройство хранилища не меняет
+версию wire-контракта и не означает переход к следующему этапу.
 
 Историческая проверка 3.2 на `b102904590af9d11217aeff90ac4822104e5ed62`
 использовала native pgx и PostgreSQL 18.6 из официальных EDB Windows binaries.
