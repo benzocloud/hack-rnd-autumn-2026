@@ -40,7 +40,7 @@ const Dashboard = ( { companyId }: { companyId?: string } ) => {
 
     useEffect(() => {
         const controller = new AbortController();
-        const request = dashboardService.getDashboardData(period, controller.signal, companyId || (() => { try { return localStorage.getItem("saldo-company-id") || undefined; } catch { return undefined; } })(), ( status ) => {
+        const request = dashboardService.getDashboardData(period, controller.signal, companyId, ( status ) => {
             if (!controller.signal.aborted) {
                 setForecastStatus(status);
             }
