@@ -2,10 +2,10 @@ name: Go API transport checks
 
 on:
   pull_request:
-    paths: ['services/api/**', 'proto/auth/**', 'docs/api/**', 'docs/auth/**', 'buf*.yaml', '.github/workflows/api-ci.yml', 'LICENSE']
+    paths: ['services/api/**', 'proto/auth/**', 'docs/api/**', 'docs/auth/**', 'docs/data-contracts/**', 'buf*.yaml', '.github/workflows/api-ci.yml', 'LICENSE']
   push:
     branches: [main]
-    paths: ['services/api/**', 'proto/auth/**', 'docs/api/**', 'docs/auth/**', 'buf*.yaml', '.github/workflows/api-ci.yml', 'LICENSE']
+    paths: ['services/api/**', 'proto/auth/**', 'docs/api/**', 'docs/auth/**', 'docs/data-contracts/**', 'buf*.yaml', '.github/workflows/api-ci.yml', 'LICENSE']
   workflow_dispatch:
 
 permissions:

@@ -68,10 +68,6 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def canonical(value):
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-
-
 def write_json(path, value):
     """Atomic replacement; a failed write leaves the previous mock state intact."""
     path = Path(path)
@@ -89,9 +85,9 @@ def write_json(path, value):
             temporary.unlink(missing_ok=True)
 
 
-def read_json(path):
+def read_json(path, *, max_bytes=MAX_FILE_BYTES):
     try:
-        if Path(path).stat().st_size > MAX_FILE_BYTES:
+        if max_bytes is not None and Path(path).stat().st_size > max_bytes:
             raise ImportFailure("FILE_TOO_LARGE", "Слишком большой файл")
         return json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:

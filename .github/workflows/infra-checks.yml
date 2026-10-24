@@ -38,5 +38,7 @@ jobs:
         run: '"$RUNNER_TEMP/infra-lint-venv/bin/ruff" format --check .'
       - name: Validate infrastructure safety boundaries
         run: python3 -B -m unittest discover -s .agent/infra/tests -p 'test_*.py' -v
+      - name: Test local mock import and artifact replay
+        run: python3 -B -m unittest discover -s tests/mock_import -p 'test_*.py' -v
       - name: Check whitespace
         run: git diff --check HEAD^ HEAD

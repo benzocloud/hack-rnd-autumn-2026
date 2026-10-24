@@ -12,5 +12,6 @@ go vet ./...
 "${GOLANGCI_LINT:-golangci-lint}" run ./...
 "$python_bin" -m ruff check scripts
 "$python_bin" -m ruff format --check scripts
+"$python_bin" -m unittest discover -s scripts -p test_data_contracts.py
 "$python_bin" scripts/smoke.py --output artifacts/smoke.json
 "$python_bin" scripts/contract.py artifacts/smoke.json

@@ -48,7 +48,10 @@ def make_server(directory, port=0):
                     self.send_content(b'{"error":"NOT_FOUND"}', "application/json", 404)
                     return
                 path = bound_path(directory, route[1:])
-                if path.stat().st_size > MAX_FILE_BYTES:
+                # The input cap applies to sources, not accumulated local reports.
+                if (
+                    route in documents or route == "/manifest.json"
+                ) and path.stat().st_size > MAX_FILE_BYTES:
                     raise ImportFailure("FILE_TOO_LARGE", "File too large")
                 content = path.read_bytes()
                 if route in documents and digest(content) != documents[route]["sha256"]:

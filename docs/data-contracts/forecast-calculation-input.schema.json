@@ -17,9 +17,7 @@
       ]
     },
     "company_id": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 128
+      "$ref": "#/$defs/ResourceID"
     },
     "company_profile": {
       "oneOf": [
@@ -73,11 +71,9 @@
       "additionalProperties": false,
       "properties": {
         "snapshot_id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128,
+          "$ref": "#/$defs/ResourceID",
           "examples": [
-            "snap_123"
+            "019a0c65-9800-7000-8000-000000000011"
           ]
         },
         "data_version": {
@@ -132,14 +128,12 @@
           "examples": [
             "RUB"
           ],
-          "description": "Provisional MVP convention, not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
+          "description": "Owner-approved MVP convention (ADR-022), not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
         },
         "account_id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128,
+          "$ref": "#/$defs/ResourceID",
           "examples": [
-            "acc_123"
+            "019a0c65-9800-7000-8000-000000000002"
           ]
         },
         "opening_balance": {
@@ -189,7 +183,8 @@
         "amount_minor": {
           "type": "string",
           "pattern": "^-?(?:0|[1-9][0-9]*)$",
-          "description": "Exact signed integer minor units encoded as decimal text; no exponent or decimal point. RUB has 100 minor units.",
+          "maxLength": 20,
+          "description": "Exact signed integer minor units encoded as decimal text; no exponent or decimal point. RUB has 100 minor units. Range -9223372036854775808 through 9223372036854775807 inclusive, matching Core int64 and PostgreSQL BIGINT. Server must validate the numeric range before conversion; maxLength is not a numeric bound. Outside range returns 422 VALIDATION_ERROR with an amount_minor field error; never truncate or use floating point.",
           "examples": [
             "5000000"
           ]
@@ -202,7 +197,7 @@
           "examples": [
             "RUB"
           ],
-          "description": "Provisional MVP convention, not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
+          "description": "Owner-approved MVP convention (ADR-022), not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
         }
       },
       "required": [
@@ -216,11 +211,9 @@
       "additionalProperties": false,
       "properties": {
         "id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128,
+          "$ref": "#/$defs/ResourceID",
           "examples": [
-            "ctx_123"
+            "019a0c65-9800-7000-8000-000000000012"
           ]
         },
         "model_name": {
@@ -286,19 +279,15 @@
       "additionalProperties": false,
       "properties": {
         "id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128,
+          "$ref": "#/$defs/ResourceID",
           "examples": [
-            "txn_123"
+            "019a0c65-9800-7000-8000-000000000006"
           ]
         },
         "account_id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128,
+          "$ref": "#/$defs/ResourceID",
           "examples": [
-            "acc_123"
+            "019a0c65-9800-7000-8000-000000000002"
           ]
         },
         "operation_date": {
@@ -346,14 +335,9 @@
           ]
         },
         "category_id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "minLength": 1,
-          "maxLength": 128,
+          "$ref": "#/$defs/NullableResourceID",
           "examples": [
-            "cat_rent"
+            "019a0c65-9800-7000-8000-000000000003"
           ]
         },
         "source": {
@@ -399,7 +383,8 @@
         "amount_minor": {
           "type": "string",
           "pattern": "^[1-9][0-9]*$",
-          "description": "Strictly positive integer minor units encoded as decimal text.",
+          "maxLength": 19,
+          "description": "Strictly positive integer minor units encoded as decimal text. Range 1 through 9223372036854775807 inclusive. Server must validate the numeric range before conversion; maxLength is not a numeric bound. Outside range returns 422 VALIDATION_ERROR with an amount_minor field error; never truncate or use floating point.",
           "examples": [
             "1000000"
           ]
@@ -412,7 +397,7 @@
           "examples": [
             "RUB"
           ],
-          "description": "Provisional MVP convention, not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
+          "description": "Owner-approved MVP convention (ADR-022), not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
         }
       },
       "required": [
@@ -479,25 +464,15 @@
           "description": "External expected-payment ID, distinct from factual operation ID. Null for facts/manual records."
         },
         "import_id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "minLength": 1,
-          "maxLength": 128,
+          "$ref": "#/$defs/NullableResourceID",
           "examples": [
-            "imp_123"
+            "019a0c65-9800-7000-8000-00000000000b"
           ]
         },
         "connection_id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "minLength": 1,
-          "maxLength": 128,
+          "$ref": "#/$defs/NullableResourceID",
           "examples": [
-            "con_123"
+            "019a0c65-9800-7000-8000-00000000000c"
           ]
         }
       },
@@ -549,19 +524,15 @@
       "additionalProperties": false,
       "properties": {
         "id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128,
+          "$ref": "#/$defs/ResourceID",
           "examples": [
-            "pay_123"
+            "019a0c65-9800-7000-8000-000000000007"
           ]
         },
         "account_id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128,
+          "$ref": "#/$defs/ResourceID",
           "examples": [
-            "acc_123"
+            "019a0c65-9800-7000-8000-000000000002"
           ]
         },
         "direction": {
@@ -602,14 +573,9 @@
           ]
         },
         "category_id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "minLength": 1,
-          "maxLength": 128,
+          "$ref": "#/$defs/NullableResourceID",
           "examples": [
-            "cat_rent"
+            "019a0c65-9800-7000-8000-000000000003"
           ]
         },
         "source": {
@@ -668,6 +634,8 @@
         "amount_minor": {
           "type": "string",
           "pattern": "^(?:0|[1-9][0-9]*)$",
+          "maxLength": 19,
+          "description": "Nonnegative integer minor units encoded as decimal text. Range 0 through 9223372036854775807 inclusive. Server must validate the numeric range before conversion; maxLength is not a numeric bound. Outside range returns 422 VALIDATION_ERROR with an amount_minor field error; never truncate or use floating point.",
           "examples": [
             "0"
           ]
@@ -680,7 +648,7 @@
           "examples": [
             "RUB"
           ],
-          "description": "Provisional MVP convention, not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
+          "description": "Owner-approved MVP convention (ADR-022), not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
         }
       },
       "required": [
@@ -693,11 +661,9 @@
       "additionalProperties": false,
       "properties": {
         "id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128,
+          "$ref": "#/$defs/ResourceID",
           "examples": [
-            "cat_rent"
+            "019a0c65-9800-7000-8000-000000000003"
           ]
         },
         "name": {
@@ -970,6 +936,25 @@
       "required": [
         "payment",
         "availability"
+      ]
+    },
+    "ResourceID": {
+      "type": "string",
+      "format": "uuid",
+      "not": {
+        "const": "00000000-0000-0000-0000-000000000000"
+      },
+      "minLength": 36,
+      "maxLength": 36
+    },
+    "NullableResourceID": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ResourceID"
+        },
+        {
+          "type": "null"
+        }
       ]
     }
   },

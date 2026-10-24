@@ -14,8 +14,16 @@ from pathlib import Path
 
 from tools.mock_import.__main__ import main
 from tools.mock_import.adapters import parse_xml
-from tools.mock_import.common import ED_NS, ImportFailure, fns_day, minor, money, write_json
-from tools.mock_import.fixtures import generate
+from tools.mock_import.common import (
+    ED_NS,
+    MAX_FILE_BYTES,
+    ImportFailure,
+    fns_day,
+    minor,
+    money,
+    write_json,
+)
+from tools.mock_import.fixtures import generate, order
 from tools.mock_import.runner import cash_plan, manifest_at, run
 from tools.mock_import.server import make_server
 
@@ -293,6 +301,50 @@ class ImportTests(unittest.TestCase):
 
 
 class HTTPTests(unittest.TestCase):
+    def test_large_generated_artifacts_are_replayable_and_served(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = generate(directory)
+            manifest["documents"] = manifest["documents"][:3]
+            for index, meta in enumerate(manifest["documents"]):
+                document = order(meta["id"], "unused", manifest["cutoff_date"], "2026-09-20")
+                rows = document.find(f"{{{ED_NS}}}ЭтапыОплаты")
+                template = rows[0]
+                rows.remove(template)
+                meta["record_assumptions"] = {}
+                for number in range(1000):
+                    row = copy.deepcopy(template)
+                    row.find(f"{{{ED_NS}}}НомерСтрокиДокумента").text = str(number + 1)
+                    row_id = f"00000000-0000-4000-8000-{index * 1000 + number + 1:012x}"
+                    row.find(f"{{{ED_NS}}}ИдентификаторСтроки").text = row_id
+                    meta["record_assumptions"][row_id] = {"paid_minor": "0"}
+                    rows.append(row)
+                document.find(f"{{{ED_NS}}}Сумма").text = "150000000.00"
+                content = ET.tostring(document, encoding="utf-8", xml_declaration=True)
+                self.assertLess(len(content), MAX_FILE_BYTES)
+                (Path(directory) / meta["path"]).write_bytes(content)
+                meta["profile"] = "ed_order_1_25_subset"
+                meta["sha256"] = hashlib.sha256(content).hexdigest()
+            write_json(Path(directory) / "manifest.json", manifest)
+            self.assertEqual(run(directory)["imported_new"], 3000)
+            self.assertGreater((Path(directory) / "state.json").stat().st_size, MAX_FILE_BYTES)
+            replay = run(directory)
+            self.assertEqual(replay["imported_new"], 0)
+            self.assertEqual(replay["already_present"], 3000)
+            with make_server(directory) as server:
+                thread = threading.Thread(target=server.serve_forever, daemon=True)
+                thread.start()
+                try:
+                    for name in ["report.json", "normalized-batches.json"]:
+                        with self.subTest(name=name):
+                            content = (Path(directory) / name).read_bytes()
+                            self.assertGreater(len(content), MAX_FILE_BYTES)
+                            url = f"http://127.0.0.1:{server.server_address[1]}/{name}"
+                            with urllib.request.urlopen(url, timeout=3) as response:
+                                self.assertEqual(response.read(), content)
+                finally:
+                    server.shutdown()
+                    thread.join(timeout=3)
+
     def test_http_delivers_exact_documents_and_rejects_other_paths(self):
         with tempfile.TemporaryDirectory() as directory:
             manifest = generate(directory)

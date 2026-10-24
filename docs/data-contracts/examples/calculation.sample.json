@@ -1,7 +1,7 @@
 {
   "schema_version": "0.1.0",
   "mode": "scenario_demo",
-  "company_id": "co_fixture_C001",
+  "company_id": "019a0c65-9800-7000-8000-000000000001",
   "company_profile": {
     "source_company_id": "C001",
     "company_name": "ООО «Грузоперевозки-063»",
@@ -10,7 +10,7 @@
     "industry": "Грузоперевозки"
   },
   "input": {
-    "snapshot_id": "snap_C001_2024-10-02_scenario_demo",
+    "snapshot_id": "019a0c65-9800-7000-8000-000000000002",
     "data_version": "1",
     "cutoff_date": "2024-10-02",
     "data_as_of": "2024-10-02",
@@ -18,7 +18,7 @@
     "end_date": "2024-11-01",
     "horizon_days": 30,
     "currency": "RUB",
-    "account_id": "acc_fixture_C001",
+    "account_id": "019a0c65-9800-7000-8000-000000000003",
     "opening_balance": {
       "amount_minor": "152771404",
       "currency": "RUB"
@@ -26,7 +26,7 @@
     "balance_as_of": "2024-10-02",
     "risk_definition": "below_zero_eod",
     "model_context": {
-      "id": "ctx_contract_fixture",
+      "id": "019a0c65-9800-7000-8000-000000000004",
       "model_name": "contract_fixture_only",
       "model_version": "not-a-trained-model",
       "preprocessing_version": "dto-0.1.0",
@@ -42,8 +42,8 @@
     "absent_day_policy": "unknown",
     "transactions": [
       {
-        "id": "txn_C001-000001",
-        "account_id": "acc_fixture_C001",
+        "id": "019a0c65-9800-7000-8000-000000000005",
+        "account_id": "019a0c65-9800-7000-8000-000000000003",
         "operation_date": "2024-10-01",
         "direction": "outflow",
         "amount": {
@@ -60,15 +60,15 @@
           "source_company_id": "C001",
           "external_operation_id": "C001-000001",
           "external_payment_id": null,
-          "import_id": "imp_dataset_fixture",
+          "import_id": "019a0c65-9800-7000-8000-000000000006",
           "connection_id": null
         },
         "version": "1",
         "created_at": "2026-10-23T20:00:00Z"
       },
       {
-        "id": "txn_C001-000002",
-        "account_id": "acc_fixture_C001",
+        "id": "019a0c65-9800-7000-8000-000000000007",
+        "account_id": "019a0c65-9800-7000-8000-000000000003",
         "operation_date": "2024-10-02",
         "direction": "inflow",
         "amount": {
@@ -85,15 +85,15 @@
           "source_company_id": "C001",
           "external_operation_id": "C001-000002",
           "external_payment_id": null,
-          "import_id": "imp_dataset_fixture",
+          "import_id": "019a0c65-9800-7000-8000-000000000006",
           "connection_id": null
         },
         "version": "1",
         "created_at": "2026-10-23T20:00:00Z"
       },
       {
-        "id": "txn_C001-000003",
-        "account_id": "acc_fixture_C001",
+        "id": "019a0c65-9800-7000-8000-000000000008",
+        "account_id": "019a0c65-9800-7000-8000-000000000003",
         "operation_date": "2024-10-02",
         "direction": "inflow",
         "amount": {
@@ -110,7 +110,7 @@
           "source_company_id": "C001",
           "external_operation_id": "C001-000003",
           "external_payment_id": null,
-          "import_id": "imp_dataset_fixture",
+          "import_id": "019a0c65-9800-7000-8000-000000000006",
           "connection_id": null
         },
         "version": "1",
@@ -139,8 +139,8 @@
   "known_payments": [
     {
       "payment": {
-        "id": "pay_DEMO-INVOICE-001",
-        "account_id": "acc_fixture_C001",
+        "id": "019a0c65-9800-7000-8000-000000000009",
+        "account_id": "019a0c65-9800-7000-8000-000000000003",
         "direction": "inflow",
         "amount": {
           "amount_minor": "10000000",
@@ -161,8 +161,8 @@
           "source_company_id": "C001",
           "external_operation_id": null,
           "external_payment_id": "DEMO-INVOICE-001",
-          "import_id": "imp_mock_fixture",
-          "connection_id": "con_mock_fixture"
+          "import_id": "019a0c65-9800-7000-8000-00000000000a",
+          "connection_id": "019a0c65-9800-7000-8000-00000000000b"
         },
         "version": "1",
         "created_at": "2026-10-23T20:00:00Z"
@@ -175,8 +175,8 @@
     },
     {
       "payment": {
-        "id": "pay_DEMO-RENT-001",
-        "account_id": "acc_fixture_C001",
+        "id": "019a0c65-9800-7000-8000-00000000000c",
+        "account_id": "019a0c65-9800-7000-8000-000000000003",
         "direction": "outflow",
         "amount": {
           "amount_minor": "8000000",
@@ -197,8 +197,8 @@
           "source_company_id": "C001",
           "external_operation_id": null,
           "external_payment_id": "DEMO-RENT-001",
-          "import_id": "imp_mock_fixture",
-          "connection_id": "con_mock_fixture"
+          "import_id": "019a0c65-9800-7000-8000-00000000000a",
+          "connection_id": "019a0c65-9800-7000-8000-00000000000b"
         },
         "version": "1",
         "created_at": "2026-10-23T20:00:00Z"

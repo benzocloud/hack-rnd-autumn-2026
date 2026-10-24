@@ -12,7 +12,6 @@ from .common import (
     SCHEMA_VERSION,
     ImportFailure,
     bound_path,
-    canonical,
     day,
     digest,
     integer_minor,
@@ -240,7 +239,7 @@ def _run_locked(directory, manifest):
     binding = {key: manifest[key] for key in BINDING_FIELDS}
     state_path = directory / "state.json"
     state = (
-        read_json(state_path)
+        read_json(state_path, max_bytes=None)
         if state_path.exists()
         else {"schema_version": SCHEMA_VERSION, "binding": binding, "records": {}}
     )
@@ -292,9 +291,7 @@ def _run_locked(directory, manifest):
                     "document_id": meta["id"],
                     "mandatory": meta["mandatory"],
                 }
-                if key in candidates or (
-                    key in records and canonical(records[key]) != canonical(value)
-                ):
+                if key in candidates or (key in records and records[key] != value):
                     raise ImportFailure(
                         "CONFLICTING_EXTERNAL_ID",
                         "Изменённое содержание под прежним ID; документ не применён",
