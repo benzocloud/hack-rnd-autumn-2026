@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
-import { canVerifyEmail, isAuthRoute, isPublicRoute, redirectToLogin } from "@/helpers/auth";
+import { canVerifyEmail, isAuthRoute, isKnownRoute, isPublicRoute, redirectToLogin } from "@/helpers/auth";
 import { accountService } from "@/service";
 import { setAuthStatus, setAuthUser } from "@/store/authSlice";
 import type { AppDispatch, RootState } from "@/store/store";
@@ -24,7 +24,7 @@ const AuthBoundary = ( { children }: IProps ) => {
 
     const dispatch = useDispatch<AppDispatch>();
     const pathname = usePathname();
-    const publicPage = isPublicRoute(pathname);
+    const publicPage = isPublicRoute(pathname) || !isKnownRoute(pathname);
     const authPage = isAuthRoute(pathname);
     const accountPage = pathname.replace(/\/+$/, "") === "/account";
     const router = useRouter();

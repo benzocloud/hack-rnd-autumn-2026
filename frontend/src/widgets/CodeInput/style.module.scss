@@ -30,7 +30,8 @@
     caret-color: transparent;
     font: inherit;
     text-align: center;
-    transition: background-color global.$transition-duration, opacity global.$transition-duration;
+    box-shadow: 0 0 0 2px transparent, 0 0 0 4px transparent;
+    transition: background-color global.$transition-duration, opacity global.$transition-duration, box-shadow global.$transition-duration;
 
     &::placeholder {
         color: global.$input-placeholder;
@@ -39,14 +40,27 @@
 
     &:focus {
         background-color: global.$gray1;
-        outline: 2px solid global.$green2;
-        outline-offset: 2px;
+        outline: none;
+        box-shadow: 0 0 0 2px global.$white, 0 0 0 4px global.$green2;
     }
 
     &:disabled {
         opacity: 0.4;
         cursor: not-allowed;
     }
+
+    &[aria-invalid="true"] {
+        box-shadow: 0 0 0 2px global.$white, 0 0 0 4px global.$red;
+        outline: none;
+    }
+}
+
+.hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
 }
 
 .digit {

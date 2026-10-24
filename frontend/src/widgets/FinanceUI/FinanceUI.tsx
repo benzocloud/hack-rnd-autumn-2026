@@ -9,6 +9,7 @@ import { Children, isValidElement, useId, type ButtonHTMLAttributes, type CSSPro
 import AuthButton from "../AuthButton/AuthButton";
 import LoadingText from "../LoadingText/LoadingText";
 import Spinner from "../Spinner/Spinner";
+import { useClearFieldError, useFieldError } from "../ValidatedForm/ValidatedForm";
 
 import styles from "./style.module.scss";
 
@@ -51,8 +52,9 @@ const FormError = ( { message }: { message: string | null } ) => message ? <p cl
 
 const Field = ( { label, hint, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string } ) => {
     const id = useId();
+    const error = useFieldError(props.name);
 
-    return <div className={styles.field}><label htmlFor={id}>{ label }</label><input {...props} id={id} aria-describedby={hint ? `${id}-hint` : undefined} />{ hint && <small id={`${id}-hint`}>{ hint }</small> }</div>;
+    return <div className={styles.field}><label htmlFor={id}>{ label }</label><input {...props} id={id} aria-invalid={Boolean(error) || undefined} aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined} />{ error && <small className={styles.fieldError} id={`${id}-error`}>{ error }</small> }{ hint && <small id={`${id}-hint`}>{ hint }</small> }</div>;
 };
 
 
@@ -63,6 +65,8 @@ const SelectArrow = ( { className }: { className?: string } ) => (
 
 const Select = ( { label, children, hint, className, ...props }: Omit<SelectProps<string>, "children" | "label"> & { label: string; hint?: string; children: ReactNode } ) => {
     const id = useId();
+    const error = useFieldError(props.name);
+    const clearFieldError = useClearFieldError();
     const options = Children.toArray(children).filter(( child ): child is ReactElement<OptionHTMLAttributes<HTMLOptionElement>> => isValidElement(child) && child.type === "option");
 
     return (
@@ -70,7 +74,10 @@ const Select = ( { label, children, hint, className, ...props }: Omit<SelectProp
             <label id={`${id}-label`} htmlFor={id}>{ label }</label>
             <MuiSelect
                 {...props}
+                onChange={( event, child ) => { if (props.name) { clearFieldError(props.name); } props.onChange?.(event, child); }}
                 id={id}
+                error={Boolean(error)}
+                data-validation-name={props.name}
                 labelId={`${id}-label`}
                 aria-describedby={hint ? `${id}-hint` : undefined}
                 className={`${styles.select} ${className || ""}`}
@@ -95,8 +102,9 @@ const Select = ( { label, children, hint, className, ...props }: Omit<SelectProp
 
 const TextArea = ( { label, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string } ) => {
     const id = useId();
+    const error = useFieldError(props.name);
 
-    return <div className={styles.field}><label htmlFor={id}>{ label }</label><textarea {...props} id={id} rows={3} /></div>;
+    return <div className={styles.field}><label htmlFor={id}>{ label }</label><textarea {...props} id={id} rows={3} aria-invalid={Boolean(error) || undefined} aria-describedby={error ? `${id}-error` : undefined} />{ error && <small className={styles.fieldError} id={`${id}-error`}>{ error }</small> }</div>;
 };
 
 

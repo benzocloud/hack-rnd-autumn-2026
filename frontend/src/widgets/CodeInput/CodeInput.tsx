@@ -4,6 +4,8 @@ import { useRef, useState, type ClipboardEvent, type CSSProperties, type Keyboar
 
 import { MOCK_CODE_LENGTH } from "@/helpers/verificationCode";
 
+import { useClearFieldError, useFieldError } from "../ValidatedForm/ValidatedForm";
+
 import styles from "./style.module.scss";
 
 
@@ -17,12 +19,15 @@ const CODE_LENGTH = MOCK_CODE_LENGTH;
 
 const CodeInput = ( { name = "token" }: IProps ) => {
     const [ digits, setDigits ] = useState<string[]>(Array.from({ length: CODE_LENGTH }, () => ""));
+    const error = useFieldError(name);
+    const clearFieldError = useClearFieldError();
 
     const inputs = useRef<Array<HTMLInputElement | null>>([]);
 
 
     const insertDigits = ( index: number, value: string ) => {
         const characters = value.replace(/\D/g, "");
+        clearFieldError(name);
 
         if (!characters) {
             if (!value) {
@@ -78,6 +83,9 @@ const CodeInput = ( { name = "token" }: IProps ) => {
                         className={styles.input}
                         type="text"
                         inputMode="numeric"
+                        data-validation-name={name}
+                        aria-invalid={Boolean(error) || undefined}
+                        aria-describedby={error ? `${name}-error` : undefined}
                         autoComplete={index === 0 ? "one-time-code" : "off"}
                         aria-label={`Цифра ${index + 1} из ${CODE_LENGTH}`}
                         placeholder="0"
@@ -91,6 +99,7 @@ const CodeInput = ( { name = "token" }: IProps ) => {
                     { digit && <span className={styles.digit} aria-hidden="true" key={digit}>{ digit }</span> }
                 </div>
             )) }
+            { error && <span className={styles.hidden} id={`${name}-error`}>{ error }</span> }
         </div>
     );
 };

@@ -12,6 +12,8 @@ import type { IInvitation } from "@/interfaces";
 import { companiesService, membersService } from "@/service";
 import { ActionButton, Badge, DataState, EmptyState, Field, FormError, Icon, Modal, PageHeading, Panel } from "@/widgets/FinanceUI/FinanceUI";
 
+import ValidatedForm from "@/widgets/ValidatedForm/ValidatedForm";
+
 import styles from "./style.module.scss";
 
 
@@ -74,11 +76,7 @@ const Workspace = () => {
             <PageHeading title="Мои компании" description="Выберите компанию, чтобы работать с её финансами. Данные разных компаний хранятся отдельно.">
                 <ActionButton icon="plus" onClick={() => setCreating(true)}>Создать компанию</ActionButton>
             </PageHeading>
-            <DataState loading={companies.loading} error={companies.error} onRetry={companies.reload}>
-                { companies.data && (
-                    companies.data.length ? <div className={styles.grid}>{ companies.data.map(( company ) => <Link key={company.id} className={styles.company} href={companyPath(company.id)}><div className={styles.companyTop}><span className={styles.avatar}>{ Array.from(company.name)[0] }</span><Icon name="arrow-right" /></div><h2>{ company.name }</h2><p>{ company.inn ? `ИНН ${company.inn}` : "ИНН не указан" }</p><Badge>{ company.membership.role === "owner" ? "Владелец" : "Финансист" }</Badge></Link>) }</div> : <Panel><EmptyState title="Начнём с вашей компании" icon="building" action={<ActionButton onClick={() => setCreating(true)}>Создать первую компанию</ActionButton>}>После создания укажите остаток на счёте, загрузите операции и добавьте будущие платежи.</EmptyState></Panel>
-                ) }
-            </DataState>
+            <div className={styles.sections}>
             <Panel title="Приглашения в компании">
                 <DataState loading={invitations.loading} error={invitations.error ? `Не удалось загрузить приглашения. ${invitations.error}` : null} onRetry={invitations.reload}>
                     { invitations.data && (
@@ -86,7 +84,13 @@ const Workspace = () => {
                     ) }
                 </DataState>
             </Panel>
-            { creating && <Modal title="Новая компания" busy={request.busy} onClose={() => setCreating(false)}><form className={styles.form} noValidate onSubmit={createCompany}><Field name="name" label="Название компании" placeholder="Например, ООО «Вектор»" autoComplete="organization" autoFocus disabled={request.busy} /><Field name="inn" label="ИНН — необязательно" inputMode="numeric" placeholder="10 или 12 цифр" disabled={request.busy} /><p>Валюта: российский рубль. Часовой пояс: Москва.</p><FormError message={request.error} /><ActionButton type="submit" loading={request.busy}>Создать компанию</ActionButton></form></Modal> }
+            <DataState loading={companies.loading} error={companies.error} onRetry={companies.reload}>
+                { companies.data && (
+                    companies.data.length ? <div className={styles.grid}>{ companies.data.map(( company ) => <Link key={company.id} className={styles.company} href={companyPath(company.id)}><div className={styles.companyTop}><span className={styles.avatar}>{ Array.from(company.name)[0] }</span><Icon name="arrow-right" /></div><h2>{ company.name }</h2><p>{ company.inn ? `ИНН ${company.inn}` : "ИНН не указан" }</p><Badge>{ company.membership.role === "owner" ? "Владелец" : "Финансист" }</Badge></Link>) }</div> : <Panel><EmptyState title="Начнём с вашей компании" icon="building" action={<ActionButton onClick={() => setCreating(true)}>Создать первую компанию</ActionButton>}>После создания укажите остаток на счёте, загрузите операции и добавьте будущие платежи.</EmptyState></Panel>
+                ) }
+            </DataState>
+            </div>
+            { creating && <Modal title="Новая компания" busy={request.busy} onClose={() => setCreating(false)}><ValidatedForm request={request} className={styles.form} noValidate onSubmit={createCompany}><Field required data-maximum="200" name="name" label="Название компании" placeholder="Например, ООО «Вектор»" autoComplete="organization" autoFocus disabled={request.busy} /><Field data-maximum="12" name="inn" label="ИНН — необязательно" inputMode="numeric" placeholder="10 или 12 цифр" disabled={request.busy} /><p>Валюта: российский рубль. Часовой пояс: Москва.</p><FormError message={request.error} /><ActionButton type="submit" loading={request.busy}>Создать компанию</ActionButton></ValidatedForm></Modal> }
             { declined && <Modal title="Отклонить приглашение?" busy={request.busy} onClose={() => setDeclined(null)}><p>Вы не присоединитесь к компании «{ declined.company_name }». Владелец сможет пригласить вас повторно.</p><div className={styles.actions}><ActionButton variant="secondary" disabled={request.busy} onClick={() => setDeclined(null)}>Оставить</ActionButton><ActionButton variant="danger" loading={request.busy} onClick={decline}>Отклонить</ActionButton></div><FormError message={request.error} /></Modal> }
         </main>
     );
