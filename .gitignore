@@ -1,6 +1,11 @@
 # Local reference checkouts linked from this workspace.
 /references/
 
+# Participant data and generated ML results remain local.
+/data/cashflow/
+/dataset/
+/services/ml/artifacts/
+
 # Local agent skills.
 /.agent/skills/
 /.agents/skills/
@@ -9,9 +14,6 @@
 # Private local MCP configuration and credentials.
 /.codex/config.toml
 /.agent/local/
-
-# Local provided dataset; do not publish raw input files.
-/dataset/
 
 # macOS directory metadata.
 .DS_Store

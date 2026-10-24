@@ -1,0 +1,3 @@
+# Forecasting and evaluation use only the Python standard library.
+# Plotting is needed only to generate the local review report.
+matplotlib==3.10.7
