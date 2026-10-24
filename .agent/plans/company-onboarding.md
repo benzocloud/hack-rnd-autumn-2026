@@ -38,6 +38,12 @@ Merge, ready-for-review, deployment и production provisioning запрещен�
 - PR/Issue descriptions и полные discussions пока недоступны: нет API auth.
   Нельзя считать проверенными отсутствие пересечений, CI или ревью.
 
+Перед первым push fetch обнаружил новый main `ea433dd` (PR #40).
+Он включён обычным merge: Workspace теперь использует независимые companies/
+invitations resources и DataState. Эту часть A4 не дублировать; state refresh,
+retry/redirect и реальный сценарий ещё предстоит проверить. Это стороннее
+согласованное изменение main, не собственная реализация onboarding.
+
 ## Граница и неизменяемые условия
 
 Каноническая цепочка: POST /companies → Auth.BeginCompanyCreation →
@@ -104,7 +110,7 @@ invitations, reset/email delivery, новые роли и полный redesign 
 - [x] Создать отдельный worktree от свежего main, не stash/reset исходный checkout.
 - [ ] Прочитать PR/Issue descriptions, все conversation/review/inline comments;
   проверить существующий draft и исключить второго владельца ветки.
-- [ ] Проверить docs diff/links, docs commit, fetch/merge нового main, сразу push.
+- [x] Проверить docs diff/links, docs commit, fetch/merge нового main, сразу push.
 - [ ] Создать/проверить единственный draft, таблицу этапов и ссылки plan/handoff;
   проверить remote SHA, доступность PR, сообщить URL; attach_artifact при наличии.
 
@@ -163,8 +169,9 @@ REST conformance/security tests; минимальные config examples/deploy t
 Зависимость: A3. Компоненты: Workspace, companiesService, existing auth/company
 context/request hooks; только блокирующая часть settings redirect.
 
-- [ ] Companies и invitations имеют независимые loading/error states;
-  P1 честно недоступен, без fake success или реализации invitations.
+- [ ] Проверить уже включённое из PR #40 разделение companies/invitations
+  loading/error states; P1 честно недоступен, без fake success или реализации
+  invitations. Повторную реализацию разделения не делать.
 - [ ] После create обновить company/membership context; стабильный retry key,
   double click, lost response, refresh сохраняют ту же компанию.
 - [ ] Проверить фактический redirect/settings unsupported endpoints;

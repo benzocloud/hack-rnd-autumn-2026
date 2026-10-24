@@ -22,11 +22,17 @@ Draft PR URL: **пока не создан — GitHub API не авторизо�
 Remote checkpoint SHA следует проверять через ls-remote; SHA текущего docs commit
 не вставляется внутрь него самого. PR/CI updates должны ссылаться на фактический SHA.
 
+Первый docs commit `9f90a80` опубликован после обычного merge нового main
+`ea433dd` (PR #40); push checkpoint `d9679eb` успешен. Ветка доступна:
+[GitHub branch](https://github.com/benzocloud/hack-rnd-autumn-2026/tree/prosteyshiyyy/feat/company_onboarding).
+Ссылка GitHub для создания PR (это **не существующий PR**):
+[create PR](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/new/prosteyshiyyy/feat/company_onboarding).
+
 ## Состояние
 
 | Этап | Статус | Tests | Review | CI |
 | --- | --- | --- | --- | --- |
-| A0 | В работе | Docs diff/links перед commit | Self-check; независимые pending | Не проверен, API auth отсутствует |
+| A0 | В работе | Docs diff/links/stage markers/fences и staged diff --check прошли | Self-check; независимые pending | Не проверен, API auth отсутствует |
 | A1 | Не начат | Не запускались | Pending | Не запускался |
 | A2 | Не начат | Не запускались | Pending | Не запускался |
 | A3 | Не начат | Не запускались | Pending | Не запускался |
@@ -48,6 +54,13 @@ fixtures не менялись. Runtime suite для docs-only slice не зап
 - Fresh main включает PR #39 stale-company-selection; исходная историческая
   база `5c5797e` уже не самая свежая.
 - Ни CI, ни reviews/PR discussions не проверены: Git SSH не даёт GitHub API.
+
+После initial self-check выполнен новый fetch: main=`ea433dd`, PR #40 уже
+разделил companies/invitations resources и их DataState. Обычный merge прошёл
+без конфликтов; изучен полный Workspace diff, своих runtime changes нет.
+Текущий diff относительно main содержит только два onboarding Markdown-файла.
+Не дублировать эту часть A4; UI tests/typecheck/browser для чужого изменения
+здесь не запускались и не считаются прошедшими.
 
 ## Последние подтверждённые ограничения среды
 
