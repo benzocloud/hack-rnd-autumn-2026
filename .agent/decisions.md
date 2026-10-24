@@ -67,3 +67,18 @@ The GBrain runtime statements below describe the old runner on 2026-10-22. The d
 - Initial mandatory GBrain config failed before inference when its token was missing. ADR-010 replaces that policy with optional, disabled-by-default memory; the original failure log is historical evidence, not the active policy.
 - Restricted SSH fixtures verified standalone `ML:` without Go, combined `INFRA/ML:` with `golang-how-to`, and Issue scope assessment. Model jobs have no GitHub token; plan publishers are tested to write only the derived Markdown plan. GitHub secrets and PR-creation settings are provisioned; subsequent default-branch activation and live Issue/PR command checks are recorded in `.agent/infra/README.md`. Installed adapters/profile match PR #12 merge `12b8ff93b091e55fddc452dcfbba845f92092795`; ADR-021 integration is separate local work.
 - See `.agent/infra/README.md` for installed state, limitations, acceptance checks and rollback.
+
+- **ADR-029 (Accepted by owner; simplified 2026-10-24):** One private ML RPC,
+  `ml.v1.ForecastService/Predict`, with explicitly pinned model/preprocessing/
+  configuration/seed context. Remove the unpublished separate financial RPC.
+  Core owns model selection and freezes it with the job; API/browser do not
+  choose an ML method. Product forecasts require a financial-capable model;
+  an empty calendar does not relax that requirement. The existing mean_90
+  implementation is only a limited baseline, not a full financial model.
+  Unsupported financial inputs/model versions must fail explicitly; no implicit
+  fallback to baseline and no relabeling history-only output as a financial
+  forecast. Missing probability is explicit and never a fabricated zero.
+  Baseline/evaluation logic can remain internal for comparison; no separate
+  baseline endpoint is added. This supersedes the earlier two-method wording,
+  not the requirement for calendar reconciliation or honest limitations. Financial
+  model implementation, orchestration and completed P0 are not claimed.

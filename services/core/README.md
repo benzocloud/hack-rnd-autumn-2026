@@ -317,8 +317,10 @@ request. `Predict` applies a maximum 30-second deadline (a shorter parent deadli
 wins), 2 MiB message limits, validates snapshot/model echoes and projection
 arithmetic, and returns safe classified errors with inspectable causes.
 
-The canonical contract comes unchanged from ML PR #27,
-`994ed6e0c33969020e4fa911b1125a0fdfe7f6ea`. Current model: `mean_90` /
+The canonical Predict originated in ML PR #27,
+`994ed6e0c33969020e4fa911b1125a0fdfe7f6ea`, and now also defines normalized
+financial inputs/results for a future financial-capable model. There is one RPC;
+unsupported financial context fails explicitly, without baseline fallback. Current model: `mean_90` /
 `mean_90_v1` / `daily_snapshot_v1`. It requires 90 verified consecutive daily
 observations/confirmed no-operation days. It rejects a known-payment calendar;
 it supplies no calibrated probability. Missing history is never filled with

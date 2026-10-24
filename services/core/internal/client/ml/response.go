@@ -14,7 +14,9 @@ func validateResponse(input forecasting.ModelInput, response *pb.PredictResponse
 	if response == nil || response.Model == nil || response.SnapshotId != input.SnapshotID.String() || response.CompanyId != input.Scope.CompanyID.String() ||
 		response.AccountId != input.Scope.AccountID.String() || response.DataVersion != uint64(input.DataVersion) || response.Currency != money.RUB ||
 		response.CutoffDate != string(input.Cutoff) || response.Model.ModelName != input.Model.Name || response.Model.ModelVersion != input.Model.Version ||
-		response.Model.PreprocessingVersion != input.Model.PreprocessingVersion || len(response.Days) != input.HorizonDays || !response.HistoryOnlyIncludesRecurringFlows ||
+		response.Model.PreprocessingVersion != input.Model.PreprocessingVersion || response.Model.ConfigurationId != "" ||
+		response.Model.RandomSeed != nil || response.Model.TrajectoryCount != nil || len(response.Components) > 0 ||
+		!baselineProbability(response.GapProbability) || len(response.Days) != input.HorizonDays || !response.HistoryOnlyIncludesRecurringFlows ||
 		!slices.Contains(response.Warnings, "HISTORY_ONLY_NO_CALENDAR") || !slices.Contains(response.Warnings, "UNCALIBRATED_NO_PROBABILITY") {
 		return forecasting.ErrModelResponse
 	}
@@ -28,7 +30,8 @@ func validateResponse(input forecasting.ModelInput, response *pb.PredictResponse
 	balance := input.OpeningBalance
 	firstNegative := ""
 	for i, day := range response.Days {
-		if day == nil || day.Date != cutoff.AddDate(0, 0, i+1).Format(time.DateOnly) || day.InflowMinor < 0 || day.OutflowMinor < 0 {
+		if day == nil || day.Date != cutoff.AddDate(0, 0, i+1).Format(time.DateOnly) || day.InflowMinor < 0 || day.OutflowMinor < 0 ||
+			day.BalanceLowerMinor != nil || day.BalanceUpperMinor != nil || !baselineProbability(day.NegativeBalanceProbability) {
 			return forecasting.ErrModelResponse
 		}
 		next, err := balanceAfter(balance, day.InflowMinor, day.OutflowMinor)
@@ -70,4 +73,13 @@ func hasReconciliation(history []forecasting.ModelDay) bool {
 		}
 	}
 	return false
+}
+
+// This adapter currently accepts only the explicitly limited mean_90 profile.
+func baselineProbability(probability *pb.FinancialProbability) bool {
+	if probability == nil {
+		return false
+	}
+	reason, ok := probability.Estimate.(*pb.FinancialProbability_UnavailableReason)
+	return ok && reason.UnavailableReason == "not_estimated"
 }

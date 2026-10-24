@@ -2,10 +2,10 @@ name: Go Core CI
 
 on:
   pull_request:
-    paths: ['services/core/**', 'proto/**', 'buf*.yaml', 'scripts/check-core-contracts.sh', '.github/workflows/go-core-ci.yml', 'LICENSE']
+    paths: ['services/core/**', 'proto/**', 'buf*.yaml', 'scripts/**', 'docs/api/openapi.yaml', 'docs/core/rest-rpc-map.json', '.github/workflows/go-core-ci.yml', 'LICENSE']
   push:
     branches: [main]
-    paths: ['services/core/**', 'proto/**', 'buf*.yaml', 'scripts/check-core-contracts.sh', '.github/workflows/go-core-ci.yml', 'LICENSE']
+    paths: ['services/core/**', 'proto/**', 'buf*.yaml', 'scripts/**', 'docs/api/openapi.yaml', 'docs/core/rest-rpc-map.json', '.github/workflows/go-core-ci.yml', 'LICENSE']
   workflow_dispatch:
 
 permissions:
@@ -41,10 +41,14 @@ jobs:
             --output "$RUNNER_TEMP/core-buf/buf"
           printf '%s  %s\n' fad1e38d6909bbb583a4da81d8c02a01046e2cd663bde7e337dd24277393764b "$RUNNER_TEMP/core-buf/buf" | sha256sum --check
           chmod +x "$RUNNER_TEMP/core-buf/buf"
+      - name: Install pinned contract validation tools
+        run: |
+          python3 -m venv "$RUNNER_TEMP/core-contract-venv"
+          "$RUNNER_TEMP/core-contract-venv/bin/python" -m pip install -r scripts/requirements-contracts.txt
       - name: Check proto compatibility, generated drift and consumer imports
         env:
           CONTRACT_BASE_REF: origin/main
-        run: BUF="$RUNNER_TEMP/core-buf/buf" scripts/check-core-contracts.sh
+        run: BUF="$RUNNER_TEMP/core-buf/buf" CONTRACT_PYTHON="$RUNNER_TEMP/core-contract-venv/bin/python" scripts/check-core-contracts.sh
 
   lint:
     name: Core lint

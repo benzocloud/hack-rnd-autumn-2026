@@ -19,6 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	PaymentsService_UpdatePayment_FullMethodName       = "/core.v1.PaymentsService/UpdatePayment"
+	PaymentsService_CancelPayment_FullMethodName       = "/core.v1.PaymentsService/CancelPayment"
+	PaymentsService_RemovePaymentMatch_FullMethodName  = "/core.v1.PaymentsService/RemovePaymentMatch"
 	PaymentsService_ListPayments_FullMethodName        = "/core.v1.PaymentsService/ListPayments"
 	PaymentsService_GetPayment_FullMethodName          = "/core.v1.PaymentsService/GetPayment"
 	PaymentsService_CreateManualPayment_FullMethodName = "/core.v1.PaymentsService/CreateManualPayment"
@@ -33,6 +36,9 @@ const (
 // Expected movements, not executed transfers. API peer only. Same financial
 // read/write authorization as LedgerService; matching cannot execute a payment.
 type PaymentsServiceClient interface {
+	UpdatePayment(ctx context.Context, in *UpdatePaymentRequest, opts ...grpc.CallOption) (*UpdatePaymentResponse, error)
+	CancelPayment(ctx context.Context, in *CancelPaymentRequest, opts ...grpc.CallOption) (*CancelPaymentResponse, error)
+	RemovePaymentMatch(ctx context.Context, in *RemovePaymentMatchRequest, opts ...grpc.CallOption) (*RemovePaymentMatchResponse, error)
 	ListPayments(ctx context.Context, in *ListPaymentsRequest, opts ...grpc.CallOption) (*ListPaymentsResponse, error)
 	GetPayment(ctx context.Context, in *GetPaymentRequest, opts ...grpc.CallOption) (*GetPaymentResponse, error)
 	CreateManualPayment(ctx context.Context, in *CreateManualPaymentRequest, opts ...grpc.CallOption) (*CreateManualPaymentResponse, error)
@@ -46,6 +52,36 @@ type paymentsServiceClient struct {
 
 func NewPaymentsServiceClient(cc grpc.ClientConnInterface) PaymentsServiceClient {
 	return &paymentsServiceClient{cc}
+}
+
+func (c *paymentsServiceClient) UpdatePayment(ctx context.Context, in *UpdatePaymentRequest, opts ...grpc.CallOption) (*UpdatePaymentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdatePaymentResponse)
+	err := c.cc.Invoke(ctx, PaymentsService_UpdatePayment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *paymentsServiceClient) CancelPayment(ctx context.Context, in *CancelPaymentRequest, opts ...grpc.CallOption) (*CancelPaymentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CancelPaymentResponse)
+	err := c.cc.Invoke(ctx, PaymentsService_CancelPayment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *paymentsServiceClient) RemovePaymentMatch(ctx context.Context, in *RemovePaymentMatchRequest, opts ...grpc.CallOption) (*RemovePaymentMatchResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RemovePaymentMatchResponse)
+	err := c.cc.Invoke(ctx, PaymentsService_RemovePaymentMatch_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *paymentsServiceClient) ListPayments(ctx context.Context, in *ListPaymentsRequest, opts ...grpc.CallOption) (*ListPaymentsResponse, error) {
@@ -105,6 +141,9 @@ func (c *paymentsServiceClient) MatchPayment(ctx context.Context, in *MatchPayme
 // Expected movements, not executed transfers. API peer only. Same financial
 // read/write authorization as LedgerService; matching cannot execute a payment.
 type PaymentsServiceServer interface {
+	UpdatePayment(context.Context, *UpdatePaymentRequest) (*UpdatePaymentResponse, error)
+	CancelPayment(context.Context, *CancelPaymentRequest) (*CancelPaymentResponse, error)
+	RemovePaymentMatch(context.Context, *RemovePaymentMatchRequest) (*RemovePaymentMatchResponse, error)
 	ListPayments(context.Context, *ListPaymentsRequest) (*ListPaymentsResponse, error)
 	GetPayment(context.Context, *GetPaymentRequest) (*GetPaymentResponse, error)
 	CreateManualPayment(context.Context, *CreateManualPaymentRequest) (*CreateManualPaymentResponse, error)
@@ -120,6 +159,15 @@ type PaymentsServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedPaymentsServiceServer struct{}
 
+func (UnimplementedPaymentsServiceServer) UpdatePayment(context.Context, *UpdatePaymentRequest) (*UpdatePaymentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdatePayment not implemented")
+}
+func (UnimplementedPaymentsServiceServer) CancelPayment(context.Context, *CancelPaymentRequest) (*CancelPaymentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CancelPayment not implemented")
+}
+func (UnimplementedPaymentsServiceServer) RemovePaymentMatch(context.Context, *RemovePaymentMatchRequest) (*RemovePaymentMatchResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RemovePaymentMatch not implemented")
+}
 func (UnimplementedPaymentsServiceServer) ListPayments(context.Context, *ListPaymentsRequest) (*ListPaymentsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListPayments not implemented")
 }
@@ -154,6 +202,60 @@ func RegisterPaymentsServiceServer(s grpc.ServiceRegistrar, srv PaymentsServiceS
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&PaymentsService_ServiceDesc, srv)
+}
+
+func _PaymentsService_UpdatePayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdatePaymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaymentsServiceServer).UpdatePayment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaymentsService_UpdatePayment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaymentsServiceServer).UpdatePayment(ctx, req.(*UpdatePaymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PaymentsService_CancelPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelPaymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaymentsServiceServer).CancelPayment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaymentsService_CancelPayment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaymentsServiceServer).CancelPayment(ctx, req.(*CancelPaymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PaymentsService_RemovePaymentMatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemovePaymentMatchRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaymentsServiceServer).RemovePaymentMatch(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaymentsService_RemovePaymentMatch_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaymentsServiceServer).RemovePaymentMatch(ctx, req.(*RemovePaymentMatchRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _PaymentsService_ListPayments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -253,6 +355,18 @@ var PaymentsService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "core.v1.PaymentsService",
 	HandlerType: (*PaymentsServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "UpdatePayment",
+			Handler:    _PaymentsService_UpdatePayment_Handler,
+		},
+		{
+			MethodName: "CancelPayment",
+			Handler:    _PaymentsService_CancelPayment_Handler,
+		},
+		{
+			MethodName: "RemovePaymentMatch",
+			Handler:    _PaymentsService_RemovePaymentMatch_Handler,
+		},
 		{
 			MethodName: "ListPayments",
 			Handler:    _PaymentsService_ListPayments_Handler,

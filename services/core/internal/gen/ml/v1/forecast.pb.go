@@ -9,6 +9,7 @@ package mlv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -27,6 +28,8 @@ const (
 	DaySource_DAY_SOURCE_UNSPECIFIED            DaySource = 0
 	DaySource_DAY_SOURCE_OBSERVED               DaySource = 1
 	DaySource_DAY_SOURCE_VERIFIED_NO_OPERATIONS DaySource = 2
+	DaySource_DAY_SOURCE_PARTIAL                DaySource = 3
+	DaySource_DAY_SOURCE_UNAVAILABLE            DaySource = 4
 )
 
 // Enum value maps for DaySource.
@@ -35,11 +38,15 @@ var (
 		0: "DAY_SOURCE_UNSPECIFIED",
 		1: "DAY_SOURCE_OBSERVED",
 		2: "DAY_SOURCE_VERIFIED_NO_OPERATIONS",
+		3: "DAY_SOURCE_PARTIAL",
+		4: "DAY_SOURCE_UNAVAILABLE",
 	}
 	DaySource_value = map[string]int32{
 		"DAY_SOURCE_UNSPECIFIED":            0,
 		"DAY_SOURCE_OBSERVED":               1,
 		"DAY_SOURCE_VERIFIED_NO_OPERATIONS": 2,
+		"DAY_SOURCE_PARTIAL":                3,
+		"DAY_SOURCE_UNAVAILABLE":            4,
 	}
 )
 
@@ -70,6 +77,260 @@ func (DaySource) EnumDescriptor() ([]byte, []int) {
 	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{0}
 }
 
+type FinancialDirection int32
+
+const (
+	FinancialDirection_FINANCIAL_DIRECTION_UNSPECIFIED FinancialDirection = 0
+	FinancialDirection_FINANCIAL_DIRECTION_INFLOW      FinancialDirection = 1
+	FinancialDirection_FINANCIAL_DIRECTION_OUTFLOW     FinancialDirection = 2
+)
+
+// Enum value maps for FinancialDirection.
+var (
+	FinancialDirection_name = map[int32]string{
+		0: "FINANCIAL_DIRECTION_UNSPECIFIED",
+		1: "FINANCIAL_DIRECTION_INFLOW",
+		2: "FINANCIAL_DIRECTION_OUTFLOW",
+	}
+	FinancialDirection_value = map[string]int32{
+		"FINANCIAL_DIRECTION_UNSPECIFIED": 0,
+		"FINANCIAL_DIRECTION_INFLOW":      1,
+		"FINANCIAL_DIRECTION_OUTFLOW":     2,
+	}
+)
+
+func (x FinancialDirection) Enum() *FinancialDirection {
+	p := new(FinancialDirection)
+	*p = x
+	return p
+}
+
+func (x FinancialDirection) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (FinancialDirection) Descriptor() protoreflect.EnumDescriptor {
+	return file_ml_v1_forecast_proto_enumTypes[1].Descriptor()
+}
+
+func (FinancialDirection) Type() protoreflect.EnumType {
+	return &file_ml_v1_forecast_proto_enumTypes[1]
+}
+
+func (x FinancialDirection) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use FinancialDirection.Descriptor instead.
+func (FinancialDirection) EnumDescriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{1}
+}
+
+type KnownPaymentStatus int32
+
+const (
+	KnownPaymentStatus_KNOWN_PAYMENT_STATUS_UNSPECIFIED       KnownPaymentStatus = 0
+	KnownPaymentStatus_KNOWN_PAYMENT_STATUS_PLANNED           KnownPaymentStatus = 1
+	KnownPaymentStatus_KNOWN_PAYMENT_STATUS_PARTIALLY_MATCHED KnownPaymentStatus = 2
+)
+
+// Enum value maps for KnownPaymentStatus.
+var (
+	KnownPaymentStatus_name = map[int32]string{
+		0: "KNOWN_PAYMENT_STATUS_UNSPECIFIED",
+		1: "KNOWN_PAYMENT_STATUS_PLANNED",
+		2: "KNOWN_PAYMENT_STATUS_PARTIALLY_MATCHED",
+	}
+	KnownPaymentStatus_value = map[string]int32{
+		"KNOWN_PAYMENT_STATUS_UNSPECIFIED":       0,
+		"KNOWN_PAYMENT_STATUS_PLANNED":           1,
+		"KNOWN_PAYMENT_STATUS_PARTIALLY_MATCHED": 2,
+	}
+)
+
+func (x KnownPaymentStatus) Enum() *KnownPaymentStatus {
+	p := new(KnownPaymentStatus)
+	*p = x
+	return p
+}
+
+func (x KnownPaymentStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (KnownPaymentStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_ml_v1_forecast_proto_enumTypes[2].Descriptor()
+}
+
+func (KnownPaymentStatus) Type() protoreflect.EnumType {
+	return &file_ml_v1_forecast_proto_enumTypes[2]
+}
+
+func (x KnownPaymentStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use KnownPaymentStatus.Descriptor instead.
+func (KnownPaymentStatus) EnumDescriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{2}
+}
+
+type FinancialPurpose int32
+
+const (
+	FinancialPurpose_FINANCIAL_PURPOSE_UNSPECIFIED           FinancialPurpose = 0
+	FinancialPurpose_FINANCIAL_PURPOSE_CURRENT_FORECAST      FinancialPurpose = 1
+	FinancialPurpose_FINANCIAL_PURPOSE_HISTORICAL_EVALUATION FinancialPurpose = 2
+)
+
+// Enum value maps for FinancialPurpose.
+var (
+	FinancialPurpose_name = map[int32]string{
+		0: "FINANCIAL_PURPOSE_UNSPECIFIED",
+		1: "FINANCIAL_PURPOSE_CURRENT_FORECAST",
+		2: "FINANCIAL_PURPOSE_HISTORICAL_EVALUATION",
+	}
+	FinancialPurpose_value = map[string]int32{
+		"FINANCIAL_PURPOSE_UNSPECIFIED":           0,
+		"FINANCIAL_PURPOSE_CURRENT_FORECAST":      1,
+		"FINANCIAL_PURPOSE_HISTORICAL_EVALUATION": 2,
+	}
+)
+
+func (x FinancialPurpose) Enum() *FinancialPurpose {
+	p := new(FinancialPurpose)
+	*p = x
+	return p
+}
+
+func (x FinancialPurpose) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (FinancialPurpose) Descriptor() protoreflect.EnumDescriptor {
+	return file_ml_v1_forecast_proto_enumTypes[3].Descriptor()
+}
+
+func (FinancialPurpose) Type() protoreflect.EnumType {
+	return &file_ml_v1_forecast_proto_enumTypes[3]
+}
+
+func (x FinancialPurpose) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use FinancialPurpose.Descriptor instead.
+func (FinancialPurpose) EnumDescriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{3}
+}
+
+type CalendarAvailability int32
+
+const (
+	CalendarAvailability_CALENDAR_AVAILABILITY_UNSPECIFIED           CalendarAvailability = 0
+	CalendarAvailability_CALENDAR_AVAILABILITY_VERIFIED_CURRENT      CalendarAvailability = 1
+	CalendarAvailability_CALENDAR_AVAILABILITY_VERIFIED_AS_OF_CUTOFF CalendarAvailability = 2
+	CalendarAvailability_CALENDAR_AVAILABILITY_UNAVAILABLE           CalendarAvailability = 3
+)
+
+// Enum value maps for CalendarAvailability.
+var (
+	CalendarAvailability_name = map[int32]string{
+		0: "CALENDAR_AVAILABILITY_UNSPECIFIED",
+		1: "CALENDAR_AVAILABILITY_VERIFIED_CURRENT",
+		2: "CALENDAR_AVAILABILITY_VERIFIED_AS_OF_CUTOFF",
+		3: "CALENDAR_AVAILABILITY_UNAVAILABLE",
+	}
+	CalendarAvailability_value = map[string]int32{
+		"CALENDAR_AVAILABILITY_UNSPECIFIED":           0,
+		"CALENDAR_AVAILABILITY_VERIFIED_CURRENT":      1,
+		"CALENDAR_AVAILABILITY_VERIFIED_AS_OF_CUTOFF": 2,
+		"CALENDAR_AVAILABILITY_UNAVAILABLE":           3,
+	}
+)
+
+func (x CalendarAvailability) Enum() *CalendarAvailability {
+	p := new(CalendarAvailability)
+	*p = x
+	return p
+}
+
+func (x CalendarAvailability) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CalendarAvailability) Descriptor() protoreflect.EnumDescriptor {
+	return file_ml_v1_forecast_proto_enumTypes[4].Descriptor()
+}
+
+func (CalendarAvailability) Type() protoreflect.EnumType {
+	return &file_ml_v1_forecast_proto_enumTypes[4]
+}
+
+func (x CalendarAvailability) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CalendarAvailability.Descriptor instead.
+func (CalendarAvailability) EnumDescriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{4}
+}
+
+type FinancialComponentKind int32
+
+const (
+	FinancialComponentKind_FINANCIAL_COMPONENT_KIND_UNSPECIFIED           FinancialComponentKind = 0
+	FinancialComponentKind_FINANCIAL_COMPONENT_KIND_KNOWN_PAYMENT         FinancialComponentKind = 1
+	FinancialComponentKind_FINANCIAL_COMPONENT_KIND_ML_SALES_RECEIPT      FinancialComponentKind = 2
+	FinancialComponentKind_FINANCIAL_COMPONENT_KIND_RECURRING_EXPENSE     FinancialComponentKind = 3
+	FinancialComponentKind_FINANCIAL_COMPONENT_KIND_UNCLASSIFIED_BASELINE FinancialComponentKind = 4
+)
+
+// Enum value maps for FinancialComponentKind.
+var (
+	FinancialComponentKind_name = map[int32]string{
+		0: "FINANCIAL_COMPONENT_KIND_UNSPECIFIED",
+		1: "FINANCIAL_COMPONENT_KIND_KNOWN_PAYMENT",
+		2: "FINANCIAL_COMPONENT_KIND_ML_SALES_RECEIPT",
+		3: "FINANCIAL_COMPONENT_KIND_RECURRING_EXPENSE",
+		4: "FINANCIAL_COMPONENT_KIND_UNCLASSIFIED_BASELINE",
+	}
+	FinancialComponentKind_value = map[string]int32{
+		"FINANCIAL_COMPONENT_KIND_UNSPECIFIED":           0,
+		"FINANCIAL_COMPONENT_KIND_KNOWN_PAYMENT":         1,
+		"FINANCIAL_COMPONENT_KIND_ML_SALES_RECEIPT":      2,
+		"FINANCIAL_COMPONENT_KIND_RECURRING_EXPENSE":     3,
+		"FINANCIAL_COMPONENT_KIND_UNCLASSIFIED_BASELINE": 4,
+	}
+)
+
+func (x FinancialComponentKind) Enum() *FinancialComponentKind {
+	p := new(FinancialComponentKind)
+	*p = x
+	return p
+}
+
+func (x FinancialComponentKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (FinancialComponentKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_ml_v1_forecast_proto_enumTypes[5].Descriptor()
+}
+
+func (FinancialComponentKind) Type() protoreflect.EnumType {
+	return &file_ml_v1_forecast_proto_enumTypes[5]
+}
+
+func (x FinancialComponentKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use FinancialComponentKind.Descriptor instead.
+func (FinancialComponentKind) EnumDescriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{5}
+}
+
 // ISO dates are company-local business dates, not timestamps. Core must reject
 // unresolved gaps/duplicates before constructing these consecutive daily points.
 type HistoricalDay struct {
@@ -79,6 +340,7 @@ type HistoricalDay struct {
 	OutflowMinor        *int64                 `protobuf:"varint,3,opt,name=outflow_minor,json=outflowMinor,proto3,oneof" json:"outflow_minor,omitempty"`
 	ClosingBalanceMinor *int64                 `protobuf:"varint,4,opt,name=closing_balance_minor,json=closingBalanceMinor,proto3,oneof" json:"closing_balance_minor,omitempty"`
 	Source              DaySource              `protobuf:"varint,5,opt,name=source,proto3,enum=ml.v1.DaySource" json:"source,omitempty"`
+	QualityCodes        []string               `protobuf:"bytes,6,rep,name=quality_codes,json=qualityCodes,proto3" json:"quality_codes,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -148,11 +410,21 @@ func (x *HistoricalDay) GetSource() DaySource {
 	return DaySource_DAY_SOURCE_UNSPECIFIED
 }
 
+func (x *HistoricalDay) GetQualityCodes() []string {
+	if x != nil {
+		return x.QualityCodes
+	}
+	return nil
+}
+
 type ModelContext struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	ModelName            string                 `protobuf:"bytes,1,opt,name=model_name,json=modelName,proto3" json:"model_name,omitempty"`
 	ModelVersion         string                 `protobuf:"bytes,2,opt,name=model_version,json=modelVersion,proto3" json:"model_version,omitempty"`
 	PreprocessingVersion string                 `protobuf:"bytes,3,opt,name=preprocessing_version,json=preprocessingVersion,proto3" json:"preprocessing_version,omitempty"`
+	ConfigurationId      string                 `protobuf:"bytes,4,opt,name=configuration_id,json=configurationId,proto3" json:"configuration_id,omitempty"`
+	RandomSeed           *string                `protobuf:"bytes,5,opt,name=random_seed,json=randomSeed,proto3,oneof" json:"random_seed,omitempty"`
+	TrajectoryCount      *uint32                `protobuf:"varint,6,opt,name=trajectory_count,json=trajectoryCount,proto3,oneof" json:"trajectory_count,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -208,94 +480,52 @@ func (x *ModelContext) GetPreprocessingVersion() string {
 	return ""
 }
 
-// Reserved input for explicit rejection until calendar reconciliation is agreed.
-// A full history-only baseline must not be blindly added to known payments.
-type KnownPayment struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	PaymentId     string                 `protobuf:"bytes,1,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty"`
-	Date          string                 `protobuf:"bytes,2,opt,name=date,proto3" json:"date,omitempty"`
-	InflowMinor   int64                  `protobuf:"varint,3,opt,name=inflow_minor,json=inflowMinor,proto3" json:"inflow_minor,omitempty"`
-	OutflowMinor  int64                  `protobuf:"varint,4,opt,name=outflow_minor,json=outflowMinor,proto3" json:"outflow_minor,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *KnownPayment) Reset() {
-	*x = KnownPayment{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *KnownPayment) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*KnownPayment) ProtoMessage() {}
-
-func (x *KnownPayment) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[2]
+func (x *ModelContext) GetConfigurationId() string {
 	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use KnownPayment.ProtoReflect.Descriptor instead.
-func (*KnownPayment) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *KnownPayment) GetPaymentId() string {
-	if x != nil {
-		return x.PaymentId
+		return x.ConfigurationId
 	}
 	return ""
 }
 
-func (x *KnownPayment) GetDate() string {
-	if x != nil {
-		return x.Date
+func (x *ModelContext) GetRandomSeed() string {
+	if x != nil && x.RandomSeed != nil {
+		return *x.RandomSeed
 	}
 	return ""
 }
 
-func (x *KnownPayment) GetInflowMinor() int64 {
-	if x != nil {
-		return x.InflowMinor
-	}
-	return 0
-}
-
-func (x *KnownPayment) GetOutflowMinor() int64 {
-	if x != nil {
-		return x.OutflowMinor
+func (x *ModelContext) GetTrajectoryCount() uint32 {
+	if x != nil && x.TrajectoryCount != nil {
+		return *x.TrajectoryCount
 	}
 	return 0
 }
 
 type ForecastSnapshot struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	SnapshotId          string                 `protobuf:"bytes,1,opt,name=snapshot_id,json=snapshotId,proto3" json:"snapshot_id,omitempty"`
-	CompanyId           string                 `protobuf:"bytes,2,opt,name=company_id,json=companyId,proto3" json:"company_id,omitempty"`
-	AccountId           string                 `protobuf:"bytes,3,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
-	DataVersion         uint64                 `protobuf:"varint,4,opt,name=data_version,json=dataVersion,proto3" json:"data_version,omitempty"`
-	Currency            string                 `protobuf:"bytes,5,opt,name=currency,proto3" json:"currency,omitempty"`
-	CutoffDate          string                 `protobuf:"bytes,6,opt,name=cutoff_date,json=cutoffDate,proto3" json:"cutoff_date,omitempty"`
-	InitialBalanceMinor *int64                 `protobuf:"varint,7,opt,name=initial_balance_minor,json=initialBalanceMinor,proto3,oneof" json:"initial_balance_minor,omitempty"`
-	History             []*HistoricalDay       `protobuf:"bytes,8,rep,name=history,proto3" json:"history,omitempty"`
-	KnownPayments       []*KnownPayment        `protobuf:"bytes,9,rep,name=known_payments,json=knownPayments,proto3" json:"known_payments,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	SnapshotId           string                 `protobuf:"bytes,1,opt,name=snapshot_id,json=snapshotId,proto3" json:"snapshot_id,omitempty"`
+	CompanyId            string                 `protobuf:"bytes,2,opt,name=company_id,json=companyId,proto3" json:"company_id,omitempty"`
+	AccountId            string                 `protobuf:"bytes,3,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
+	DataVersion          uint64                 `protobuf:"varint,4,opt,name=data_version,json=dataVersion,proto3" json:"data_version,omitempty"`
+	Currency             string                 `protobuf:"bytes,5,opt,name=currency,proto3" json:"currency,omitempty"`
+	CutoffDate           string                 `protobuf:"bytes,6,opt,name=cutoff_date,json=cutoffDate,proto3" json:"cutoff_date,omitempty"`
+	InitialBalanceMinor  *int64                 `protobuf:"varint,7,opt,name=initial_balance_minor,json=initialBalanceMinor,proto3,oneof" json:"initial_balance_minor,omitempty"`
+	History              []*HistoricalDay       `protobuf:"bytes,8,rep,name=history,proto3" json:"history,omitempty"`
+	KnownPayments        []*KnownPayment        `protobuf:"bytes,9,rep,name=known_payments,json=knownPayments,proto3" json:"known_payments,omitempty"`
+	HistoryStart         string                 `protobuf:"bytes,10,opt,name=history_start,json=historyStart,proto3" json:"history_start,omitempty"`
+	Facts                []*FinancialFact       `protobuf:"bytes,11,rep,name=facts,proto3" json:"facts,omitempty"`
+	ReconciliationGroups []*ReconciliationGroup `protobuf:"bytes,12,rep,name=reconciliation_groups,json=reconciliationGroups,proto3" json:"reconciliation_groups,omitempty"`
+	Purpose              FinancialPurpose       `protobuf:"varint,13,opt,name=purpose,proto3,enum=ml.v1.FinancialPurpose" json:"purpose,omitempty"`
+	CalendarAvailability CalendarAvailability   `protobuf:"varint,14,opt,name=calendar_availability,json=calendarAvailability,proto3,enum=ml.v1.CalendarAvailability" json:"calendar_availability,omitempty"`
+	CapturedAt           *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=captured_at,json=capturedAt,proto3" json:"captured_at,omitempty"`
+	BalanceAsOf          string                 `protobuf:"bytes,16,opt,name=balance_as_of,json=balanceAsOf,proto3" json:"balance_as_of,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *ForecastSnapshot) Reset() {
 	*x = ForecastSnapshot{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[3]
+	mi := &file_ml_v1_forecast_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -307,7 +537,7 @@ func (x *ForecastSnapshot) String() string {
 func (*ForecastSnapshot) ProtoMessage() {}
 
 func (x *ForecastSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[3]
+	mi := &file_ml_v1_forecast_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -320,7 +550,7 @@ func (x *ForecastSnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForecastSnapshot.ProtoReflect.Descriptor instead.
 func (*ForecastSnapshot) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{3}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ForecastSnapshot) GetSnapshotId() string {
@@ -386,6 +616,55 @@ func (x *ForecastSnapshot) GetKnownPayments() []*KnownPayment {
 	return nil
 }
 
+func (x *ForecastSnapshot) GetHistoryStart() string {
+	if x != nil {
+		return x.HistoryStart
+	}
+	return ""
+}
+
+func (x *ForecastSnapshot) GetFacts() []*FinancialFact {
+	if x != nil {
+		return x.Facts
+	}
+	return nil
+}
+
+func (x *ForecastSnapshot) GetReconciliationGroups() []*ReconciliationGroup {
+	if x != nil {
+		return x.ReconciliationGroups
+	}
+	return nil
+}
+
+func (x *ForecastSnapshot) GetPurpose() FinancialPurpose {
+	if x != nil {
+		return x.Purpose
+	}
+	return FinancialPurpose_FINANCIAL_PURPOSE_UNSPECIFIED
+}
+
+func (x *ForecastSnapshot) GetCalendarAvailability() CalendarAvailability {
+	if x != nil {
+		return x.CalendarAvailability
+	}
+	return CalendarAvailability_CALENDAR_AVAILABILITY_UNSPECIFIED
+}
+
+func (x *ForecastSnapshot) GetCapturedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CapturedAt
+	}
+	return nil
+}
+
+func (x *ForecastSnapshot) GetBalanceAsOf() string {
+	if x != nil {
+		return x.BalanceAsOf
+	}
+	return ""
+}
+
 type PredictRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Snapshot      *ForecastSnapshot      `protobuf:"bytes,1,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
@@ -397,7 +676,7 @@ type PredictRequest struct {
 
 func (x *PredictRequest) Reset() {
 	*x = PredictRequest{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[4]
+	mi := &file_ml_v1_forecast_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -409,7 +688,7 @@ func (x *PredictRequest) String() string {
 func (*PredictRequest) ProtoMessage() {}
 
 func (x *PredictRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[4]
+	mi := &file_ml_v1_forecast_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -422,7 +701,7 @@ func (x *PredictRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PredictRequest.ProtoReflect.Descriptor instead.
 func (*PredictRequest) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{4}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *PredictRequest) GetSnapshot() *ForecastSnapshot {
@@ -453,14 +732,17 @@ type ForecastDay struct {
 	OutflowMinor int64                  `protobuf:"varint,3,opt,name=outflow_minor,json=outflowMinor,proto3" json:"outflow_minor,omitempty"`
 	// Mathematical reference only. Core independently checks the identity and
 	// owns the final financial result; this is not a database balance observation.
-	ReferenceBalanceMinor int64 `protobuf:"varint,4,opt,name=reference_balance_minor,json=referenceBalanceMinor,proto3" json:"reference_balance_minor,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	ReferenceBalanceMinor      int64                 `protobuf:"varint,4,opt,name=reference_balance_minor,json=referenceBalanceMinor,proto3" json:"reference_balance_minor,omitempty"`
+	BalanceLowerMinor          *int64                `protobuf:"varint,5,opt,name=balance_lower_minor,json=balanceLowerMinor,proto3,oneof" json:"balance_lower_minor,omitempty"`
+	BalanceUpperMinor          *int64                `protobuf:"varint,6,opt,name=balance_upper_minor,json=balanceUpperMinor,proto3,oneof" json:"balance_upper_minor,omitempty"`
+	NegativeBalanceProbability *FinancialProbability `protobuf:"bytes,7,opt,name=negative_balance_probability,json=negativeBalanceProbability,proto3" json:"negative_balance_probability,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
 }
 
 func (x *ForecastDay) Reset() {
 	*x = ForecastDay{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[5]
+	mi := &file_ml_v1_forecast_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -472,7 +754,7 @@ func (x *ForecastDay) String() string {
 func (*ForecastDay) ProtoMessage() {}
 
 func (x *ForecastDay) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[5]
+	mi := &file_ml_v1_forecast_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -485,7 +767,7 @@ func (x *ForecastDay) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForecastDay.ProtoReflect.Descriptor instead.
 func (*ForecastDay) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{5}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ForecastDay) GetDate() string {
@@ -516,6 +798,27 @@ func (x *ForecastDay) GetReferenceBalanceMinor() int64 {
 	return 0
 }
 
+func (x *ForecastDay) GetBalanceLowerMinor() int64 {
+	if x != nil && x.BalanceLowerMinor != nil {
+		return *x.BalanceLowerMinor
+	}
+	return 0
+}
+
+func (x *ForecastDay) GetBalanceUpperMinor() int64 {
+	if x != nil && x.BalanceUpperMinor != nil {
+		return *x.BalanceUpperMinor
+	}
+	return 0
+}
+
+func (x *ForecastDay) GetNegativeBalanceProbability() *FinancialProbability {
+	if x != nil {
+		return x.NegativeBalanceProbability
+	}
+	return nil
+}
+
 type PredictResponse struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	SnapshotId  string                 `protobuf:"bytes,1,opt,name=snapshot_id,json=snapshotId,proto3" json:"snapshot_id,omitempty"`
@@ -529,16 +832,19 @@ type PredictResponse struct {
 	Days        []*ForecastDay         `protobuf:"bytes,9,rep,name=days,proto3" json:"days,omitempty"`
 	// below_zero_eod, not proven insolvency. Absence means no negative reference
 	// balance in the horizon; no calibrated probability is available.
-	FirstNegativeBalanceDate          *string  `protobuf:"bytes,10,opt,name=first_negative_balance_date,json=firstNegativeBalanceDate,proto3,oneof" json:"first_negative_balance_date,omitempty"`
-	HistoryOnlyIncludesRecurringFlows bool     `protobuf:"varint,11,opt,name=history_only_includes_recurring_flows,json=historyOnlyIncludesRecurringFlows,proto3" json:"history_only_includes_recurring_flows,omitempty"`
-	Warnings                          []string `protobuf:"bytes,12,rep,name=warnings,proto3" json:"warnings,omitempty"`
+	FirstNegativeBalanceDate          *string               `protobuf:"bytes,10,opt,name=first_negative_balance_date,json=firstNegativeBalanceDate,proto3,oneof" json:"first_negative_balance_date,omitempty"`
+	HistoryOnlyIncludesRecurringFlows bool                  `protobuf:"varint,11,opt,name=history_only_includes_recurring_flows,json=historyOnlyIncludesRecurringFlows,proto3" json:"history_only_includes_recurring_flows,omitempty"`
+	Warnings                          []string              `protobuf:"bytes,12,rep,name=warnings,proto3" json:"warnings,omitempty"`
+	Components                        []*FinancialComponent `protobuf:"bytes,13,rep,name=components,proto3" json:"components,omitempty"`
+	GapProbability                    *FinancialProbability `protobuf:"bytes,14,opt,name=gap_probability,json=gapProbability,proto3" json:"gap_probability,omitempty"`
+	Assumptions                       []string              `protobuf:"bytes,15,rep,name=assumptions,proto3" json:"assumptions,omitempty"`
 	unknownFields                     protoimpl.UnknownFields
 	sizeCache                         protoimpl.SizeCache
 }
 
 func (x *PredictResponse) Reset() {
 	*x = PredictResponse{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[6]
+	mi := &file_ml_v1_forecast_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -550,7 +856,7 @@ func (x *PredictResponse) String() string {
 func (*PredictResponse) ProtoMessage() {}
 
 func (x *PredictResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[6]
+	mi := &file_ml_v1_forecast_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -563,7 +869,7 @@ func (x *PredictResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PredictResponse.ProtoReflect.Descriptor instead.
 func (*PredictResponse) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{6}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *PredictResponse) GetSnapshotId() string {
@@ -650,31 +956,824 @@ func (x *PredictResponse) GetWarnings() []string {
 	return nil
 }
 
+func (x *PredictResponse) GetComponents() []*FinancialComponent {
+	if x != nil {
+		return x.Components
+	}
+	return nil
+}
+
+func (x *PredictResponse) GetGapProbability() *FinancialProbability {
+	if x != nil {
+		return x.GapProbability
+	}
+	return nil
+}
+
+func (x *PredictResponse) GetAssumptions() []string {
+	if x != nil {
+		return x.Assumptions
+	}
+	return nil
+}
+
+type FinancialCategory struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Core UUID, optional category message means uncategorized.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	SemanticKind  string `protobuf:"bytes,2,opt,name=semantic_kind,json=semanticKind,proto3" json:"semantic_kind,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinancialCategory) Reset() {
+	*x = FinancialCategory{}
+	mi := &file_ml_v1_forecast_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinancialCategory) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinancialCategory) ProtoMessage() {}
+
+func (x *FinancialCategory) ProtoReflect() protoreflect.Message {
+	mi := &file_ml_v1_forecast_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinancialCategory.ProtoReflect.Descriptor instead.
+func (*FinancialCategory) Descriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *FinancialCategory) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *FinancialCategory) GetSemanticKind() string {
+	if x != nil {
+		return x.SemanticKind
+	}
+	return ""
+}
+
+type FinancialSource struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Kind            string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	SourceSystem    string                 `protobuf:"bytes,2,opt,name=source_system,json=sourceSystem,proto3" json:"source_system,omitempty"`
+	SourceCompanyId *string                `protobuf:"bytes,3,opt,name=source_company_id,json=sourceCompanyId,proto3,oneof" json:"source_company_id,omitempty"`
+	ExternalId      *string                `protobuf:"bytes,4,opt,name=external_id,json=externalId,proto3,oneof" json:"external_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *FinancialSource) Reset() {
+	*x = FinancialSource{}
+	mi := &file_ml_v1_forecast_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinancialSource) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinancialSource) ProtoMessage() {}
+
+func (x *FinancialSource) ProtoReflect() protoreflect.Message {
+	mi := &file_ml_v1_forecast_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinancialSource.ProtoReflect.Descriptor instead.
+func (*FinancialSource) Descriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *FinancialSource) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *FinancialSource) GetSourceSystem() string {
+	if x != nil {
+		return x.SourceSystem
+	}
+	return ""
+}
+
+func (x *FinancialSource) GetSourceCompanyId() string {
+	if x != nil && x.SourceCompanyId != nil {
+		return *x.SourceCompanyId
+	}
+	return ""
+}
+
+func (x *FinancialSource) GetExternalId() string {
+	if x != nil && x.ExternalId != nil {
+		return *x.ExternalId
+	}
+	return ""
+}
+
+type FinancialFact struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	TransactionId     string                 `protobuf:"bytes,1,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
+	Version           int64                  `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+	Date              string                 `protobuf:"bytes,3,opt,name=date,proto3" json:"date,omitempty"`
+	Direction         FinancialDirection     `protobuf:"varint,4,opt,name=direction,proto3,enum=ml.v1.FinancialDirection" json:"direction,omitempty"`
+	AmountMinor       int64                  `protobuf:"varint,5,opt,name=amount_minor,json=amountMinor,proto3" json:"amount_minor,omitempty"`
+	Category          *FinancialCategory     `protobuf:"bytes,6,opt,name=category,proto3" json:"category,omitempty"`
+	Source            *FinancialSource       `protobuf:"bytes,7,opt,name=source,proto3" json:"source,omitempty"`
+	RecurrenceGroupId *string                `protobuf:"bytes,8,opt,name=recurrence_group_id,json=recurrenceGroupId,proto3,oneof" json:"recurrence_group_id,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *FinancialFact) Reset() {
+	*x = FinancialFact{}
+	mi := &file_ml_v1_forecast_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinancialFact) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinancialFact) ProtoMessage() {}
+
+func (x *FinancialFact) ProtoReflect() protoreflect.Message {
+	mi := &file_ml_v1_forecast_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinancialFact.ProtoReflect.Descriptor instead.
+func (*FinancialFact) Descriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *FinancialFact) GetTransactionId() string {
+	if x != nil {
+		return x.TransactionId
+	}
+	return ""
+}
+
+func (x *FinancialFact) GetVersion() int64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *FinancialFact) GetDate() string {
+	if x != nil {
+		return x.Date
+	}
+	return ""
+}
+
+func (x *FinancialFact) GetDirection() FinancialDirection {
+	if x != nil {
+		return x.Direction
+	}
+	return FinancialDirection_FINANCIAL_DIRECTION_UNSPECIFIED
+}
+
+func (x *FinancialFact) GetAmountMinor() int64 {
+	if x != nil {
+		return x.AmountMinor
+	}
+	return 0
+}
+
+func (x *FinancialFact) GetCategory() *FinancialCategory {
+	if x != nil {
+		return x.Category
+	}
+	return nil
+}
+
+func (x *FinancialFact) GetSource() *FinancialSource {
+	if x != nil {
+		return x.Source
+	}
+	return nil
+}
+
+func (x *FinancialFact) GetRecurrenceGroupId() string {
+	if x != nil && x.RecurrenceGroupId != nil {
+		return *x.RecurrenceGroupId
+	}
+	return ""
+}
+
+type KnownPayment struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	PaymentId      string                 `protobuf:"bytes,1,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty"`
+	Version        int64                  `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+	Date           string                 `protobuf:"bytes,3,opt,name=date,proto3" json:"date,omitempty"`
+	Direction      FinancialDirection     `protobuf:"varint,4,opt,name=direction,proto3,enum=ml.v1.FinancialDirection" json:"direction,omitempty"`
+	RemainingMinor int64                  `protobuf:"varint,5,opt,name=remaining_minor,json=remainingMinor,proto3" json:"remaining_minor,omitempty"`
+	Category       *FinancialCategory     `protobuf:"bytes,6,opt,name=category,proto3" json:"category,omitempty"`
+	Source         *FinancialSource       `protobuf:"bytes,7,opt,name=source,proto3" json:"source,omitempty"`
+	Status         KnownPaymentStatus     `protobuf:"varint,8,opt,name=status,proto3,enum=ml.v1.KnownPaymentStatus" json:"status,omitempty"`
+	// Grouped obligations are referenced by exactly one reconciliation group.
+	// Ungrouped obligations must explicitly declare additional=true.
+	ReconciliationGroupId *string `protobuf:"bytes,9,opt,name=reconciliation_group_id,json=reconciliationGroupId,proto3,oneof" json:"reconciliation_group_id,omitempty"`
+	Additional            bool    `protobuf:"varint,10,opt,name=additional,proto3" json:"additional,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *KnownPayment) Reset() {
+	*x = KnownPayment{}
+	mi := &file_ml_v1_forecast_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *KnownPayment) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*KnownPayment) ProtoMessage() {}
+
+func (x *KnownPayment) ProtoReflect() protoreflect.Message {
+	mi := &file_ml_v1_forecast_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use KnownPayment.ProtoReflect.Descriptor instead.
+func (*KnownPayment) Descriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *KnownPayment) GetPaymentId() string {
+	if x != nil {
+		return x.PaymentId
+	}
+	return ""
+}
+
+func (x *KnownPayment) GetVersion() int64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *KnownPayment) GetDate() string {
+	if x != nil {
+		return x.Date
+	}
+	return ""
+}
+
+func (x *KnownPayment) GetDirection() FinancialDirection {
+	if x != nil {
+		return x.Direction
+	}
+	return FinancialDirection_FINANCIAL_DIRECTION_UNSPECIFIED
+}
+
+func (x *KnownPayment) GetRemainingMinor() int64 {
+	if x != nil {
+		return x.RemainingMinor
+	}
+	return 0
+}
+
+func (x *KnownPayment) GetCategory() *FinancialCategory {
+	if x != nil {
+		return x.Category
+	}
+	return nil
+}
+
+func (x *KnownPayment) GetSource() *FinancialSource {
+	if x != nil {
+		return x.Source
+	}
+	return nil
+}
+
+func (x *KnownPayment) GetStatus() KnownPaymentStatus {
+	if x != nil {
+		return x.Status
+	}
+	return KnownPaymentStatus_KNOWN_PAYMENT_STATUS_UNSPECIFIED
+}
+
+func (x *KnownPayment) GetReconciliationGroupId() string {
+	if x != nil && x.ReconciliationGroupId != nil {
+		return *x.ReconciliationGroupId
+	}
+	return ""
+}
+
+func (x *KnownPayment) GetAdditional() bool {
+	if x != nil {
+		return x.Additional
+	}
+	return false
+}
+
+type ReconciledOccurrence struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OccurrenceId  string                 `protobuf:"bytes,1,opt,name=occurrence_id,json=occurrenceId,proto3" json:"occurrence_id,omitempty"`
+	Date          string                 `protobuf:"bytes,2,opt,name=date,proto3" json:"date,omitempty"`
+	Direction     FinancialDirection     `protobuf:"varint,3,opt,name=direction,proto3,enum=ml.v1.FinancialDirection" json:"direction,omitempty"`
+	AmountMinor   int64                  `protobuf:"varint,4,opt,name=amount_minor,json=amountMinor,proto3" json:"amount_minor,omitempty"`
+	Category      *FinancialCategory     `protobuf:"bytes,5,opt,name=category,proto3" json:"category,omitempty"`
+	PaymentId     *string                `protobuf:"bytes,6,opt,name=payment_id,json=paymentId,proto3,oneof" json:"payment_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReconciledOccurrence) Reset() {
+	*x = ReconciledOccurrence{}
+	mi := &file_ml_v1_forecast_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReconciledOccurrence) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReconciledOccurrence) ProtoMessage() {}
+
+func (x *ReconciledOccurrence) ProtoReflect() protoreflect.Message {
+	mi := &file_ml_v1_forecast_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReconciledOccurrence.ProtoReflect.Descriptor instead.
+func (*ReconciledOccurrence) Descriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ReconciledOccurrence) GetOccurrenceId() string {
+	if x != nil {
+		return x.OccurrenceId
+	}
+	return ""
+}
+
+func (x *ReconciledOccurrence) GetDate() string {
+	if x != nil {
+		return x.Date
+	}
+	return ""
+}
+
+func (x *ReconciledOccurrence) GetDirection() FinancialDirection {
+	if x != nil {
+		return x.Direction
+	}
+	return FinancialDirection_FINANCIAL_DIRECTION_UNSPECIFIED
+}
+
+func (x *ReconciledOccurrence) GetAmountMinor() int64 {
+	if x != nil {
+		return x.AmountMinor
+	}
+	return 0
+}
+
+func (x *ReconciledOccurrence) GetCategory() *FinancialCategory {
+	if x != nil {
+		return x.Category
+	}
+	return nil
+}
+
+func (x *ReconciledOccurrence) GetPaymentId() string {
+	if x != nil && x.PaymentId != nil {
+		return *x.PaymentId
+	}
+	return ""
+}
+
+// Complete economic group for the entire forecast horizon. Exclude these facts
+// from unknown baseline, replace with exactly these future occurrences ONCE.
+// No heuristic ID/amount/date match is permitted. Empty future needs an explicit
+// confirmed absence reason; every grouped known payment occurs exactly once.
+type ReconciliationGroup struct {
+	state                     protoimpl.MessageState  `protogen:"open.v1"`
+	Id                        string                  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	HistoricalTransactionIds  []string                `protobuf:"bytes,2,rep,name=historical_transaction_ids,json=historicalTransactionIds,proto3" json:"historical_transaction_ids,omitempty"`
+	FutureOccurrences         []*ReconciledOccurrence `protobuf:"bytes,3,rep,name=future_occurrences,json=futureOccurrences,proto3" json:"future_occurrences,omitempty"`
+	FullHorizonVerified       bool                    `protobuf:"varint,4,opt,name=full_horizon_verified,json=fullHorizonVerified,proto3" json:"full_horizon_verified,omitempty"`
+	NoFutureOccurrencesReason *string                 `protobuf:"bytes,5,opt,name=no_future_occurrences_reason,json=noFutureOccurrencesReason,proto3,oneof" json:"no_future_occurrences_reason,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
+}
+
+func (x *ReconciliationGroup) Reset() {
+	*x = ReconciliationGroup{}
+	mi := &file_ml_v1_forecast_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReconciliationGroup) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReconciliationGroup) ProtoMessage() {}
+
+func (x *ReconciliationGroup) ProtoReflect() protoreflect.Message {
+	mi := &file_ml_v1_forecast_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReconciliationGroup.ProtoReflect.Descriptor instead.
+func (*ReconciliationGroup) Descriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ReconciliationGroup) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ReconciliationGroup) GetHistoricalTransactionIds() []string {
+	if x != nil {
+		return x.HistoricalTransactionIds
+	}
+	return nil
+}
+
+func (x *ReconciliationGroup) GetFutureOccurrences() []*ReconciledOccurrence {
+	if x != nil {
+		return x.FutureOccurrences
+	}
+	return nil
+}
+
+func (x *ReconciliationGroup) GetFullHorizonVerified() bool {
+	if x != nil {
+		return x.FullHorizonVerified
+	}
+	return false
+}
+
+func (x *ReconciliationGroup) GetNoFutureOccurrencesReason() string {
+	if x != nil && x.NoFutureOccurrencesReason != nil {
+		return *x.NoFutureOccurrencesReason
+	}
+	return ""
+}
+
+// An estimate requires calibration provenance. Rule confidence never qualifies.
+// A model without an estimate returns unavailable_reason, never value=0.
+type CalibratedEstimate struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Value               float64                `protobuf:"fixed64,1,opt,name=value,proto3" json:"value,omitempty"`
+	CalibrationVersion  string                 `protobuf:"bytes,2,opt,name=calibration_version,json=calibrationVersion,proto3" json:"calibration_version,omitempty"`
+	EvaluationReference string                 `protobuf:"bytes,3,opt,name=evaluation_reference,json=evaluationReference,proto3" json:"evaluation_reference,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *CalibratedEstimate) Reset() {
+	*x = CalibratedEstimate{}
+	mi := &file_ml_v1_forecast_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CalibratedEstimate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CalibratedEstimate) ProtoMessage() {}
+
+func (x *CalibratedEstimate) ProtoReflect() protoreflect.Message {
+	mi := &file_ml_v1_forecast_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CalibratedEstimate.ProtoReflect.Descriptor instead.
+func (*CalibratedEstimate) Descriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *CalibratedEstimate) GetValue() float64 {
+	if x != nil {
+		return x.Value
+	}
+	return 0
+}
+
+func (x *CalibratedEstimate) GetCalibrationVersion() string {
+	if x != nil {
+		return x.CalibrationVersion
+	}
+	return ""
+}
+
+func (x *CalibratedEstimate) GetEvaluationReference() string {
+	if x != nil {
+		return x.EvaluationReference
+	}
+	return ""
+}
+
+type FinancialProbability struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Estimate:
+	//
+	//	*FinancialProbability_Calibrated
+	//	*FinancialProbability_UnavailableReason
+	Estimate      isFinancialProbability_Estimate `protobuf_oneof:"estimate"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinancialProbability) Reset() {
+	*x = FinancialProbability{}
+	mi := &file_ml_v1_forecast_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinancialProbability) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinancialProbability) ProtoMessage() {}
+
+func (x *FinancialProbability) ProtoReflect() protoreflect.Message {
+	mi := &file_ml_v1_forecast_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinancialProbability.ProtoReflect.Descriptor instead.
+func (*FinancialProbability) Descriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *FinancialProbability) GetEstimate() isFinancialProbability_Estimate {
+	if x != nil {
+		return x.Estimate
+	}
+	return nil
+}
+
+func (x *FinancialProbability) GetCalibrated() *CalibratedEstimate {
+	if x != nil {
+		if x, ok := x.Estimate.(*FinancialProbability_Calibrated); ok {
+			return x.Calibrated
+		}
+	}
+	return nil
+}
+
+func (x *FinancialProbability) GetUnavailableReason() string {
+	if x != nil {
+		if x, ok := x.Estimate.(*FinancialProbability_UnavailableReason); ok {
+			return x.UnavailableReason
+		}
+	}
+	return ""
+}
+
+type isFinancialProbability_Estimate interface {
+	isFinancialProbability_Estimate()
+}
+
+type FinancialProbability_Calibrated struct {
+	Calibrated *CalibratedEstimate `protobuf:"bytes,1,opt,name=calibrated,proto3,oneof"`
+}
+
+type FinancialProbability_UnavailableReason struct {
+	UnavailableReason string `protobuf:"bytes,2,opt,name=unavailable_reason,json=unavailableReason,proto3,oneof"`
+}
+
+func (*FinancialProbability_Calibrated) isFinancialProbability_Estimate() {}
+
+func (*FinancialProbability_UnavailableReason) isFinancialProbability_Estimate() {}
+
+type FinancialComponent struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	ComponentId            string                 `protobuf:"bytes,1,opt,name=component_id,json=componentId,proto3" json:"component_id,omitempty"`
+	OccurrenceId           string                 `protobuf:"bytes,2,opt,name=occurrence_id,json=occurrenceId,proto3" json:"occurrence_id,omitempty"`
+	Kind                   FinancialComponentKind `protobuf:"varint,3,opt,name=kind,proto3,enum=ml.v1.FinancialComponentKind" json:"kind,omitempty"`
+	Direction              FinancialDirection     `protobuf:"varint,4,opt,name=direction,proto3,enum=ml.v1.FinancialDirection" json:"direction,omitempty"`
+	Date                   string                 `protobuf:"bytes,5,opt,name=date,proto3" json:"date,omitempty"`
+	AmountMinor            int64                  `protobuf:"varint,6,opt,name=amount_minor,json=amountMinor,proto3" json:"amount_minor,omitempty"`
+	CategoryId             *string                `protobuf:"bytes,7,opt,name=category_id,json=categoryId,proto3,oneof" json:"category_id,omitempty"`
+	PaymentId              *string                `protobuf:"bytes,8,opt,name=payment_id,json=paymentId,proto3,oneof" json:"payment_id,omitempty"`
+	RecurrenceGroupId      *string                `protobuf:"bytes,9,opt,name=recurrence_group_id,json=recurrenceGroupId,proto3,oneof" json:"recurrence_group_id,omitempty"`
+	EvidenceTransactionIds []string               `protobuf:"bytes,10,rep,name=evidence_transaction_ids,json=evidenceTransactionIds,proto3" json:"evidence_transaction_ids,omitempty"`
+	ScenarioEligible       bool                   `protobuf:"varint,11,opt,name=scenario_eligible,json=scenarioEligible,proto3" json:"scenario_eligible,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *FinancialComponent) Reset() {
+	*x = FinancialComponent{}
+	mi := &file_ml_v1_forecast_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinancialComponent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinancialComponent) ProtoMessage() {}
+
+func (x *FinancialComponent) ProtoReflect() protoreflect.Message {
+	mi := &file_ml_v1_forecast_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinancialComponent.ProtoReflect.Descriptor instead.
+func (*FinancialComponent) Descriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *FinancialComponent) GetComponentId() string {
+	if x != nil {
+		return x.ComponentId
+	}
+	return ""
+}
+
+func (x *FinancialComponent) GetOccurrenceId() string {
+	if x != nil {
+		return x.OccurrenceId
+	}
+	return ""
+}
+
+func (x *FinancialComponent) GetKind() FinancialComponentKind {
+	if x != nil {
+		return x.Kind
+	}
+	return FinancialComponentKind_FINANCIAL_COMPONENT_KIND_UNSPECIFIED
+}
+
+func (x *FinancialComponent) GetDirection() FinancialDirection {
+	if x != nil {
+		return x.Direction
+	}
+	return FinancialDirection_FINANCIAL_DIRECTION_UNSPECIFIED
+}
+
+func (x *FinancialComponent) GetDate() string {
+	if x != nil {
+		return x.Date
+	}
+	return ""
+}
+
+func (x *FinancialComponent) GetAmountMinor() int64 {
+	if x != nil {
+		return x.AmountMinor
+	}
+	return 0
+}
+
+func (x *FinancialComponent) GetCategoryId() string {
+	if x != nil && x.CategoryId != nil {
+		return *x.CategoryId
+	}
+	return ""
+}
+
+func (x *FinancialComponent) GetPaymentId() string {
+	if x != nil && x.PaymentId != nil {
+		return *x.PaymentId
+	}
+	return ""
+}
+
+func (x *FinancialComponent) GetRecurrenceGroupId() string {
+	if x != nil && x.RecurrenceGroupId != nil {
+		return *x.RecurrenceGroupId
+	}
+	return ""
+}
+
+func (x *FinancialComponent) GetEvidenceTransactionIds() []string {
+	if x != nil {
+		return x.EvidenceTransactionIds
+	}
+	return nil
+}
+
+func (x *FinancialComponent) GetScenarioEligible() bool {
+	if x != nil {
+		return x.ScenarioEligible
+	}
+	return false
+}
+
 var File_ml_v1_forecast_proto protoreflect.FileDescriptor
 
 const file_ml_v1_forecast_proto_rawDesc = "" +
 	"\n" +
-	"\x14ml/v1/forecast.proto\x12\x05ml.v1\"\x95\x02\n" +
+	"\x14ml/v1/forecast.proto\x12\x05ml.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xba\x02\n" +
 	"\rHistoricalDay\x12\x12\n" +
 	"\x04date\x18\x01 \x01(\tR\x04date\x12&\n" +
 	"\finflow_minor\x18\x02 \x01(\x03H\x00R\vinflowMinor\x88\x01\x01\x12(\n" +
 	"\routflow_minor\x18\x03 \x01(\x03H\x01R\foutflowMinor\x88\x01\x01\x127\n" +
 	"\x15closing_balance_minor\x18\x04 \x01(\x03H\x02R\x13closingBalanceMinor\x88\x01\x01\x12(\n" +
-	"\x06source\x18\x05 \x01(\x0e2\x10.ml.v1.DaySourceR\x06sourceB\x0f\n" +
+	"\x06source\x18\x05 \x01(\x0e2\x10.ml.v1.DaySourceR\x06source\x12#\n" +
+	"\rquality_codes\x18\x06 \x03(\tR\fqualityCodesB\x0f\n" +
 	"\r_inflow_minorB\x10\n" +
 	"\x0e_outflow_minorB\x18\n" +
-	"\x16_closing_balance_minor\"\x87\x01\n" +
+	"\x16_closing_balance_minor\"\xad\x02\n" +
 	"\fModelContext\x12\x1d\n" +
 	"\n" +
 	"model_name\x18\x01 \x01(\tR\tmodelName\x12#\n" +
 	"\rmodel_version\x18\x02 \x01(\tR\fmodelVersion\x123\n" +
-	"\x15preprocessing_version\x18\x03 \x01(\tR\x14preprocessingVersion\"\x89\x01\n" +
-	"\fKnownPayment\x12\x1d\n" +
-	"\n" +
-	"payment_id\x18\x01 \x01(\tR\tpaymentId\x12\x12\n" +
-	"\x04date\x18\x02 \x01(\tR\x04date\x12!\n" +
-	"\finflow_minor\x18\x03 \x01(\x03R\vinflowMinor\x12#\n" +
-	"\routflow_minor\x18\x04 \x01(\x03R\foutflowMinor\"\x90\x03\n" +
+	"\x15preprocessing_version\x18\x03 \x01(\tR\x14preprocessingVersion\x12)\n" +
+	"\x10configuration_id\x18\x04 \x01(\tR\x0fconfigurationId\x12$\n" +
+	"\vrandom_seed\x18\x05 \x01(\tH\x00R\n" +
+	"randomSeed\x88\x01\x01\x12.\n" +
+	"\x10trajectory_count\x18\x06 \x01(\rH\x01R\x0ftrajectoryCount\x88\x01\x01B\x0e\n" +
+	"\f_random_seedB\x13\n" +
+	"\x11_trajectory_count\"\x98\x06\n" +
 	"\x10ForecastSnapshot\x12\x1f\n" +
 	"\vsnapshot_id\x18\x01 \x01(\tR\n" +
 	"snapshotId\x12\x1d\n" +
@@ -688,17 +1787,31 @@ const file_ml_v1_forecast_proto_rawDesc = "" +
 	"cutoffDate\x127\n" +
 	"\x15initial_balance_minor\x18\a \x01(\x03H\x00R\x13initialBalanceMinor\x88\x01\x01\x12.\n" +
 	"\ahistory\x18\b \x03(\v2\x14.ml.v1.HistoricalDayR\ahistory\x12:\n" +
-	"\x0eknown_payments\x18\t \x03(\v2\x13.ml.v1.KnownPaymentR\rknownPaymentsB\x18\n" +
+	"\x0eknown_payments\x18\t \x03(\v2\x13.ml.v1.KnownPaymentR\rknownPayments\x12#\n" +
+	"\rhistory_start\x18\n" +
+	" \x01(\tR\fhistoryStart\x12*\n" +
+	"\x05facts\x18\v \x03(\v2\x14.ml.v1.FinancialFactR\x05facts\x12O\n" +
+	"\x15reconciliation_groups\x18\f \x03(\v2\x1a.ml.v1.ReconciliationGroupR\x14reconciliationGroups\x121\n" +
+	"\apurpose\x18\r \x01(\x0e2\x17.ml.v1.FinancialPurposeR\apurpose\x12P\n" +
+	"\x15calendar_availability\x18\x0e \x01(\x0e2\x1b.ml.v1.CalendarAvailabilityR\x14calendarAvailability\x12;\n" +
+	"\vcaptured_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"capturedAt\x12\"\n" +
+	"\rbalance_as_of\x18\x10 \x01(\tR\vbalanceAsOfB\x18\n" +
 	"\x16_initial_balance_minor\"\x93\x01\n" +
 	"\x0ePredictRequest\x123\n" +
 	"\bsnapshot\x18\x01 \x01(\v2\x17.ml.v1.ForecastSnapshotR\bsnapshot\x12!\n" +
 	"\fhorizon_days\x18\x02 \x01(\rR\vhorizonDays\x12)\n" +
-	"\x05model\x18\x03 \x01(\v2\x13.ml.v1.ModelContextR\x05model\"\xa1\x01\n" +
+	"\x05model\x18\x03 \x01(\v2\x13.ml.v1.ModelContextR\x05model\"\x9a\x03\n" +
 	"\vForecastDay\x12\x12\n" +
 	"\x04date\x18\x01 \x01(\tR\x04date\x12!\n" +
 	"\finflow_minor\x18\x02 \x01(\x03R\vinflowMinor\x12#\n" +
 	"\routflow_minor\x18\x03 \x01(\x03R\foutflowMinor\x126\n" +
-	"\x17reference_balance_minor\x18\x04 \x01(\x03R\x15referenceBalanceMinor\"\x94\x04\n" +
+	"\x17reference_balance_minor\x18\x04 \x01(\x03R\x15referenceBalanceMinor\x123\n" +
+	"\x13balance_lower_minor\x18\x05 \x01(\x03H\x00R\x11balanceLowerMinor\x88\x01\x01\x123\n" +
+	"\x13balance_upper_minor\x18\x06 \x01(\x03H\x01R\x11balanceUpperMinor\x88\x01\x01\x12]\n" +
+	"\x1cnegative_balance_probability\x18\a \x01(\v2\x1b.ml.v1.FinancialProbabilityR\x1anegativeBalanceProbabilityB\x16\n" +
+	"\x14_balance_lower_minorB\x16\n" +
+	"\x14_balance_upper_minor\"\xb7\x05\n" +
 	"\x0fPredictResponse\x12\x1f\n" +
 	"\vsnapshot_id\x18\x01 \x01(\tR\n" +
 	"snapshotId\x12\x1d\n" +
@@ -717,12 +1830,124 @@ const file_ml_v1_forecast_proto_rawDesc = "" +
 	"\x1bfirst_negative_balance_date\x18\n" +
 	" \x01(\tH\x00R\x18firstNegativeBalanceDate\x88\x01\x01\x12P\n" +
 	"%history_only_includes_recurring_flows\x18\v \x01(\bR!historyOnlyIncludesRecurringFlows\x12\x1a\n" +
-	"\bwarnings\x18\f \x03(\tR\bwarningsB\x1e\n" +
-	"\x1c_first_negative_balance_date*g\n" +
+	"\bwarnings\x18\f \x03(\tR\bwarnings\x129\n" +
+	"\n" +
+	"components\x18\r \x03(\v2\x19.ml.v1.FinancialComponentR\n" +
+	"components\x12D\n" +
+	"\x0fgap_probability\x18\x0e \x01(\v2\x1b.ml.v1.FinancialProbabilityR\x0egapProbability\x12 \n" +
+	"\vassumptions\x18\x0f \x03(\tR\vassumptionsB\x1e\n" +
+	"\x1c_first_negative_balance_date\"H\n" +
+	"\x11FinancialCategory\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
+	"\rsemantic_kind\x18\x02 \x01(\tR\fsemanticKind\"\xc7\x01\n" +
+	"\x0fFinancialSource\x12\x12\n" +
+	"\x04kind\x18\x01 \x01(\tR\x04kind\x12#\n" +
+	"\rsource_system\x18\x02 \x01(\tR\fsourceSystem\x12/\n" +
+	"\x11source_company_id\x18\x03 \x01(\tH\x00R\x0fsourceCompanyId\x88\x01\x01\x12$\n" +
+	"\vexternal_id\x18\x04 \x01(\tH\x01R\n" +
+	"externalId\x88\x01\x01B\x14\n" +
+	"\x12_source_company_idB\x0e\n" +
+	"\f_external_id\"\xf3\x02\n" +
+	"\rFinancialFact\x12%\n" +
+	"\x0etransaction_id\x18\x01 \x01(\tR\rtransactionId\x12\x18\n" +
+	"\aversion\x18\x02 \x01(\x03R\aversion\x12\x12\n" +
+	"\x04date\x18\x03 \x01(\tR\x04date\x127\n" +
+	"\tdirection\x18\x04 \x01(\x0e2\x19.ml.v1.FinancialDirectionR\tdirection\x12!\n" +
+	"\famount_minor\x18\x05 \x01(\x03R\vamountMinor\x124\n" +
+	"\bcategory\x18\x06 \x01(\v2\x18.ml.v1.FinancialCategoryR\bcategory\x12.\n" +
+	"\x06source\x18\a \x01(\v2\x16.ml.v1.FinancialSourceR\x06source\x123\n" +
+	"\x13recurrence_group_id\x18\b \x01(\tH\x00R\x11recurrenceGroupId\x88\x01\x01B\x16\n" +
+	"\x14_recurrence_group_id\"\xcf\x03\n" +
+	"\fKnownPayment\x12\x1d\n" +
+	"\n" +
+	"payment_id\x18\x01 \x01(\tR\tpaymentId\x12\x18\n" +
+	"\aversion\x18\x02 \x01(\x03R\aversion\x12\x12\n" +
+	"\x04date\x18\x03 \x01(\tR\x04date\x127\n" +
+	"\tdirection\x18\x04 \x01(\x0e2\x19.ml.v1.FinancialDirectionR\tdirection\x12'\n" +
+	"\x0fremaining_minor\x18\x05 \x01(\x03R\x0eremainingMinor\x124\n" +
+	"\bcategory\x18\x06 \x01(\v2\x18.ml.v1.FinancialCategoryR\bcategory\x12.\n" +
+	"\x06source\x18\a \x01(\v2\x16.ml.v1.FinancialSourceR\x06source\x121\n" +
+	"\x06status\x18\b \x01(\x0e2\x19.ml.v1.KnownPaymentStatusR\x06status\x12;\n" +
+	"\x17reconciliation_group_id\x18\t \x01(\tH\x00R\x15reconciliationGroupId\x88\x01\x01\x12\x1e\n" +
+	"\n" +
+	"additional\x18\n" +
+	" \x01(\bR\n" +
+	"additionalB\x1a\n" +
+	"\x18_reconciliation_group_id\"\x94\x02\n" +
+	"\x14ReconciledOccurrence\x12#\n" +
+	"\roccurrence_id\x18\x01 \x01(\tR\foccurrenceId\x12\x12\n" +
+	"\x04date\x18\x02 \x01(\tR\x04date\x127\n" +
+	"\tdirection\x18\x03 \x01(\x0e2\x19.ml.v1.FinancialDirectionR\tdirection\x12!\n" +
+	"\famount_minor\x18\x04 \x01(\x03R\vamountMinor\x124\n" +
+	"\bcategory\x18\x05 \x01(\v2\x18.ml.v1.FinancialCategoryR\bcategory\x12\"\n" +
+	"\n" +
+	"payment_id\x18\x06 \x01(\tH\x00R\tpaymentId\x88\x01\x01B\r\n" +
+	"\v_payment_id\"\xca\x02\n" +
+	"\x13ReconciliationGroup\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12<\n" +
+	"\x1ahistorical_transaction_ids\x18\x02 \x03(\tR\x18historicalTransactionIds\x12J\n" +
+	"\x12future_occurrences\x18\x03 \x03(\v2\x1b.ml.v1.ReconciledOccurrenceR\x11futureOccurrences\x122\n" +
+	"\x15full_horizon_verified\x18\x04 \x01(\bR\x13fullHorizonVerified\x12D\n" +
+	"\x1cno_future_occurrences_reason\x18\x05 \x01(\tH\x00R\x19noFutureOccurrencesReason\x88\x01\x01B\x1f\n" +
+	"\x1d_no_future_occurrences_reason\"\x8e\x01\n" +
+	"\x12CalibratedEstimate\x12\x14\n" +
+	"\x05value\x18\x01 \x01(\x01R\x05value\x12/\n" +
+	"\x13calibration_version\x18\x02 \x01(\tR\x12calibrationVersion\x121\n" +
+	"\x14evaluation_reference\x18\x03 \x01(\tR\x13evaluationReference\"\x90\x01\n" +
+	"\x14FinancialProbability\x12;\n" +
+	"\n" +
+	"calibrated\x18\x01 \x01(\v2\x19.ml.v1.CalibratedEstimateH\x00R\n" +
+	"calibrated\x12/\n" +
+	"\x12unavailable_reason\x18\x02 \x01(\tH\x00R\x11unavailableReasonB\n" +
+	"\n" +
+	"\bestimate\"\x9c\x04\n" +
+	"\x12FinancialComponent\x12!\n" +
+	"\fcomponent_id\x18\x01 \x01(\tR\vcomponentId\x12#\n" +
+	"\roccurrence_id\x18\x02 \x01(\tR\foccurrenceId\x121\n" +
+	"\x04kind\x18\x03 \x01(\x0e2\x1d.ml.v1.FinancialComponentKindR\x04kind\x127\n" +
+	"\tdirection\x18\x04 \x01(\x0e2\x19.ml.v1.FinancialDirectionR\tdirection\x12\x12\n" +
+	"\x04date\x18\x05 \x01(\tR\x04date\x12!\n" +
+	"\famount_minor\x18\x06 \x01(\x03R\vamountMinor\x12$\n" +
+	"\vcategory_id\x18\a \x01(\tH\x00R\n" +
+	"categoryId\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"payment_id\x18\b \x01(\tH\x01R\tpaymentId\x88\x01\x01\x123\n" +
+	"\x13recurrence_group_id\x18\t \x01(\tH\x02R\x11recurrenceGroupId\x88\x01\x01\x128\n" +
+	"\x18evidence_transaction_ids\x18\n" +
+	" \x03(\tR\x16evidenceTransactionIds\x12+\n" +
+	"\x11scenario_eligible\x18\v \x01(\bR\x10scenarioEligibleB\x0e\n" +
+	"\f_category_idB\r\n" +
+	"\v_payment_idB\x16\n" +
+	"\x14_recurrence_group_id*\x9b\x01\n" +
 	"\tDaySource\x12\x1a\n" +
 	"\x16DAY_SOURCE_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13DAY_SOURCE_OBSERVED\x10\x01\x12%\n" +
-	"!DAY_SOURCE_VERIFIED_NO_OPERATIONS\x10\x022K\n" +
+	"!DAY_SOURCE_VERIFIED_NO_OPERATIONS\x10\x02\x12\x16\n" +
+	"\x12DAY_SOURCE_PARTIAL\x10\x03\x12\x1a\n" +
+	"\x16DAY_SOURCE_UNAVAILABLE\x10\x04*z\n" +
+	"\x12FinancialDirection\x12#\n" +
+	"\x1fFINANCIAL_DIRECTION_UNSPECIFIED\x10\x00\x12\x1e\n" +
+	"\x1aFINANCIAL_DIRECTION_INFLOW\x10\x01\x12\x1f\n" +
+	"\x1bFINANCIAL_DIRECTION_OUTFLOW\x10\x02*\x88\x01\n" +
+	"\x12KnownPaymentStatus\x12$\n" +
+	" KNOWN_PAYMENT_STATUS_UNSPECIFIED\x10\x00\x12 \n" +
+	"\x1cKNOWN_PAYMENT_STATUS_PLANNED\x10\x01\x12*\n" +
+	"&KNOWN_PAYMENT_STATUS_PARTIALLY_MATCHED\x10\x02*\x8a\x01\n" +
+	"\x10FinancialPurpose\x12!\n" +
+	"\x1dFINANCIAL_PURPOSE_UNSPECIFIED\x10\x00\x12&\n" +
+	"\"FINANCIAL_PURPOSE_CURRENT_FORECAST\x10\x01\x12+\n" +
+	"'FINANCIAL_PURPOSE_HISTORICAL_EVALUATION\x10\x02*\xc1\x01\n" +
+	"\x14CalendarAvailability\x12%\n" +
+	"!CALENDAR_AVAILABILITY_UNSPECIFIED\x10\x00\x12*\n" +
+	"&CALENDAR_AVAILABILITY_VERIFIED_CURRENT\x10\x01\x12/\n" +
+	"+CALENDAR_AVAILABILITY_VERIFIED_AS_OF_CUTOFF\x10\x02\x12%\n" +
+	"!CALENDAR_AVAILABILITY_UNAVAILABLE\x10\x03*\x81\x02\n" +
+	"\x16FinancialComponentKind\x12(\n" +
+	"$FINANCIAL_COMPONENT_KIND_UNSPECIFIED\x10\x00\x12*\n" +
+	"&FINANCIAL_COMPONENT_KIND_KNOWN_PAYMENT\x10\x01\x12-\n" +
+	")FINANCIAL_COMPONENT_KIND_ML_SALES_RECEIPT\x10\x02\x12.\n" +
+	"*FINANCIAL_COMPONENT_KIND_RECURRING_EXPENSE\x10\x03\x122\n" +
+	".FINANCIAL_COMPONENT_KIND_UNCLASSIFIED_BASELINE\x10\x042K\n" +
 	"\x0fForecastService\x128\n" +
 	"\aPredict\x12\x15.ml.v1.PredictRequest\x1a\x16.ml.v1.PredictResponseBRZPgithub.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/ml/v1;mlv1b\x06proto3"
 
@@ -738,33 +1963,68 @@ func file_ml_v1_forecast_proto_rawDescGZIP() []byte {
 	return file_ml_v1_forecast_proto_rawDescData
 }
 
-var file_ml_v1_forecast_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_ml_v1_forecast_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_ml_v1_forecast_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
+var file_ml_v1_forecast_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_ml_v1_forecast_proto_goTypes = []any{
-	(DaySource)(0),           // 0: ml.v1.DaySource
-	(*HistoricalDay)(nil),    // 1: ml.v1.HistoricalDay
-	(*ModelContext)(nil),     // 2: ml.v1.ModelContext
-	(*KnownPayment)(nil),     // 3: ml.v1.KnownPayment
-	(*ForecastSnapshot)(nil), // 4: ml.v1.ForecastSnapshot
-	(*PredictRequest)(nil),   // 5: ml.v1.PredictRequest
-	(*ForecastDay)(nil),      // 6: ml.v1.ForecastDay
-	(*PredictResponse)(nil),  // 7: ml.v1.PredictResponse
+	(DaySource)(0),                // 0: ml.v1.DaySource
+	(FinancialDirection)(0),       // 1: ml.v1.FinancialDirection
+	(KnownPaymentStatus)(0),       // 2: ml.v1.KnownPaymentStatus
+	(FinancialPurpose)(0),         // 3: ml.v1.FinancialPurpose
+	(CalendarAvailability)(0),     // 4: ml.v1.CalendarAvailability
+	(FinancialComponentKind)(0),   // 5: ml.v1.FinancialComponentKind
+	(*HistoricalDay)(nil),         // 6: ml.v1.HistoricalDay
+	(*ModelContext)(nil),          // 7: ml.v1.ModelContext
+	(*ForecastSnapshot)(nil),      // 8: ml.v1.ForecastSnapshot
+	(*PredictRequest)(nil),        // 9: ml.v1.PredictRequest
+	(*ForecastDay)(nil),           // 10: ml.v1.ForecastDay
+	(*PredictResponse)(nil),       // 11: ml.v1.PredictResponse
+	(*FinancialCategory)(nil),     // 12: ml.v1.FinancialCategory
+	(*FinancialSource)(nil),       // 13: ml.v1.FinancialSource
+	(*FinancialFact)(nil),         // 14: ml.v1.FinancialFact
+	(*KnownPayment)(nil),          // 15: ml.v1.KnownPayment
+	(*ReconciledOccurrence)(nil),  // 16: ml.v1.ReconciledOccurrence
+	(*ReconciliationGroup)(nil),   // 17: ml.v1.ReconciliationGroup
+	(*CalibratedEstimate)(nil),    // 18: ml.v1.CalibratedEstimate
+	(*FinancialProbability)(nil),  // 19: ml.v1.FinancialProbability
+	(*FinancialComponent)(nil),    // 20: ml.v1.FinancialComponent
+	(*timestamppb.Timestamp)(nil), // 21: google.protobuf.Timestamp
 }
 var file_ml_v1_forecast_proto_depIdxs = []int32{
-	0, // 0: ml.v1.HistoricalDay.source:type_name -> ml.v1.DaySource
-	1, // 1: ml.v1.ForecastSnapshot.history:type_name -> ml.v1.HistoricalDay
-	3, // 2: ml.v1.ForecastSnapshot.known_payments:type_name -> ml.v1.KnownPayment
-	4, // 3: ml.v1.PredictRequest.snapshot:type_name -> ml.v1.ForecastSnapshot
-	2, // 4: ml.v1.PredictRequest.model:type_name -> ml.v1.ModelContext
-	2, // 5: ml.v1.PredictResponse.model:type_name -> ml.v1.ModelContext
-	6, // 6: ml.v1.PredictResponse.days:type_name -> ml.v1.ForecastDay
-	5, // 7: ml.v1.ForecastService.Predict:input_type -> ml.v1.PredictRequest
-	7, // 8: ml.v1.ForecastService.Predict:output_type -> ml.v1.PredictResponse
-	8, // [8:9] is the sub-list for method output_type
-	7, // [7:8] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	0,  // 0: ml.v1.HistoricalDay.source:type_name -> ml.v1.DaySource
+	6,  // 1: ml.v1.ForecastSnapshot.history:type_name -> ml.v1.HistoricalDay
+	15, // 2: ml.v1.ForecastSnapshot.known_payments:type_name -> ml.v1.KnownPayment
+	14, // 3: ml.v1.ForecastSnapshot.facts:type_name -> ml.v1.FinancialFact
+	17, // 4: ml.v1.ForecastSnapshot.reconciliation_groups:type_name -> ml.v1.ReconciliationGroup
+	3,  // 5: ml.v1.ForecastSnapshot.purpose:type_name -> ml.v1.FinancialPurpose
+	4,  // 6: ml.v1.ForecastSnapshot.calendar_availability:type_name -> ml.v1.CalendarAvailability
+	21, // 7: ml.v1.ForecastSnapshot.captured_at:type_name -> google.protobuf.Timestamp
+	8,  // 8: ml.v1.PredictRequest.snapshot:type_name -> ml.v1.ForecastSnapshot
+	7,  // 9: ml.v1.PredictRequest.model:type_name -> ml.v1.ModelContext
+	19, // 10: ml.v1.ForecastDay.negative_balance_probability:type_name -> ml.v1.FinancialProbability
+	7,  // 11: ml.v1.PredictResponse.model:type_name -> ml.v1.ModelContext
+	10, // 12: ml.v1.PredictResponse.days:type_name -> ml.v1.ForecastDay
+	20, // 13: ml.v1.PredictResponse.components:type_name -> ml.v1.FinancialComponent
+	19, // 14: ml.v1.PredictResponse.gap_probability:type_name -> ml.v1.FinancialProbability
+	1,  // 15: ml.v1.FinancialFact.direction:type_name -> ml.v1.FinancialDirection
+	12, // 16: ml.v1.FinancialFact.category:type_name -> ml.v1.FinancialCategory
+	13, // 17: ml.v1.FinancialFact.source:type_name -> ml.v1.FinancialSource
+	1,  // 18: ml.v1.KnownPayment.direction:type_name -> ml.v1.FinancialDirection
+	12, // 19: ml.v1.KnownPayment.category:type_name -> ml.v1.FinancialCategory
+	13, // 20: ml.v1.KnownPayment.source:type_name -> ml.v1.FinancialSource
+	2,  // 21: ml.v1.KnownPayment.status:type_name -> ml.v1.KnownPaymentStatus
+	1,  // 22: ml.v1.ReconciledOccurrence.direction:type_name -> ml.v1.FinancialDirection
+	12, // 23: ml.v1.ReconciledOccurrence.category:type_name -> ml.v1.FinancialCategory
+	16, // 24: ml.v1.ReconciliationGroup.future_occurrences:type_name -> ml.v1.ReconciledOccurrence
+	18, // 25: ml.v1.FinancialProbability.calibrated:type_name -> ml.v1.CalibratedEstimate
+	5,  // 26: ml.v1.FinancialComponent.kind:type_name -> ml.v1.FinancialComponentKind
+	1,  // 27: ml.v1.FinancialComponent.direction:type_name -> ml.v1.FinancialDirection
+	9,  // 28: ml.v1.ForecastService.Predict:input_type -> ml.v1.PredictRequest
+	11, // 29: ml.v1.ForecastService.Predict:output_type -> ml.v1.PredictResponse
+	29, // [29:30] is the sub-list for method output_type
+	28, // [28:29] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_ml_v1_forecast_proto_init() }
@@ -773,15 +2033,27 @@ func file_ml_v1_forecast_proto_init() {
 		return
 	}
 	file_ml_v1_forecast_proto_msgTypes[0].OneofWrappers = []any{}
-	file_ml_v1_forecast_proto_msgTypes[3].OneofWrappers = []any{}
-	file_ml_v1_forecast_proto_msgTypes[6].OneofWrappers = []any{}
+	file_ml_v1_forecast_proto_msgTypes[1].OneofWrappers = []any{}
+	file_ml_v1_forecast_proto_msgTypes[2].OneofWrappers = []any{}
+	file_ml_v1_forecast_proto_msgTypes[4].OneofWrappers = []any{}
+	file_ml_v1_forecast_proto_msgTypes[5].OneofWrappers = []any{}
+	file_ml_v1_forecast_proto_msgTypes[7].OneofWrappers = []any{}
+	file_ml_v1_forecast_proto_msgTypes[8].OneofWrappers = []any{}
+	file_ml_v1_forecast_proto_msgTypes[9].OneofWrappers = []any{}
+	file_ml_v1_forecast_proto_msgTypes[10].OneofWrappers = []any{}
+	file_ml_v1_forecast_proto_msgTypes[11].OneofWrappers = []any{}
+	file_ml_v1_forecast_proto_msgTypes[13].OneofWrappers = []any{
+		(*FinancialProbability_Calibrated)(nil),
+		(*FinancialProbability_UnavailableReason)(nil),
+	}
+	file_ml_v1_forecast_proto_msgTypes[14].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ml_v1_forecast_proto_rawDesc), len(file_ml_v1_forecast_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   7,
+			NumEnums:      6,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

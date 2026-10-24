@@ -74,6 +74,10 @@ func responseFixture(input forecasting.ModelInput) *pb.PredictResponse {
 			r.FirstNegativeBalanceDate = &date
 		}
 	}
+	r.GapProbability = &pb.FinancialProbability{Estimate: &pb.FinancialProbability_UnavailableReason{UnavailableReason: "not_estimated"}}
+	for _, day := range r.Days {
+		day.NegativeBalanceProbability = &pb.FinancialProbability{Estimate: &pb.FinancialProbability_UnavailableReason{UnavailableReason: "not_estimated"}}
+	}
 	r.StartDate = r.Days[0].Date
 	return r
 }
@@ -136,6 +140,15 @@ func TestRejectInputBeforeRPC(t *testing.T) {
 }
 func TestRejectResponse(t *testing.T) {
 	tests := map[string]func(*pb.PredictResponse){
+		"unexpected configuration": func(r *pb.PredictResponse) { r.Model.ConfigurationId = "other" },
+		"unexpected seed":          func(r *pb.PredictResponse) { seed := "0"; r.Model.RandomSeed = &seed },
+		"estimated probability": func(r *pb.PredictResponse) {
+			r.GapProbability = &pb.FinancialProbability{Estimate: &pb.FinancialProbability_Calibrated{Calibrated: &pb.CalibratedEstimate{Value: 0}}}
+		},
+		"missing probability": func(r *pb.PredictResponse) { r.GapProbability = nil },
+		"estimated day probability": func(r *pb.PredictResponse) {
+			r.Days[0].NegativeBalanceProbability = &pb.FinancialProbability{Estimate: &pb.FinancialProbability_Calibrated{Calibrated: &pb.CalibratedEstimate{Value: 0}}}
+		},
 		"snapshot":       func(r *pb.PredictResponse) { r.SnapshotId = uuid.NewString() },
 		"company":        func(r *pb.PredictResponse) { r.CompanyId = uuid.NewString() },
 		"account":        func(r *pb.PredictResponse) { r.AccountId = uuid.NewString() },

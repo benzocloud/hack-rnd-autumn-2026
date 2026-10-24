@@ -10,6 +10,7 @@ import (
 	v1 "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/auth/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -968,11 +969,467 @@ func (x *MatchPaymentResponse) GetDataVersion() int64 {
 	return 0
 }
 
+// Patch at least one field. Absent category_change preserves it; explicit clear
+// removes it. Existing matches restrict changes to financial economics.
+type UpdatePaymentRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Context          *v1.WriteContext       `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	Scope            *AccountScope          `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
+	PaymentId        string                 `protobuf:"bytes,3,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty"`
+	ExpectedVersion  int64                  `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
+	Direction        *Direction             `protobuf:"varint,5,opt,name=direction,proto3,enum=core.v1.Direction,oneof" json:"direction,omitempty"`
+	Amount           *Money                 `protobuf:"bytes,6,opt,name=amount,proto3" json:"amount,omitempty"`
+	ScheduledDate    *string                `protobuf:"bytes,7,opt,name=scheduled_date,json=scheduledDate,proto3,oneof" json:"scheduled_date,omitempty"`
+	CounterpartyName *string                `protobuf:"bytes,8,opt,name=counterparty_name,json=counterpartyName,proto3,oneof" json:"counterparty_name,omitempty"`
+	Description      *string                `protobuf:"bytes,9,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	// Types that are valid to be assigned to CategoryChange:
+	//
+	//	*UpdatePaymentRequest_CategoryId
+	//	*UpdatePaymentRequest_ClearCategory
+	CategoryChange isUpdatePaymentRequest_CategoryChange `protobuf_oneof:"category_change"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *UpdatePaymentRequest) Reset() {
+	*x = UpdatePaymentRequest{}
+	mi := &file_core_v1_payments_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdatePaymentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdatePaymentRequest) ProtoMessage() {}
+
+func (x *UpdatePaymentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_payments_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdatePaymentRequest.ProtoReflect.Descriptor instead.
+func (*UpdatePaymentRequest) Descriptor() ([]byte, []int) {
+	return file_core_v1_payments_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *UpdatePaymentRequest) GetContext() *v1.WriteContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *UpdatePaymentRequest) GetScope() *AccountScope {
+	if x != nil {
+		return x.Scope
+	}
+	return nil
+}
+
+func (x *UpdatePaymentRequest) GetPaymentId() string {
+	if x != nil {
+		return x.PaymentId
+	}
+	return ""
+}
+
+func (x *UpdatePaymentRequest) GetExpectedVersion() int64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+func (x *UpdatePaymentRequest) GetDirection() Direction {
+	if x != nil && x.Direction != nil {
+		return *x.Direction
+	}
+	return Direction_DIRECTION_UNSPECIFIED
+}
+
+func (x *UpdatePaymentRequest) GetAmount() *Money {
+	if x != nil {
+		return x.Amount
+	}
+	return nil
+}
+
+func (x *UpdatePaymentRequest) GetScheduledDate() string {
+	if x != nil && x.ScheduledDate != nil {
+		return *x.ScheduledDate
+	}
+	return ""
+}
+
+func (x *UpdatePaymentRequest) GetCounterpartyName() string {
+	if x != nil && x.CounterpartyName != nil {
+		return *x.CounterpartyName
+	}
+	return ""
+}
+
+func (x *UpdatePaymentRequest) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
+	}
+	return ""
+}
+
+func (x *UpdatePaymentRequest) GetCategoryChange() isUpdatePaymentRequest_CategoryChange {
+	if x != nil {
+		return x.CategoryChange
+	}
+	return nil
+}
+
+func (x *UpdatePaymentRequest) GetCategoryId() string {
+	if x != nil {
+		if x, ok := x.CategoryChange.(*UpdatePaymentRequest_CategoryId); ok {
+			return x.CategoryId
+		}
+	}
+	return ""
+}
+
+func (x *UpdatePaymentRequest) GetClearCategory() *emptypb.Empty {
+	if x != nil {
+		if x, ok := x.CategoryChange.(*UpdatePaymentRequest_ClearCategory); ok {
+			return x.ClearCategory
+		}
+	}
+	return nil
+}
+
+type isUpdatePaymentRequest_CategoryChange interface {
+	isUpdatePaymentRequest_CategoryChange()
+}
+
+type UpdatePaymentRequest_CategoryId struct {
+	CategoryId string `protobuf:"bytes,10,opt,name=category_id,json=categoryId,proto3,oneof"`
+}
+
+type UpdatePaymentRequest_ClearCategory struct {
+	ClearCategory *emptypb.Empty `protobuf:"bytes,11,opt,name=clear_category,json=clearCategory,proto3,oneof"`
+}
+
+func (*UpdatePaymentRequest_CategoryId) isUpdatePaymentRequest_CategoryChange() {}
+
+func (*UpdatePaymentRequest_ClearCategory) isUpdatePaymentRequest_CategoryChange() {}
+
+type UpdatePaymentResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Payment       *ExpectedPayment       `protobuf:"bytes,1,opt,name=payment,proto3" json:"payment,omitempty"`
+	DataVersion   int64                  `protobuf:"varint,2,opt,name=data_version,json=dataVersion,proto3" json:"data_version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdatePaymentResponse) Reset() {
+	*x = UpdatePaymentResponse{}
+	mi := &file_core_v1_payments_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdatePaymentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdatePaymentResponse) ProtoMessage() {}
+
+func (x *UpdatePaymentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_payments_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdatePaymentResponse.ProtoReflect.Descriptor instead.
+func (*UpdatePaymentResponse) Descriptor() ([]byte, []int) {
+	return file_core_v1_payments_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *UpdatePaymentResponse) GetPayment() *ExpectedPayment {
+	if x != nil {
+		return x.Payment
+	}
+	return nil
+}
+
+func (x *UpdatePaymentResponse) GetDataVersion() int64 {
+	if x != nil {
+		return x.DataVersion
+	}
+	return 0
+}
+
+type CancelPaymentRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Context         *v1.WriteContext       `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	Scope           *AccountScope          `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
+	PaymentId       string                 `protobuf:"bytes,3,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty"`
+	ExpectedVersion int64                  `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *CancelPaymentRequest) Reset() {
+	*x = CancelPaymentRequest{}
+	mi := &file_core_v1_payments_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelPaymentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelPaymentRequest) ProtoMessage() {}
+
+func (x *CancelPaymentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_payments_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelPaymentRequest.ProtoReflect.Descriptor instead.
+func (*CancelPaymentRequest) Descriptor() ([]byte, []int) {
+	return file_core_v1_payments_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *CancelPaymentRequest) GetContext() *v1.WriteContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *CancelPaymentRequest) GetScope() *AccountScope {
+	if x != nil {
+		return x.Scope
+	}
+	return nil
+}
+
+func (x *CancelPaymentRequest) GetPaymentId() string {
+	if x != nil {
+		return x.PaymentId
+	}
+	return ""
+}
+
+func (x *CancelPaymentRequest) GetExpectedVersion() int64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+type CancelPaymentResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Payment       *ExpectedPayment       `protobuf:"bytes,1,opt,name=payment,proto3" json:"payment,omitempty"`
+	DataVersion   int64                  `protobuf:"varint,2,opt,name=data_version,json=dataVersion,proto3" json:"data_version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelPaymentResponse) Reset() {
+	*x = CancelPaymentResponse{}
+	mi := &file_core_v1_payments_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelPaymentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelPaymentResponse) ProtoMessage() {}
+
+func (x *CancelPaymentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_payments_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelPaymentResponse.ProtoReflect.Descriptor instead.
+func (*CancelPaymentResponse) Descriptor() ([]byte, []int) {
+	return file_core_v1_payments_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *CancelPaymentResponse) GetPayment() *ExpectedPayment {
+	if x != nil {
+		return x.Payment
+	}
+	return nil
+}
+
+func (x *CancelPaymentResponse) GetDataVersion() int64 {
+	if x != nil {
+		return x.DataVersion
+	}
+	return 0
+}
+
+type RemovePaymentMatchRequest struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Context                *v1.WriteContext       `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	Scope                  *AccountScope          `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
+	PaymentId              string                 `protobuf:"bytes,3,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty"`
+	MatchId                string                 `protobuf:"bytes,4,opt,name=match_id,json=matchId,proto3" json:"match_id,omitempty"`
+	ExpectedPaymentVersion int64                  `protobuf:"varint,5,opt,name=expected_payment_version,json=expectedPaymentVersion,proto3" json:"expected_payment_version,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *RemovePaymentMatchRequest) Reset() {
+	*x = RemovePaymentMatchRequest{}
+	mi := &file_core_v1_payments_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemovePaymentMatchRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemovePaymentMatchRequest) ProtoMessage() {}
+
+func (x *RemovePaymentMatchRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_payments_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemovePaymentMatchRequest.ProtoReflect.Descriptor instead.
+func (*RemovePaymentMatchRequest) Descriptor() ([]byte, []int) {
+	return file_core_v1_payments_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *RemovePaymentMatchRequest) GetContext() *v1.WriteContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *RemovePaymentMatchRequest) GetScope() *AccountScope {
+	if x != nil {
+		return x.Scope
+	}
+	return nil
+}
+
+func (x *RemovePaymentMatchRequest) GetPaymentId() string {
+	if x != nil {
+		return x.PaymentId
+	}
+	return ""
+}
+
+func (x *RemovePaymentMatchRequest) GetMatchId() string {
+	if x != nil {
+		return x.MatchId
+	}
+	return ""
+}
+
+func (x *RemovePaymentMatchRequest) GetExpectedPaymentVersion() int64 {
+	if x != nil {
+		return x.ExpectedPaymentVersion
+	}
+	return 0
+}
+
+type RemovePaymentMatchResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Payment       *ExpectedPayment       `protobuf:"bytes,1,opt,name=payment,proto3" json:"payment,omitempty"`
+	DataVersion   int64                  `protobuf:"varint,2,opt,name=data_version,json=dataVersion,proto3" json:"data_version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemovePaymentMatchResponse) Reset() {
+	*x = RemovePaymentMatchResponse{}
+	mi := &file_core_v1_payments_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemovePaymentMatchResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemovePaymentMatchResponse) ProtoMessage() {}
+
+func (x *RemovePaymentMatchResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_payments_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemovePaymentMatchResponse.ProtoReflect.Descriptor instead.
+func (*RemovePaymentMatchResponse) Descriptor() ([]byte, []int) {
+	return file_core_v1_payments_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *RemovePaymentMatchResponse) GetPayment() *ExpectedPayment {
+	if x != nil {
+		return x.Payment
+	}
+	return nil
+}
+
+func (x *RemovePaymentMatchResponse) GetDataVersion() int64 {
+	if x != nil {
+		return x.DataVersion
+	}
+	return 0
+}
+
 var File_core_v1_payments_proto protoreflect.FileDescriptor
 
 const file_core_v1_payments_proto_rawDesc = "" +
 	"\n" +
-	"\x16core/v1/payments.proto\x12\acore.v1\x1a\x12auth/v1/auth.proto\x1a\x14core/v1/common.proto\x1a\x14core/v1/ledger.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb5\x04\n" +
+	"\x16core/v1/payments.proto\x12\acore.v1\x1a\x12auth/v1/auth.proto\x1a\x14core/v1/common.proto\x1a\x14core/v1/ledger.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb5\x04\n" +
 	"\x0fExpectedPayment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -1058,14 +1515,60 @@ const file_core_v1_payments_proto_rawDesc = "" +
 	"\x14MatchPaymentResponse\x12+\n" +
 	"\x05match\x18\x01 \x01(\v2\x15.core.v1.PaymentMatchR\x05match\x12'\n" +
 	"\x0fpayment_version\x18\x02 \x01(\x03R\x0epaymentVersion\x12!\n" +
-	"\fdata_version\x18\x03 \x01(\x03R\vdataVersion*\xab\x01\n" +
+	"\fdata_version\x18\x03 \x01(\x03R\vdataVersion\"\xe0\x04\n" +
+	"\x14UpdatePaymentRequest\x12/\n" +
+	"\acontext\x18\x01 \x01(\v2\x15.auth.v1.WriteContextR\acontext\x12+\n" +
+	"\x05scope\x18\x02 \x01(\v2\x15.core.v1.AccountScopeR\x05scope\x12\x1d\n" +
+	"\n" +
+	"payment_id\x18\x03 \x01(\tR\tpaymentId\x12)\n" +
+	"\x10expected_version\x18\x04 \x01(\x03R\x0fexpectedVersion\x125\n" +
+	"\tdirection\x18\x05 \x01(\x0e2\x12.core.v1.DirectionH\x01R\tdirection\x88\x01\x01\x12&\n" +
+	"\x06amount\x18\x06 \x01(\v2\x0e.core.v1.MoneyR\x06amount\x12*\n" +
+	"\x0escheduled_date\x18\a \x01(\tH\x02R\rscheduledDate\x88\x01\x01\x120\n" +
+	"\x11counterparty_name\x18\b \x01(\tH\x03R\x10counterpartyName\x88\x01\x01\x12%\n" +
+	"\vdescription\x18\t \x01(\tH\x04R\vdescription\x88\x01\x01\x12!\n" +
+	"\vcategory_id\x18\n" +
+	" \x01(\tH\x00R\n" +
+	"categoryId\x12?\n" +
+	"\x0eclear_category\x18\v \x01(\v2\x16.google.protobuf.EmptyH\x00R\rclearCategoryB\x11\n" +
+	"\x0fcategory_changeB\f\n" +
+	"\n" +
+	"_directionB\x11\n" +
+	"\x0f_scheduled_dateB\x14\n" +
+	"\x12_counterparty_nameB\x0e\n" +
+	"\f_description\"n\n" +
+	"\x15UpdatePaymentResponse\x122\n" +
+	"\apayment\x18\x01 \x01(\v2\x18.core.v1.ExpectedPaymentR\apayment\x12!\n" +
+	"\fdata_version\x18\x02 \x01(\x03R\vdataVersion\"\xbe\x01\n" +
+	"\x14CancelPaymentRequest\x12/\n" +
+	"\acontext\x18\x01 \x01(\v2\x15.auth.v1.WriteContextR\acontext\x12+\n" +
+	"\x05scope\x18\x02 \x01(\v2\x15.core.v1.AccountScopeR\x05scope\x12\x1d\n" +
+	"\n" +
+	"payment_id\x18\x03 \x01(\tR\tpaymentId\x12)\n" +
+	"\x10expected_version\x18\x04 \x01(\x03R\x0fexpectedVersion\"n\n" +
+	"\x15CancelPaymentResponse\x122\n" +
+	"\apayment\x18\x01 \x01(\v2\x18.core.v1.ExpectedPaymentR\apayment\x12!\n" +
+	"\fdata_version\x18\x02 \x01(\x03R\vdataVersion\"\xed\x01\n" +
+	"\x19RemovePaymentMatchRequest\x12/\n" +
+	"\acontext\x18\x01 \x01(\v2\x15.auth.v1.WriteContextR\acontext\x12+\n" +
+	"\x05scope\x18\x02 \x01(\v2\x15.core.v1.AccountScopeR\x05scope\x12\x1d\n" +
+	"\n" +
+	"payment_id\x18\x03 \x01(\tR\tpaymentId\x12\x19\n" +
+	"\bmatch_id\x18\x04 \x01(\tR\amatchId\x128\n" +
+	"\x18expected_payment_version\x18\x05 \x01(\x03R\x16expectedPaymentVersion\"s\n" +
+	"\x1aRemovePaymentMatchResponse\x122\n" +
+	"\apayment\x18\x01 \x01(\v2\x18.core.v1.ExpectedPaymentR\apayment\x12!\n" +
+	"\fdata_version\x18\x02 \x01(\x03R\vdataVersion*\xab\x01\n" +
 	"\rPaymentStatus\x12\x1e\n" +
 	"\x1aPAYMENT_STATUS_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16PAYMENT_STATUS_PLANNED\x10\x01\x12$\n" +
 	" PAYMENT_STATUS_PARTIALLY_MATCHED\x10\x02\x12\x1a\n" +
 	"\x16PAYMENT_STATUS_MATCHED\x10\x03\x12\x1c\n" +
-	"\x18PAYMENT_STATUS_CANCELLED\x10\x042\xb3\x03\n" +
-	"\x0fPaymentsService\x12K\n" +
+	"\x18PAYMENT_STATUS_CANCELLED\x10\x042\xb2\x05\n" +
+	"\x0fPaymentsService\x12N\n" +
+	"\rUpdatePayment\x12\x1d.core.v1.UpdatePaymentRequest\x1a\x1e.core.v1.UpdatePaymentResponse\x12N\n" +
+	"\rCancelPayment\x12\x1d.core.v1.CancelPaymentRequest\x1a\x1e.core.v1.CancelPaymentResponse\x12]\n" +
+	"\x12RemovePaymentMatch\x12\".core.v1.RemovePaymentMatchRequest\x1a#.core.v1.RemovePaymentMatchResponse\x12K\n" +
 	"\fListPayments\x12\x1c.core.v1.ListPaymentsRequest\x1a\x1d.core.v1.ListPaymentsResponse\x12E\n" +
 	"\n" +
 	"GetPayment\x12\x1a.core.v1.GetPaymentRequest\x1a\x1b.core.v1.GetPaymentResponse\x12`\n" +
@@ -1086,7 +1589,7 @@ func file_core_v1_payments_proto_rawDescGZIP() []byte {
 }
 
 var file_core_v1_payments_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_core_v1_payments_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_core_v1_payments_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_core_v1_payments_proto_goTypes = []any{
 	(PaymentStatus)(0),                  // 0: core.v1.PaymentStatus
 	(*ExpectedPayment)(nil),             // 1: core.v1.ExpectedPayment
@@ -1101,65 +1604,90 @@ var file_core_v1_payments_proto_goTypes = []any{
 	(*ListPaymentMatchesResponse)(nil),  // 10: core.v1.ListPaymentMatchesResponse
 	(*MatchPaymentRequest)(nil),         // 11: core.v1.MatchPaymentRequest
 	(*MatchPaymentResponse)(nil),        // 12: core.v1.MatchPaymentResponse
-	(Direction)(0),                      // 13: core.v1.Direction
-	(*Money)(nil),                       // 14: core.v1.Money
-	(*RecordSource)(nil),                // 15: core.v1.RecordSource
-	(*timestamppb.Timestamp)(nil),       // 16: google.protobuf.Timestamp
-	(*v1.BrowserContext)(nil),           // 17: auth.v1.BrowserContext
-	(*AccountScope)(nil),                // 18: core.v1.AccountScope
-	(*PageRequest)(nil),                 // 19: core.v1.PageRequest
-	(*DateRange)(nil),                   // 20: core.v1.DateRange
-	(*PageResponse)(nil),                // 21: core.v1.PageResponse
-	(*v1.WriteContext)(nil),             // 22: auth.v1.WriteContext
+	(*UpdatePaymentRequest)(nil),        // 13: core.v1.UpdatePaymentRequest
+	(*UpdatePaymentResponse)(nil),       // 14: core.v1.UpdatePaymentResponse
+	(*CancelPaymentRequest)(nil),        // 15: core.v1.CancelPaymentRequest
+	(*CancelPaymentResponse)(nil),       // 16: core.v1.CancelPaymentResponse
+	(*RemovePaymentMatchRequest)(nil),   // 17: core.v1.RemovePaymentMatchRequest
+	(*RemovePaymentMatchResponse)(nil),  // 18: core.v1.RemovePaymentMatchResponse
+	(Direction)(0),                      // 19: core.v1.Direction
+	(*Money)(nil),                       // 20: core.v1.Money
+	(*RecordSource)(nil),                // 21: core.v1.RecordSource
+	(*timestamppb.Timestamp)(nil),       // 22: google.protobuf.Timestamp
+	(*v1.BrowserContext)(nil),           // 23: auth.v1.BrowserContext
+	(*AccountScope)(nil),                // 24: core.v1.AccountScope
+	(*PageRequest)(nil),                 // 25: core.v1.PageRequest
+	(*DateRange)(nil),                   // 26: core.v1.DateRange
+	(*PageResponse)(nil),                // 27: core.v1.PageResponse
+	(*v1.WriteContext)(nil),             // 28: auth.v1.WriteContext
+	(*emptypb.Empty)(nil),               // 29: google.protobuf.Empty
 }
 var file_core_v1_payments_proto_depIdxs = []int32{
-	13, // 0: core.v1.ExpectedPayment.direction:type_name -> core.v1.Direction
-	14, // 1: core.v1.ExpectedPayment.amount:type_name -> core.v1.Money
-	14, // 2: core.v1.ExpectedPayment.remaining_amount:type_name -> core.v1.Money
+	19, // 0: core.v1.ExpectedPayment.direction:type_name -> core.v1.Direction
+	20, // 1: core.v1.ExpectedPayment.amount:type_name -> core.v1.Money
+	20, // 2: core.v1.ExpectedPayment.remaining_amount:type_name -> core.v1.Money
 	0,  // 3: core.v1.ExpectedPayment.status:type_name -> core.v1.PaymentStatus
-	15, // 4: core.v1.ExpectedPayment.source:type_name -> core.v1.RecordSource
-	16, // 5: core.v1.ExpectedPayment.created_at:type_name -> google.protobuf.Timestamp
-	14, // 6: core.v1.PaymentMatch.amount:type_name -> core.v1.Money
-	16, // 7: core.v1.PaymentMatch.created_at:type_name -> google.protobuf.Timestamp
-	17, // 8: core.v1.ListPaymentsRequest.context:type_name -> auth.v1.BrowserContext
-	18, // 9: core.v1.ListPaymentsRequest.scope:type_name -> core.v1.AccountScope
-	19, // 10: core.v1.ListPaymentsRequest.page:type_name -> core.v1.PageRequest
-	20, // 11: core.v1.ListPaymentsRequest.dates:type_name -> core.v1.DateRange
+	21, // 4: core.v1.ExpectedPayment.source:type_name -> core.v1.RecordSource
+	22, // 5: core.v1.ExpectedPayment.created_at:type_name -> google.protobuf.Timestamp
+	20, // 6: core.v1.PaymentMatch.amount:type_name -> core.v1.Money
+	22, // 7: core.v1.PaymentMatch.created_at:type_name -> google.protobuf.Timestamp
+	23, // 8: core.v1.ListPaymentsRequest.context:type_name -> auth.v1.BrowserContext
+	24, // 9: core.v1.ListPaymentsRequest.scope:type_name -> core.v1.AccountScope
+	25, // 10: core.v1.ListPaymentsRequest.page:type_name -> core.v1.PageRequest
+	26, // 11: core.v1.ListPaymentsRequest.dates:type_name -> core.v1.DateRange
 	0,  // 12: core.v1.ListPaymentsRequest.status:type_name -> core.v1.PaymentStatus
 	1,  // 13: core.v1.ListPaymentsResponse.items:type_name -> core.v1.ExpectedPayment
-	21, // 14: core.v1.ListPaymentsResponse.pagination:type_name -> core.v1.PageResponse
-	17, // 15: core.v1.GetPaymentRequest.context:type_name -> auth.v1.BrowserContext
-	18, // 16: core.v1.GetPaymentRequest.scope:type_name -> core.v1.AccountScope
+	27, // 14: core.v1.ListPaymentsResponse.pagination:type_name -> core.v1.PageResponse
+	23, // 15: core.v1.GetPaymentRequest.context:type_name -> auth.v1.BrowserContext
+	24, // 16: core.v1.GetPaymentRequest.scope:type_name -> core.v1.AccountScope
 	1,  // 17: core.v1.GetPaymentResponse.payment:type_name -> core.v1.ExpectedPayment
-	22, // 18: core.v1.CreateManualPaymentRequest.context:type_name -> auth.v1.WriteContext
-	18, // 19: core.v1.CreateManualPaymentRequest.scope:type_name -> core.v1.AccountScope
-	13, // 20: core.v1.CreateManualPaymentRequest.direction:type_name -> core.v1.Direction
-	14, // 21: core.v1.CreateManualPaymentRequest.amount:type_name -> core.v1.Money
+	28, // 18: core.v1.CreateManualPaymentRequest.context:type_name -> auth.v1.WriteContext
+	24, // 19: core.v1.CreateManualPaymentRequest.scope:type_name -> core.v1.AccountScope
+	19, // 20: core.v1.CreateManualPaymentRequest.direction:type_name -> core.v1.Direction
+	20, // 21: core.v1.CreateManualPaymentRequest.amount:type_name -> core.v1.Money
 	1,  // 22: core.v1.CreateManualPaymentResponse.payment:type_name -> core.v1.ExpectedPayment
-	17, // 23: core.v1.ListPaymentMatchesRequest.context:type_name -> auth.v1.BrowserContext
-	18, // 24: core.v1.ListPaymentMatchesRequest.scope:type_name -> core.v1.AccountScope
-	19, // 25: core.v1.ListPaymentMatchesRequest.page:type_name -> core.v1.PageRequest
+	23, // 23: core.v1.ListPaymentMatchesRequest.context:type_name -> auth.v1.BrowserContext
+	24, // 24: core.v1.ListPaymentMatchesRequest.scope:type_name -> core.v1.AccountScope
+	25, // 25: core.v1.ListPaymentMatchesRequest.page:type_name -> core.v1.PageRequest
 	2,  // 26: core.v1.ListPaymentMatchesResponse.items:type_name -> core.v1.PaymentMatch
-	21, // 27: core.v1.ListPaymentMatchesResponse.pagination:type_name -> core.v1.PageResponse
-	22, // 28: core.v1.MatchPaymentRequest.context:type_name -> auth.v1.WriteContext
-	18, // 29: core.v1.MatchPaymentRequest.scope:type_name -> core.v1.AccountScope
-	14, // 30: core.v1.MatchPaymentRequest.amount:type_name -> core.v1.Money
+	27, // 27: core.v1.ListPaymentMatchesResponse.pagination:type_name -> core.v1.PageResponse
+	28, // 28: core.v1.MatchPaymentRequest.context:type_name -> auth.v1.WriteContext
+	24, // 29: core.v1.MatchPaymentRequest.scope:type_name -> core.v1.AccountScope
+	20, // 30: core.v1.MatchPaymentRequest.amount:type_name -> core.v1.Money
 	2,  // 31: core.v1.MatchPaymentResponse.match:type_name -> core.v1.PaymentMatch
-	3,  // 32: core.v1.PaymentsService.ListPayments:input_type -> core.v1.ListPaymentsRequest
-	5,  // 33: core.v1.PaymentsService.GetPayment:input_type -> core.v1.GetPaymentRequest
-	7,  // 34: core.v1.PaymentsService.CreateManualPayment:input_type -> core.v1.CreateManualPaymentRequest
-	9,  // 35: core.v1.PaymentsService.ListPaymentMatches:input_type -> core.v1.ListPaymentMatchesRequest
-	11, // 36: core.v1.PaymentsService.MatchPayment:input_type -> core.v1.MatchPaymentRequest
-	4,  // 37: core.v1.PaymentsService.ListPayments:output_type -> core.v1.ListPaymentsResponse
-	6,  // 38: core.v1.PaymentsService.GetPayment:output_type -> core.v1.GetPaymentResponse
-	8,  // 39: core.v1.PaymentsService.CreateManualPayment:output_type -> core.v1.CreateManualPaymentResponse
-	10, // 40: core.v1.PaymentsService.ListPaymentMatches:output_type -> core.v1.ListPaymentMatchesResponse
-	12, // 41: core.v1.PaymentsService.MatchPayment:output_type -> core.v1.MatchPaymentResponse
-	37, // [37:42] is the sub-list for method output_type
-	32, // [32:37] is the sub-list for method input_type
-	32, // [32:32] is the sub-list for extension type_name
-	32, // [32:32] is the sub-list for extension extendee
-	0,  // [0:32] is the sub-list for field type_name
+	28, // 32: core.v1.UpdatePaymentRequest.context:type_name -> auth.v1.WriteContext
+	24, // 33: core.v1.UpdatePaymentRequest.scope:type_name -> core.v1.AccountScope
+	19, // 34: core.v1.UpdatePaymentRequest.direction:type_name -> core.v1.Direction
+	20, // 35: core.v1.UpdatePaymentRequest.amount:type_name -> core.v1.Money
+	29, // 36: core.v1.UpdatePaymentRequest.clear_category:type_name -> google.protobuf.Empty
+	1,  // 37: core.v1.UpdatePaymentResponse.payment:type_name -> core.v1.ExpectedPayment
+	28, // 38: core.v1.CancelPaymentRequest.context:type_name -> auth.v1.WriteContext
+	24, // 39: core.v1.CancelPaymentRequest.scope:type_name -> core.v1.AccountScope
+	1,  // 40: core.v1.CancelPaymentResponse.payment:type_name -> core.v1.ExpectedPayment
+	28, // 41: core.v1.RemovePaymentMatchRequest.context:type_name -> auth.v1.WriteContext
+	24, // 42: core.v1.RemovePaymentMatchRequest.scope:type_name -> core.v1.AccountScope
+	1,  // 43: core.v1.RemovePaymentMatchResponse.payment:type_name -> core.v1.ExpectedPayment
+	13, // 44: core.v1.PaymentsService.UpdatePayment:input_type -> core.v1.UpdatePaymentRequest
+	15, // 45: core.v1.PaymentsService.CancelPayment:input_type -> core.v1.CancelPaymentRequest
+	17, // 46: core.v1.PaymentsService.RemovePaymentMatch:input_type -> core.v1.RemovePaymentMatchRequest
+	3,  // 47: core.v1.PaymentsService.ListPayments:input_type -> core.v1.ListPaymentsRequest
+	5,  // 48: core.v1.PaymentsService.GetPayment:input_type -> core.v1.GetPaymentRequest
+	7,  // 49: core.v1.PaymentsService.CreateManualPayment:input_type -> core.v1.CreateManualPaymentRequest
+	9,  // 50: core.v1.PaymentsService.ListPaymentMatches:input_type -> core.v1.ListPaymentMatchesRequest
+	11, // 51: core.v1.PaymentsService.MatchPayment:input_type -> core.v1.MatchPaymentRequest
+	14, // 52: core.v1.PaymentsService.UpdatePayment:output_type -> core.v1.UpdatePaymentResponse
+	16, // 53: core.v1.PaymentsService.CancelPayment:output_type -> core.v1.CancelPaymentResponse
+	18, // 54: core.v1.PaymentsService.RemovePaymentMatch:output_type -> core.v1.RemovePaymentMatchResponse
+	4,  // 55: core.v1.PaymentsService.ListPayments:output_type -> core.v1.ListPaymentsResponse
+	6,  // 56: core.v1.PaymentsService.GetPayment:output_type -> core.v1.GetPaymentResponse
+	8,  // 57: core.v1.PaymentsService.CreateManualPayment:output_type -> core.v1.CreateManualPaymentResponse
+	10, // 58: core.v1.PaymentsService.ListPaymentMatches:output_type -> core.v1.ListPaymentMatchesResponse
+	12, // 59: core.v1.PaymentsService.MatchPayment:output_type -> core.v1.MatchPaymentResponse
+	52, // [52:60] is the sub-list for method output_type
+	44, // [44:52] is the sub-list for method input_type
+	44, // [44:44] is the sub-list for extension type_name
+	44, // [44:44] is the sub-list for extension extendee
+	0,  // [0:44] is the sub-list for field type_name
 }
 
 func init() { file_core_v1_payments_proto_init() }
@@ -1172,13 +1700,17 @@ func file_core_v1_payments_proto_init() {
 	file_core_v1_payments_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_v1_payments_proto_msgTypes[2].OneofWrappers = []any{}
 	file_core_v1_payments_proto_msgTypes[6].OneofWrappers = []any{}
+	file_core_v1_payments_proto_msgTypes[12].OneofWrappers = []any{
+		(*UpdatePaymentRequest_CategoryId)(nil),
+		(*UpdatePaymentRequest_ClearCategory)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_v1_payments_proto_rawDesc), len(file_core_v1_payments_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   12,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

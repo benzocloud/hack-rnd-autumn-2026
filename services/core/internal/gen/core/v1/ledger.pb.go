@@ -10,6 +10,7 @@ import (
 	v1 "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/auth/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -1342,11 +1343,180 @@ func (x *CreateManualTransactionResponse) GetDataVersion() int64 {
 	return 0
 }
 
+// A required category change: empty clears it, UUID sets it. Omission invalid.
+type UpdateTransactionCategoryRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Context         *v1.WriteContext       `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	Scope           *AccountScope          `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
+	TransactionId   string                 `protobuf:"bytes,3,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
+	ExpectedVersion int64                  `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
+	// Types that are valid to be assigned to CategoryChange:
+	//
+	//	*UpdateTransactionCategoryRequest_CategoryId
+	//	*UpdateTransactionCategoryRequest_ClearCategory
+	CategoryChange isUpdateTransactionCategoryRequest_CategoryChange `protobuf_oneof:"category_change"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *UpdateTransactionCategoryRequest) Reset() {
+	*x = UpdateTransactionCategoryRequest{}
+	mi := &file_core_v1_ledger_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateTransactionCategoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateTransactionCategoryRequest) ProtoMessage() {}
+
+func (x *UpdateTransactionCategoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_ledger_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateTransactionCategoryRequest.ProtoReflect.Descriptor instead.
+func (*UpdateTransactionCategoryRequest) Descriptor() ([]byte, []int) {
+	return file_core_v1_ledger_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *UpdateTransactionCategoryRequest) GetContext() *v1.WriteContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *UpdateTransactionCategoryRequest) GetScope() *AccountScope {
+	if x != nil {
+		return x.Scope
+	}
+	return nil
+}
+
+func (x *UpdateTransactionCategoryRequest) GetTransactionId() string {
+	if x != nil {
+		return x.TransactionId
+	}
+	return ""
+}
+
+func (x *UpdateTransactionCategoryRequest) GetExpectedVersion() int64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+func (x *UpdateTransactionCategoryRequest) GetCategoryChange() isUpdateTransactionCategoryRequest_CategoryChange {
+	if x != nil {
+		return x.CategoryChange
+	}
+	return nil
+}
+
+func (x *UpdateTransactionCategoryRequest) GetCategoryId() string {
+	if x != nil {
+		if x, ok := x.CategoryChange.(*UpdateTransactionCategoryRequest_CategoryId); ok {
+			return x.CategoryId
+		}
+	}
+	return ""
+}
+
+func (x *UpdateTransactionCategoryRequest) GetClearCategory() *emptypb.Empty {
+	if x != nil {
+		if x, ok := x.CategoryChange.(*UpdateTransactionCategoryRequest_ClearCategory); ok {
+			return x.ClearCategory
+		}
+	}
+	return nil
+}
+
+type isUpdateTransactionCategoryRequest_CategoryChange interface {
+	isUpdateTransactionCategoryRequest_CategoryChange()
+}
+
+type UpdateTransactionCategoryRequest_CategoryId struct {
+	CategoryId string `protobuf:"bytes,5,opt,name=category_id,json=categoryId,proto3,oneof"`
+}
+
+type UpdateTransactionCategoryRequest_ClearCategory struct {
+	ClearCategory *emptypb.Empty `protobuf:"bytes,6,opt,name=clear_category,json=clearCategory,proto3,oneof"`
+}
+
+func (*UpdateTransactionCategoryRequest_CategoryId) isUpdateTransactionCategoryRequest_CategoryChange() {
+}
+
+func (*UpdateTransactionCategoryRequest_ClearCategory) isUpdateTransactionCategoryRequest_CategoryChange() {
+}
+
+type UpdateTransactionCategoryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Transaction   *Transaction           `protobuf:"bytes,1,opt,name=transaction,proto3" json:"transaction,omitempty"`
+	DataVersion   int64                  `protobuf:"varint,2,opt,name=data_version,json=dataVersion,proto3" json:"data_version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateTransactionCategoryResponse) Reset() {
+	*x = UpdateTransactionCategoryResponse{}
+	mi := &file_core_v1_ledger_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateTransactionCategoryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateTransactionCategoryResponse) ProtoMessage() {}
+
+func (x *UpdateTransactionCategoryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_ledger_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateTransactionCategoryResponse.ProtoReflect.Descriptor instead.
+func (*UpdateTransactionCategoryResponse) Descriptor() ([]byte, []int) {
+	return file_core_v1_ledger_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *UpdateTransactionCategoryResponse) GetTransaction() *Transaction {
+	if x != nil {
+		return x.Transaction
+	}
+	return nil
+}
+
+func (x *UpdateTransactionCategoryResponse) GetDataVersion() int64 {
+	if x != nil {
+		return x.DataVersion
+	}
+	return 0
+}
+
 var File_core_v1_ledger_proto protoreflect.FileDescriptor
 
 const file_core_v1_ledger_proto_rawDesc = "" +
 	"\n" +
-	"\x14core/v1/ledger.proto\x12\acore.v1\x1a\x12auth/v1/auth.proto\x1a\x14core/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"{\n" +
+	"\x14core/v1/ledger.proto\x12\acore.v1\x1a\x12auth/v1/auth.proto\x1a\x14core/v1/common.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"{\n" +
 	"\fDatedBalance\x12&\n" +
 	"\x06amount\x18\x01 \x01(\v2\x0e.core.v1.MoneyR\x06amount\x12\x13\n" +
 	"\x05as_of\x18\x02 \x01(\tR\x04asOf\x12.\n" +
@@ -1463,6 +1633,18 @@ const file_core_v1_ledger_proto_rawDesc = "" +
 	"\f_category_id\"|\n" +
 	"\x1fCreateManualTransactionResponse\x126\n" +
 	"\vtransaction\x18\x01 \x01(\v2\x14.core.v1.TransactionR\vtransaction\x12!\n" +
+	"\fdata_version\x18\x02 \x01(\x03R\vdataVersion\"\xc9\x02\n" +
+	" UpdateTransactionCategoryRequest\x12/\n" +
+	"\acontext\x18\x01 \x01(\v2\x15.auth.v1.WriteContextR\acontext\x12+\n" +
+	"\x05scope\x18\x02 \x01(\v2\x15.core.v1.AccountScopeR\x05scope\x12%\n" +
+	"\x0etransaction_id\x18\x03 \x01(\tR\rtransactionId\x12)\n" +
+	"\x10expected_version\x18\x04 \x01(\x03R\x0fexpectedVersion\x12!\n" +
+	"\vcategory_id\x18\x05 \x01(\tH\x00R\n" +
+	"categoryId\x12?\n" +
+	"\x0eclear_category\x18\x06 \x01(\v2\x16.google.protobuf.EmptyH\x00R\rclearCategoryB\x11\n" +
+	"\x0fcategory_change\"~\n" +
+	"!UpdateTransactionCategoryResponse\x126\n" +
+	"\vtransaction\x18\x01 \x01(\v2\x14.core.v1.TransactionR\vtransaction\x12!\n" +
 	"\fdata_version\x18\x02 \x01(\x03R\vdataVersion*l\n" +
 	"\rBalanceSource\x12\x1e\n" +
 	"\x1aBALANCE_SOURCE_UNSPECIFIED\x10\x00\x12 \n" +
@@ -1476,8 +1658,9 @@ const file_core_v1_ledger_proto_rawDesc = "" +
 	"\x1eRECORD_SOURCE_KIND_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19RECORD_SOURCE_KIND_MANUAL\x10\x01\x12\x1b\n" +
 	"\x17RECORD_SOURCE_KIND_FILE\x10\x02\x12$\n" +
-	" RECORD_SOURCE_KIND_MOCK_EXTERNAL\x10\x032\xe7\x03\n" +
-	"\rLedgerService\x12Z\n" +
+	" RECORD_SOURCE_KIND_MOCK_EXTERNAL\x10\x032\xdb\x04\n" +
+	"\rLedgerService\x12r\n" +
+	"\x19UpdateTransactionCategory\x12).core.v1.UpdateTransactionCategoryRequest\x1a*.core.v1.UpdateTransactionCategoryResponse\x12Z\n" +
 	"\x11GetDefaultAccount\x12!.core.v1.GetDefaultAccountRequest\x1a\".core.v1.GetDefaultAccountResponse\x12`\n" +
 	"\x13RecordManualBalance\x12#.core.v1.RecordManualBalanceRequest\x1a$.core.v1.RecordManualBalanceResponse\x12Q\n" +
 	"\x0eListCategories\x12\x1e.core.v1.ListCategoriesRequest\x1a\x1f.core.v1.ListCategoriesResponse\x12W\n" +
@@ -1497,86 +1680,95 @@ func file_core_v1_ledger_proto_rawDescGZIP() []byte {
 }
 
 var file_core_v1_ledger_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_core_v1_ledger_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_core_v1_ledger_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_core_v1_ledger_proto_goTypes = []any{
-	(BalanceSource)(0),                      // 0: core.v1.BalanceSource
-	(FactualSourceMode)(0),                  // 1: core.v1.FactualSourceMode
-	(RecordSourceKind)(0),                   // 2: core.v1.RecordSourceKind
-	(*DatedBalance)(nil),                    // 3: core.v1.DatedBalance
-	(*FactualSourceBinding)(nil),            // 4: core.v1.FactualSourceBinding
-	(*Account)(nil),                         // 5: core.v1.Account
-	(*Category)(nil),                        // 6: core.v1.Category
-	(*RecordSource)(nil),                    // 7: core.v1.RecordSource
-	(*Transaction)(nil),                     // 8: core.v1.Transaction
-	(*GetDefaultAccountRequest)(nil),        // 9: core.v1.GetDefaultAccountRequest
-	(*GetDefaultAccountResponse)(nil),       // 10: core.v1.GetDefaultAccountResponse
-	(*RecordManualBalanceRequest)(nil),      // 11: core.v1.RecordManualBalanceRequest
-	(*RecordManualBalanceResponse)(nil),     // 12: core.v1.RecordManualBalanceResponse
-	(*ListCategoriesRequest)(nil),           // 13: core.v1.ListCategoriesRequest
-	(*ListCategoriesResponse)(nil),          // 14: core.v1.ListCategoriesResponse
-	(*ListTransactionsRequest)(nil),         // 15: core.v1.ListTransactionsRequest
-	(*ListTransactionsResponse)(nil),        // 16: core.v1.ListTransactionsResponse
-	(*CreateManualTransactionRequest)(nil),  // 17: core.v1.CreateManualTransactionRequest
-	(*CreateManualTransactionResponse)(nil), // 18: core.v1.CreateManualTransactionResponse
-	(*Money)(nil),                           // 19: core.v1.Money
-	(Direction)(0),                          // 20: core.v1.Direction
-	(*timestamppb.Timestamp)(nil),           // 21: google.protobuf.Timestamp
-	(*v1.BrowserContext)(nil),               // 22: auth.v1.BrowserContext
-	(*v1.WriteContext)(nil),                 // 23: auth.v1.WriteContext
-	(*AccountScope)(nil),                    // 24: core.v1.AccountScope
-	(*PageRequest)(nil),                     // 25: core.v1.PageRequest
-	(*PageResponse)(nil),                    // 26: core.v1.PageResponse
-	(*DateRange)(nil),                       // 27: core.v1.DateRange
+	(BalanceSource)(0),                        // 0: core.v1.BalanceSource
+	(FactualSourceMode)(0),                    // 1: core.v1.FactualSourceMode
+	(RecordSourceKind)(0),                     // 2: core.v1.RecordSourceKind
+	(*DatedBalance)(nil),                      // 3: core.v1.DatedBalance
+	(*FactualSourceBinding)(nil),              // 4: core.v1.FactualSourceBinding
+	(*Account)(nil),                           // 5: core.v1.Account
+	(*Category)(nil),                          // 6: core.v1.Category
+	(*RecordSource)(nil),                      // 7: core.v1.RecordSource
+	(*Transaction)(nil),                       // 8: core.v1.Transaction
+	(*GetDefaultAccountRequest)(nil),          // 9: core.v1.GetDefaultAccountRequest
+	(*GetDefaultAccountResponse)(nil),         // 10: core.v1.GetDefaultAccountResponse
+	(*RecordManualBalanceRequest)(nil),        // 11: core.v1.RecordManualBalanceRequest
+	(*RecordManualBalanceResponse)(nil),       // 12: core.v1.RecordManualBalanceResponse
+	(*ListCategoriesRequest)(nil),             // 13: core.v1.ListCategoriesRequest
+	(*ListCategoriesResponse)(nil),            // 14: core.v1.ListCategoriesResponse
+	(*ListTransactionsRequest)(nil),           // 15: core.v1.ListTransactionsRequest
+	(*ListTransactionsResponse)(nil),          // 16: core.v1.ListTransactionsResponse
+	(*CreateManualTransactionRequest)(nil),    // 17: core.v1.CreateManualTransactionRequest
+	(*CreateManualTransactionResponse)(nil),   // 18: core.v1.CreateManualTransactionResponse
+	(*UpdateTransactionCategoryRequest)(nil),  // 19: core.v1.UpdateTransactionCategoryRequest
+	(*UpdateTransactionCategoryResponse)(nil), // 20: core.v1.UpdateTransactionCategoryResponse
+	(*Money)(nil),                             // 21: core.v1.Money
+	(Direction)(0),                            // 22: core.v1.Direction
+	(*timestamppb.Timestamp)(nil),             // 23: google.protobuf.Timestamp
+	(*v1.BrowserContext)(nil),                 // 24: auth.v1.BrowserContext
+	(*v1.WriteContext)(nil),                   // 25: auth.v1.WriteContext
+	(*AccountScope)(nil),                      // 26: core.v1.AccountScope
+	(*PageRequest)(nil),                       // 27: core.v1.PageRequest
+	(*PageResponse)(nil),                      // 28: core.v1.PageResponse
+	(*DateRange)(nil),                         // 29: core.v1.DateRange
+	(*emptypb.Empty)(nil),                     // 30: google.protobuf.Empty
 }
 var file_core_v1_ledger_proto_depIdxs = []int32{
-	19, // 0: core.v1.DatedBalance.amount:type_name -> core.v1.Money
+	21, // 0: core.v1.DatedBalance.amount:type_name -> core.v1.Money
 	0,  // 1: core.v1.DatedBalance.source:type_name -> core.v1.BalanceSource
 	1,  // 2: core.v1.FactualSourceBinding.mode:type_name -> core.v1.FactualSourceMode
 	3,  // 3: core.v1.Account.balance:type_name -> core.v1.DatedBalance
 	4,  // 4: core.v1.Account.transaction_source:type_name -> core.v1.FactualSourceBinding
-	20, // 5: core.v1.Category.direction:type_name -> core.v1.Direction
+	22, // 5: core.v1.Category.direction:type_name -> core.v1.Direction
 	2,  // 6: core.v1.RecordSource.kind:type_name -> core.v1.RecordSourceKind
-	20, // 7: core.v1.Transaction.direction:type_name -> core.v1.Direction
-	19, // 8: core.v1.Transaction.amount:type_name -> core.v1.Money
+	22, // 7: core.v1.Transaction.direction:type_name -> core.v1.Direction
+	21, // 8: core.v1.Transaction.amount:type_name -> core.v1.Money
 	7,  // 9: core.v1.Transaction.source:type_name -> core.v1.RecordSource
-	21, // 10: core.v1.Transaction.created_at:type_name -> google.protobuf.Timestamp
-	22, // 11: core.v1.GetDefaultAccountRequest.context:type_name -> auth.v1.BrowserContext
+	23, // 10: core.v1.Transaction.created_at:type_name -> google.protobuf.Timestamp
+	24, // 11: core.v1.GetDefaultAccountRequest.context:type_name -> auth.v1.BrowserContext
 	5,  // 12: core.v1.GetDefaultAccountResponse.account:type_name -> core.v1.Account
-	23, // 13: core.v1.RecordManualBalanceRequest.context:type_name -> auth.v1.WriteContext
-	24, // 14: core.v1.RecordManualBalanceRequest.scope:type_name -> core.v1.AccountScope
-	19, // 15: core.v1.RecordManualBalanceRequest.balance:type_name -> core.v1.Money
+	25, // 13: core.v1.RecordManualBalanceRequest.context:type_name -> auth.v1.WriteContext
+	26, // 14: core.v1.RecordManualBalanceRequest.scope:type_name -> core.v1.AccountScope
+	21, // 15: core.v1.RecordManualBalanceRequest.balance:type_name -> core.v1.Money
 	5,  // 16: core.v1.RecordManualBalanceResponse.account:type_name -> core.v1.Account
-	22, // 17: core.v1.ListCategoriesRequest.context:type_name -> auth.v1.BrowserContext
-	25, // 18: core.v1.ListCategoriesRequest.page:type_name -> core.v1.PageRequest
+	24, // 17: core.v1.ListCategoriesRequest.context:type_name -> auth.v1.BrowserContext
+	27, // 18: core.v1.ListCategoriesRequest.page:type_name -> core.v1.PageRequest
 	6,  // 19: core.v1.ListCategoriesResponse.items:type_name -> core.v1.Category
-	26, // 20: core.v1.ListCategoriesResponse.pagination:type_name -> core.v1.PageResponse
-	22, // 21: core.v1.ListTransactionsRequest.context:type_name -> auth.v1.BrowserContext
-	24, // 22: core.v1.ListTransactionsRequest.scope:type_name -> core.v1.AccountScope
-	25, // 23: core.v1.ListTransactionsRequest.page:type_name -> core.v1.PageRequest
-	27, // 24: core.v1.ListTransactionsRequest.dates:type_name -> core.v1.DateRange
-	20, // 25: core.v1.ListTransactionsRequest.direction:type_name -> core.v1.Direction
+	28, // 20: core.v1.ListCategoriesResponse.pagination:type_name -> core.v1.PageResponse
+	24, // 21: core.v1.ListTransactionsRequest.context:type_name -> auth.v1.BrowserContext
+	26, // 22: core.v1.ListTransactionsRequest.scope:type_name -> core.v1.AccountScope
+	27, // 23: core.v1.ListTransactionsRequest.page:type_name -> core.v1.PageRequest
+	29, // 24: core.v1.ListTransactionsRequest.dates:type_name -> core.v1.DateRange
+	22, // 25: core.v1.ListTransactionsRequest.direction:type_name -> core.v1.Direction
 	8,  // 26: core.v1.ListTransactionsResponse.items:type_name -> core.v1.Transaction
-	26, // 27: core.v1.ListTransactionsResponse.pagination:type_name -> core.v1.PageResponse
-	23, // 28: core.v1.CreateManualTransactionRequest.context:type_name -> auth.v1.WriteContext
-	24, // 29: core.v1.CreateManualTransactionRequest.scope:type_name -> core.v1.AccountScope
-	20, // 30: core.v1.CreateManualTransactionRequest.direction:type_name -> core.v1.Direction
-	19, // 31: core.v1.CreateManualTransactionRequest.amount:type_name -> core.v1.Money
+	28, // 27: core.v1.ListTransactionsResponse.pagination:type_name -> core.v1.PageResponse
+	25, // 28: core.v1.CreateManualTransactionRequest.context:type_name -> auth.v1.WriteContext
+	26, // 29: core.v1.CreateManualTransactionRequest.scope:type_name -> core.v1.AccountScope
+	22, // 30: core.v1.CreateManualTransactionRequest.direction:type_name -> core.v1.Direction
+	21, // 31: core.v1.CreateManualTransactionRequest.amount:type_name -> core.v1.Money
 	8,  // 32: core.v1.CreateManualTransactionResponse.transaction:type_name -> core.v1.Transaction
-	9,  // 33: core.v1.LedgerService.GetDefaultAccount:input_type -> core.v1.GetDefaultAccountRequest
-	11, // 34: core.v1.LedgerService.RecordManualBalance:input_type -> core.v1.RecordManualBalanceRequest
-	13, // 35: core.v1.LedgerService.ListCategories:input_type -> core.v1.ListCategoriesRequest
-	15, // 36: core.v1.LedgerService.ListTransactions:input_type -> core.v1.ListTransactionsRequest
-	17, // 37: core.v1.LedgerService.CreateManualTransaction:input_type -> core.v1.CreateManualTransactionRequest
-	10, // 38: core.v1.LedgerService.GetDefaultAccount:output_type -> core.v1.GetDefaultAccountResponse
-	12, // 39: core.v1.LedgerService.RecordManualBalance:output_type -> core.v1.RecordManualBalanceResponse
-	14, // 40: core.v1.LedgerService.ListCategories:output_type -> core.v1.ListCategoriesResponse
-	16, // 41: core.v1.LedgerService.ListTransactions:output_type -> core.v1.ListTransactionsResponse
-	18, // 42: core.v1.LedgerService.CreateManualTransaction:output_type -> core.v1.CreateManualTransactionResponse
-	38, // [38:43] is the sub-list for method output_type
-	33, // [33:38] is the sub-list for method input_type
-	33, // [33:33] is the sub-list for extension type_name
-	33, // [33:33] is the sub-list for extension extendee
-	0,  // [0:33] is the sub-list for field type_name
+	25, // 33: core.v1.UpdateTransactionCategoryRequest.context:type_name -> auth.v1.WriteContext
+	26, // 34: core.v1.UpdateTransactionCategoryRequest.scope:type_name -> core.v1.AccountScope
+	30, // 35: core.v1.UpdateTransactionCategoryRequest.clear_category:type_name -> google.protobuf.Empty
+	8,  // 36: core.v1.UpdateTransactionCategoryResponse.transaction:type_name -> core.v1.Transaction
+	19, // 37: core.v1.LedgerService.UpdateTransactionCategory:input_type -> core.v1.UpdateTransactionCategoryRequest
+	9,  // 38: core.v1.LedgerService.GetDefaultAccount:input_type -> core.v1.GetDefaultAccountRequest
+	11, // 39: core.v1.LedgerService.RecordManualBalance:input_type -> core.v1.RecordManualBalanceRequest
+	13, // 40: core.v1.LedgerService.ListCategories:input_type -> core.v1.ListCategoriesRequest
+	15, // 41: core.v1.LedgerService.ListTransactions:input_type -> core.v1.ListTransactionsRequest
+	17, // 42: core.v1.LedgerService.CreateManualTransaction:input_type -> core.v1.CreateManualTransactionRequest
+	20, // 43: core.v1.LedgerService.UpdateTransactionCategory:output_type -> core.v1.UpdateTransactionCategoryResponse
+	10, // 44: core.v1.LedgerService.GetDefaultAccount:output_type -> core.v1.GetDefaultAccountResponse
+	12, // 45: core.v1.LedgerService.RecordManualBalance:output_type -> core.v1.RecordManualBalanceResponse
+	14, // 46: core.v1.LedgerService.ListCategories:output_type -> core.v1.ListCategoriesResponse
+	16, // 47: core.v1.LedgerService.ListTransactions:output_type -> core.v1.ListTransactionsResponse
+	18, // 48: core.v1.LedgerService.CreateManualTransaction:output_type -> core.v1.CreateManualTransactionResponse
+	43, // [43:49] is the sub-list for method output_type
+	37, // [37:43] is the sub-list for method input_type
+	37, // [37:37] is the sub-list for extension type_name
+	37, // [37:37] is the sub-list for extension extendee
+	0,  // [0:37] is the sub-list for field type_name
 }
 
 func init() { file_core_v1_ledger_proto_init() }
@@ -1590,13 +1782,17 @@ func file_core_v1_ledger_proto_init() {
 	file_core_v1_ledger_proto_msgTypes[5].OneofWrappers = []any{}
 	file_core_v1_ledger_proto_msgTypes[12].OneofWrappers = []any{}
 	file_core_v1_ledger_proto_msgTypes[14].OneofWrappers = []any{}
+	file_core_v1_ledger_proto_msgTypes[16].OneofWrappers = []any{
+		(*UpdateTransactionCategoryRequest_CategoryId)(nil),
+		(*UpdateTransactionCategoryRequest_ClearCategory)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_v1_ledger_proto_rawDesc), len(file_core_v1_ledger_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   16,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

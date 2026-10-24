@@ -2,10 +2,14 @@ syntax = "proto3";
 
 package ml.v1;
 
+import "google/protobuf/timestamp.proto";
+
 option go_package = "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/ml/v1;mlv1";
 
 // Private Core -> ML interface. Core owns authorization, a consistent input
-// snapshot, persistence and authoritative balance/risk calculations.
+// snapshot, persistence and authoritative balance/risk calculations. One RPC
+// serves explicitly versioned models (ADR-029); unsupported financial inputs
+// must fail, never silently select the history-only baseline.
 service ForecastService {
   rpc Predict(PredictRequest) returns (PredictResponse);
 }
@@ -14,6 +18,8 @@ enum DaySource {
   DAY_SOURCE_UNSPECIFIED = 0;
   DAY_SOURCE_OBSERVED = 1;
   DAY_SOURCE_VERIFIED_NO_OPERATIONS = 2;
+  DAY_SOURCE_PARTIAL = 3;
+  DAY_SOURCE_UNAVAILABLE = 4;
 }
 
 // ISO dates are company-local business dates, not timestamps. Core must reject
@@ -24,21 +30,16 @@ message HistoricalDay {
   optional int64 outflow_minor = 3;
   optional int64 closing_balance_minor = 4;
   DaySource source = 5;
+  repeated string quality_codes = 6;
 }
 
 message ModelContext {
   string model_name = 1;
   string model_version = 2;
   string preprocessing_version = 3;
-}
-
-// Reserved input for explicit rejection until calendar reconciliation is agreed.
-// A full history-only baseline must not be blindly added to known payments.
-message KnownPayment {
-  string payment_id = 1;
-  string date = 2;
-  int64 inflow_minor = 3;
-  int64 outflow_minor = 4;
+  string configuration_id = 4;
+  optional string random_seed = 5;
+  optional uint32 trajectory_count = 6;
 }
 
 message ForecastSnapshot {
@@ -51,6 +52,13 @@ message ForecastSnapshot {
   optional int64 initial_balance_minor = 7;
   repeated HistoricalDay history = 8;
   repeated KnownPayment known_payments = 9;
+  string history_start = 10;
+  repeated FinancialFact facts = 11;
+  repeated ReconciliationGroup reconciliation_groups = 12;
+  FinancialPurpose purpose = 13;
+  CalendarAvailability calendar_availability = 14;
+  google.protobuf.Timestamp captured_at = 15;
+  string balance_as_of = 16;
 }
 
 message PredictRequest {
@@ -66,6 +74,9 @@ message ForecastDay {
   // Mathematical reference only. Core independently checks the identity and
   // owns the final financial result; this is not a database balance observation.
   int64 reference_balance_minor = 4;
+  optional int64 balance_lower_minor = 5;
+  optional int64 balance_upper_minor = 6;
+  FinancialProbability negative_balance_probability = 7;
 }
 
 message PredictResponse {
@@ -83,4 +94,119 @@ message PredictResponse {
   optional string first_negative_balance_date = 10;
   bool history_only_includes_recurring_flows = 11;
   repeated string warnings = 12;
+  repeated FinancialComponent components = 13;
+  FinancialProbability gap_probability = 14;
+  repeated string assumptions = 15;
+}
+
+enum FinancialDirection {
+  FINANCIAL_DIRECTION_UNSPECIFIED = 0;
+  FINANCIAL_DIRECTION_INFLOW = 1;
+  FINANCIAL_DIRECTION_OUTFLOW = 2;
+}
+
+message FinancialCategory {
+  // Core UUID, optional category message means uncategorized.
+  string id = 1;
+  string semantic_kind = 2;
+}
+message FinancialSource {
+  string kind = 1;
+  string source_system = 2;
+  optional string source_company_id = 3;
+  optional string external_id = 4;
+}
+message FinancialFact {
+  string transaction_id = 1;
+  int64 version = 2;
+  string date = 3;
+  FinancialDirection direction = 4;
+  int64 amount_minor = 5;
+  FinancialCategory category = 6;
+  FinancialSource source = 7;
+  optional string recurrence_group_id = 8;
+}
+enum KnownPaymentStatus {
+  KNOWN_PAYMENT_STATUS_UNSPECIFIED = 0;
+  KNOWN_PAYMENT_STATUS_PLANNED = 1;
+  KNOWN_PAYMENT_STATUS_PARTIALLY_MATCHED = 2;
+}
+message KnownPayment {
+  string payment_id = 1;
+  int64 version = 2;
+  string date = 3;
+  FinancialDirection direction = 4;
+  int64 remaining_minor = 5;
+  FinancialCategory category = 6;
+  FinancialSource source = 7;
+  KnownPaymentStatus status = 8;
+  // Grouped obligations are referenced by exactly one reconciliation group.
+  // Ungrouped obligations must explicitly declare additional=true.
+  optional string reconciliation_group_id = 9;
+  bool additional = 10;
+}
+message ReconciledOccurrence {
+  string occurrence_id = 1;
+  string date = 2;
+  FinancialDirection direction = 3;
+  int64 amount_minor = 4;
+  FinancialCategory category = 5;
+  optional string payment_id = 6;
+}
+// Complete economic group for the entire forecast horizon. Exclude these facts
+// from unknown baseline, replace with exactly these future occurrences ONCE.
+// No heuristic ID/amount/date match is permitted. Empty future needs an explicit
+// confirmed absence reason; every grouped known payment occurs exactly once.
+message ReconciliationGroup {
+  string id = 1;
+  repeated string historical_transaction_ids = 2;
+  repeated ReconciledOccurrence future_occurrences = 3;
+  bool full_horizon_verified = 4;
+  optional string no_future_occurrences_reason = 5;
+}
+enum FinancialPurpose {
+  FINANCIAL_PURPOSE_UNSPECIFIED = 0;
+  FINANCIAL_PURPOSE_CURRENT_FORECAST = 1;
+  FINANCIAL_PURPOSE_HISTORICAL_EVALUATION = 2;
+}
+enum CalendarAvailability {
+  CALENDAR_AVAILABILITY_UNSPECIFIED = 0;
+  CALENDAR_AVAILABILITY_VERIFIED_CURRENT = 1;
+  CALENDAR_AVAILABILITY_VERIFIED_AS_OF_CUTOFF = 2;
+  CALENDAR_AVAILABILITY_UNAVAILABLE = 3;
+}
+
+// An estimate requires calibration provenance. Rule confidence never qualifies.
+// A model without an estimate returns unavailable_reason, never value=0.
+message CalibratedEstimate {
+  double value = 1;
+  string calibration_version = 2;
+  string evaluation_reference = 3;
+}
+message FinancialProbability {
+  oneof estimate {
+    CalibratedEstimate calibrated = 1;
+    string unavailable_reason = 2;
+  }
+}
+
+enum FinancialComponentKind {
+  FINANCIAL_COMPONENT_KIND_UNSPECIFIED = 0;
+  FINANCIAL_COMPONENT_KIND_KNOWN_PAYMENT = 1;
+  FINANCIAL_COMPONENT_KIND_ML_SALES_RECEIPT = 2;
+  FINANCIAL_COMPONENT_KIND_RECURRING_EXPENSE = 3;
+  FINANCIAL_COMPONENT_KIND_UNCLASSIFIED_BASELINE = 4;
+}
+message FinancialComponent {
+  string component_id = 1;
+  string occurrence_id = 2;
+  FinancialComponentKind kind = 3;
+  FinancialDirection direction = 4;
+  string date = 5;
+  int64 amount_minor = 6;
+  optional string category_id = 7;
+  optional string payment_id = 8;
+  optional string recurrence_group_id = 9;
+  repeated string evidence_transaction_ids = 10;
+  bool scenario_eligible = 11;
 }

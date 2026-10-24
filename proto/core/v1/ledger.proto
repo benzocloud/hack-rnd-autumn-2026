@@ -4,6 +4,7 @@ package core.v1;
 
 import "auth/v1/auth.proto";
 import "core/v1/common.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1;corev1";
@@ -11,6 +12,7 @@ option go_package = "github.com/benzocloud/hack-rnd-autumn-2026/services/core/in
 // API peer only. Reads require FINANCIAL_READ; writes FINANCIAL_WRITE with
 // Auth's write-context/CSRF check before financial data is read or changed.
 service LedgerService {
+  rpc UpdateTransactionCategory(UpdateTransactionCategoryRequest) returns (UpdateTransactionCategoryResponse);
   rpc GetDefaultAccount(GetDefaultAccountRequest) returns (GetDefaultAccountResponse);
   rpc RecordManualBalance(RecordManualBalanceRequest) returns (RecordManualBalanceResponse);
   rpc ListCategories(ListCategoriesRequest) returns (ListCategoriesResponse);
@@ -157,6 +159,22 @@ message CreateManualTransactionRequest {
   optional string category_id = 11;
 }
 message CreateManualTransactionResponse {
+  Transaction transaction = 1;
+  int64 data_version = 2;
+}
+
+// A required category change: empty clears it, UUID sets it. Omission invalid.
+message UpdateTransactionCategoryRequest {
+  auth.v1.WriteContext context = 1;
+  AccountScope scope = 2;
+  string transaction_id = 3;
+  int64 expected_version = 4;
+  oneof category_change {
+    string category_id = 5;
+    google.protobuf.Empty clear_category = 6;
+  }
+}
+message UpdateTransactionCategoryResponse {
   Transaction transaction = 1;
   int64 data_version = 2;
 }

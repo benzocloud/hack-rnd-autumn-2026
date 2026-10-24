@@ -1,12 +1,13 @@
-# API → Go Core: первый контракт
+# API → Go Core: полный набор контрактов
 
 Дата: 2026-10-24. Статус: подготовлен для ревью; **серверные handlers не
 реализованы**. Основание: REST `docs/api/openapi.yaml` 0.2.1, ADR-002/003/022/024,
 Auth ADR-027 и `proto/auth/v1/auth.proto`. Ответственность за Core proto принял
-владелец в текущем обсуждении. Это не замена всему REST и не работающий API.
+владелец в текущем обсуждении. Все 54 REST operationId имеют явное RPC-соответствие; handlers ещё не реализованы.
 
 Канонические файлы: `proto/core/v1/common.proto`, `company.proto`, `ledger.proto`,
-`payments.proto`, `errors.proto`. Отдельные сервисы здесь — gRPC-группы внутри
+`payments.proto`, `imports.proto`, `integrations.proto`, `forecasting.proto`,
+`scenarios.proto`, `errors.proto`. Отдельные сервисы здесь — gRPC-группы внутри
 одного Core-процесса, не новые микросервисы. Референсы gateway/engine-go помогают
 с границей handler → service и ручной сборкой; предметные DTO определяются нашим
 REST. Service не импортирует generated protobuf, SQL остаётся в repository.
@@ -131,6 +132,11 @@ SQL/credentials/финансовые значения остаются за гр
 | IDEMPOTENCY_CONFLICT | AlreadyExists | 409 |
 | FACTUAL_SOURCE_CONFLICT, SOURCE_BINDING_CONFLICT, BALANCE_OBSERVATION_CONFLICT, PAYMENT_STATE_CONFLICT | FailedPrecondition | 409 |
 | RATE_LIMITED | ResourceExhausted | 429 |
+| PAYLOAD_TOO_LARGE | ResourceExhausted | 413 |
+| IMPORT_STATE_CONFLICT, IMPORT_PREVIEW_STALE, IMPORT_WARNINGS_NOT_ACKNOWLEDGED | FailedPrecondition | 409 |
+| FORECAST_NOT_READY, FORECAST_NOT_COMPARABLE, ACTUALS_NOT_AVAILABLE | FailedPrecondition | 409 |
+| BALANCE_AS_OF_UNAVAILABLE | FailedPrecondition | 409 |
+| INSUFFICIENT_HISTORY, UNSUPPORTED_MODEL_CONTEXT, SCENARIO_NOT_SUPPORTED, SCENARIO_TARGET_CONFLICT | FailedPrecondition | 422 |
 | DEPENDENCY_UNAVAILABLE | Unavailable | 503 |
 | INTERNAL_ERROR | Internal | 500 |
 
@@ -138,16 +144,16 @@ Field violations содержат путь/безопасное описание
 Отмена клиента — Canceled, дедлайн — DeadlineExceeded (API 504, если соединение
 ещё открыто); изменение могло успеть commit, поэтому retry с тем же ключом и
 телом, без обещания rollback из-за сетевого timeout. Для PATCH сначала перечитать
-состояние. Адаптер явно задаёт бюджет: обычные RPC <=10 секунд, ML <=30 секунд;
+состояние. Адаптер явно задаёт бюджет: обычные RPC <=10 секунд, upload stream <=120 секунд, ML <=30 секунд;
 более короткий parent deadline побеждает. Вызов ML выполняется вне SQL Tx.
 Повтор writes новым ключом после неизвестного исхода запрещён. До runtime-сервера
 эти бюджеты — спецификация, не проверенная конфигурация deployment.
 
 ## Непокрытая реализация и следующие поставки
 
-Первый proto не включает import/commit, category update, payment update/cancel/
-unmatch, forecast jobs/results/chart, scenarios, connectors. Это остаётся в REST
-и P0/P1-плане; не считать отсутствие RPC удалением бизнес-требования.
+Контракты покрывают также import/commit, category update, payment update/cancel/
+unmatch, forecast jobs/results/chart, scenarios и connectors. Их runtime-реализация
+остаётся следующими этапами; proto не является выполнением бизнес-требования.
 Не добавляем generic JSON passthrough, fake success, брокер или временный обход Auth.
 
 Перед подключением API нужны отдельные проверки/реализация:
@@ -205,3 +211,36 @@ Payments inputs проверены отдельно: весь Core PostgreSQL in
 ExpectedDataVersion=0 и обеих resource versions. Совместимость receipts_v1,
 повтор без записи и digest conflict при изменении версии факта — PASS.
 Это проверка сервисов/storage; сетевые handlers остаются следующим этапом.
+
+
+## Единый ML-метод — ADR-029
+
+Один `ml.v1.ForecastService/Predict`, явная версия модели/подготовки/configuration.
+Пустой календарь не меняет требования к финансовой модели. Core фиксирует выбор
+в job, API/браузер не выбирают метод. Неподдерживаемые данные/модель дают явную
+ошибку; автоматический fallback и подмена финансового расчёта baseline запрещены.
+Текущий mean_90 — ограниченный baseline; продуктовая модель ещё не реализована.
+Полная финансовая семантика: [ML contract](financial-ml.md).
+
+## Полная передача Go API
+
+Полный route manifest: [rest-rpc-map.json](rest-rpc-map.json); таблица маршрутов и
+особых преобразований: [API adapter guide](api-adapter.md). Manifest проверяется
+по всем operationId OpenAPI и реальным protobuf descriptors. Связанные сервисы
+Auth и Core вызываются строго в указанном порядке; внутренние AuthorizeCompany,
+AuthorizeCompanyBootstrap и recovery-вызовы принадлежат upstream, не браузеру.
+
+Генерация из корня checkout (отдельные local packages):
+
+```sh
+buf generate --template buf.api-core.gen.yaml
+buf generate --template buf.auth-core.gen.yaml
+buf generate --template buf.core.gen.yaml
+```
+
+Для общей проверки в отдельном venv установить scripts/requirements-contracts.txt
+и выполнить `CONTRACT_PYTHON=/path/to/venv/bin/python scripts/check-core-contracts.sh`.
+Buf 1.75.0 и Go 1.27.3 нужны в окружении. Скрипт использует те же templates,
+компилирует API/Auth только во временных modules и проверяет Core generated drift.
+Обычный API adapter преобразует типы явно; protojson.Marshal не является
+готовым публичным REST-ответом из-за envelope/nulls/discriminators/status_url.
