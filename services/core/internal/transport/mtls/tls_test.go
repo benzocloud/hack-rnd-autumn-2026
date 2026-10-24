@@ -34,6 +34,12 @@ func TestTLSConfigurationFailsClosed(t *testing.T) {
 	if mtls.Identity(t.Context()) != "" {
 		t.Fatal("context invented service identity")
 	}
+	if _, err := mtls.Client(ca.Files(t, mtls.Core), "saldo-ml", mtls.Core, mtls.ML); err != nil {
+		t.Fatal("valid ML peer configuration rejected", err)
+	}
+	if _, err := mtls.Client(files, "saldo-api", mtls.API, mtls.API); !errors.Is(err, mtls.ErrConfiguration) {
+		t.Fatal("unsupported server identity accepted", err)
+	}
 }
 
 func TestTLSRejectsMissingClientAndWrongServerIdentity(t *testing.T) {

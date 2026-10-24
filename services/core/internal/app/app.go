@@ -40,11 +40,12 @@ type forecastingOperations interface {
 }
 
 type application struct {
-	Companies   companyOperations
-	Ledger      ledgerOperations
-	Payments    paymentsOperations
-	Forecasting forecastingOperations
-	db          *sqlx.DB
+	Companies    companyOperations
+	Ledger       ledgerOperations
+	Payments     paymentsOperations
+	Forecasting  forecastingOperations
+	ForecastJobs forecastJobs
+	db           *sqlx.DB
 }
 
 // New owns the opened pool. Call Close after operations have finished.
@@ -56,13 +57,18 @@ func New(ctx context.Context, cfg config.Config) (*application, error) {
 // NewWithCompanyAuthorizer binds the trusted Auth adapter supplied by runtime.
 // The authorizer runs before opening a bootstrap transaction, including replay.
 func NewWithCompanyAuthorizer(ctx context.Context, cfg config.Config, authorize func(context.Context, uuid.UUID, uuid.UUID, string) (company.Authorization, error)) (*application, error) {
+	return NewWithForecastModel(ctx, cfg, authorize, nil)
+}
+
+func NewWithForecastModel(ctx context.Context, cfg config.Config, authorize func(context.Context, uuid.UUID, uuid.UUID, string) (company.Authorization, error), model financialPredictor) (*application, error) {
 	db, err := appPostgres.Open(ctx, cfg.Postgres)
 	if err != nil {
 		return nil, err
 	}
 	return &application{
-		db:        db,
-		Companies: newCompanies(db, cfg.Postgres, authorize),
+		db:           db,
+		Companies:    newCompanies(db, cfg.Postgres, authorize),
+		ForecastJobs: newForecastJobs(db, cfg.Postgres, model),
 		Ledger: ledger.New(func(ctx context.Context, work ledger.Work) error {
 			err := appPostgres.WithinTx(ctx, db, cfg.Postgres.QueryTimeout, func(ctx context.Context, tx *sqlx.Tx) error {
 				return work(ctx, ledgerSQL.New(tx), commandsSQL.New(tx))

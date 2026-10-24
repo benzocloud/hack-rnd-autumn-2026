@@ -11,9 +11,12 @@ import (
 
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/app"
 	authClient "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/client/auth"
+	mlClient "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/client/ml"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/config"
 	companyHandler "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/handler/grpc/company"
+	forecastHandler "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/handler/grpc/forecasting"
 	ledgerHandler "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/handler/grpc/ledger"
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/forecasting"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/transport/grpcserver"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/transport/mtls"
 )
@@ -44,7 +47,25 @@ func Run(ctx context.Context, cfg config.Config, rpc config.RPC) (err error) {
 	if err != nil {
 		return errRuntime
 	}
-	application, err := app.NewWithCompanyAuthorizer(ctx, cfg, auth.AuthorizeBootstrap)
+	var model interface {
+		PredictFinancial(context.Context, forecasting.FinancialModelInput) (forecasting.FinancialModelResult, error)
+	}
+	if rpc.MLAddress != "" {
+		mlTLS, err := mtls.Client(files, rpc.MLServerName, mtls.Core, mtls.ML)
+		if err != nil {
+			return err
+		}
+		mlConn, err := grpc.NewClient(rpc.MLAddress, grpc.WithTransportCredentials(credentials.NewTLS(mlTLS)), grpc.WithDisableRetry())
+		if err != nil {
+			return errRuntime
+		}
+		defer func() { err = errors.Join(err, mlConn.Close()) }()
+		model, err = mlClient.New(mlConn, 25*time.Second)
+		if err != nil {
+			return errRuntime
+		}
+	}
+	application, err := app.NewWithForecastModel(ctx, cfg, auth.AuthorizeBootstrap, model)
 	if err != nil {
 		return errRuntime
 	}
@@ -58,12 +79,26 @@ func Run(ctx context.Context, cfg config.Config, rpc config.RPC) (err error) {
 		server.Stop()
 		return err
 	}
+	if err := forecastHandler.Register(server, application.ForecastJobs, application.Companies, auth); err != nil {
+		server.Stop()
+		return err
+	}
 	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp", rpc.Address)
 	if err != nil {
 		server.Stop()
 		return errRuntime
 	}
-	return serve(ctx, server, listener, cfg.ShutdownTimeout)
+	if model == nil {
+		return serve(ctx, server, listener, cfg.ShutdownTimeout)
+	}
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	worker := make(chan error, 1)
+	go func() { worker <- application.ForecastJobs.Run(runCtx); cancel() }()
+	serveErr := serve(runCtx, server, listener, cfg.ShutdownTimeout)
+	cancel()
+	workerErr := <-worker
+	return errors.Join(serveErr, workerErr)
 }
 
 func serve(ctx context.Context, server *grpc.Server, listener net.Listener, timeout time.Duration) error {

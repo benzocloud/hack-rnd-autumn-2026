@@ -32,6 +32,8 @@ func authorizePeer(ctx context.Context, request any, info *grpc.UnaryServerInfo,
 		allowed = identity == mtls.Auth
 	case pb.CompanyService_ReadCompany_FullMethodName, pb.CompanyService_UpdateCompany_FullMethodName, pb.LedgerService_GetDefaultAccount_FullMethodName, pb.LedgerService_RecordManualBalance_FullMethodName, pb.LedgerService_CreateManualTransaction_FullMethodName:
 		allowed = identity == mtls.API
+	case pb.ForecastingService_CreateForecast_FullMethodName, pb.ForecastingService_GetForecast_FullMethodName, pb.ForecastingService_ListForecasts_FullMethodName:
+		allowed = identity == mtls.API
 	}
 	if !allowed {
 		return nil, status.Error(codes.PermissionDenied, "service peer is not permitted")

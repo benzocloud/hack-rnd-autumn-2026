@@ -45,6 +45,9 @@ func cleanupCompany(t *testing.T, app *application, id uuid.UUID) {
 		ctx, cancel := context.WithTimeout(context.WithoutCancel(t.Context()), 5*time.Second)
 		defer cancel()
 		for _, query := range []string{
+			"DELETE FROM core_forecast_jobs WHERE company_id=$1",
+			"DELETE FROM core_history_coverage WHERE company_id=$1",
+			"DELETE FROM core_financial_snapshots WHERE company_id=$1",
 			"DELETE FROM core_company_bootstraps WHERE company_id=$1",
 			"DELETE FROM core_company_profiles WHERE company_id=$1",
 			"DELETE FROM core_command_results WHERE company_id=$1",

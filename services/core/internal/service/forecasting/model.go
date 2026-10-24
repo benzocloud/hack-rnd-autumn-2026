@@ -45,8 +45,9 @@ type ModelForecastDay struct {
 	Inflow, Outflow, ReferenceBalance money.Money
 }
 
-// ModelResult is a history-only mathematical projection, not an authoritative
-// persisted forecast or a calibrated probability of insolvency.
+// ModelResult is a checked mathematical daily projection, not an authoritative
+// persisted forecast or a calibrated probability of insolvency. Financial
+// provenance and limitations belong to its FinancialModelResult wrapper.
 type ModelResult struct {
 	SnapshotID                        uuid.UUID
 	Scope                             ledger.Scope

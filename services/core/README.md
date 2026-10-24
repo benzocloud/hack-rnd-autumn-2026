@@ -479,3 +479,64 @@ Full unit/race/build/vet/lint and PostgreSQL/mTLS tests pass, including concurre
 retries, stored timestamp equality, full replay after edits, corrupted receipt,
 source/category/scope/access denials and failed-commit recovery. These use the
 same Auth double limitation as C4. C5 is owner-approved; no deployment occurred.
+
+### API forecast flow (C6.1–C6.3, pending owner review)
+
+The current API worktree implements company/account reads and forecast
+create/list/get polling. Core already serves ReadCompany/GetDefaultAccount;
+CreateForecast/GetForecast/ListForecasts now enqueue, list and read durable
+forecasts. See the [matching Core plan](../../.agent/plans/core-api-forecast-flow.md).
+
+The new internal `PredictFinancial` adapter calls the same canonical ML Predict
+RPC with mean_90_components_v1/calendar_replacement_v1. It requires explicit
+90-day coverage provenance and operations that exactly reconcile to daily flows.
+The cutoff EOD is observed; reconstructed covered days retain their provenance.
+An unavailable historical calendar remains an explicit limitation of this
+financial model, and never triggers a fallback to the baseline.
+
+Financial echo, arithmetic, components/evidence and uncalibrated uncertainty are
+validated. The result retains not_calibrated probability and explicit limits;
+residual components are not exposed as scenario targets. Empirical bands are not
+public confidence intervals. Unit/race/full lint and real Python mTLS tests pass.
+Python bindings may be generated outside the checkout; pass both that output
+directory and services/ml via CORE_ML_TEST_SOURCE (a Python path list).
+
+Apply migration 00006 separately. It adds revision-bound history coverage and
+durable jobs. The enqueue transaction checks Auth, reserves the idempotency key,
+locks the account and freezes the snapshot/model context. Identical retries
+return the original queued acceptance even after completion. A worker claims
+one job with a 60-second lease, calls ML outside SQL transactions with a bounded
+deadline, and persists a checked success or safe failure. Expired claims can be
+recovered; the previous lease holder cannot overwrite a newer result.
+
+Set both `CORE_ML_ADDRESS` and `CORE_ML_SERVER_NAME` to enable the worker. Core
+uses its own certificate, the trusted CA and the ML leaf URI
+`spiffe://saldo.local/ml`; the DNS name is also verified. Without ML configured,
+forecast creation is unavailable while existing company/ledger reads work.
+
+Forecasts require an observed cutoff EOD and a trusted `core_history_coverage`
+record covering 90 consecutive days at the exact account revision. A trusted
+import/preparation boundary must certify this coverage with provenance; this
+slice does not implement that writer or infer zero days from missing rows.
+Any financial change makes previous forecasts stale and requires fresh coverage
+before a new forecast. Reading a result never runs ML again. Lists use stable
+keyset pagination bound to actor, company/account and scenario filter.
+
+Saved results carry a schema version and are checked again on read. Residual
+components/evidence remain stored for audit; public components, recommendations
+and scenario targets are currently empty/unavailable. Historical calendar is
+explicitly unavailable, probability is `not_calibrated`, and readiness is
+`limited`. Known planned payments, what-if scenarios and full Core MVP are not
+completed by this slice.
+
+Full PostgreSQL/race tests pass for concurrent enqueue/replay, reconnect,
+staleness, revoked access/CSRF/scope, failure persistence, lease recovery,
+pagination and corrupted result rejection. The real Python ML test runs with
+`-tags=integration,mlintegration` and `CORE_ML_TEST_PYTHON`/`CORE_ML_TEST_SOURCE`.
+The optional HTTP test additionally requires `CORE_API_TEST_BINARY`, built from
+the financial API worktree. It verifies actual HTTP company/account/create/get/
+list adapters against Core TCP mTLS, PostgreSQL and Python ML. Auth is an explicit
+test double: real Auth/login and frontend/browser E2E remain unverified.
+
+These C6 changes are local, awaiting owner review; they are not committed,
+pushed or deployed.

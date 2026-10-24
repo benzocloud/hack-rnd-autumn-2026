@@ -12,6 +12,7 @@ import (
 	authpb "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/auth/v1"
 	pb "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/company"
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/forecasting"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/ledger"
 )
 
@@ -29,6 +30,22 @@ func From(err error) error {
 	}
 	code, reason := codes.Internal, pb.CoreErrorReason_CORE_ERROR_REASON_INTERNAL_ERROR
 	switch {
+	case errors.Is(err, forecasting.ErrInvalid):
+		code, reason = codes.InvalidArgument, pb.CoreErrorReason_CORE_ERROR_REASON_VALIDATION_ERROR
+	case errors.Is(err, forecasting.ErrCursor):
+		code, reason = codes.InvalidArgument, pb.CoreErrorReason_CORE_ERROR_REASON_INVALID_CURSOR
+	case errors.Is(err, forecasting.ErrMissingBalance):
+		code, reason = codes.FailedPrecondition, pb.CoreErrorReason_CORE_ERROR_REASON_BALANCE_AS_OF_UNAVAILABLE
+	case errors.Is(err, forecasting.ErrHistory):
+		code, reason = codes.FailedPrecondition, pb.CoreErrorReason_CORE_ERROR_REASON_INSUFFICIENT_HISTORY
+	case errors.Is(err, forecasting.ErrHorizon):
+		code, reason = codes.FailedPrecondition, pb.CoreErrorReason_CORE_ERROR_REASON_UNSUPPORTED_MODEL_CONTEXT
+	case errors.Is(err, forecasting.ErrJobConflict):
+		code, reason = codes.AlreadyExists, pb.CoreErrorReason_CORE_ERROR_REASON_IDEMPOTENCY_CONFLICT
+	case errors.Is(err, forecasting.ErrNotFound):
+		code, reason = codes.NotFound, pb.CoreErrorReason_CORE_ERROR_REASON_NOT_FOUND
+	case errors.Is(err, forecasting.ErrUnavailable):
+		code, reason = codes.Unavailable, pb.CoreErrorReason_CORE_ERROR_REASON_DEPENDENCY_UNAVAILABLE
 	case errors.Is(err, company.ErrInvalid), errors.Is(err, domain.ErrInvalid), errors.Is(err, ledger.ErrInvalid):
 		code, reason = codes.InvalidArgument, pb.CoreErrorReason_CORE_ERROR_REASON_VALIDATION_ERROR
 	case errors.Is(err, company.ErrNotFound), errors.Is(err, ledger.ErrNotFound):

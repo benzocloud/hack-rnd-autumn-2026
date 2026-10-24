@@ -15,6 +15,7 @@ const (
 	API  = "spiffe://saldo.local/api"
 	Core = "spiffe://saldo.local/core"
 	Auth = "spiffe://saldo.local/auth"
+	ML   = "spiffe://saldo.local/ml"
 )
 
 var ErrConfiguration = errors.New("invalid Core mTLS configuration")
@@ -30,7 +31,7 @@ func Server(files Files) (*tls.Config, error) {
 }
 
 func Client(files Files, serverName, ownIdentity, serverIdentity string) (*tls.Config, error) {
-	if serverName == "" || (serverIdentity != Core && serverIdentity != Auth) {
+	if serverName == "" || (serverIdentity != Core && serverIdentity != Auth && serverIdentity != ML) {
 		return nil, ErrConfiguration
 	}
 	certificate, roots, err := load(files, ownIdentity)
