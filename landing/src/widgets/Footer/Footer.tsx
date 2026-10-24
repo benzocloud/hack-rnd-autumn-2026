@@ -48,7 +48,7 @@ const Footer = () => {
                                 <div className={styles.groupHeading}>
                                     <h2>
                                         <a href={bankUrl(group.href)} aria-label={group.title === "ESG" ? "ESG — устойчивое развитие" : undefined}>
-                                            { group.title === "ESG" ? <Image src="/icons/bank/footer/green-vector.svg" alt="" width={34} height={34} unoptimized /> : group.title }
+                                            { group.title === "ESG" ? <Image src="/landing/icons/bank/footer/green-vector.svg" alt="" width={34} height={34} unoptimized /> : group.title }
                                         </a>
                                     </h2>
                                     <button type="button" className={styles.toggle} aria-label={`${expanded.includes(group.title) ? "Свернуть" : "Развернуть"} раздел «${group.title}»`} aria-expanded={expanded.includes(group.title)} aria-controls={`footer-group-${index}`} onClick={() => toggleGroup(group.title)}>
@@ -67,7 +67,7 @@ const Footer = () => {
                                     { socialLinks.map(( link, index ) => (
                                         <li key={link.href} className={index > 3 ? styles.telegram : undefined}>
                                             <a href={link.href} aria-label={index < 4 ? link.title : undefined}>
-                                                <Image src={`/icons/bank/footer/${link.icon}.svg`} alt="" width={link.icon === "telegram" ? 21 : 24} height={link.icon === "vk" ? 15 : link.icon === "telegram" ? 17 : 24} unoptimized />{ index > 3 && <span>{ link.title }</span> }
+                                                <Image src={`/landing/icons/bank/footer/${link.icon}.svg`} alt="" width={link.icon === "telegram" ? 21 : 24} height={link.icon === "vk" ? 15 : link.icon === "telegram" ? 17 : 24} unoptimized />{ index > 3 && <span>{ link.title }</span> }
                                             </a>
                                         </li>
                                     )) }
@@ -76,7 +76,7 @@ const Footer = () => {
                             <section>
                                 <h2>Связаться с нами</h2>
                                 <ul className={styles.contactLinks}>
-                                    { contactLinks.map(( link ) => <li key={link.href}><a href={bankUrl(link.href)} aria-label={link.title}><Image src={`/icons/bank/footer/${link.icon}.svg`} alt="" width={link.icon === "internet-reception" ? 21 : 24} height={link.icon === "vk" ? 15 : link.icon === "internet-reception" ? 21 : 24} unoptimized /></a></li>) }
+                                    { contactLinks.map(( link ) => <li key={link.href}><a href={bankUrl(link.href)} aria-label={link.title}><Image src={`/landing/icons/bank/footer/${link.icon}.svg`} alt="" width={link.icon === "internet-reception" ? 21 : 24} height={link.icon === "vk" ? 15 : link.icon === "internet-reception" ? 21 : 24} unoptimized /></a></li>) }
                                 </ul>
                             </section>
                         </div>
@@ -85,7 +85,7 @@ const Footer = () => {
                     <div className={styles.online}>
                         <a className={styles.onlineButton} href={bankUrl("/for-individuals/online-applications")}>Онлайн - сервисы</a>
                         <ul className={styles.apps}>
-                            { apps.map(( app ) => <li key={app.title}><a href={bankUrl(app.href)} aria-label={app.title}><Image src={`/icons/bank/footer/${app.icon}.svg`} alt="" width={74} height={74} unoptimized /></a></li>) }
+                            { apps.map(( app ) => <li key={app.title}><a href={bankUrl(app.href)} aria-label={app.title}><Image src={`/landing/icons/bank/footer/${app.icon}.svg`} alt="" width={74} height={74} unoptimized /></a></li>) }
                         </ul>
                     </div>
                 </div>

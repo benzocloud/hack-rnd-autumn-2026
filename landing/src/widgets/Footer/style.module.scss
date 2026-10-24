@@ -5,7 +5,7 @@
     font-style: normal;
     font-weight: 300;
     font-display: swap;
-    src: url("/fonts/inter/Inter-Light.woff2") format("woff2");
+    src: url("/landing/fonts/inter/Inter-Light.woff2") format("woff2");
 }
 
 @font-face {
@@ -13,7 +13,7 @@
     font-style: normal;
     font-weight: 400;
     font-display: swap;
-    src: url("/fonts/inter/Inter-Regular.woff2") format("woff2");
+    src: url("/landing/fonts/inter/Inter-Regular.woff2") format("woff2");
 }
 
 @font-face {
@@ -21,7 +21,7 @@
     font-style: normal;
     font-weight: 500;
     font-display: swap;
-    src: url("/fonts/inter/Inter-Medium.woff2") format("woff2");
+    src: url("/landing/fonts/inter/Inter-Medium.woff2") format("woff2");
 }
 
 @font-face {
@@ -29,7 +29,7 @@
     font-style: normal;
     font-weight: 700;
     font-display: swap;
-    src: url("/fonts/inter/Inter-Bold.woff2") format("woff2");
+    src: url("/landing/fonts/inter/Inter-Bold.woff2") format("woff2");
 }
 
 .footer {
@@ -401,7 +401,7 @@
         display: block;
         width: 15px;
         height: 15px;
-        background: url("/icons/bank/footer/chevron-down-black.svg") center no-repeat;
+        background: url("/landing/icons/bank/footer/chevron-down-black.svg") center no-repeat;
         transition: transform global.$transition-duration;
     }
 

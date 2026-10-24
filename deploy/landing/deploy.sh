@@ -31,7 +31,9 @@ write_image() {
 
 write_image "$image"
 if compose up -d --no-deps --wait --wait-timeout 120 landing && \
-    curl --fail --silent --show-error --retry 5 --retry-connrefused http://127.0.0.1:3005/ >/dev/null; then
+    curl --fail --silent --show-error --max-time 15 --retry 5 --retry-connrefused http://127.0.0.1:3005/landing >/dev/null && \
+    curl --fail --silent --show-error --max-time 15 --retry 10 --retry-all-errors --retry-delay 2 \
+        --resolve saldo.brokebyte.me:443:127.0.0.1 https://saldo.brokebyte.me/landing >/dev/null; then
     printf '%s\n' "$previous" > previous-image
     echo "Deployed $image"
 else
