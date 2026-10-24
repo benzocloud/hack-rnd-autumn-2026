@@ -2,10 +2,10 @@ name: Auth CI
 
 on:
   pull_request:
-    paths: ['testdata/company-bootstrap-fingerprint-v1.json', 'services/auth/**', '.github/workflows/auth-ci.yml', 'LICENSE']
+    paths: ['testdata/company-bootstrap-fingerprint-v1.json', 'services/auth/**', 'proto/auth/**', 'proto/core/v1/company.proto', 'proto/core/v1/errors.proto', 'buf.auth-core.gen.yaml', 'buf.yaml', '.github/workflows/auth-ci.yml', 'LICENSE']
   push:
     branches: [main]
-    paths: ['testdata/company-bootstrap-fingerprint-v1.json', 'services/auth/**', '.github/workflows/auth-ci.yml', 'LICENSE']
+    paths: ['testdata/company-bootstrap-fingerprint-v1.json', 'services/auth/**', 'proto/auth/**', 'proto/core/v1/company.proto', 'proto/core/v1/errors.proto', 'buf.auth-core.gen.yaml', 'buf.yaml', '.github/workflows/auth-ci.yml', 'LICENSE']
   workflow_dispatch:
 
 permissions:
@@ -39,6 +39,15 @@ jobs:
           working-directory: services/auth
           install-only: true
           skip-cache: true
+      - name: Install pinned Buf and check canonical Auth/Core bindings
+        run: |
+          mkdir -p "$RUNNER_TEMP/auth-buf"
+          curl --fail --silent --show-error --location --retry 3 \
+            https://github.com/bufbuild/buf/releases/download/v1.75.0/buf-Linux-x86_64 \
+            --output "$RUNNER_TEMP/auth-buf/buf"
+          printf '%s  %s\n' fad1e38d6909bbb583a4da81d8c02a01046e2cd663bde7e337dd24277393764b "$RUNNER_TEMP/auth-buf/buf" | sha256sum --check
+          chmod +x "$RUNNER_TEMP/auth-buf/buf"
+          BUF="$RUNNER_TEMP/auth-buf/buf" bash scripts/generate.sh --check
       - name: Check formatting and imports in every Go file
         run: |
           mapfile -d '' go_files < <(git ls-files -z -- '*.go')

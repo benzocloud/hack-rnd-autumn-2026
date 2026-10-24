@@ -2,184 +2,160 @@
 
 Обновлено 2026-10-25. Реализация в работе; owner review pending; не сливать.
 
-## Авторизация и ownership
+## Поручение, граница и ownership
 
 Прямое поручение владельца разрешает A0–A5, проверки, независимые read-only reviews,
-исправления, commit/push и один draft PR без промежуточных подтверждений.
-ADR-020 owner review отложен до общего результата; этапы после checks — «На ревью
-владельца», не «Принят». Merge/ready-for-review/deploy/provisioning запрещены.
-Полный scope/invariants/checklist: [plan](../plans/company-onboarding.md).
-Issue не назначен. Не добавлять выдуманные Issue references.
+исправления, небольшие commits/push и один draft PR без промежуточных подтверждений.
+Исключение ADR-020: промежуточные этапы остаются «На ревью владельца», не «Принят».
+Merge, ready-for-review, deployment и production provisioning запрещены.
+Scope/invariants/checklist: [plan](../plans/company-onboarding.md). Issue не назначен.
 
-Ветка: `prosteyshiyyy/feat/company_onboarding`.
-Начальная база: `fdee0ed` из origin/main, получена git fetch 2026-10-24.
-GitHub SSH подтвердил `Prosteyshiyyy`; исходный checkout на `prosteyshiyyy/goapi`
-не изменялся. Владелец ветки — текущая Codex-сессия по этому поручению.
-Явного takeover нет. Другому агенту продолжать ту же ветку, не cherry-pick и не
-создавать второй PR/параллельного владельца без проверки.
+Ветка: `prosteyshiyyy/feat/company_onboarding`, nickname подтверждён GitHub SSH/API.
+Владелец ветки — текущая Codex-сессия по поручению Prosteyshiyyy; takeover нет.
+Продолжать ту же ветку, не cherry-pick и не создавать второй PR/параллельного owner.
+[Draft PR #41](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/41).
+Исходный checkout `prosteyshiyyy/goapi` не изменялся; отдельный worktree.
+Начальная база `fdee0ed`; main обновляется обычным merge перед каждым push.
+Последний включённый main `0f0ff73`, опубликованный head до A2 slice:
+`7f62b72a8ea802e679fcbdc1e45c7d75529bd443` (remote API ref проверен).
 
-Draft PR URL: https://github.com/benzocloud/hack-rnd-autumn-2026/pull/41 (draft, head `6bd70b2` проверен через GitHub API и ls-remote).
-Remote checkpoint SHA следует проверять через ls-remote; SHA текущего docs commit
-не вставляется внутрь него самого. PR/CI updates должны ссылаться на фактический SHA.
-
-Первый docs commit `9f90a80` опубликован после обычного merge нового main
-`ea433dd` (PR #40); push checkpoint `d9679eb` успешен. Ветка доступна:
-[GitHub branch](https://github.com/benzocloud/hack-rnd-autumn-2026/tree/prosteyshiyyy/feat/company_onboarding).
-Продолжать в существующем draft PR #41; новый PR не создавать.
-
-## Состояние
+## Состояние A0–A5
 
 | Этап | Статус | Tests | Review | CI |
 | --- | --- | --- | --- | --- |
-| A0 | На ревью владельца | Docs diff/links/stage markers/fences и staged diff --check прошли | Caveman/Ponytail A0: подтверждённых замечаний нет | Checks пусты для docs SHA `6bd70b2` |
-| A1 | В работе: service/finalizer slice | Полный Auth unit/race + real PG integration/race/vet/build/lint прошли | Repository reviewed; service final reviews interrupted by usage limit | Последний проверенный CI — `1ffd947`, детали ниже |
-| A2 | Не начат | Не запускались | Pending | Не запускался |
-| A3 | Не начат | Не запускались | Pending | Не запускался |
-| A4 | Не начат | Не запускались | Pending | Не запускался |
-| A5 | Не начат | Не запускались | Pending | Не запускался |
+| A0 | На ревью владельца | Docs links/diff/fences, draft/remote SHA | Caveman/Ponytail без дефектов | Docs-only, runtime не требовался |
+| A1 | На ревью владельца | Полный Auth unit/real PG integration/race/shuffle/vet/build/lint | Два independent reviews `9463e40`, дефектов нет | Auth/Core gates `7f62b72` SUCCESS |
+| A2 | В работе: RPC/client slice, worker далее | Полный Auth gate, настоящие TLS tests, Buf/drift прошли | Два reviews текущего RPC/client diff, дефектов нет | Нового A2 SHA ещё нет; не переносить старый green |
+| A3 | Не начат | Нет POST /companies/E2E proof | Pending | Pending |
+| A4 | Не начат | PR40/43 из main сохранены; onboarding UI ещё не проверен | Pending | Pending |
+| A5 | Не начат | Нет полного register→owner→account→reload browser E2E | Pending | Pending |
 
-A0 и A1 repository опубликованы. В текущем A1 service diff подключены command
-store/app-owned Tx, Begin/Authorize business methods и Complete/common finalizer.
-RPC/Core client/reconciler ещё не подключены, HTTP create отсутствует.
-Финансовых fixtures нет. Runtime suite docs-only A0 не требовался; A1 проверен ниже.
+HTTP create пока отсутствует. Durable worker ещё отсутствует: сами storage leases
+не восстанавливают PREPARED после restart. Продукт/импорт/ML/MVP готовыми не объявлять.
 
-Проверено на `fdee0ed` + docs diff:
+## Что реализовано и чем подтверждено
 
-- GBrain recall выполнен по проекту/onboarding; вывод — вспомогательный контекст.
-- Auth RPC declarations есть, implementation Begin/AuthorizeBootstrap/Complete
-  в handler/service нет. Existing login/verify/membership auth сохранять.
-- Core bootstrap/receipt/service tests уже есть, переиспользовать их.
-- API financialRoute выбирает GET для /companies; POST сейчас 405.
-- Workspace Promise.all связывает companies и unsupported invitations;
-  create использует companiesService, затем settings redirect.
-- Fresh main включает PR #39 stale-company-selection; исходная историческая
-  база `5c5797e` уже не самая свежая.
-- Ни CI, ни reviews/PR discussions не проверены: Git SSH не даёт GitHub API.
+A1 repository `599d068`, service `9463e409af668dc13cc9930c1ecbf8785815efa4`.
+Новая additive migration3 (старые migrations не менялись), schema version3.
+Auth-owned UUIDv4 command/UUIDv7 company, scoped key/spec/hash, states
+PREPARED/COMPLETED/QUARANTINED, receipt account/commit и DB-time lease/fencing/backoff
+metadata. Initiator UUID сохраняется после удаления user, без cascading FK/TTL.
+SQL/embed/record, private repositories и app-owned sqlx pool/Tx сохранены.
 
-После initial self-check выполнен новый fetch: main=`ea433dd`, PR #40 уже
-разделил companies/invitations resources и их DataState. Обычный merge прошёл
-без конфликтов; изучен полный Workspace diff, своих runtime changes нет.
-Текущий diff относительно main содержит только два onboarding Markdown-файла.
-Не дублировать эту часть A4; UI tests/typecheck/browser для чужого изменения
-здесь не запускались и не считаются прошедшими.
+Begin использует существующий checkContext: user→session→command, live/verified
+session/CSRF; ID создаются после key lookup, timestamp PostgreSQL microseconds.
+Authorize проверяет durable tuple и enabled/verified initiator. Complete сам
+читает receipt вне SQL Tx, затем общий finalizer берёт user→command locks и
+атомарно создаёт owner/COMPLETED. Invalid receipt или disabled/deleted user →
+committed quarantine без owner. Completed replay не восстанавливает revoked access.
+Owner insert не повышает financier и не заменяет другого owner.
+Fingerprint v1 общий fixture Auth/Core: `testdata/company-bootstrap-fingerprint-v1.json`
+(кириллица, absent/null INN, leading zeros, escaping, trim).
 
-## Среда и восстановление доступа
+A1 real tests: concurrent scoped insert/reopen, migration2→3→2→3/up replay с
+сохранением user, atomic rollback, lease reclaim/stale worker fencing,
+initiator deletion, owner conflicts. Service tests: две replicas/pools и restart,
+body conflict, missing receipt/PREPARED, disabled user во время read, отсутствие
+user lock через network boundary (SQL NOWAIT), revoked membership replay.
+Core boundary здесь fixture; это не полный Core runtime E2E.
 
-GitHub API auth восстановлен пользователем: `/usr/bin/gh`, `gh api user --jq .login`
-→ `Prosteyshiyyy`; список открытых PR до создания #41 пуст. PR #41 draft создан
-и проверен, SHA `6bd70b23e65fd924c6c2c5a76b26281972272496` совпал с remote.
-Все доступные descriptions/conversation/reviews/inline replies с пагинацией
-прочитаны для связанных PR #17/#25/#30/#34–#40; Issue не назначен.
-Исторические ошибки `gh not found` и API 404 устранены; не повторять диагностику
-без новой причины. Git mutations/network требуют sandbox escalation.
+A1 два read-only reviews exact `1ffd947..9463e40` завершены без доказанных дефектов.
+В repository review исправлен CHECK nullable account_id до публикации, реальные
+integration повторены. Первоначальный quota failure review/Buf устранён после reset;
+оба reviews повторно завершены, Buf1.75.0 установлен. Ничего не обходилось.
+После merge main Auth tree не изменился (`git diff --exit-code 9463e40 7f62b72 -- services/auth`).
 
-Pinned review skills получены в изолированном каталоге из
-`.agent/infra/skills/skills.json`: caveman-review `bad48a0`, ponytail-review
-`09c434a`, cc-skills-golang `19a0626`. Чтение skill не равно проведённому review;
-A0 reviewed двумя независимыми read-only агентами: caveman-review и
-ponytail-review, подтверждённых замечаний нет (HEAD `6bd70b2` + A0 docs diff).
-Repository slice A1 также reviewed; service/RPC/recovery reviews ещё pending. Тот же pinned fetch можно повторить с другого
-компьютера; root-owned installer на developer машине запускать не нужно.
-Go `GOTOOLCHAIN=go1.27.3 go version` успешен; Docker server 29.9.1 доступен.
-Go lint 2.15.0 подготовлен, A1 runtime результаты ниже; task/Buf ещё предстоит подготовить.
+A2 текущий снимок: `7f62b72` + RPC/client/config/generated/tests/docs diff.
+Три Auth RPC зарегистрированы, owner из service/session, feature-local mapping,
+UUID/spec presence и безопасные typed 409/503 errors. Реальный TLS Auth listener
+пускает bootstrap authorization только Core; API/Auth/ML/frontend отклонены до state.
 
-## Воспроизводимые команды
+Auth Core client: app-owned connection/Close, TLS13, обычные CA+hostname проверки
+и exact Core URI, local Auth URI; no retries, per-call deadline50ms–3s/default2s.
+Receipt codec сверяет canonical IDs/spec/hash/account/committed timestamp;
+peer denial без business detail остаётся dependency failure. Error text безопасен,
+cause сохраняется. Missing/unavailable optional client не ломает login/verify.
 
-С другого компьютера с настроенными Git SSH и авторизованным gh/connector:
+A2 проверки (exit0, не skipped): full Auth unit/race/shuffle и real PostgreSQL
+integration/race/shuffle, vet/build/full-module lint0issues; actual mTLS client
+положительный и wrong URI/hostname/local identity; protobuf adapters/Core-only
+Auth authorization; deadline/receipt/error codec; register/verify/login при
+client init failure; Buf lint/format/build/breaking against origin/main snapshot;
+exact generated drift, shell syntax, Python provision template compile и
+Ruff0.17.1 check/format для изменённого deploy template.
+Два read-only Caveman/Ponytail reviews RPC/client diff поверх7f62b72 — доказанных
+дефектов нет. Применены pinned Go grpc/security/context/testing/error skills.
+Recovery, real Core→PostgreSQL chain и полный browser E2E ещё pending.
+
+## Remote CI и предыдущий контекст
+
+Последний полностью проверенный CI — `7f62b72`: Auth lint/tests/build SUCCESS
+([run40136094127](https://github.com/benzocloud/hack-rnd-autumn-2026/actions/runs/40136094127));
+Core contracts/lint/tests/build SUCCESS, GHCR publish SKIPPED (не тест)
+([run40136094115](https://github.com/benzocloud/hack-rnd-autumn-2026/actions/runs/40136094115));
+infra safety/ml-tests SUCCESS
+([run40136094215](https://github.com/benzocloud/hack-rnd-autumn-2026/actions/runs/40136094215)).
+Новый A2 SHA требует нового чтения CI; queued/in-progress не passing.
+
+Полные descriptions/conversation/reviews/inline replies с pagination прочитаны
+для связанных PR16/17/25/30/31/34–40/43. GBrain recall выполнен; Git/contracts
+авторитетны. PR40 уже разделил companies/invitations; PR43 меняет validation/
+useRequest/Workspace: их изменения сохранены, не дублировать и не откатывать.
+Никаких чужих незавершённых изменений не переносилось.
+
+## Воспроизведение и tooling
+
+На другом компьютере с Git SSH и авторизованным gh:
 
 ```sh
 git fetch origin
 git switch --track origin/prosteyshiyyy/feat/company_onboarding
 cat .agent/handoffs/company-onboarding.md
-cat .agent/plans/company-onboarding.md
 git status --short
-git ls-remote origin refs/heads/prosteyshiyyy/feat/company_onboarding
+gh pr view 41 --repo benzocloud/hack-rnd-autumn-2026 --json isDraft,headRefOid,url
 ```
 
-Если ветка уже локальная, использовать `git switch prosteyshiyyy/feat/company_onboarding`;
-для параллельного checkout — отдельный worktree, не stash/reset чужого.
-Проверить все существующие PR, выбрать прежний draft при наличии.
+Если ветка уже локальная — обычный git switch; для parallel checkout отдельный
+worktree. Перед push fetch origin/main + обычный merge, без force/rewrite/stash чужого.
+Check diff/index/secrets, обновить этот handoff в том же commit, push, проверить
+remote SHA и draft/CI. SHA текущего commit внутрь него не вставлять.
 
-До нового push: fetch origin/main и обычный merge в эту ветку, без force/rewrite.
-PR title: `feat: implement durable company onboarding`; русское description:
-«Реализация в работе; owner review pending; не сливать», таблица A0–A5 и ссылки
-на plan/handoff в этой ветке. Проверить `isDraft`, head SHA и доступность URL.
-Read full PR descriptions/conversation/reviews/inline replies с пагинацией;
-linked Issues читать только если действительно связаны, номер не выдумывать.
+Pinned: Go1.27.3; golangci-lint2.15.0; Buf1.75.0; protoc-gen-go1.36.12 и
+protoc-gen-go-grpc1.6.2 из существующего buf.auth-core.gen.yaml.
+Review sources/pins: `.agent/infra/skills/skills.json`; pinned fetch в отдельный
+каталог, root-owned runner installer на developer машине не запускать.
+Инструкции skill не равны проведённому review.
 
-Полный набор gates; фактически выполненные проверки и ограничения A1 указаны ниже:
+Пример установки tooling без изменения go.mod:
 
-- Cwd `services/auth`: Go toolchain `go1.27.3`; golangci-lint `2.15.0`;
-  `golangci-lint fmt --diff $(git ls-files -- '*.go')`,
-  `golangci-lint run ./...`, `go vet -tags=integration ./...`,
-  `go build ./...`, `go test -race -shuffle=on -count=1 -timeout=90s ./...`,
-  `go test -race -tags=integration -shuffle=on -count=1 -timeout=90s ./...`.
-  `AUTH_TEST_DATABASE_URL` — отдельная PostgreSQL 18 test DB с `_test` suffix,
-  случайные disposable schemas по существующему integration helper;
-  production/Core DSN не использовать. PostgreSQL CI pin 18.6, sqlx 1.4.0,
-  pgx/stdlib 5.11.0, goose 3.29.0. Additive миграция 3 создана и проверена, подробности в A1-разделе.
-- Cwd `services/core`: `task check`, `task integration`; предварительно
-  подготовить отдельную marked Core test DB по README/current integration helper.
-  Не подменять skipped integration успешной проверкой.
-- Cwd `services/api`: `bash scripts/check.sh` (generation/build/unit/race/
-  coverage/vet/fmt/lint/data contracts/smoke/conformance).
-- Canonical Buf lint/build/breaking, drift/generation/consumer import checks
-  по актуальным scripts/configs при изменениях bindings. Generated code вручную
-  не редактировать; base для breaking выбрать из свежего main.
-- Cwd `frontend`: `npm ci`, `npm test`, `npm run typecheck`, `npm run lint`,
-  `npm run build`; Node >=20.9.0, точные npm dependencies из package-lock.json.
-  Настоящий браузер, financial mocks off, HTTPS API/mTLS services/real PostgreSQL.
+```sh
+GOTOOLCHAIN=go1.27.3 GOBIN=/tmp/saldo-onboarding-tools go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
+GOTOOLCHAIN=go1.27.3 GOBIN=/tmp/saldo-onboarding-tools go install github.com/bufbuild/buf/cmd/buf@v1.75.0
+```
 
-Изолированный Auth test DB fixture реализован и описан ниже; mTLS topology и
-config env для нового Auth→Core client пока не реализованы.
-Перед A2/A5 взять существующие service TLS/testauth patterns и документировать
-точные новые env names/isolated setup в Git. Секреты/ключи/cookies/.env/dumps
-не выводить и не коммитить. Живые server/CA/firewall/SSH/чужие containers не менять.
+Добавить tool directory в PATH. Из services/auth:
 
-## Следующие действия
+```sh
+bash scripts/generate.sh --check
+golangci-lint fmt --diff ./...
+golangci-lint run ./...
+GOTOOLCHAIN=go1.27.3 go test -race -shuffle=on -count=1 -timeout=90s ./...
+GOTOOLCHAIN=go1.27.3 go test -race -tags=integration -shuffle=on -count=1 -timeout=90s ./...
+GOTOOLCHAIN=go1.27.3 go vet -tags=integration ./...
+GOTOOLCHAIN=go1.27.3 go build ./...
+```
 
-1. Завершить два независимых review A1 service/finalizer diff: оба были прерваны
-   usage limit, итоговый успех не заявлен. Проверенный parent — `1ffd947` + service diff.
-2. Опубликовать service checkpoint и проверить remote SHA/CI; при review findings
-   исправить, повторить относящиеся checks и сразу push.
-3. A2: реальные Auth RPC/Core client/generated bindings, app lifecycle и durable
-   reconciler. Buf ещё не установлен: предыдущий approval review завершился quota error.
+Generation: `bash scripts/generate.sh` (generator + agreed formatter only),
+canonical Auth/Company/Errors subset, no manual generated edits. Auth CI includes
+exact drift and specific framework-generated dispatch/comment lint exceptions,
+without blanket exclusions. Canonical Buf lint/format/build/breaking from root.
+Full Core gate из services/core: task check / task integration (task3.48.0,
+separate marked Core DB по README). API из services/api: bash scripts/check.sh.
+Frontend только из frontend/: npm ci / npm test / npm run typecheck / npm run lint /
+npm run build, затем настоящий browser с financial mocks off. Эти remaining gates
+ещё не объявлялись выполненными для полного onboarding.
 
-Продолжать все A0–A5 по поручению, не запрашивать промежуточное разрешение на
-согласованную работу. При недоступном первом gate сохранить честный checkpoint
-и сообщить blocker, не объявлять задачу завершённой.
-
-## A1 — repository checkpoint (2026-10-24)
-
-Проверенный снимок: `0bde7e61b7b5c0fda152875e55da624898518b7e` + A1 storage diff.
-Новая additive миграция `00003_company_creation.sql`; schema version 3, старые
-миграции не изменены. Команда UUIDv4, company UUIDv7, scoped key, normalized spec/
-fingerprint, PREPARED/COMPLETED/QUARANTINED, account/commit result и DB-time
-lease/backoff metadata. Нет каскадного удаления команды при удалении initiator.
-Новый command repository принимает DB/Tx, SQL/embed/record приватны; InsertOwner
-не повышает financier и не заменяет другого owner. Общие Auth/Core fixtures —
-`testdata/company-bootstrap-fingerprint-v1.json`, оба CI реагируют на их изменения.
-
-Пройдено (в cwd services/auth, GOTOOLCHAIN=go1.27.3):
-
-- `go test -race -shuffle=on -count=1 -timeout=90s ./...`.
-- `go test -race -tags=integration -shuffle=on -count=1 -timeout=90s ./...`:
-  настоящая marked PostgreSQL18.6, все integration прошли, не skipped.
-- `go vet -tags=integration ./...`, `go build ./...`.
-- `golangci-lint fmt ./...`, `golangci-lint run ./...`: 0 issues.
-- Дополнительный focused `./integration -run '^TestCompanyCreation'` с race/shuffle
-  проверяет owner uniqueness/role preservation после дополнения regression.
-- Cwd services/core: полный `golangci-lint fmt --diff ./...`, полный
-  `golangci-lint run ./...` (0 issues), `go test -race ./internal/domain/company`.
-  Полный Core runtime/PG gate — на A2/final, Core runtime здесь не менялся.
-
-Два независимых read-only reviewers (pinned caveman/ponytail + golang-how-to,
-database/error-handling/security/testing) нашли один blocker: nullable account_id
-CHECK запрещал PREPARED INSERT. Исправлен до публикации, реальные integration
-повторно прошли; других подтверждённых замечаний repository slice не осталось.
-Это не приёмка A1 целиком: production service finalizer ещё отсутствует.
-
-Воспроизведение isolated DB из корня repo (без production/чужих контейнеров):
+Отдельная Auth DB fixture из root repo:
 
 ```sh
 docker run --rm --name saldo-onboarding-test-pg -e POSTGRES_USER=auth_test -e POSTGRES_DB=auth_test -e POSTGRES_HOST_AUTH_METHOD=trust -p 127.0.0.1::5432 -d postgres:18.6@sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6
@@ -187,65 +163,33 @@ docker port saldo-onboarding-test-pg 5432
 docker exec saldo-onboarding-test-pg psql -U auth_test -d auth_test -c "ALTER DATABASE auth_test SET saldo.test_database = 'saldo-auth-integration';"
 ```
 
-Задать AUTH_TEST_DATABASE_URL на loopback port из docker port, user auth_test,
-database auth_test, sslmode=disable (это disposable trust fixture, не credentials
-живой БД). Helper создаёт/удаляет только собственные random auth_test_* schemas.
-Проверено 2→3→2→3 и повторный up с сохранением существующего user; rollback
-schema 3 удаляет command table, использовать только в isolated test DB.
-Удаление своего fixture после проверок: `docker stop saldo-onboarding-test-pg`;
-`--rm` убирает только этот container, persistent volumes не создавались.
+Задать AUTH_TEST_DATABASE_URL на выданный loopback port, user auth_test/database
+auth_test/sslmode=disable (disposable trust fixture). Helpers ограничены *_test и
+создают/удаляют только свои random schemas. В текущей среде port32769; считать его
+локальным значением, на другом компьютере читать docker port. После проверок
+остановить только свой fixture: docker stop saldo-onboarding-test-pg (--rm).
+Не трогать production/Core DB, чужие containers/worktrees или persistent volumes.
 
-Tooling воспроизводится без изменения go.mod:
-`GOTOOLCHAIN=go1.27.3 GOBIN=/tmp/saldo-onboarding-tools go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0`.
-Добавить этот каталог в PATH либо вызвать установленный binary по пути.
-Текущий worker/PKI/client config не создан; runtime CI надо читать после push,
-исторические green checks не доказательство нового SHA.
+## Config и будущие operator действия
 
-## A1 — service/finalizer checkpoint (2026-10-25)
+New env: AUTH_CORE_ADDRESS, AUTH_CORE_SERVER_NAME, AUTH_CORE_TIMEOUT. TLS cert/key/CA
+из AUTH_GRPC_CERT_FILE/AUTH_GRPC_KEY_FILE/AUTH_GRPC_CA_FILE; Auth cert needs clientAuth
+и exact Auth URI. Existing provision template cert уже dual serverAuth/clientAuth.
+У нового stack шаблон задаёт Core dependency; в существующей установке оператор
+позднее должен отдельно обновить auth.env этими тремя env и проверить existing PKI.
+provision.py отказывается перезаписывать существующую установку — не запускать его
+для обновления и не менять live secrets/CA/server/firewall/SSH. Никакой deployment
+этим поручением не разрешён. Tests используют ephemeral PKI, файлы ключей не публикуются.
 
-Снимок: `1ffd9473d7f32f82262710e5751df4f2c901ea34` + service/app/tests diff.
-account.Work расширен feature-local command store; app.New связывает repository
-с тем же sqlx.Tx. Begin использует live/verified session/CSRF, user→session→command
-locks, UUIDv4/UUIDv7 создаются только после scoped key lookup. CreatedAt усечён
-до PostgreSQL microseconds, чтобы первый ответ совпадал с durable replay.
-Authorize bootstrap проверяет durable command и verified/enabled initiator;
-чужой input не карантинит корректную команду. Complete читает Core через
-consumer-side port после commit первой Tx; общий finalizer повторно берёт
-user→command locks, сверяет receipt и атомарно пишет owner+COMPLETED.
-Disabled/deleted user и mismatch дают committed QUARANTINED без membership;
-completed replay не восстанавливает удалённую membership.
+## Следующие действия
 
-Core port пока тестовый boundary, не реальный mTLS client; business methods
-не зарегистрированы как RPC. Это не доказательство полного onboarding/E2E.
-Существующие login/verify не требуют Core клиента и прошли повторный regression.
+1. Опубликовать текущий проверенный RPC/client slice в тот же draft, проверить
+   remote SHA и новые CI failures; сохранить точный SHA в PR update после push.
+2. A2 recovery: ReconcileOne/worker receipt-first→bootstrap→receipt→общий finalizer;
+   без cookie, leases/fencing/backoff/shutdown, expired/reset session persistence,
+   disabled/deleted/quarantined guards. Отдельный checkpoint после проверки.
+3. A3 real POST/typed mapping/conformance/HTTPS→mTLS→PG; затем A4 current Workspace
+   retry/context/redirect без неподдержанных P1 dependencies и A5 real browser/E2E.
 
-Проверено на этом diff в services/auth, pinned Go1.27.3:
-
-- Полный `go test -race -shuffle=on -count=1 -timeout=90s ./...` — exit0.
-- Полный `go test -race -tags=integration -shuffle=on -count=1 -timeout=90s ./...`
-  на том же отдельном marked PostgreSQL18.6 fixture — exit0, не skipped.
-- `go vet -tags=integration ./...`, `go build ./...`, full-module
-  `golangci-lint run ./...` — exit0, lint0issues; formatting/import применены.
-- Реальные две service replicas/pools: concurrent Begin даёт один command,
-  same key/different spec conflict, missing receipt оставляет PREPARED;
-  fresh service/pool после restart завершает owner, completed replay сохраняет
-  отзыв доступа. SQL NOWAIT regression подтверждает отсутствие user lock через RPC.
-- Disabled user во время receipt read даёт durable QUARANTINED/no membership.
-  Unit cases дополнительно покрывают mismatch всех receipt fields, invalid/missing
-  account/commit, deleted user, foreign command, CSRF/expired session и rollback.
-
-Два service reviewers были запущены, но оба завершились usage limit до финального
-отчёта. Ponytail успел сообщить предварительное отсутствие доказанных дефектов;
-это не завершённое review. Repository reviews выше действуют только на старый slice.
-
-Последний прочитанный GitHub CI (`1ffd947`): Auth lint/tests, Core contracts/lint,
-infra safety/ml-tests — SUCCESS; Auth build и Core tests — IN_PROGRESS, общий успех
-не заявлен. Источники: Auth run40132488413, Core run40132488424, infra run40132488402.
-
-Подтверждённый environment failure: установка Buf1.75.0 через pinned go install
-не запущена — automatic approval reviewer сообщил usage limit и retry at12:50AM.
-Это сбой проверки разрешения, не признание команды небезопасной. Не обходить
-reviewer и не выдавать Buf установленным; восстановить quota/approval service,
-затем повторить обычную разрешённую проверку. Последний remote checkpoint до
-service публикации — `1ffd947`; весь service diff пока локален, пока новый push
-и remote SHA не подтверждены.
+Known blockers продукта не подтверждены; remaining work выше не выполнен.
+Не создавать heartbeat/resume jobs; при явном takeover прекратить изменения/push.

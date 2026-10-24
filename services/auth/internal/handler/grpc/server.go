@@ -11,6 +11,9 @@ import (
 )
 
 type accountOperations interface {
+	BeginCompanyCreation(context.Context, account.BeginCompanyCreationInput) (account.CreationCommand, error)
+	AuthorizeCompanyBootstrap(context.Context, account.AuthorizeCompanyBootstrapInput) (account.CreationCommand, error)
+	CompleteCompanyCreation(context.Context, account.CompleteCompanyCreationInput) (account.CreationCommand, error)
 	GetPersonalDataConsent(context.Context) (account.Document, error)
 	EmailVerificationMode() string
 	GetSecurityContext(context.Context, string) (account.SecurityContext, error)

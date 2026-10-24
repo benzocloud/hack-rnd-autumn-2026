@@ -94,8 +94,8 @@ invitations, reset/email delivery, новые роли и полный redesign 
 | Этап | Статус | Проверяемый результат |
 | --- | --- | --- |
 | A0 | На ревью владельца | Удалённые plan/handoff и один проверенный draft PR |
-| A1 | В работе | Durable Auth command/repository и atomic owner finalization |
-| A2 | Не начат | RPC, Core client и recovery после restart |
+| A1 | На ревью владельца | Durable Auth command/repository и atomic owner finalization |
+| A2 | В работе | RPC, Core client и recovery после restart |
 | A3 | Не начат | Настоящий POST /companies, HTTPS/mTLS conformance |
 | A4 | Не начат | Workspace без блокирующей зависимости от invitations |
 | A5 | Не начат | Реальный полный сценарий, два ревью, CI, итоговый handoff |
@@ -126,11 +126,11 @@ repository SQL/embed/record, membership/user locks, общие fingerprint fixtu
 
 - [x] Реализовать validation/spec/fingerprint и persistent scoped idempotency;
   states PREPARED/COMPLETED/QUARANTINED, constraints/indexes/locks.
-- [ ] Atomic membership + completion; concurrency/replay и rollback без утечки result.
+- [x] Atomic membership + completion; concurrency/replay и rollback без утечки result.
 - [x] Проверить additive migration на отдельной marked Auth test DB;
   совместимость/up/repeated-up/rollback по действующим правилам, старые SQL не менять.
 - [x] Unit/real PostgreSQL/race, два read-only review repository slice.
-- [ ] Публикация repository checkpoint и подключение service/finalizer для завершения A1.
+- [x] Repository `599d068`, service/finalizer `9463e40` опубликованы; full Auth gates и два read-only reviews A1 пройдены. Remote после merge свежего main: `7f62b72`. Владелец ещё не принимал A1.
 
 Критерий: одинаковый ключ даёт одну команду/company, конфликт без новой записи;
 финализация атомарна и безопасна при конкуренции/disabled initiator.
@@ -140,9 +140,9 @@ repository SQL/embed/record, membership/user locks, общие fingerprint fixtu
 Зависимость: A1. Компоненты: Auth handler/service/app/config/client/lifecycle,
 canonical generated Core bindings только через generator; Core только совместимость.
 
-- [ ] Begin/Authorize/Complete и точные mTLS peer checks, typed errors.
-- [ ] Core client с app-owned connection/deadlines/Close и receipt validation.
-- [ ] Общий finalizer; сеть вне locks/Tx, перепроверка после сети.
+- [x] Begin/Authorize/Complete и точные mTLS peer checks, typed errors (RPC/client slice).
+- [x] Core client с app-owned connection/deadlines/Close и receipt validation.
+- [x] Общий finalizer; сеть вне locks/Tx, перепроверка после сети.
 - [ ] Durable worker: receipt-first, bootstrap fallback, lease/fencing,
   bounded backoff/retries/shutdown, quarantine, без cookie и произвольного TTL.
 - [ ] Missing/mismatched receipt, lost reply, restart в каждом переходе,
