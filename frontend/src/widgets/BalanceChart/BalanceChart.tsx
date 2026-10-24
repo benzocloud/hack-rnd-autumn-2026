@@ -28,7 +28,7 @@ const BalanceChart = ( { points, comparison }: IProps ) => {
     return (
         <div className={styles.chart} role="group" aria-label={`Прогноз остатка на счёте в рублях за ${points.length} дней. По горизонтали — дни, по вертикали — сумма.`}>
             <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                <LineChart data={data} margin={{ top: 20, right: 36, bottom: 16, left: 0 }} accessibilityLayer>
+                <LineChart data={data} margin={{ top: 20, right: 36, bottom: 16, left: 0 }} style={{ cursor: "inherit" }} accessibilityLayer>
                     <CartesianGrid stroke="var(--chart-grid)" strokeOpacity={0.2} vertical={false} />
                     <XAxis dataKey="date" tickFormatter={( value: string ) => dayFormatter.format(new Date(`${value}T00:00:00Z`))} tick={{ fill: "var(--chart-text)", fontSize: 11 }} tickLine={false} axisLine={false} minTickGap={24} tickMargin={10} interval="preserveStartEnd" />
                     <YAxis tickFormatter={( value: number ) => numberFormatter.format(value)} tick={{ fill: "var(--chart-text)", fontSize: 11 }} tickLine={false} axisLine={false} width={62} tickMargin={8} domain={[ "auto", "auto" ]} />
