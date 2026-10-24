@@ -3,7 +3,6 @@
 import { useRef, useState } from "react";
 import { useSelector } from "react-redux";
 
-import { withBasePath } from "@/helpers/basePath";
 import { authService } from "@/service";
 import type { RootState } from "@/store/store";
 import { AuthButton } from "@/widgets";
@@ -27,7 +26,7 @@ const Account = () => {
 
         try {
             await authService.logout();
-            window.location.replace(withBasePath("/login"));
+            window.location.replace("/login");
         } catch {
             pending.current = false;
             setBusy(false);

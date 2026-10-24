@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { useSelector } from "react-redux";
 
 import { isAuthRoute } from "@/helpers/auth";
-import { withBasePath } from "@/helpers/basePath";
 import type { ICompany } from "@/interfaces";
 import type { RootState } from "@/store/store";
 
@@ -35,10 +34,10 @@ const Header = ( { company, avatarUrl }: IProps ) => {
             <div className={styles.container}>
                 <Link className={styles.bank} href="/" aria-label="Банк Центр-инвест — на главную">
                     <picture>
-                        <source media="(max-width: 480px)" srcSet={withBasePath("/icons/bank/invest-bank-symbol.svg")} />
+                        <source media="(max-width: 480px)" srcSet="/icons/bank/invest-bank-symbol.svg" />
                         <Image
                             className={styles.bankLogo}
-                            src={withBasePath("/icons/bank/invest-bank.svg")}
+                            src="/icons/bank/invest-bank.svg"
                             alt="Банк Центр-инвест"
                             width={254}
                             height={53}

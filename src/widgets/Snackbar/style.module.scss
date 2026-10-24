@@ -27,21 +27,21 @@
 }
 
 .warning {
-    mask-image: url("../../../public/icons/snackbar/circle-alert.svg");
+    mask-image: url("/icons/snackbar/circle-alert.svg");
 }
 
 .info {
-    mask-image: url("../../../public/icons/snackbar/info.svg");
+    mask-image: url("/icons/snackbar/info.svg");
 }
 
 .error {
-    mask-image: url("../../../public/icons/snackbar/circle-x.svg");
+    mask-image: url("/icons/snackbar/circle-x.svg");
 }
 
 .success {
-    mask-image: url("../../../public/icons/snackbar/circle-check.svg");
+    mask-image: url("/icons/snackbar/circle-check.svg");
 }
 
 .close {
-    mask-image: url("../../../public/icons/snackbar/x.svg");
+    mask-image: url("/icons/snackbar/x.svg");
 }

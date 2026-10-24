@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 
-import AuthQueryForm from "@/features/AuthForm/AuthQueryForm";
-import { Spinner } from "@/widgets";
+import { AuthForm } from "@/features";
+
+
+interface IProps {
+    searchParams: Promise<{ token?: string }>;
+}
 
 
 const metadata: Metadata = {
@@ -10,8 +13,10 @@ const metadata: Metadata = {
 };
 
 
-const Page = () => {
-    return <Suspense fallback={<Spinner label="Загружаем форму" />}><AuthQueryForm mode="reset-password" /></Suspense>;
+const Page = async ( { searchParams }: IProps ) => {
+    const { token } = await searchParams;
+
+    return <AuthForm mode="reset-password" resetToken={token || ""} />;
 };
 
 

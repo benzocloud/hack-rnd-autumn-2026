@@ -24,11 +24,11 @@
     appearance: none;
     border: 0;
     border-radius: 5px;
-    background: url("../../../public/icons/checkbox/unchecked.svg") center / contain no-repeat;
+    background: url("/icons/checkbox/unchecked.svg") center / contain no-repeat;
     cursor: pointer;
 
     &:checked {
-        background-image: url("../../../public/icons/checkbox/checked.svg");
+        background-image: url("/icons/checkbox/checked.svg");
     }
 
     &:focus-visible {

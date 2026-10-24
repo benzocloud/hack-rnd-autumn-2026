@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 
-import AuthQueryForm from "@/features/AuthForm/AuthQueryForm";
-import { Spinner } from "@/widgets";
+import { AuthForm } from "@/features";
+import type { VerificationPurpose } from "@/interfaces";
+
+
+interface IProps {
+    searchParams: Promise<{ purpose?: string }>;
+}
 
 
 const metadata: Metadata = {
@@ -10,8 +14,11 @@ const metadata: Metadata = {
 };
 
 
-const Page = () => {
-    return <Suspense fallback={<Spinner label="Загружаем форму" />}><AuthQueryForm mode="verify-code" /></Suspense>;
+const Page = async ( { searchParams }: IProps ) => {
+    const { purpose } = await searchParams;
+    const verificationPurpose: VerificationPurpose = purpose === "login" || purpose === "reset" ? purpose : "register";
+
+    return <AuthForm key={verificationPurpose} mode="verify-code" verificationPurpose={verificationPurpose} />;
 };
 
 
