@@ -85,6 +85,13 @@ message ConsentAcceptance {
   string document_sha256 = 3;
 }
 
+// Public non-secret handle. Register/resend always return this shape, including
+// a fresh inert handle for ineligible addresses, to avoid account enumeration.
+message EmailVerificationChallenge {
+  string challenge_id = 1;
+  google.protobuf.Timestamp expires_at = 2;
+}
+
 enum CompanyRole {
   COMPANY_ROLE_UNSPECIFIED = 0;
   COMPANY_ROLE_OWNER = 1;
@@ -167,6 +174,8 @@ enum CompanyCreationState {
 
 message CompanyCreationCommand {
   string id = 1;
+  // Nonzero UUIDv7, generated once by Auth when persisting the durable command.
+  // Core must reuse it unchanged for every retry and recovery.
   string company_id = 2;
   // Server-derived from the original live session, never accepted from browser.
   string initiator_id = 3;
@@ -198,6 +207,7 @@ enum AuthErrorReason {
   AUTH_ERROR_REASON_MEMBERSHIP_REVOKED = 18;
   AUTH_ERROR_REASON_COMPANY_CREATION_IN_PROGRESS = 19;
   AUTH_ERROR_REASON_INVALID_CURSOR = 20;
+  AUTH_ERROR_REASON_CODE_INVALID_OR_EXPIRED = 21;
 }
 
 // Attached to a non-OK gRPC status. No request values, secrets or stack traces.
@@ -233,7 +243,9 @@ message RegisterRequest {
   string display_name = 4;
   ConsentAcceptance personal_data_consent = 5;
 }
-message RegisterResponse {}
+message RegisterResponse {
+  EmailVerificationChallenge challenge = 1;
+}
 
 message LoginRequest {
   WriteContext context = 1;
@@ -247,7 +259,12 @@ message LoginResponse {
 
 message VerifyEmailRequest {
   WriteContext context = 1;
-  string token = 2;
+  // Removed link token must never be reinterpreted as a challenge or code.
+  reserved 2;
+  reserved "token";
+  string challenge_id = 3;
+  // Exactly six ASCII digits, including leading zeros; never a numeric type.
+  string code = 4;
 }
 message VerifyEmailResponse {}
 
@@ -255,7 +272,9 @@ message ResendVerificationRequest {
   WriteContext context = 1;
   string email = 2;
 }
-message ResendVerificationResponse {}
+message ResendVerificationResponse {
+  EmailVerificationChallenge challenge = 1;
+}
 
 message ForgotPasswordRequest {
   WriteContext context = 1;

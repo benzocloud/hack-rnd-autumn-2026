@@ -1,6 +1,6 @@
 # Auth Saldo: адаптация референса и полный пользовательский флоу
 
-Дата: 2026-10-23.
+Дата: 2026-10-24.
 Статус: материалы этапа 3.1 подготовлены для ревью; runtime-реализация не начата.
 Основание: прямое поручение владельца составить план после обсуждения адаптации
 `references/auth-service/`. Отдельная Issue к задаче не привязана;
@@ -18,6 +18,13 @@
 ревью (caveman-review и ponytail-review), исправления, commit и обычный push в
 PR #17 после каждого этапа. Следующий этап — после командного ревью и явного
 апрува. Merge в main и deployment этим поручением не разрешены.
+
+Уточнение [PR #17 от владельца](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/17#issuecomment-6377367058):
+подтверждение email — challenge/шесть случайных цифр, включая ведущие нули,
+TTL 10 минут; reset остаётся ссылкой; email transport — Resend HTTP API.
+Auth выдаёт ненулевой Company UUIDv7 один раз на durable команду. Auth ADR
+перенумерован в 026: номера 024/025 зарезервированы параллельной Core-работой.
+Остальные границы Auth/API/Core и review gate 3.1 сохраняются.
 
 ## 1. Цель и проверенное текущее состояние
 
@@ -151,7 +158,9 @@ flowchart LR
   Подтверждение само по себе не выдаёт доступ к произвольной компании.
 - Пароли хранятся только как парольные хеши. Случайные session/one-time tokens
   генерируются криптографически; в БД хранятся проверочные хеши, сроки и состояние.
-  Исходные токены не оказываются в обычных логах, ошибках и API JSON.
+  Исходные токены/verification code не оказываются в обычных логах, ошибках и API
+  ответах. Низкоэнтропийный code хранится как keyed HMAC с pepper вне БД;
+  public challenge ID не является токеном доступа.
 - Сессия сохраняется в Auth и переживает рестарт. При входе идентификатор
   ротируется, предавторизационный контекст отзывается; CSRF связывается с текущим
   контекстом. SameSite не заменяет CSRF. Cookie: Secure, HttpOnly, SameSite=Lax,
@@ -167,7 +176,9 @@ flowchart LR
   Auth владеет состоянием, необходимым для проверки и ротации. Точные RPC и
   атомарные границы определяются в 3.1. Rate limiting учитывает аккаунт и IP;
   состояние/лимиты не должны обходиться переключением реплики.
-- User ID и Company ID непрозрачны для клиента. Email, ИНН, CSV company_id,
+- User ID и Company ID непрозрачны для клиента. Новый Company ID — ненулевой UUIDv7,
+  выдаётся Auth один раз вместе с durable командой и неизменно передаётся Core
+  на повторе/recovery. User/прочие Auth IDs остаются UUIDv4. Email, ИНН, CSV company_id,
   тело запроса и произвольные `X-User-*`/`X-Role-*` не являются доказательством доступа.
 - Членство уникально по `(company_id, user_id)` и не является глобальной ролью.
   Удаление финансиста сохраняет его аккаунт и финансовые данные компании.
@@ -267,7 +278,7 @@ ADR со свободным на момент реализации номеро�
 После результата — ревью разработчиком и апрув до 3.2.
 
 Материалы реализации 3.1: [контракт](../../docs/auth/contract.md),
-[Proposed ADR-024](../adr/024-auth-contract.md),
+[Proposed ADR-026](../adr/026-auth-contract.md),
 [канонический protobuf](../../proto/auth/v1/auth.proto),
 [Buf lint/breaking](../../buf.yaml) и
 [service-local generation](../../buf.auth.gen.yaml).
@@ -289,7 +300,7 @@ health/readiness, локальные инструкции сборки и тес
 - [ ] Настроить явное владение pool/servers, startup cleanup, context/timeouts,
   readiness и ограниченный shutdown. DSN/TLS берутся из валидируемой конфигурации.
 - [ ] Добавить миграции users/credentials с `credential_version`, sessions с версией
-  credentials, security contexts и token records;
+  credentials, security contexts, verification challenges/attempt counters и reset token records;
   остальные таблицы вводить вместе с использующим их этапом.
 - [ ] Ввести самостоятельные IDs и уникальность нормализованного email;
   SQL и migration tool соответствуют выбранной версии PostgreSQL.
@@ -335,21 +346,30 @@ session fixation, неправильный CSRF/context, истечение, log
 Компоненты: Auth token/email use cases, delivery adapter, необходимые миграции,
 подтверждённые RPC и transport errors.
 
-- [ ] Реализовать verify/resend/forgot/reset: ограниченные сроки, назначение токена,
-  безопасные повторы, generic acknowledgement и ограничения частоты.
+- [ ] Реализовать verify/resend с challenge ID и строковым шестизначным кодом,
+  TTL 10 минут, keyed HMAC, лимит пять ошибок и общий user/IP rate limit.
+  Проверка/attempt counter/consume/email_verified атомарны; повтор правильного
+  consumed кода до expiry безопасен. Resend отзывает старый challenge.
+- [ ] Реализовать отдельный forgot/reset по одноразовой ссылке (TTL 15 минут),
+  purpose binding, отзыв, single-use и конкурентное потребление.
 - [ ] Потребление токена, изменение аккаунта/пароля и отзыв сессий выполнять
   согласованно в локальной транзакции; увеличить `credential_version` под той же
   блокировкой пользователя, которую использует выдача сессии в login.
-  Согласовать единый порядок user/token/session locks для reset и login.
+  Соблюдать единый порядок user/session/challenge-or-token locks для verify/reset/login.
   Два конкурентных reset не потребляют токен дважды.
 - [ ] Сохранить задание доставки в транзакции с изменением, обеспечить ограниченный
-  retry без брокера; plaintext link не хранить открыто в delivery payload/log.
-  Выбрать защищённое хранение payload или воспроизводимый подписанный механизм в 3.1.
-- [ ] Предусмотреть test sink/mail catcher для тестов; он не доказывает доставку
-  в реальный ящик. Не возвращать verification/reset token в обычном REST ответе.
+  retry без брокера; code/reset link шифровать в outbox, не писать в лог.
+- [ ] Подключить Resend HTTP API adapter: TLS, timeout, fixed endpoint, секреты вне
+  Git, стабильные request/Idempotency-Key на intent, bounded retry по статусам.
+- [ ] Для тестов использовать fake adapter/HTTP stub без настоящего send;
+  отдельно проверить Resend test address и реальный согласованный тестовый ящик.
+  Не возвращать code/reset token в ответе; challenge_id/expires_at обязательны
+  в одинаковом generic Register/resend 202 и для неeligible адресов.
 
-Проверки: истёкший/чужой/уже использованный токен, resend, гонка reset,
-ошибка email provider, рестарт до отправки, повтор доставки, отзыв старых сессий;
+Проверки: ведущие нули, expiry/пять неверных попыток, concurrent verify/replay,
+resend и отзыв прежнего challenge; истёкший/чужой/уже использованный reset token,
+гонка reset; Resend timeout/429/5xx/permanent 4xx и стабильный provider key,
+рестарт до/после acceptance, повтор доставки, отзыв старых сессий;
 отдельная наблюдаемая доставка письма в согласованном демо-окружении.
 Конкурентные проверки с управляемыми барьерами: login уже проверил старый пароль
 → reset зафиксирован → попытка выдать сессию отклоняется; login успел создать
@@ -436,7 +456,7 @@ owner onboarding, приглашение financier и актуальная пр�
 ID/нормализация, channel доставки/хранение link payload, recovery создания компании,
 service-to-service authentication, версии/инструменты и происхождение заимствований.
 Это технические решения команды; вопросы о датасете или ФНС их не блокируют.
-Не запрашивать пароли, SMTP/API secrets или signing keys через чат/план.
+Не запрашивать пароли, Resend API secrets или signing keys через чат/план.
 
 Основные риски: объём адаптации больше каркаса референса; незаметный обход
 отзыва через кэш/старую сессию; рассогласование двух хранилищ при onboarding;

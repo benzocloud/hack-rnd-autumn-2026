@@ -33,7 +33,7 @@
 
 ## Proposed decisions awaiting review
 
-- **ADR-024 (Proposed, 2026-10-24):** [Приватный Auth и серверное управление доступом](adr/024-auth-contract.md),
+- **ADR-026 (Proposed, 2026-10-24):** [Приватный Auth и серверное управление доступом](adr/026-auth-contract.md),
   контракт и protobuf этапа 3.1 PR #17. Не является Accepted ADR и не разрешает
   переход к 3.2 без явного апрува команды/разработчика.
 

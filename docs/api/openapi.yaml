@@ -2,7 +2,7 @@ openapi: "3.1.0"
 x-auth-contract: "../auth/contract.md"
 info:
   title: "Saldo Frontend → Go API"
-  version: "0.1.2"
+  version: "0.1.3"
   description: "Review baseline, 2026-10-23. A saved REST proposal, not implemented endpoints, accepted ADR, or evidence of a working integration. Browser calls Go API only; Core/ML protobuf boundaries remain separate. Paths are relative to /api/v1.\n\nScope: self-service small-business account, one default account per company, owner/financier company roles, file/manual input, explicitly mocked external adapters, forecasts, four what-if templates, plan-fact. RUB-only is a provisional adapter/MVP convention: dataset contains no currency. Email/password, cookie session, seven-day invitations, numerical input/upload caps and below_zero_eod proxy are proposed defaults requiring owner review. Actual FNS/1C DTO research immediately follows owner approval of this saved REST baseline; mock schemas are NOT claims about their official APIs.\n\nSecurity: same-origin deployment only in this baseline. Secure HttpOnly SameSite=Lax __Host- cookie, server session, synchronizer CSRF on ALL writes including public login/register/recovery. GET /auth/csrf establishes pre-auth context; send credentials and X-CSRF-Token thereafter. Exact trusted Origin/Referer validation; no wildcard credentialed CORS. Rotate session after login and obtain fresh CSRF token. API must not expose Auth/Core databases or trust role/company/source IDs sent by browser. Auth unavailable: fail closed. Company membership is checked live on every scoped read/write, including polling/downloads; financial operations owner/financier, administration owner only. Cross-tenant resources return 404. Email verification required for company operations. Auth tokens/passwords/financial contents never logged; errors include request_id, not stack traces.\n\nConsistency: IDs opaque, all money exact decimal integer strings in minor units. Positive movement plus direction differs from signed balance. Date-only business dates use Europe/Moscow, timestamp strings UTC Z. Do not use JS floating point for financial arithmetic. All lists cursor-based with stable sort (by resource date then ID unless documented); cursors bind filters and tenant. Financial data version increments on facts, dated balances, categories, known payments, matches and imported facts; connections/invitation cosmetics do not mutate prediction snapshots. Reads include dated provenance/freshness; no balance claims live bank access.\n\nJob semantics: HTTP 202 only after durable input/job saved. Retried idempotent create/job requests reuse resource; same key different semantic payload/file bytes is 409. Stored resource is truth; transport errors never mean job failure. Imports first preview, then explicit atomic commit with optimistic versions. No silent partial rows, inferred tenant access, duplicate economic counting or invented balancing transactions. Identical external IDs dedup only inside scoped source; content-similar different IDs warn. Historical forecasts filter all factual/features past cutoff and preserve point-in-time known obligations. A negative balance is an EOD indicator; overdraft limit and actual unpaid obligation are unknown.\n\nAll application responses, including errors, should use Cache-Control:no-store; JSON content type application/json. No merge/deploy or implemented behavior is implied by this file. Delivery infrastructure, provider DTO mapping and calibrated ML uncertainty remain separate reviewed work."
 servers:
   -
@@ -79,10 +79,10 @@ paths:
       summary: "Register a personal account"
       tags:
         - "Auth"
-      description: "Creates account pending contact verification only after a separate active consent confirmation. Frontend first fetches GET /auth/personal-data-consent, displays that full standalone text with an unchecked, separate checkbox, and sends personal_data_consent.accepted=true plus the displayed document_version and document_sha256. Missing confirmation or accepted other than true is 422 CONSENT_REQUIRED; malformed fields are 422 VALIDATION_ERROR. A syntactically valid unknown/retired version or digest different from the server's current document is 409 CONSENT_DOCUMENT_CHANGED: fetch and display the current document, clear the checkbox, and require a new explicit confirmation; never silently retry with a new version/hash. If the registry or evidence store is unavailable, return 503 and create no account. At account commit, validate the still-current server-owned version/hash and atomically persist the new account and consent evidence: consent_id, account_id, immutable text/version/hash, server accepted_at and confirmation method. Do not accept client-supplied evidence timestamps or IDs: accepted_at/consent_id are server-owned and disallowed in this request. No account or verification-mail job may be committed on consent failure; password and rejected request contents are never logged. Persist the encrypted delivery intent in the same account/evidence transaction; dispatch only committed intents after commit. Generic 202 for an existing address after the same consent validation; an unauthenticated registration retry must not overwrite that account's existing consent or append an acceptance on its behalf. No company or bank connection is created. Rate limit by IP+normalized email; no mock claim that mail was delivered."
+      description: "Creates account pending contact verification only after a separate active consent confirmation. Frontend first fetches GET /auth/personal-data-consent, displays that full standalone text with an unchecked, separate checkbox, and sends personal_data_consent.accepted=true plus the displayed document_version and document_sha256. Missing confirmation or accepted other than true is 422 CONSENT_REQUIRED; malformed fields are 422 VALIDATION_ERROR. A syntactically valid unknown/retired version or digest different from the server's current document is 409 CONSENT_DOCUMENT_CHANGED: fetch and display the current document, clear the checkbox, and require a new explicit confirmation; never silently retry with a new version/hash. If the registry or evidence store is unavailable, return 503 and create no account. At account commit, validate the still-current server-owned version/hash and atomically persist the new account and consent evidence: consent_id, account_id, immutable text/version/hash, server accepted_at and confirmation method. Do not accept client-supplied evidence timestamps or IDs: accepted_at/consent_id are server-owned and disallowed in this request. No account or verification-mail job may be committed on consent failure; password and rejected request contents are never logged. Persist the encrypted delivery intent in the same account/evidence transaction; dispatch only committed intents after commit. Generic 202 for an existing address after the same consent validation; an unauthenticated registration retry must not overwrite that account's existing consent or append an acceptance on its behalf. No company or bank connection is created. Rate limit by IP+normalized email; no mock claim that mail was delivered. New accounts atomically persist a user-bound email_verification challenge and encrypted outbox intent. Code is six ASCII digits including leading zeros, TTL 10 minutes, never returned in JSON. Every 202 returns message, challenge_id (UUIDv4) and expires_at. Existing addresses receive an indistinguishable fresh inert handle/10-minute expiry, without changing credentials/consent or creating another challenge/mail. Frontend retains the handle and sends it with code to POST /auth/verify-email; lost handles use resend. This acknowledgement does not prove account eligibility or email delivery."
       responses:
         "202":
-          "$ref": "#/components/responses/SuccessAcknowledgement"
+          "$ref": "#/components/responses/SuccessEmailVerificationChallenge"
         "400":
           "$ref": "#/components/responses/Error400"
         "403":
@@ -168,10 +168,10 @@ paths:
   "/auth/verify-email":
     post:
       operationId: "verifyEmail"
-      summary: "Confirm email using one-time token"
+      summary: "Confirm email using a six-digit challenge code"
       tags:
         - "Auth"
-      description: "Token is bound to account+purpose, short-lived, single-use. No company is created and no financial permissions granted. Invalid/expired token gives 422 TOKEN_INVALID_OR_EXPIRED; reusing a consumed token cannot verify another account."
+      description: "Send challenge_id from register/resend and code as a string of exactly six ASCII digits, including leading zeros. Challenge is user/purpose-bound, TTL 10 minutes, at most five failed code comparisons; resend revokes it and does not reset the shared user rate limit. Auth atomically checks HMAC/expiry/attempt counter, consumes challenge and confirms email. Invalid, unknown, expired, blocked, revoked or wrong-actor challenges/codes share 422 CODE_INVALID_OR_EXPIRED; malformed fields give 422 VALIDATION_ERROR. Concurrent correct submissions confirm once; same-code replay of a consumed but unexpired/unrevoked challenge returns 200 without another effect, subject to the common limits. Different codes never succeed on a consumed challenge. Only the shared IP bucket checked before challenge lookup returns 429 with Retry-After. Exhausted challenge/user limits return the same 422 CODE_INVALID_OR_EXPIRED as invalid/inert handles, without Retry-After or attempt counts; do not expose an account-specific 429. No session/company or arbitrary financial access is created."
       responses:
         "200":
           "$ref": "#/components/responses/SuccessAcknowledgement"
@@ -196,20 +196,20 @@ paths:
         content:
           "application/json":
             schema:
-              "$ref": "#/components/schemas/TokenRequest"
+              "$ref": "#/components/schemas/VerifyEmailRequest"
             examples:
               sample:
-                "$ref": "#/components/examples/TokenRequest"
+                "$ref": "#/components/examples/VerifyEmailRequest"
   "/auth/resend-verification":
     post:
       operationId: "resendVerification"
       summary: "Request a new confirmation email"
       tags:
         - "Auth"
-      description: "Generic acknowledgement; rate limited, does not enumerate accounts. Previous confirmation tokens invalidated."
+      description: "Generic 202 with message, fresh challenge_id UUIDv4 and expires_at=creation+10 minutes for every eligible or ineligible email. Eligible unverified user gets a new six-digit code; old challenge is revoked atomically with new challenge/outbox. Unknown/already verified addresses get indistinguishable inert handles, no challenge/mail. Code/delivery state/eligibility are not returned. Rate limits apply equally; resend does not reset the aggregate user verification limit. Frontend replaces the stored challenge handle after 202."
       responses:
         "202":
-          "$ref": "#/components/responses/SuccessAcknowledgement"
+          "$ref": "#/components/responses/SuccessEmailVerificationChallenge"
         "400":
           "$ref": "#/components/responses/Error400"
         "403":
@@ -2327,6 +2327,15 @@ components:
           schema:
             type: "string"
             example: "__Host-saldo_session=opaque-session-value; Path=/; Secure; HttpOnly; SameSite=Lax"
+    SuccessEmailVerificationChallenge:
+      description: "Generic challenge envelope; never proves eligibility or delivery"
+      content:
+        "application/json":
+          schema:
+            "$ref": "#/components/schemas/EmailVerificationChallenge"
+          examples:
+            sample:
+              "$ref": "#/components/examples/EmailVerificationChallenge"
     SuccessAcknowledgement:
       description: "Acknowledgement"
       content:
@@ -2654,9 +2663,15 @@ components:
           display_name: "Иван"
           email_verified: true
         expires_at: "2026-10-24T12:00:00Z"
-    TokenRequest:
+    VerifyEmailRequest:
       value:
-        token: "example-one-time-token"
+        challenge_id: "550e8400-e29b-41d4-a716-446655440000"
+        code: "001234"
+    EmailVerificationChallenge:
+      value:
+        message: "Если подтверждение требуется, письмо с кодом будет отправлено."
+        challenge_id: "550e8400-e29b-41d4-a716-446655440000"
+        expires_at: "2026-10-24T12:10:00Z"
     EmailRequest:
       value:
         email: "owner@example.com"
@@ -4351,19 +4366,54 @@ components:
       required:
         - "email"
         - "password"
-    TokenRequest:
+    VerifyEmailRequest:
       type: "object"
       additionalProperties: false
       properties:
-        token:
+        challenge_id:
           type: "string"
-          minLength: 16
-          maxLength: 512
+          format: "uuid"
+          pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          examples:
+            - "550e8400-e29b-41d4-a716-446655440000"
+        code:
+          type: "string"
+          minLength: 6
+          maxLength: 6
+          pattern: "^[0-9]{6}$"
           writeOnly: true
           examples:
-            - "example-one-time-token"
+            - "001234"
       required:
-        - "token"
+        - "challenge_id"
+        - "code"
+      description: "Verification only; link token/user_id/purpose/attempt counters are not accepted from browser."
+    EmailVerificationChallenge:
+      type: "object"
+      additionalProperties: false
+      properties:
+        message:
+          type: "string"
+          const: "Если подтверждение требуется, письмо с кодом будет отправлено."
+          examples:
+            - "Если подтверждение требуется, письмо с кодом будет отправлено."
+        challenge_id:
+          type: "string"
+          format: "uuid"
+          pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          examples:
+            - "550e8400-e29b-41d4-a716-446655440000"
+        expires_at:
+          type: "string"
+          format: "date-time"
+          pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$"
+          examples:
+            - "2026-10-24T12:10:00Z"
+      required:
+        - "message"
+        - "challenge_id"
+        - "expires_at"
+      description: "Non-secret challenge metadata for both real and inert handles; no code/user/session/eligibility/delivery fields. TTL is 10 minutes."
     EmailRequest:
       type: "object"
       additionalProperties: false

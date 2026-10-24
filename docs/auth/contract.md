@@ -1,13 +1,13 @@
 # Контракт Auth Saldo
 
-Дата: 24 октября 2026 года. Версия: 0.1.0. Статус: **на ревью этапа 3.1**.
+Дата: 24 октября 2026 года. Версия: 0.1.1. Статус: **на ревью этапа 3.1**.
 Это конкретное предложение для согласования Auth, API и Core, а не принятый
 ADR, работающий сервис или разрешение перейти к этапу 3.2.
 
 Основание: [план Auth](../../.agent/plans/auth-service-adaptation.md),
 [PR #17](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/17),
 [API-план PR #16](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/16),
-[REST](../api/openapi.yaml), [ADR-024](../../.agent/adr/024-auth-contract.md).
+[REST](../api/openapi.yaml), [ADR-026](../../.agent/adr/026-auth-contract.md).
 Канонический приватный контракт: [auth.proto](../../proto/auth/v1/auth.proto).
 
 ## Владельцы и доверие
@@ -33,13 +33,14 @@ Reflection выключен. HTTP Auth предоставляет только l
 внутренней сети; браузер не обходит API. Max receive 1 MiB, max send 2 MiB.
 API/Core устанавливают deadline 3 s на обычный RPC, 10 s на Register/Login/Reset;
 автоповтор мутаций без описанной ниже идемпотентности запрещён. Timeout не доказывает
-откат транзакции. Пароль, cookie, CSRF, token и payload письма не логируются.
+откат транзакции. Пароль, cookie, CSRF, verification code, token и payload письма не логируются.
 
 ## Профиль пользователя
 
-Вход — email/password. Проверка email и reset используют purpose-bound случайный
-токен, не шестизначный OTP. Макеты писем с шестью цифрами не меняют этот контракт;
-изменение способа входа потребует отдельного согласования REST/RPC и ограничений.
+Вход — email/password. По [уточнению владельца в PR #17](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/17#issuecomment-6377367058)
+подтверждение email использует challenge и шестизначный код на 10 минут;
+password reset сохраняет отдельную одноразовую ссылку. Код подтверждения не
+является способом входа. Возврат к verify-link требует отдельного решения владельца.
 
 Email: ASCII mailbox без display name, длина после trim не больше 254 символов;
 trim внешних пробелов и lowercase всего адреса. Нет удаления `+suffix` или точек.
@@ -48,8 +49,10 @@ SMTPUTF8/IDN mailbox пока не поддерживаются. Уникаль�
 нормализации или скрытого усечения. Display name: 1–120 Unicode code points.
 Детали проверки на обеих границах совпадают с REST, ошибки не содержат ввод.
 
-IDs пользователей, consent, приглашений и команд — UUID v4; для браузера opaque.
-Company ID выдаёт Auth при сохранении команды, а Core использует тот же ID.
+IDs пользователей, consent, challenge, приглашений и команд — UUIDv4; для браузера opaque.
+Новый Company ID — ненулевой UUIDv7: Auth генерирует его один раз при сохранении
+durable команды. Core принимает тот же ID без изменения на каждом повторе/recovery
+и не генерирует другую компанию. Прочие Auth-owned ID остаются UUIDv4.
 Положительные версии приглашений и компаний передаются десятичными **строками**,
 не JSON number; клиент не увеличивает их. Неизвестные enum и нулевые permission
 отклоняются, а не означают финансовый доступ.
@@ -106,8 +109,9 @@ credentials, неизменяемый evidence (ID/время сервера, п
 метод `separate_checkbox`) и intent письма. Outbox виден исполнителю только после
 commit. Ошибка не оставляет ни аккаунта, ни evidence, ни задания. При существующем
 email после той же проверки согласия возвращается generic acknowledgement;
-его credentials/evidence не меняются и новый token/mail не создаётся. Гонка
-регистраций разрешается уникальностью нормализованного email в БД, без дублей.
+его credentials/evidence не меняются и новый challenge/mail не создаётся.
+Ответ Register всегда содержит публичный challenge_id и expires_at по правилам ниже.
+Гонка регистраций разрешается уникальностью нормализованного email в БД, без дублей.
 Register не создаёт компанию, членство или сессию. Текущие legal-документы MOCK:
 эта поставка не разрешает использование реальных данных без замены реквизитов.
 
@@ -130,42 +134,107 @@ reset commit — login не выдаёт сессию; login session commit, з�
 не действует. Оба результата сохраняются после рестарта.
 Общий порядок при наличии нескольких блокировок: users по UUID → существующие
 security contexts/sessions по ID → memberships по (company,user) → invitations
-по ID → one-time tokens по ID → onboarding/outbox. Первичный lookup без FOR UPDATE
+по ID → verification challenges/reset tokens по ID → onboarding/outbox. Первичный lookup без FOR UPDATE
 допустим, но все условия повторно проверяются после нужных блокировок. Reset
 блокирует отзываемые сессии до token row; cleanup не берёт user lock после session.
 
 ## Подтверждение, восстановление и email
 
-Verify token живёт 24 часа, reset token — 15 минут, оба 32 random bytes/43 chars.
-В token records хранятся hash, user_id, purpose, expires_at, consumed/revoked.
-Resend отзывает предыдущие verify tokens; forgot отзывает предыдущие reset tokens.
-Повтор доставки того же intent не меняет token и не продлевает срок.
-Потребление и изменение пользователя атомарны; второй concurrent consume проигрывает.
-Истёкший, чужого purpose или использованный token даёт один TOKEN_INVALID_OR_EXPIRED.
-При authenticated context другого пользователя verify/reset отклоняется тем же
-кодом; pre-auth не имеет actor и допускает предъявление валидного token.
+### Email challenge и шестизначный код
 
-Resend/forgot возвращают generic acknowledgement для известного и неизвестного
-адреса; отсутствие аккаунта не раскрывается ни отдельной ошибкой, ни очередью
-в публичном ответе. Provider outage после сохранения intent не выдаётся за
-«письмо доставлено»; ошибки БД до сохранения дают 503.
+Register для нового аккаунта атомарно сохраняет user/consent, challenge и encrypted
+outbox. Challenge содержит UUIDv4 ID, user_id, purpose=email_verification,
+created_at/expires_at, failed_attempts, consumed_at/revoked_at. TTL ровно 10 минут
+с момента commit/создания; доставка, чтение и повтор проверки его не продлевают.
+Код — строка из шести ASCII цифр `[0-9]{6}`, включая `000000`/ведущие нули:
+равномерный `crypto/rand.Int` в [0, 1000000), формат `%06d`, без modulo bias.
+В challenge хранится HMAC-SHA256 по purpose, challenge ID, user ID и коду;
+секретный pepper/key_id вне БД/Git. Обычный SHA-256 шестизначного кода не подходит
+из-за перебора при утечке БД. В покое исходный код хранится только в зашифрованном
+payload outbox; в запросах он не логируется и в ответах не возвращается.
 
-SMTP-adapter использует TLS с проверкой сертификата; адрес/credentials окружения
-вне Git. Для локальной интеграции выбран test sink/Mailpit; для демо нужен
-согласованный SMTP и настоящий тестовый ящик. HTML имеет текстовую альтернативу
-и CID PNG, без внешних шрифтов/скриптов. Verification/reset URL строится только
-из настроенного trusted frontend origin; query token не пишется в access-log,
+Register и ResendVerification возвращают обязательный `EmailVerificationChallenge`;
+REST — `{message, challenge_id, expires_at}`. Идентификатор не является секретом
+или доказательством личности; код никогда не возвращается в RPC/REST ответе.
+Для существующего email при Register и неизвестного/уже подтверждённого адреса
+при resend возвращаются свежий случайный inert UUIDv4 и такой же срок now+10m,
+без создания challenge/mail и изменения аккаунта. Форма, текст, TTL и лимиты
+ответа одинаковы; API не сообщает eligible/sent/remaining_attempts. Нельзя по
+отсутствию handle определить наличие аккаунта. После перезагрузки frontend
+запрашивает resend по email, а не выбирает аккаунт по user_id.
+
+Resend для eligible аккаунта одной транзакцией отзывает прежний challenge,
+создаёт новый ID/код/TTL и outbox. Письма не переиспользуют revoked challenge.
+Работник перед отправкой проверяет актуальность; уже начатый HTTP send может
+доставить старое письмо, но его код более не действует. Resend не сбрасывает
+общий лимит попыток пользователя. Сохранённый Register retry не меняет согласие.
+
+VerifyEmail принимает только challenge_id и code вместе с WriteContext.
+Под user → session → challenge lock Auth проверяет purpose, expiry (now < expires_at),
+отзыв, actor (если сессия аутентифицирована) и попытки, затем constant-time HMAC.
+Каждое неверное шестизначное значение атомарно увеличивает failed_attempts;
+после пяти ошибок challenge навсегда blocked. Проверка кода, счётчик, consumed_at
+и email_verified изменяются одной транзакцией. Одновременные правильные запросы
+дают один переход; повтор **того же кода** по consumed challenge до expires_at
+возвращает 200 без повторного действия, если challenge не revoked/blocked и
+общие лимиты не исчерпаны.
+Неверный, неизвестный, expired/revoked/blocked challenge, неверный код и чужой
+authenticated actor дают одну 422 CODE_INVALID_OR_EXPIRED; чужой actor не меняет
+попытки чужого challenge. Ошибки формы полей — 422 VALIDATION_ERROR. Подтверждение
+не создаёт сессию/компанию и не повышает права кроме email_verified текущего user.
+
+### Password reset
+
+Reset token остаётся отдельными 32 random bytes/43 base64url chars, TTL 15 минут,
+purpose=password_reset, hash/user_id/expiry/consumed/revoked в БД. Forgot отзывает
+прежние reset tokens; потребление и смена пароля/credential_version/session revoke
+атомарны. Повтор/expired/чужой purpose или authenticated actor другого пользователя
+даёт TOKEN_INVALID_OR_EXPIRED. Собственная сессия не запрещает reset; pre-auth
+допускает валидный reset token. Код verify
+и challenge ID никогда не принимаются вместо reset token.
+
+### Resend HTTP API и outbox
+
+Целевой email adapter — [Resend HTTP API](https://resend.com/docs/api-reference/emails/send-email),
+`POST https://api.resend.com/emails` с Bearer из `RESEND_API_KEY`, проверкой TLS,
+таймаутом 10 s и запретом redirect. `EMAIL_FROM` — настроенный отправитель на
+подтверждённом домене; ключ отправки и AES/pepper keys находятся вне Git/логов.
+Production/demo используют `EMAIL_PROVIDER=resend`; SMTP не является выбранным
+transport. Тесты используют fake adapter/локальный HTTP stub без настоящего ключа,
+внешнего send и произвольного production base URL. Provider acceptance с email ID
+означает принятие Resend, а не доставку в ящик; 202 клиенту подтверждает сохранённый
+intent, не provider delivery. Недоступность БД до commit даёт 503.
+
+Request содержит from/to/subject/html/text, встроенный PNG как base64 attachment
+с CID, без внешних шрифтов/скриптов. Verify-письмо показывает код; reset-письмо —
+URL только из trusted frontend origin. Query reset token не пишется в access-log,
 страница очищает URL после чтения, Referrer-Policy no-referrer.
 
-Outbox сохраняется в локальной транзакции с token/account. Secret payload
-шифруется AES-256-GCM случайным nonce на сообщение, с отдельным ключом/key_id вне
-БД; associated data связывает intent ID, user ID и purpose. В outbox не хранится
-открытая ссылка. Работники используют lease/attempt state в PostgreSQL, не
-удерживают SQL-транзакцию на SMTP I/O. Попытки: сразу, затем через 5, 30, 120,
-300 секунд с bounded jitter 20%, не позже expires_at. После max attempts — failed,
-без ложного success и бесконечного retry. Рестарт поднимает незавершённые intent;
-SMTP acceptance с потерянным ответом может привести к дублю того же письма,
-но не к второму действию. Доставленные/истёкшие secret payload удаляются.
+Outbox сохраняется в локальной транзакции с challenge или reset/account. Secret
+payload, включая замороженный provider request, шифруется AES-256-GCM со случайным
+nonce, key/key_id вне БД; associated data связывает intent ID, user ID и purpose.
+Рендеринг/смена template после retry не меняет сохранённое тело. Работник использует
+lease/attempt state в PostgreSQL, не держит SQL-транзакцию на HTTP I/O и повторяет
+тот же request с `Idempotency-Key: auth-email/<intent_uuid>`. Ключ не меняется
+после рестарта/timeout и не содержит email/код. Resend хранит ключи
+[24 часа](https://resend.com/docs/dashboard/emails/idempotency-keys); наше окно
+retry всегда короче TTL challenge/reset, без отправки после expires_at/отзыва.
+
+Попытки: сразу, затем через 5, 30, 120, 300 секунд с jitter 20%, максимум пять.
+Network/timeout, HTTP 429/5xx и 409 concurrent_idempotent_requests допускают retry
+с тем же ключом; Retry-After соблюдается, но не продлевает deadline. Остальные
+4xx, включая 409 invalid_idempotent_request, — failed без смены ключа/тела.
+Классификация соответствует [ошибкам Resend](https://resend.com/docs/api-reference/errors).
+После max attempts/expiry — failed, без бесконечного retry. Успешный ID сохраняется;
+потерянный HTTP ответ восстанавливается тем же ключом. Secret payload удаляется
+после acceptance/expiry/revoke. 202 для resend/forgot остаётся generic независимо
+от eligibility/provider state; неизвестный адрес не создаёт очередь.
+
+До 3.4 нужны проверки fake/stub: timeout после provider acceptance, 429 с
+Retry-After, 5xx, permanent 4xx, конкурентный worker/restart, revoked challenge.
+Отдельный live smoke — только с согласованным ключом/отправителем, синтетическими
+[Resend test addresses](https://resend.com/docs/dashboard/emails/send-test-emails)
+и затем настоящим тестовым ящиком для ручной проверки; сейчас они не выполнены.
 
 ### Общие лимиты
 
@@ -178,9 +247,15 @@ SMTP acceptance с потерянным ответом может привест
 | Login | 30/мин | 5/мин на нормализованный email |
 | Register | 10/час | 3/час на нормализованный email |
 | Resend / forgot, каждый | 10/час | 3/час на email; минимум 60 секунд между новыми письмами |
-| Verify / reset, каждый | 20/15 мин | 5/15 мин на token hash |
+| Verify | 20/15 мин | 5 ошибок на challenge за весь TTL; 10 проверок/15 мин на user, включая resend |
+| Reset | 20/15 мин | 5/15 мин на token hash |
 
-429 возвращает целочисленный Retry-After до конца окна. Для email bucket
+Для Verify только общий IP bucket, проверяемый до lookup challenge/user,
+возвращает 429 с Retry-After. Исчерпание challenge/user limit даёт одинаковый
+422 CODE_INVALID_OR_EXPIRED без Retry-After/remaining_attempts; inert/неизвестные
+handles получают ту же ошибку и не раскрывают наличие пользователя. Это явное
+исключение из общего правила rate-limit, чтобы account-specific 429 не стал oracle.
+Для остальных bucket 429 возвращает целочисленный Retry-After до конца окна. Для email bucket
 используется keyed HMAC, а не каталог открытых email. Argon2id: 64 MiB, iterations=3,
 parallelism=1, salt=16 bytes, key=32 bytes; concurrency по умолчанию 2, валидируется
 против памяти процесса. Очередь ожидания ограничена, переполнение — 429, timeout
@@ -234,10 +309,10 @@ InvalidArgument/INVALID_CURSOR → HTTP 400, как в REST, без раскры
 | --- | --- |
 | GET /auth/personal-data-consent | GetPersonalDataConsent |
 | GET /auth/csrf | GetSecurityContext; cookie только через API |
-| POST /auth/register | Register; 202 без user/session/token в JSON |
+| POST /auth/register | Register; challenge → 202 {message, challenge_id, expires_at}, без кода/user/session/token |
 | POST /auth/login | Login; UserProfile → REST user, SecurityContext → cookie, затем новый GET CSRF |
-| POST /auth/verify-email | VerifyEmail |
-| POST /auth/resend-verification | ResendVerification |
+| POST /auth/verify-email | VerifyEmail(challenge_id, code); 200 acknowledgement, повтор того же кода до expiry безопасен |
+| POST /auth/resend-verification | ResendVerification(email); новый challenge → такой же generic 202 как Register |
 | POST /auth/forgot-password | ForgotPassword |
 | POST /auth/reset-password | ResetPassword; сброс cookie, без автоматического login |
 | POST /auth/logout | Logout; очистка cookie |
@@ -258,7 +333,8 @@ InvalidArgument/INVALID_CURSOR → HTTP 400, как в REST, без раскры
 | Остальные mutations /companies/{id}/… | Core → AuthorizeCompany(FINANCIAL_WRITE), плюс API Origin/CSRF |
 
 В private RPC допускаются raw cookie/session и CSRF для установки/проверки;
-в public JSON не допускаются session/access/refresh/verification/reset tokens.
+в public JSON ответов не допускаются session/access/refresh/reset tokens и verification code.
+Публичный challenge_id и expires_at допускаются и не подтверждают eligibility.
 Публичный GET CSRF возвращает только CSRF, а Login — только REST User.
 
 ### Ошибки
@@ -270,7 +346,7 @@ field violations; описание не содержит значений зап
 | gRPC | Причина | HTTP |
 | --- | --- | --- |
 | InvalidArgument | INVALID_CURSOR | 400 |
-| InvalidArgument | VALIDATION_ERROR, CONSENT_REQUIRED, TOKEN_INVALID_OR_EXPIRED, INVITATION_NOT_AVAILABLE | 422 |
+| InvalidArgument | VALIDATION_ERROR, CONSENT_REQUIRED, CODE_INVALID_OR_EXPIRED, TOKEN_INVALID_OR_EXPIRED, INVITATION_NOT_AVAILABLE | 422 |
 | Unauthenticated | AUTH_REQUIRED, INVALID_CREDENTIALS | 401 |
 | PermissionDenied | CSRF_INVALID, EMAIL_UNVERIFIED, FORBIDDEN | 403 |
 | NotFound | NOT_FOUND, недоступный tenant/recipient/история | 404 |
@@ -287,8 +363,8 @@ Peer-denial до бизнес-обработчика не содержит AuthE
 
 ## Создание компании и контракт стыка Core
 
-1. Begin проверяет live session/verified email/CSRF. Сохраняет initiator, UUID
-   команды/компании, нормализованный spec и fingerprint под уникальным
+1. Begin проверяет live session/verified email/CSRF. Сохраняет initiator, UUIDv4
+   команды, единожды созданный ненулевой UUIDv7 компании, нормализованный spec и fingerprint под уникальным
    `(initiator, operation=create_company, Idempotency-Key)`. Owner не входной параметр.
 2. Повтор того же ключа возвращает тот же ID/spec/state. Иное тело — 409.
    Fingerprint v1: SHA-256 UTF-8 JSON фиксированного struct в порядке
@@ -419,5 +495,5 @@ Generated package сборка проверяется в временных мо
 секреты, service deployment и runtime-тесты ещё не реализованы.
 
 Перед переходом к 3.2 требуются: явный апрув 3.1, согласие API/Core на RPC и
-стык bootstrap/UpdateCompany, принятие ADR-024/политик и тестовая PostgreSQL.
+стык bootstrap/UpdateCompany, принятие ADR-026/политик и тестовая PostgreSQL.
 Два агентских ревью и успешная компиляция не заменяют эти решения команды.
