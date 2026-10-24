@@ -139,3 +139,45 @@ func requireError(t *testing.T, got, want error) {
 		t.Fatalf("error=%v want=%v", got, want)
 	}
 }
+
+func TestRESTPaymentVersionsAndReplay(t *testing.T) {
+	application, _ := testApplication(t)
+	scope := newScope(t, application)
+	fact, err := application.Ledger.CreateTransaction(t.Context(), transactionCommand(t, scope))
+	if err != nil {
+		t.Fatal(err)
+	}
+	create := paymentCommand(t, scope, 0)
+	payment, err := application.Payments.CreatePayment(t.Context(), create)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd := matchCommand(t, scope, fact.TransactionID, payment.PaymentID, 0)
+	cmd.ExpectedTransactionVersion = fact.TransactionVersion
+	first, err := application.Payments.MatchPayment(t.Context(), cmd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	replay, err := application.Payments.MatchPayment(t.Context(), cmd)
+	if err != nil || replay != first {
+		t.Fatalf("resource-version replay failed: %+v %v", replay, err)
+	}
+	assertRevision(t, application, scope, 4)
+	cmd.ExpectedTransactionVersion++
+	if _, err = application.Payments.MatchPayment(t.Context(), cmd); !errors.Is(err, paymentService.ErrIdempotencyConflict) {
+		t.Fatalf("changed fact version under same key accepted: %v", err)
+	}
+	cmd.IdempotencyKey = uuid.NewString()
+	cmd.ExpectedVersion = first.PaymentVersion
+	if _, err = application.Payments.MatchPayment(t.Context(), cmd); !errors.Is(err, paymentService.ErrStaleVersion) {
+		t.Fatalf("stale fact version accepted: %v", err)
+	}
+	assertRevision(t, application, scope, 4)
+	var total int64
+	if err = application.db.GetContext(t.Context(), &total, "SELECT coalesce(sum(amount_minor),0) FROM core_payment_matches WHERE company_id=$1 AND account_id=$2", scope.CompanyID, scope.AccountID); err != nil {
+		t.Fatal(err)
+	}
+	if total != 60 {
+		t.Fatalf("stale or replay request changed allocation: %d", total)
+	}
+}

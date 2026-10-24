@@ -72,3 +72,17 @@ func TestImportedPaymentReplayAndBinding(t *testing.T) {
 		t.Fatalf("stale version accepted: %v", err)
 	}
 }
+
+func TestManualPaymentWithoutAccountCAS(t *testing.T) {
+	cmd := paymentCommand(t)
+	cmd.ExpectedDataVersion = 0
+	storage := &captureStore{}
+	result, err := payments.New(storage.withinTx).CreatePayment(t.Context(), cmd)
+	if err != nil || result.DataVersion != 2 || storage.saves != 1 || storage.inserts != 1 {
+		t.Fatal(result, err)
+	}
+	cmd.ExpectedDataVersion = -1
+	if _, err = payments.New(storage.withinTx).CreatePayment(t.Context(), cmd); !errors.Is(err, payments.ErrInvalid) || storage.calls != 1 {
+		t.Fatal(err)
+	}
+}

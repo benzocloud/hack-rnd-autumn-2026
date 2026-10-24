@@ -1,0 +1,159 @@
+syntax = "proto3";
+
+package core.v1;
+
+import "auth/v1/auth.proto";
+import "core/v1/common.proto";
+import "core/v1/ledger.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1;corev1";
+
+// Expected movements, not executed transfers. API peer only. Same financial
+// read/write authorization as LedgerService; matching cannot execute a payment.
+service PaymentsService {
+  rpc UpdatePayment(UpdatePaymentRequest) returns (UpdatePaymentResponse);
+  rpc CancelPayment(CancelPaymentRequest) returns (CancelPaymentResponse);
+  rpc RemovePaymentMatch(RemovePaymentMatchRequest) returns (RemovePaymentMatchResponse);
+  rpc ListPayments(ListPaymentsRequest) returns (ListPaymentsResponse);
+  rpc GetPayment(GetPaymentRequest) returns (GetPaymentResponse);
+  rpc CreateManualPayment(CreateManualPaymentRequest) returns (CreateManualPaymentResponse);
+  rpc ListPaymentMatches(ListPaymentMatchesRequest) returns (ListPaymentMatchesResponse);
+  rpc MatchPayment(MatchPaymentRequest) returns (MatchPaymentResponse);
+}
+
+enum PaymentStatus {
+  PAYMENT_STATUS_UNSPECIFIED = 0;
+  PAYMENT_STATUS_PLANNED = 1;
+  PAYMENT_STATUS_PARTIALLY_MATCHED = 2;
+  PAYMENT_STATUS_MATCHED = 3;
+  PAYMENT_STATUS_CANCELLED = 4;
+}
+message ExpectedPayment {
+  string id = 1;
+  string account_id = 2;
+  Direction direction = 3;
+  Money amount = 4;
+  Money remaining_amount = 5;
+  string scheduled_date = 6;
+  optional string category_id = 7;
+  string counterparty_name = 8;
+  string description = 9;
+  PaymentStatus status = 10;
+  RecordSource source = 11;
+  int64 version = 12;
+  google.protobuf.Timestamp created_at = 13;
+}
+message PaymentMatch {
+  string id = 1;
+  string payment_id = 2;
+  string transaction_id = 3;
+  Money amount = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message ListPaymentsRequest {
+  auth.v1.BrowserContext context = 1;
+  AccountScope scope = 2;
+  PageRequest page = 3;
+  DateRange dates = 4;
+  optional PaymentStatus status = 5;
+}
+message ListPaymentsResponse {
+  repeated ExpectedPayment items = 1;
+  PageResponse pagination = 2;
+}
+message GetPaymentRequest {
+  auth.v1.BrowserContext context = 1;
+  AccountScope scope = 2;
+  string payment_id = 3;
+}
+message GetPaymentResponse {
+  ExpectedPayment payment = 1;
+}
+message CreateManualPaymentRequest {
+  auth.v1.WriteContext context = 1;
+  AccountScope scope = 2;
+  string idempotency_key = 3;
+  Direction direction = 4;
+  Money amount = 5;
+  string scheduled_date = 6;
+  optional string category_id = 7;
+  string counterparty_name = 8;
+  string description = 9;
+}
+message CreateManualPaymentResponse {
+  ExpectedPayment payment = 1;
+  int64 data_version = 2;
+}
+message ListPaymentMatchesRequest {
+  auth.v1.BrowserContext context = 1;
+  AccountScope scope = 2;
+  string payment_id = 3;
+  PageRequest page = 4;
+}
+message ListPaymentMatchesResponse {
+  repeated PaymentMatch items = 1;
+  PageResponse pagination = 2;
+}
+// Positive amount <= both the remaining expectation and unallocated factual
+// amount; same scope/currency/direction. Atomic replay precedes stale guards.
+message MatchPaymentRequest {
+  auth.v1.WriteContext context = 1;
+  AccountScope scope = 2;
+  string idempotency_key = 3;
+  string payment_id = 4;
+  int64 expected_payment_version = 5;
+  string transaction_id = 6;
+  int64 expected_transaction_version = 7;
+  Money amount = 8;
+}
+message MatchPaymentResponse {
+  PaymentMatch match = 1;
+  int64 payment_version = 2;
+  int64 data_version = 3;
+}
+
+// Patch at least one field. Absent category_change preserves it; explicit clear
+// removes it. Existing matches restrict changes to financial economics.
+message UpdatePaymentRequest {
+  auth.v1.WriteContext context = 1;
+  AccountScope scope = 2;
+  string payment_id = 3;
+  int64 expected_version = 4;
+  optional Direction direction = 5;
+  Money amount = 6;
+  optional string scheduled_date = 7;
+  optional string counterparty_name = 8;
+  optional string description = 9;
+  oneof category_change {
+    string category_id = 10;
+    google.protobuf.Empty clear_category = 11;
+  }
+}
+message UpdatePaymentResponse {
+  ExpectedPayment payment = 1;
+  int64 data_version = 2;
+}
+message CancelPaymentRequest {
+  auth.v1.WriteContext context = 1;
+  AccountScope scope = 2;
+  string payment_id = 3;
+  int64 expected_version = 4;
+}
+message CancelPaymentResponse {
+  ExpectedPayment payment = 1;
+  int64 data_version = 2;
+}
+message RemovePaymentMatchRequest {
+  auth.v1.WriteContext context = 1;
+  AccountScope scope = 2;
+  string payment_id = 3;
+  string match_id = 4;
+  int64 expected_payment_version = 5;
+}
+message RemovePaymentMatchResponse {
+  ExpectedPayment payment = 1;
+  int64 data_version = 2;
+}

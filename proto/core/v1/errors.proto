@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package core.v1;
+
+option go_package = "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1;corev1";
+
+enum CoreErrorReason {
+  CORE_ERROR_REASON_UNSPECIFIED = 0;
+  CORE_ERROR_REASON_VALIDATION_ERROR = 1;
+  CORE_ERROR_REASON_AUTH_REQUIRED = 2;
+  CORE_ERROR_REASON_FORBIDDEN = 3;
+  CORE_ERROR_REASON_CSRF_INVALID = 4;
+  CORE_ERROR_REASON_NOT_FOUND = 5;
+  CORE_ERROR_REASON_VERSION_CONFLICT = 6;
+  CORE_ERROR_REASON_IDEMPOTENCY_CONFLICT = 7;
+  CORE_ERROR_REASON_FACTUAL_SOURCE_CONFLICT = 8;
+  CORE_ERROR_REASON_SOURCE_BINDING_CONFLICT = 9;
+  CORE_ERROR_REASON_BALANCE_OBSERVATION_CONFLICT = 10;
+  CORE_ERROR_REASON_PAYMENT_STATE_CONFLICT = 11;
+  CORE_ERROR_REASON_DEPENDENCY_UNAVAILABLE = 12;
+  CORE_ERROR_REASON_RATE_LIMITED = 13;
+  CORE_ERROR_REASON_INVALID_CURSOR = 14;
+  CORE_ERROR_REASON_INTERNAL_ERROR = 15;
+  CORE_ERROR_REASON_EMAIL_UNVERIFIED = 16;
+  CORE_ERROR_REASON_MEMBERSHIP_REVOKED = 17;
+  CORE_ERROR_REASON_IMPORT_STATE_CONFLICT = 18;
+  CORE_ERROR_REASON_IMPORT_PREVIEW_STALE = 19;
+  CORE_ERROR_REASON_IMPORT_WARNINGS_NOT_ACKNOWLEDGED = 20;
+  CORE_ERROR_REASON_PAYLOAD_TOO_LARGE = 21;
+  CORE_ERROR_REASON_FORECAST_NOT_READY = 22;
+  CORE_ERROR_REASON_FORECAST_NOT_COMPARABLE = 23;
+  CORE_ERROR_REASON_BALANCE_AS_OF_UNAVAILABLE = 24;
+  CORE_ERROR_REASON_INSUFFICIENT_HISTORY = 25;
+  CORE_ERROR_REASON_UNSUPPORTED_MODEL_CONTEXT = 26;
+  CORE_ERROR_REASON_SCENARIO_NOT_SUPPORTED = 27;
+  CORE_ERROR_REASON_SCENARIO_TARGET_CONFLICT = 28;
+  CORE_ERROR_REASON_ACTUALS_NOT_AVAILABLE = 29;
+}
+
+// Attached to a non-OK google.rpc.Status, not an alternative successful response.
+// Safe machine codes only; never include SQL errors, cookies or financial input.
+message CoreErrorDetail {
+  CoreErrorReason reason = 1;
+  repeated FieldViolation field_violations = 2;
+  uint32 retry_after_seconds = 3;
+}
+message FieldViolation {
+  string field = 1;
+  string description = 2;
+}
+
+// Persisted async-job failure, matching REST ErrorDetail. The API owns the
+// public envelope; safe message/field code never exposes driver diagnostics.
+message OperationError {
+  string code = 1;
+  string message = 2;
+  repeated OperationFieldError field_errors = 3;
+  string request_id = 4;
+}
+message OperationFieldError {
+  string field = 1;
+  string code = 2;
+  string message = 3;
+}

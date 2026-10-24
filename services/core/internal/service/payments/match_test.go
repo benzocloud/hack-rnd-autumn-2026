@@ -102,3 +102,30 @@ func TestMatchPaymentOrchestratesGuards(t *testing.T) {
 		})
 	}
 }
+
+func TestMatchResourceVersionsWithoutAccountCAS(t *testing.T) {
+	t.Parallel()
+	for _, version := range []int64{1, 2} {
+		cmd := matchCommand(t)
+		cmd.ExpectedDataVersion = 0
+		cmd.ExpectedTransactionVersion = version
+		storage := matchStore(t, cmd)
+		result, err := payments.New(storage.withinTx).MatchPayment(t.Context(), cmd)
+		if version == 1 {
+			if err != nil || result.PaymentVersion != 2 || storage.saves != 1 {
+				t.Fatal(result, err)
+			}
+		} else if !errors.Is(err, payments.ErrStaleVersion) || result != (payments.MatchPaymentResult{}) || storage.saves != 0 || storage.inserts != 0 {
+			t.Fatalf("stale fact wrote allocation: %+v %v", result, err)
+		}
+	}
+}
+
+func TestMatchNegativeTransactionVersion(t *testing.T) {
+	cmd := matchCommand(t)
+	cmd.ExpectedTransactionVersion = -1
+	storage := &captureStore{}
+	if _, err := payments.New(storage.withinTx).MatchPayment(t.Context(), cmd); !errors.Is(err, payments.ErrInvalid) || storage.calls != 0 {
+		t.Fatal(err)
+	}
+}

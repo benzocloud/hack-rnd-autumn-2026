@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package core.v1;
+
+option go_package = "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1;corev1";
+
+// UUID strings are canonical, lowercase and nonzero; new Core IDs are UUIDv7.
+// A matching account/company pair is checked in storage after Auth permission.
+message AccountScope {
+  string company_id = 1;
+  string account_id = 2;
+}
+
+// Signed kopecks, RUB only. Financial flows require amount_minor > 0;
+// dated balances may be negative. API serializes int64 as decimal JSON strings.
+message Money {
+  int64 amount_minor = 1;
+  string currency = 2;
+}
+
+enum Direction {
+  DIRECTION_UNSPECIFIED = 0;
+  DIRECTION_INFLOW = 1;
+  DIRECTION_OUTFLOW = 2;
+}
+
+message PageRequest {
+  // Absent means 50; present must be 1..100.
+  optional uint32 limit = 1;
+  // Opaque, max 1024 ASCII characters, bound to actor/company/filters/sort.
+  string cursor = 2;
+}
+
+message PageResponse {
+  // Empty maps to REST null.
+  string next_cursor = 1;
+}
+
+// Inclusive company-local business dates YYYY-MM-DD, years 0001..9999.
+// Missing bounds are unbounded; present empty/invalid dates or from > to fail.
+// No UTC instant conversion and no inference of dates outside actual coverage.
+message DateRange {
+  optional string from = 1;
+  optional string to = 2;
+}

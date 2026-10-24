@@ -6,7 +6,7 @@
 - [`services/api/`](services/api/README.md) — десять HTTP auth-endpoints через mTLS gRPC; проверены с отдельным тестовым Auth.
 - [`services/core/`](services/core/README.md) — домен, прикладные финансовые команды и PostgreSQL; транспорт ещё не реализован.
 - [`services/auth/`](services/auth/README.md) — каркас Auth, схема и health/readiness; бизнес-RPC ещё не реализованы.
-- [`services/ml/`](services/ml/README.md) — локальный baseline и исследования; ML RPC ещё не реализован.
+- [`services/ml/`](services/ml/README.md) — baseline, исследования и gRPC-прогноз `mean_90`; контракт и Python-сервис реализованы, подключение снимка данных из Core ещё требуется.
 - [`deploy/frontend/`](deploy/frontend/README.md) — Nginx, TLS и ограниченный CI deploy демонстрации.
 - [`docs/api/`](docs/api/README.md) — REST-контракты.
 - [Состояние интеграции](docs/integration-status.md) — готовые части и зависимости для разработчиков.
