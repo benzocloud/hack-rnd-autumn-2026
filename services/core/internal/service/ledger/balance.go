@@ -83,6 +83,13 @@ func recordBalance(ctx context.Context, store balanceStore, cmd BalanceCommand, 
 	if err != nil {
 		return RecordBalanceResult{}, err
 	}
+	return recordBalanceOnAccount(ctx, store, account, cmd, record)
+}
+
+func recordBalanceOnAccount(ctx context.Context, store balanceStore, account *domain.BankAccount, cmd BalanceCommand, record domain.BalanceObservation) (RecordBalanceResult, error) {
+	if account == nil || account.Scope() != record.Scope() {
+		return RecordBalanceResult{}, ErrUnavailable
+	}
 	stored, revision, found, err := store.FindBalance(ctx, record.Scope(), record.Date())
 	if err != nil {
 		return RecordBalanceResult{}, err

@@ -160,8 +160,11 @@ unmatch, forecast jobs/results/chart, scenarios и connectors. Их runtime-ре
 
 1. Company metadata/default account/bootstrap receipts: нынешняя core_companies
    содержит только ID; добавить миграцию/domain/services/repositories и recovery.
-2. Get/list projections, provenance и created_at: нынешний TransactionData не
-   хранит created_at/import_id/connection_id; нельзя подставлять time.Now на read.
+2. Get/list projections и provenance: TransactionData не хранит
+   created_at/import_id/connection_id. Локальный C5 сохраняет nullable SQL
+   created_at для новых операций и использует его в CreateManualTransaction/
+   durable receipt; старые строки остаются без metadata. При реализации list
+   нельзя подставлять time.Now на read или выдумывать import/connection IDs.
 3. Входы Payments уже адаптированы локально: manual CreateCommand допускает
    ExpectedDataVersion=0, MatchCommand при ExpectedDataVersion=0 требует
    положительную ExpectedTransactionVersion и проверяет её вместе с версией

@@ -85,10 +85,10 @@ func validCompanyRequest(request *pb.AuthorizeCompanyRequest) bool {
 	if err != nil || id == uuid.Nil || id.String() != request.CompanyId {
 		return false
 	}
-	if request.Permission == pb.CompanyPermission_COMPANY_PERMISSION_READ {
+	if request.Permission == pb.CompanyPermission_COMPANY_PERMISSION_READ || request.Permission == pb.CompanyPermission_COMPANY_PERMISSION_FINANCIAL_READ {
 		return request.GetBrowser() != nil
 	}
-	if request.Permission == pb.CompanyPermission_COMPANY_PERMISSION_UPDATE {
+	if request.Permission == pb.CompanyPermission_COMPANY_PERMISSION_UPDATE || request.Permission == pb.CompanyPermission_COMPANY_PERMISSION_FINANCIAL_WRITE {
 		write := request.GetWrite()
 		return write != nil && write.Browser != nil
 	}

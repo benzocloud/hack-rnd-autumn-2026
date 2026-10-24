@@ -13,6 +13,8 @@ import (
 	authClient "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/client/auth"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/config"
 	companyHandler "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/handler/grpc/company"
+	ledgerHandler "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/handler/grpc/ledger"
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/transport/grpcserver"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/transport/mtls"
 )
 
@@ -47,8 +49,13 @@ func Run(ctx context.Context, cfg config.Config, rpc config.RPC) (err error) {
 		return errRuntime
 	}
 	defer func() { err = errors.Join(err, application.Close()) }()
-	server, err := companyHandler.NewServer(credentials.NewTLS(serverTLS), application.Companies, auth)
+	server, err := grpcserver.New(credentials.NewTLS(serverTLS))
 	if err != nil {
+		return err
+	}
+	companyHandler.Register(server, application.Companies, auth)
+	if err := ledgerHandler.Register(server, application.Ledger, application.Companies, auth); err != nil {
+		server.Stop()
 		return err
 	}
 	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp", rpc.Address)

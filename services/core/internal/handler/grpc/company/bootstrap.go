@@ -11,35 +11,36 @@ import (
 	domain "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/company"
 	authpb "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/auth/v1"
 	pb "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1"
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/handler/grpc/rpcerror"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/company"
 )
 
 func (h *handler) CreateCompanyBootstrap(ctx context.Context, request *pb.CreateCompanyBootstrapRequest) (*pb.CreateCompanyBootstrapResponse, error) {
 	cmd, err := decodeBootstrap(request)
 	if err != nil {
-		return nil, mapError(err)
+		return nil, rpcerror.From(err)
 	}
 	result, err := h.companies.Bootstrap(ctx, cmd)
 	if err != nil {
 		if errors.Is(err, company.ErrConflict) {
-			return nil, coreError(codes.AlreadyExists, pb.CoreErrorReason_CORE_ERROR_REASON_IDEMPOTENCY_CONFLICT)
+			return nil, rpcerror.New(codes.AlreadyExists, pb.CoreErrorReason_CORE_ERROR_REASON_IDEMPOTENCY_CONFLICT)
 		}
-		return nil, mapError(err)
+		return nil, rpcerror.From(err)
 	}
 	return &pb.CreateCompanyBootstrapResponse{Receipt: encodeReceipt(result)}, nil
 }
 
 func (h *handler) GetCompanyCreationResult(ctx context.Context, request *pb.GetCompanyCreationResultRequest) (*pb.GetCompanyCreationResultResponse, error) {
 	if request == nil {
-		return nil, mapError(company.ErrInvalid)
+		return nil, rpcerror.From(company.ErrInvalid)
 	}
 	id, err := parseID(request.CommandId)
 	if err != nil {
-		return nil, mapError(err)
+		return nil, rpcerror.From(err)
 	}
 	result, err := h.companies.GetBootstrapResult(ctx, id)
 	if err != nil {
-		return nil, mapError(err)
+		return nil, rpcerror.From(err)
 	}
 	return &pb.GetCompanyCreationResultResponse{Receipt: encodeReceipt(result)}, nil
 }

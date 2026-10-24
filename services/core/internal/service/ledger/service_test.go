@@ -25,9 +25,23 @@ type captureStore struct {
 	transaction                    domain.Transaction
 	transactionFound               bool
 	balance                        domain.BalanceObservation
+	latestOverride                 *domain.BalanceObservation
 	balanceFound                   bool
 	revision                       int64
 	saves, inserts                 int
+	categoryExists                 bool
+	createdAt                      time.Time
+}
+
+func (s *captureStore) CategoryExists(context.Context, uuid.UUID, uuid.UUID) (bool, error) {
+	return s.categoryExists, nil
+}
+
+func (s *captureStore) TransactionCreatedAt(context.Context, domain.Scope, uuid.UUID) (time.Time, error) {
+	if s.createdAt.IsZero() {
+		s.createdAt = time.Now().UTC().Truncate(time.Microsecond)
+	}
+	return s.createdAt, nil
 }
 
 func (s *captureStore) prepare(scope domain.Scope) error {
@@ -77,6 +91,13 @@ func (s *captureStore) InsertTransaction(_ context.Context, record domain.Transa
 	return nil
 }
 func (s *captureStore) FindBalance(context.Context, domain.Scope, domain.Date) (domain.BalanceObservation, int64, bool, error) {
+	return s.balance, s.revision, s.balanceFound, nil
+}
+
+func (s *captureStore) FindLatestBalance(context.Context, domain.Scope, domain.Date) (domain.BalanceObservation, int64, bool, error) {
+	if s.latestOverride != nil {
+		return *s.latestOverride, s.revision, true, nil
+	}
 	return s.balance, s.revision, s.balanceFound, nil
 }
 func (s *captureStore) InsertBalance(_ context.Context, record domain.BalanceObservation, _ string, revision int64) error {

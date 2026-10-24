@@ -24,6 +24,7 @@ import (
 	companyHandler "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/handler/grpc/company"
 	companyService "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/company"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/testutil/pki"
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/transport/grpcserver"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/transport/mtls"
 )
 
@@ -51,7 +52,8 @@ func (s *bootstrapAuthServer) AuthorizeCompany(ctx context.Context, r *authpb.Au
 		return nil, status.Error(codes.PermissionDenied, "wrong peer")
 	}
 	if r.CompanyId != s.command.CompanyID.String() {
-		return nil, status.Error(codes.NotFound, "foreign company")
+		s, _ := status.New(codes.NotFound, "foreign company").WithDetails(&authpb.AuthErrorDetail{Reason: authpb.AuthErrorReason_AUTH_ERROR_REASON_NOT_FOUND})
+		return nil, s.Err()
 	}
 	cookie := r.GetBrowser().GetCookieToken()
 	if r.GetWrite() != nil {
@@ -61,7 +63,7 @@ func (s *bootstrapAuthServer) AuthorizeCompany(ctx context.Context, r *authpb.Au
 		s, _ := status.New(codes.Aborted, "private revoked user").WithDetails(&authpb.AuthErrorDetail{Reason: authpb.AuthErrorReason_AUTH_ERROR_REASON_MEMBERSHIP_REVOKED})
 		return nil, s.Err()
 	}
-	if r.Permission == authpb.CompanyPermission_COMPANY_PERMISSION_UPDATE && (r.GetWrite() == nil || r.GetWrite().CsrfToken != "valid-csrf") {
+	if (r.Permission == authpb.CompanyPermission_COMPANY_PERMISSION_UPDATE || r.Permission == authpb.CompanyPermission_COMPANY_PERMISSION_FINANCIAL_WRITE) && (r.GetWrite() == nil || r.GetWrite().CsrfToken != "valid-csrf") {
 		s, _ := status.New(codes.PermissionDenied, "private CSRF").WithDetails(&authpb.AuthErrorDetail{Reason: authpb.AuthErrorReason_AUTH_ERROR_REASON_CSRF_INVALID})
 		return nil, s.Err()
 	}
@@ -102,10 +104,11 @@ func TestCompanyRPCBootstrapRecoveryAndCAS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	server, err := companyHandler.NewServer(credentials.NewTLS(tlsConfig), companies, auth)
+	server, err := grpcserver.New(credentials.NewTLS(tlsConfig))
 	if err != nil {
 		t.Fatal(err)
 	}
+	companyHandler.Register(server, companies, auth)
 	client := pb.NewCompanyServiceClient(testRPCConnection(t, ca, server, mtls.API, mtls.Core, "saldo-core"))
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
@@ -130,10 +133,11 @@ func TestCompanyRPCBootstrapRecoveryAndCAS(t *testing.T) {
 
 	// Reconstruct app/service/server with another SQL pool, then recover as Auth.
 	second, _ := testApplication(t)
-	recoveryServer, err := companyHandler.NewServer(credentials.NewTLS(tlsConfig), newCompanies(second.db, cfg.Postgres, auth.AuthorizeBootstrap), auth)
+	recoveryServer, err := grpcserver.New(credentials.NewTLS(tlsConfig))
 	if err != nil {
 		t.Fatal(err)
 	}
+	companyHandler.Register(recoveryServer, newCompanies(second.db, cfg.Postgres, auth.AuthorizeBootstrap), auth)
 	recovery := pb.NewCompanyServiceClient(testRPCConnection(t, ca, recoveryServer, mtls.Auth, mtls.Core, "saldo-core"))
 	recovered, err := recovery.GetCompanyCreationResult(ctx, &pb.GetCompanyCreationResultRequest{CommandId: cmd.CommandID.String()})
 	if err != nil || !proto.Equal(first.Receipt, recovered.GetReceipt()) {

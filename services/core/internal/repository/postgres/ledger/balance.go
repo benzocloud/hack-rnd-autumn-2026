@@ -44,3 +44,16 @@ func (r *repository) FindBalance(ctx context.Context, scope domain.Scope, date d
 	}
 	return record, revision, err == nil, storage.StorageError(err)
 }
+
+func (r *repository) FindLatestBalance(ctx context.Context, scope domain.Scope, date domain.Date) (domain.BalanceObservation, int64, bool, error) {
+	var row balanceRow
+	err := r.tx.GetContext(ctx, &row, queryLatestBalance, scope.CompanyID, scope.AccountID, string(date))
+	if errors.Is(err, sql.ErrNoRows) {
+		return domain.BalanceObservation{}, 0, false, nil
+	}
+	if err != nil {
+		return domain.BalanceObservation{}, 0, false, storage.StorageError(err)
+	}
+	observation, err := row.observation(scope)
+	return observation, row.Revision, err == nil, storage.StorageError(err)
+}

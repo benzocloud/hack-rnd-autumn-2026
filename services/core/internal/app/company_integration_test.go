@@ -47,6 +47,12 @@ func cleanupCompany(t *testing.T, app *application, id uuid.UUID) {
 		for _, query := range []string{
 			"DELETE FROM core_company_bootstraps WHERE company_id=$1",
 			"DELETE FROM core_company_profiles WHERE company_id=$1",
+			"DELETE FROM core_command_results WHERE company_id=$1",
+			"DELETE FROM core_balances WHERE company_id=$1",
+			"DELETE FROM core_transactions WHERE company_id=$1",
+			"DELETE FROM core_categories WHERE company_id=$1",
+			"UPDATE core_accounts SET factual_kind=NULL,source_system=NULL,source_company_id=NULL WHERE company_id=$1",
+			"DELETE FROM core_source_bindings WHERE company_id=$1",
 			"DELETE FROM core_accounts WHERE company_id=$1",
 			"DELETE FROM core_companies WHERE id=$1",
 		} {

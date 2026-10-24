@@ -1,4 +1,4 @@
-package company
+package rpcerror
 
 import (
 	"context"
@@ -8,12 +8,14 @@ import (
 	"google.golang.org/grpc/status"
 
 	domain "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/company"
+	ledgerDomain "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
 	authpb "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/auth/v1"
 	pb "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/company"
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/ledger"
 )
 
-func mapError(err error) error {
+func From(err error) error {
 	if errors.Is(err, context.Canceled) || status.Code(err) == codes.Canceled {
 		return status.Error(codes.Canceled, "request canceled")
 	}
@@ -27,43 +29,49 @@ func mapError(err error) error {
 	}
 	code, reason := codes.Internal, pb.CoreErrorReason_CORE_ERROR_REASON_INTERNAL_ERROR
 	switch {
-	case errors.Is(err, company.ErrInvalid), errors.Is(err, domain.ErrInvalid):
+	case errors.Is(err, company.ErrInvalid), errors.Is(err, domain.ErrInvalid), errors.Is(err, ledger.ErrInvalid):
 		code, reason = codes.InvalidArgument, pb.CoreErrorReason_CORE_ERROR_REASON_VALIDATION_ERROR
-	case errors.Is(err, company.ErrNotFound):
+	case errors.Is(err, company.ErrNotFound), errors.Is(err, ledger.ErrNotFound):
 		code, reason = codes.NotFound, pb.CoreErrorReason_CORE_ERROR_REASON_NOT_FOUND
-	case errors.Is(err, company.ErrConflict):
+	case errors.Is(err, company.ErrConflict), errors.Is(err, ledger.ErrStaleVersion), errors.Is(err, ledger.ErrConflict):
 		code, reason = codes.Aborted, pb.CoreErrorReason_CORE_ERROR_REASON_VERSION_CONFLICT
+	case errors.Is(err, ledger.ErrIdempotencyConflict):
+		code, reason = codes.AlreadyExists, pb.CoreErrorReason_CORE_ERROR_REASON_IDEMPOTENCY_CONFLICT
+	case errors.Is(err, ledgerDomain.ErrBalanceConflict):
+		code, reason = codes.FailedPrecondition, pb.CoreErrorReason_CORE_ERROR_REASON_BALANCE_OBSERVATION_CONFLICT
+	case errors.Is(err, ledgerDomain.ErrSourceConflict):
+		code, reason = codes.FailedPrecondition, pb.CoreErrorReason_CORE_ERROR_REASON_FACTUAL_SOURCE_CONFLICT
 	case errors.Is(err, company.ErrUnauthorized):
 		code, reason = codes.PermissionDenied, pb.CoreErrorReason_CORE_ERROR_REASON_FORBIDDEN
-	case errors.Is(err, company.ErrUnavailable), status.Code(err) == codes.Unavailable:
+	case errors.Is(err, company.ErrUnavailable), errors.Is(err, ledger.ErrUnavailable), status.Code(err) == codes.Unavailable:
 		code, reason = codes.Unavailable, pb.CoreErrorReason_CORE_ERROR_REASON_DEPENDENCY_UNAVAILABLE
 	}
-	return coreError(code, reason)
+	return New(code, reason)
 }
 
 func mapAuthError(code codes.Code, detail *authpb.AuthErrorDetail) error {
 	reason := detail.Reason
 	switch {
 	case code == codes.Unauthenticated && reason == authpb.AuthErrorReason_AUTH_ERROR_REASON_AUTH_REQUIRED:
-		return coreError(codes.Unauthenticated, pb.CoreErrorReason_CORE_ERROR_REASON_AUTH_REQUIRED)
+		return New(codes.Unauthenticated, pb.CoreErrorReason_CORE_ERROR_REASON_AUTH_REQUIRED)
 	case code == codes.PermissionDenied && reason == authpb.AuthErrorReason_AUTH_ERROR_REASON_FORBIDDEN:
-		return coreError(codes.PermissionDenied, pb.CoreErrorReason_CORE_ERROR_REASON_FORBIDDEN)
+		return New(codes.PermissionDenied, pb.CoreErrorReason_CORE_ERROR_REASON_FORBIDDEN)
 	case code == codes.PermissionDenied && reason == authpb.AuthErrorReason_AUTH_ERROR_REASON_CSRF_INVALID:
-		return coreError(codes.PermissionDenied, pb.CoreErrorReason_CORE_ERROR_REASON_CSRF_INVALID)
+		return New(codes.PermissionDenied, pb.CoreErrorReason_CORE_ERROR_REASON_CSRF_INVALID)
 	case code == codes.PermissionDenied && reason == authpb.AuthErrorReason_AUTH_ERROR_REASON_EMAIL_UNVERIFIED:
-		return coreError(codes.PermissionDenied, pb.CoreErrorReason_CORE_ERROR_REASON_EMAIL_UNVERIFIED)
+		return New(codes.PermissionDenied, pb.CoreErrorReason_CORE_ERROR_REASON_EMAIL_UNVERIFIED)
 	case code == codes.NotFound && reason == authpb.AuthErrorReason_AUTH_ERROR_REASON_NOT_FOUND:
-		return coreError(codes.NotFound, pb.CoreErrorReason_CORE_ERROR_REASON_NOT_FOUND)
+		return New(codes.NotFound, pb.CoreErrorReason_CORE_ERROR_REASON_NOT_FOUND)
 	case code == codes.Aborted && reason == authpb.AuthErrorReason_AUTH_ERROR_REASON_MEMBERSHIP_REVOKED:
-		return coreError(codes.PermissionDenied, pb.CoreErrorReason_CORE_ERROR_REASON_MEMBERSHIP_REVOKED)
+		return New(codes.PermissionDenied, pb.CoreErrorReason_CORE_ERROR_REASON_MEMBERSHIP_REVOKED)
 	case code == codes.ResourceExhausted && reason == authpb.AuthErrorReason_AUTH_ERROR_REASON_RATE_LIMITED:
 		return errorWithDetail(codes.ResourceExhausted, &pb.CoreErrorDetail{Reason: pb.CoreErrorReason_CORE_ERROR_REASON_RATE_LIMITED, RetryAfterSeconds: detail.RetryAfterSeconds})
 	default:
-		return coreError(codes.Unavailable, pb.CoreErrorReason_CORE_ERROR_REASON_DEPENDENCY_UNAVAILABLE)
+		return New(codes.Unavailable, pb.CoreErrorReason_CORE_ERROR_REASON_DEPENDENCY_UNAVAILABLE)
 	}
 }
 
-func coreError(code codes.Code, reason pb.CoreErrorReason) error {
+func New(code codes.Code, reason pb.CoreErrorReason) error {
 	return errorWithDetail(code, &pb.CoreErrorDetail{Reason: reason})
 }
 

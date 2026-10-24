@@ -24,6 +24,9 @@ import (
 type ledgerOperations interface {
 	CreateTransaction(context.Context, ledger.TransactionCommand) (ledger.CreateTransactionResult, error)
 	RecordBalance(context.Context, ledger.BalanceCommand) (ledger.RecordBalanceResult, error)
+	ReadAccount(context.Context, ledgerDomain.Scope, ledgerDomain.Date) (ledger.ReadAccountResult, error)
+	RecordManualBalance(context.Context, ledger.ManualBalanceCommand) (ledger.RecordManualBalanceResult, error)
+	CreateManualTransaction(context.Context, ledger.ManualTransactionCommand) (ledger.CreateManualTransactionResult, error)
 }
 
 type paymentsOperations interface {

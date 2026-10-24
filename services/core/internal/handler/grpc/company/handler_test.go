@@ -21,8 +21,10 @@ import (
 	domain "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/company"
 	authpb "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/auth/v1"
 	pb "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1"
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/handler/grpc/rpcerror"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/company"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/testutil/pki"
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/transport/grpcserver"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/transport/mtls"
 )
 
@@ -74,10 +76,11 @@ func testService(t *testing.T, identity string, companies *fakeCompanies, auth *
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := NewServer(credentials.NewTLS(serverTLS), companies, auth)
+	s, err := grpcserver.New(credentials.NewTLS(serverTLS))
 	if err != nil {
 		t.Fatal(err)
 	}
+	Register(s, companies, auth)
 	l := bufconn.Listen(1 << 20)
 	go func() { _ = s.Serve(l) }()
 	t.Cleanup(s.Stop)
@@ -189,7 +192,7 @@ func TestSafeErrorMapping(t *testing.T) {
 		{company.ErrUnavailable, codes.Unavailable, pb.CoreErrorReason_CORE_ERROR_REASON_DEPENDENCY_UNAVAILABLE},
 		{errors.New("private password=secret"), codes.Internal, pb.CoreErrorReason_CORE_ERROR_REASON_INTERNAL_ERROR},
 	} {
-		err := mapError(test.err)
+		err := rpcerror.From(test.err)
 		if status.Code(err) != test.code || strings.Contains(err.Error(), "secret") {
 			t.Fatal(err)
 		}
