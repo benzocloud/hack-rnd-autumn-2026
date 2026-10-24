@@ -3,13 +3,19 @@
 Дата сверки: 24.10.2026. Этот документ описывает реализованные части и их
 границы. Разработчик Go API самостоятельно составляет план исполнения.
 Предложенный [план первой реализации Go API](../.agent/plans/go-api-implementation.md)
-описывает доступную сейчас работу, зависимости и учёт этапов; реализация не начата.
+содержит учёт этапов. По последующему Goal разработчика API реализован локально:
+десять auth/account endpoints и отдельный mTLS gRPC test Auth;
+[проверки и ограничения](../services/api/verification.md). Этапы ожидают человеческого
+ревью; настоящий Auth и Core transport остаются отдельными зависимостями.
 
 Новый приоритет владельца: сдача **25 октября, 12:00 МСК**,
 [план D1–D4](../.agent/plans/demo-integration.md) — объединить готовые части
 в настоящий финансовый сценарий. ADR-028 разрешает отдельный явно включённый
 mock подтверждения email в изолированном демо; его server-side реализация
 ещё не проверена. Существующий общий frontend-mock не является этой интеграцией.
+Локальный [план API первого финансового прохода](../.agent/plans/go-api-financial-integration.md)
+содержит проверенную карту RPC, минимальные REST-маршруты и запрос потребностей
+к владельцам Core/ML/Auth; новые этапы пока не начаты и ожидают согласования.
 
 ## Исходные PR
 
@@ -47,7 +53,7 @@ mock подтверждения email в изолированном демо; е
 
 | Компонент | Отсутствующий результат |
 | --- | --- |
-| Go API | Исполняемый сервис, HTTP handlers/middleware, cookie/CSRF/Origin, Auth/Core adapters и проверка полного browser flow |
+| Go API | Десять auth/account handlers, HTTP lifecycle и mTLS Auth adapter проверены локально с test Auth; нужны реальный Auth E2E и будущая Core-интеграция |
 | Auth | Бизнес-RPC регистрации/входа/подтверждения/reset, consent/outbox/email delivery, компании/членства/приглашения; этапы 3.3–3.6 не начаты |
 | Core | Transport, Auth access adapter, company bootstrap/read/update и durable onboarding receipt для Auth; forecast orchestration. FinancialSnapshot (2.4) реализован, проверен и принят владельцем для включения в эту поставку; это внутренний снимок, не готовый прогноз |
 | ML | Согласованный protobuf adapter/service над прогнозом; вход от Core snapshot, а не обращение Go API к CSV/CLI |

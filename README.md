@@ -3,6 +3,7 @@
 Монорепозиторий сервиса финансового прогнозирования для малого бизнеса.
 
 - [`frontend/`](frontend/README.md) — Next.js: исходники, моки, тесты, зависимости и Docker-сборка.
+- [`services/api/`](services/api/README.md) — десять HTTP auth-endpoints через mTLS gRPC; проверены с отдельным тестовым Auth.
 - [`services/core/`](services/core/README.md) — домен, прикладные финансовые команды и PostgreSQL; транспорт ещё не реализован.
 - [`services/auth/`](services/auth/README.md) — каркас Auth, схема и health/readiness; бизнес-RPC ещё не реализованы.
 - [`services/ml/`](services/ml/README.md) — локальный baseline и исследования; ML RPC ещё не реализован.

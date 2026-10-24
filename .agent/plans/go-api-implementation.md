@@ -1,12 +1,18 @@
 # Go API: план первой реализации
 
 Дата: 24.10.2026. Ответственный: @Prosteyshiyyy.
-Статус: **Предложен для правок разработчиком; реализация не начата**.
+Статус: **Реализован локально по последующему Goal; все этапы на итоговом ревью**.
 Основание: прямое поручение разработчика в локальном чате подготовить,
 задокументировать и опубликовать план. Отдельный Issue не указан.
-Режим: после каждого этапа результат и проверки → «На ревью» → остановка
-до явного апрува разработчика; только апрув переводит этап в «Принят».
+Режим исходного предложения: поэтапное ревью. Последующий прямой Goal разработчика
+разрешил пройти анализ → реализацию → тестирование → процессную демонстрацию →
+передачу без промежуточных остановок, с итоговым ревью. Этапы остаются «На ревью»;
+только апрув разработчика переводит их в «Принят».
 Публикация документа не разрешает реализацию, merge или deployment.
+
+Новый приоритет владельца после этой Auth-поставки —
+[первый финансовый проход](go-api-financial-integration.md) по D1–D4 и ADR-028.
+Результаты ниже сохраняются; расширение полного Auth-флоу не блокирует финансы.
 
 ## 1. Цель
 
@@ -88,7 +94,7 @@ Docker/deployment сервисов. Недостающие RPC согласую�
 
 ### Этап 1 — исполняемый HTTP-каркас и проверки API
 
-**Статус: Не начат.** Зависимость: разработчик согласовал этот план и этап 1.
+**Статус: На ревью.** Зависимость: разработчик согласовал этот план и этап 1.
 Результат: сервис запускается/останавливается, безопасно принимает HTTP
 и имеет воспроизводимые проверки, без заявления о готовой авторизации.
 
@@ -96,17 +102,17 @@ Docker/deployment сервисов. Недостающие RPC согласую�
 `cmd/api/main.go`, `internal/{app,config,handler/http}`;
 `.github/workflows/api-ci.yml`.
 
-- [ ] Создать тонкий main, явную сборку, config/validation, HTTP timeouts,
+- [x] Создать тонкий main, явную сборку, config/validation, HTTP timeouts,
   ограниченный shutdown и корректное закрытие ресурсов при startup failure.
-- [ ] Добавить liveness/readiness, request ID, безопасное логирование и общий
+- [x] Добавить liveness/readiness, request ID, безопасное логирование и общий
   JSON error writer; исключить тела запросов, пароли, cookie и токены из логов.
-- [ ] Обеспечить `Cache-Control: no-store`, контролируемые JSON Content-Type,
+- [x] Обеспечить `Cache-Control: no-store`, контролируемые JSON Content-Type,
   method routing, лимит auth body, отказ на неизвестные поля/лишний JSON.
   Предел auth body фиксируется отдельно и не переносится на будущие CSV uploads.
-- [ ] Не объявлять Auth готовым по наличию ClientConn или его HTTP health.
+- [x] Не объявлять Auth готовым по наличию ClientConn или его HTTP health.
   На этапе 2 подключить read-only RPC probe `GetPersonalDataConsent` к readiness;
   до подключения этого probe readiness полной auth-цепочки не заявляется.
-- [ ] Настроить форматирование, модульный lint, build, unit/race/vet и CI API
+- [x] Настроить форматирование, модульный lint, build, unit/race/vet и CI API
   по существующим Go-практикам. В triggers учитывать Auth proto и Buf config.
 
 Проверки: unit config/validation, startup failure, shutdown/cancellation,
@@ -117,7 +123,7 @@ malformed/oversized JSON, отсутствие секретов в error/log, bu
 
 ### Этап 2 — private gRPC Auth-клиент и преобразование ошибок
 
-**Статус: Не начат.** Зависимость: принят этап 1; Auth baseline повторно сверен
+**Статус: На ревью.** Зависимость: принят этап 1; Auth baseline повторно сверен
 с текущими `auth.proto`, OpenAPI и `docs/auth/contract.md`.
 Результат: API вызывает существующий wire-контракт и различает доменный отказ,
 ошибку service authentication и недоступность зависимости.
@@ -125,22 +131,22 @@ malformed/oversized JSON, отсутствие секретов в error/log, bu
 Компоненты: `services/api/internal/{client/auth,gen/auth/v1,app,config}`,
 `buf.auth.gen.yaml` только при необходимости, тестовые RPC fixtures.
 
-- [ ] Генерировать API-local bindings через имеющийся Buf template;
+- [x] Генерировать API-local bindings через имеющийся Buf template;
   generated code не править вручную. Зафиксировать воспроизводимость generation.
-- [ ] Реализовать узкий адаптер методов для десяти HTTP endpoints этапов 3/4,
+- [x] Реализовать узкий адаптер методов для десяти HTTP endpoints этапов 3/4,
   без преждевременного клиента company/member/financial операций.
-- [ ] Подключить mTLS, chain/SAN проверки, lifecycle ClientConn и cancellation.
+- [x] Подключить mTLS, chain/SAN проверки, lifecycle ClientConn и cancellation.
   Обычный deadline 3 s; Register/Login/Reset — 10 s, с учётом более короткого
   срока родительского запроса. Не повторять мутации автоматически.
-- [ ] Передавать BrowserContext/WriteContext/ClientContext по proto;
+- [x] Передавать BrowserContext/WriteContext/ClientContext по proto;
   не принимать доверенные actor/role/IP из произвольных заголовков браузера.
-- [ ] Преобразовать AuthErrorDetail reason/field violations и Retry-After
+- [x] Преобразовать AuthErrorDetail reason/field violations и Retry-After
   по контракту. Peer denial без AuthErrorDetail → 503, не неверный пароль.
   Неизвестные upstream details дают безопасный ответ без raw status message.
-- [ ] Подключить bounded read-only readiness probe; успех probe не объявляет
+- [x] Подключить bounded read-only readiness probe; успех probe не объявляет
   реализованными остальные бизнес-RPC и не создаёт pre-auth context.
 
-Проверки: Buf lint/generation, сборка; тестовый RPC peer с собственной CA;
+Проверки: canonical protobuf generation/check через protoc (API-local), сборка; тестовый RPC peer с собственной CA;
 валидный/чужой SAN/CA, connection failure, deadline/cancellation, status/details
 mapping и отсутствие автоматического повтора записи. API CI проверяет эти gates.
 Критерий завершения: вызовы соответствуют proto; Auth outage закрывает доступ,
@@ -149,22 +155,22 @@ mapping и отсутствие автоматического повтора з
 
 ### Этап 3 — cookie-контекст, согласие, CSRF и текущий пользователь
 
-**Статус: Не начат.** Зависимость: принят этап 2.
+**Статус: На ревью.** Зависимость: принят этап 2.
 Результат: браузерные read endpoints соответствуют REST и не раскрывают
 внутренний security context.
 
 Компоненты: `services/api/internal/handler/http/{auth,me,middleware}`,
 адаптер Auth и HTTP contract tests.
 
-- [ ] Реализовать `GET /api/v1/auth/personal-data-consent`,
+- [x] Реализовать `GET /api/v1/auth/personal-data-consent`,
   `GET /api/v1/auth/csrf`, `GET /api/v1/me`.
-- [ ] Cookie material из Auth устанавливать только через Set-Cookie;
+- [x] Cookie material из Auth устанавливать только через Set-Cookie;
   public JSON содержит только согласованные DTO, без session token.
-- [ ] Согласие возвращать полностью с исходными version/hash; API не меняет
+- [x] Согласие возвращать полностью с исходными version/hash; API не меняет
   текст документа, не подставляет accepted/version/hash за пользователя.
-- [ ] Передавать исходный opaque cookie в Auth; проверка сессии остаётся там.
+- [x] Передавать исходный opaque cookie в Auth; проверка сессии остаётся там.
   Ошибка чтения согласия/контекста не подменяется пустым успешным ответом.
-- [ ] Подготовить общий Origin/Referer guard для записей: точный allowlist,
+- [x] Подготовить общий Origin/Referer guard для записей: точный allowlist,
   отсутствие/чужой origin отклоняются; trusted proxies по явному allowlist,
   без доверия произвольным X-Forwarded-For и X-User/X-Role.
 
@@ -177,35 +183,35 @@ API не объявляет пользователя вошедшим по од�
 
 ### Этап 4 — auth-мутации и передача API-контракта фронтенду
 
-**Статус: Не начат.** Зависимость: принят этап 3.
+**Статус: На ревью.** Зависимость: принят этап 3.
 Результат: десять auth/account HTTP endpoints проверены на границе API
 с тестовым RPC peer; ограничения реальной интеграции явно документированы.
 
 Компоненты: `services/api/internal/handler/http/auth`, mapper/contract tests,
 `services/api/README.md`, `docs/api/README.md`, `docs/integration-status.md`.
 
-- [ ] Реализовать `POST /api/v1/auth/{register,login,verify-email,`
+- [x] Реализовать `POST /api/v1/auth/{register,login,verify-email,`
   `resend-verification,forgot-password,reset-password,logout}`.
-- [ ] Для записей проверять Origin/Referer, наличие CSRF и структуру JSON;
+- [x] Для записей проверять Origin/Referer, наличие CSRF и структуру JSON;
   передавать контекст в Auth для авторитетной транзакционной проверки.
-- [ ] Register/resend → generic 202 с challenge_id/expires_at без кода;
+- [x] Register/resend → generic 202 с challenge_id/expires_at без кода;
   verify принимает строку из шести ASCII цифр, сохраняя ведущие нули.
-- [ ] Login устанавливает cookie по Auth-результату; frontend заново получает
+- [x] Login устанавливает cookie по Auth-результату; frontend заново получает
   CSRF. Verify/reset не выполняют автоматический login; reset/logout очищают
   cookie по успешному результату с теми же Path/flags.
-- [ ] Сохранить `CONSENT_REQUIRED`/422 и `CONSENT_DOCUMENT_CHANGED`/409;
+- [x] Сохранить `CONSENT_REQUIRED`/422 и `CONSENT_DOCUMENT_CHANGED`/409;
   не повторять регистрацию автоматически с новым текстом согласия.
-- [ ] Передать frontend адреса/DTO/error codes, настройки HTTPS одного origin,
+- [x] Передать frontend адреса/DTO/error codes, настройки HTTPS одного origin,
   cookie/CSRF sequence и команды локального запуска. Отдельно описать будущие
   reverse proxy и real frontend build без включения deployment в этот этап.
-- [ ] Обновить статус каждого реально реализованного endpoint; test peer
+- [x] Обновить статус каждого реально реализованного endpoint; test peer
   и unit/contract checks не обозначать как реальный Auth E2E.
 
 Проверки: HTTP contract tests десяти endpoints; 400/401/403/422/429/503 по
 контракту; consent 409; session rotation, cookie deletion, неверный CSRF;
 challenge/code/resend/reset mapping, malformed JSON, отмена/timeout без retry.
 Fixture проверяет передачу и mapping, не доказывает бизнес-правила Auth.
-Полные module lint/build/unit/race/vet и применимые Buf gates.
+Полные module lint/build/unit/race/vet и canonical protobuf generation check.
 Критерий завершения: API-адаптация воспроизводимо проверяется без production
 секретов; поддерживаемые методы и ограничения переданы frontend.
 После отчёта — **итоговое ревью этапа и явный апрув**.
@@ -241,10 +247,10 @@ workspace/company/member/invitation/finance интеграции и провер
 
 | Этап | Статус | Реализация / проверки / ревью |
 | --- | --- | --- |
-| 1. HTTP-каркас | Не начат | — |
-| 2. Auth gRPC client | Не начат | — |
-| 3. Cookie, CSRF, consent, me | Не начат | — |
-| 4. Auth mutations и передача | Не начат | — |
+| 1. HTTP-каркас | На ревью | services/api, CI; build/lifecycle/config tests PASS |
+| 2. Auth gRPC client | На ревью | generation, mTLS, timeout/cancellation/error tests PASS |
+| 3. Cookie, CSRF, consent, me | На ревью | HTTPS → mTLS RPC security/contract tests PASS |
+| 4. Auth mutations и передача | На ревью | 10 endpoints × success/error, 20 OpenAPI responses, smoke PASS; README/report готовы |
 
 После этапа добавить дату, затронутые файлы, commit при наличии, команды
 и фактические результаты проверок, ограничения и ссылку/основание апрува.
@@ -257,3 +263,13 @@ workspace/company/member/invitation/finance интеграции и провер
   и mock-импорт, 25 тестов импорта успешны; API не реализован.
 - 24.10.2026: подготовлена первая редакция этого плана для правок разработчиком.
   Все этапы «Не начат»; заявленных результатов проверок будущего API нет.
+
+- 24.10.2026: последующий Goal разработчика задал D1–D8, coverage ≥85%, реальный
+  test Auth transport и process smoke, разрешив довести все этапы до итогового
+  ревью без промежуточных остановок. Публичные контракты не менялись.
+- 24.10.2026: этапы 1–4 реализованы локально и переведены в «На ревью». Единый
+  `services/api/scripts/check.sh` PASS: build/test/race/vet/lint, 88.85% statements,
+  89.76% executable block lines (исключён только generated code), smoke всех
+  десяти endpoints успех/ошибка, 20 реальных ответов проверены по OpenAPI.
+  [Фактический отчёт](../../services/api/verification.md). Коммит/push реализации,
+  remote Actions, merge/deployment не выполнялись; человеческого апрува пока нет.

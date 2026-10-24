@@ -1,0 +1,57 @@
+name: Go API transport checks
+
+on:
+  pull_request:
+    paths: ['services/api/**', 'proto/auth/**', 'docs/api/**', 'docs/auth/**', 'buf*.yaml', '.github/workflows/api-ci.yml', 'LICENSE']
+  push:
+    branches: [main]
+    paths: ['services/api/**', 'proto/auth/**', 'docs/api/**', 'docs/auth/**', 'buf*.yaml', '.github/workflows/api-ci.yml', 'LICENSE']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+    working-directory: services/api
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: services/api/go.mod
+          cache: false
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.15.0
+          working-directory: services/api
+          install-only: true
+          skip-cache: true
+      - name: Install isolated contract test tooling
+        run: |
+          python3 -m venv "$RUNNER_TEMP/api-python"
+          "$RUNNER_TEMP/api-python/bin/python" -m pip install -r requirements-dev.txt
+      - name: Install protobuf compiler and pinned Go plugins
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.12
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2
+      - name: Build, test, race, coverage, vet, lint, process smoke and OpenAPI contracts
+        env:
+          PYTHON: ${{ runner.temp }}/api-python/bin/python
+          CGO_ENABLED: '1'
+        run: bash scripts/check.sh
+      - name: Verify dependency checksums
+        run: go mod verify
