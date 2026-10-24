@@ -54,7 +54,8 @@ Workflow `.github/workflows/frontend.yml`:
 3. `workflow_dispatch` разрешает повторный deployment только на `main`.
 
 Environment `frontend-mock` разрешает deployment только с ветки `main`.
-Два repository Actions secrets:
+Два Actions secrets хранятся только в environment `frontend-mock`,
+доступном для deployment из `main` (repository-wide копий нет):
 
 - `FRONTEND_DEPLOY_SSH_KEY`: отдельный приватный ключ `saldo-deploy`.
 - `FRONTEND_DEPLOY_KNOWN_HOSTS`: проверенный ED25519 host key для
