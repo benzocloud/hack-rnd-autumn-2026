@@ -10,6 +10,16 @@ permissions:
   contents: read
 
 jobs:
+  ml-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, Node.js 24
+        with:
+          persist-credentials: false
+      - name: Run ML baseline unit tests
+        run: python3 -B -m unittest discover -s services/ml/tests -p 'test_*.py' -v
+
   safety:
     runs-on: ubuntu-latest
     timeout-minutes: 5

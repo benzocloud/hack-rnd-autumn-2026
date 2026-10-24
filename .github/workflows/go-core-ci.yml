@@ -47,12 +47,28 @@ jobs:
           task fmt-check
           task vet
           task lint
+          go vet -tags=integration ./...
+          golangci-lint run --build-tags=integration ./...
 
   test:
     name: Core tests
     needs: lint
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:18.6-alpine@sha256:898c60cb390d1085bc97bdd6a1ae968757421df394b071848b52b1c09c89d6a5
+        env:
+          POSTGRES_USER: core_test
+          POSTGRES_PASSWORD: core_test_only
+          POSTGRES_DB: saldo_core_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U core_test -d saldo_core_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -64,6 +80,29 @@ jobs:
       - name: Test with the race detector and shuffled order
         working-directory: services/core
         run: go test -race -shuffle=on -count=1 ./...
+      - name: Mark the disposable Core database
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: >-
+          docker exec "$POSTGRES_CONTAINER" psql -U core_test -d saldo_core_test
+          --set ON_ERROR_STOP=1
+          --command "ALTER DATABASE saldo_core_test SET saldo.test_database TO 'saldo-core-integration'"
+      - name: Apply Core migrations
+        working-directory: services/core
+        env:
+          GOOSE_DRIVER: postgres
+          GOOSE_DBSTRING: postgres://core_test:core_test_only@127.0.0.1:5432/saldo_core_test?sslmode=disable
+        run: go run github.com/pressly/goose/v3/cmd/goose@v3.29.0 -dir migrations up
+      - name: Test PostgreSQL commands and replay with the race detector
+        working-directory: services/core
+        env:
+          CORE_POSTGRES_HOST: 127.0.0.1
+          CORE_POSTGRES_PORT: '5432'
+          CORE_POSTGRES_USER: core_test
+          CORE_POSTGRES_PASSWORD: core_test_only
+          CORE_POSTGRES_DATABASE: saldo_core_test
+          CORE_POSTGRES_SSL_MODE: disable
+        run: go test -tags=integration -race -shuffle=on -count=1 -timeout=90s ./...
 
   build:
     name: Core build
