@@ -6,6 +6,8 @@ import (
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	domain "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/forecasting"
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
 	pb "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/forecasting"
 )
@@ -36,8 +38,19 @@ func probability() *pb.Probability {
 func encodeForecast(view forecasting.ForecastView) *pb.Forecast {
 	d := view.Snapshot.Data()
 	cutoff, _ := time.Parse(time.DateOnly, string(d.Cutoff))
-	input := &pb.ForecastInput{SnapshotId: d.ID.String(), DataVersion: d.DataVersion, CutoffDate: string(d.Cutoff), DataAsOf: string(d.Cutoff), StartDate: cutoff.AddDate(0, 0, 1).Format(time.DateOnly), EndDate: cutoff.AddDate(0, 0, 30).Format(time.DateOnly), HorizonDays: 30, Currency: "RUB", AccountId: d.Scope.AccountID.String(), OpeningBalance: kopecks(d.Opening.Observation.Amount().Minor()), BalanceAsOf: string(d.Cutoff), RiskDefinition: "below_zero_eod", ModelContext: &pb.ForecastModelContext{Id: view.ModelContextID.String(), ModelName: "mean_90", ModelVersion: "mean_90_components_v1", PreprocessingVersion: "calendar_replacement_v1", ConfigurationId: "mean_90_components_v1"}}
-	out := &pb.Forecast{Id: view.ID.String(), CompanyId: view.Scope.CompanyID.String(), CreatedAt: timestamppb.New(view.CreatedAt), IsStale: view.CurrentDataVersion > d.DataVersion, CurrentDataVersion: view.CurrentDataVersion, Input: input, Readiness: &pb.ForecastReadiness{Status: "limited", HistoryDays: 90, ObservedDays: 1, Limitations: []string{"historical_calendar_unavailable", "historical_availability_unverified", "history_reconstructed_from_certified_facts_and_cutoff_eod", "not_calibrated"}}}
+	coverage := view.Coverage
+	kind := pb.HistoryCoverageKind_HISTORY_COVERAGE_KIND_UNSPECIFIED
+	switch coverage.Kind {
+	case "certified":
+		kind = pb.HistoryCoverageKind_HISTORY_COVERAGE_KIND_CERTIFIED
+	case "dataset_fixture_assumption":
+		kind = pb.HistoryCoverageKind_HISTORY_COVERAGE_KIND_DATASET_FIXTURE_ASSUMPTION
+	}
+	historyCoverage := &pb.HistoryCoverage{Kind: kind, FromDate: string(coverage.From), ThroughDate: string(coverage.Through), Reference: coverage.Reference, DataVersion: coverage.DataVersion, Limitations: append([]string(nil), coverage.Limitations...)}
+	input := &pb.ForecastInput{SnapshotId: d.ID.String(), DataVersion: d.DataVersion, CutoffDate: string(d.Cutoff), DataAsOf: string(d.Cutoff), StartDate: cutoff.AddDate(0, 0, 1).Format(time.DateOnly), EndDate: cutoff.AddDate(0, 0, 30).Format(time.DateOnly), HorizonDays: 30, Currency: "RUB", AccountId: d.Scope.AccountID.String(), OpeningBalance: kopecks(d.Opening.Observation.Amount().Minor()), BalanceAsOf: string(d.Cutoff), RiskDefinition: "below_zero_eod", ModelContext: &pb.ForecastModelContext{Id: view.ModelContextID.String(), ModelName: "mean_90", ModelVersion: "mean_90_components_v1", PreprocessingVersion: "calendar_replacement_v1", ConfigurationId: "mean_90_components_v1"}, HistoryCoverage: historyCoverage}
+	limitations := []string{"historical_calendar_unavailable", "historical_availability_unverified", "history_reconstructed_from_covered_facts_and_cutoff_eod", "not_calibrated"}
+	limitations = append(limitations, coverage.Limitations...)
+	out := &pb.Forecast{Id: view.ID.String(), CompanyId: view.Scope.CompanyID.String(), CreatedAt: timestamppb.New(view.CreatedAt), IsStale: view.CurrentDataVersion > d.DataVersion, CurrentDataVersion: view.CurrentDataVersion, Input: input, Readiness: &pb.ForecastReadiness{Status: "limited", HistoryDays: 90, ObservedDays: observedDays(d.Facts, coverage, cutoff), Limitations: limitations}}
 	switch view.Status {
 	case "queued", "running":
 		out.State = &pb.Forecast_Pending{Pending: &pb.ForecastPending{Status: statusName(view.Status)}}
@@ -69,4 +82,22 @@ func encodeResult(saved *forecasting.SavedForecast) *pb.ForecastResult {
 		result.DailyPoints = append(result.DailyPoints, &pb.ForecastPoint{Date: string(day.Date), Inflow: kopecks(day.Inflow), Outflow: kopecks(day.Outflow), Balance: kopecks(day.Balance), NegativeBalanceProbability: probability()})
 	}
 	return result
+}
+
+// Observed days are distinct fact dates inside both the proof and the 90-day window.
+func observedDays(facts []domain.Fact, coverage domain.JobCoverage, cutoff time.Time) uint32 {
+	if coverage.Kind != "certified" && coverage.Kind != "dataset_fixture_assumption" {
+		return 0
+	}
+	start := ledger.Date(cutoff.AddDate(0, 0, -89).Format(time.DateOnly))
+	end := ledger.Date(cutoff.Format(time.DateOnly))
+	seen := make(map[ledger.Date]struct{}, len(facts))
+	for _, fact := range facts {
+		date := fact.Transaction.Data().Date
+		if date < coverage.From || date > coverage.Through || date < start || date > end {
+			continue
+		}
+		seen[date] = struct{}{}
+	}
+	return uint32(len(seen))
 }

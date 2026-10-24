@@ -21,7 +21,7 @@ func financialFixture(t *testing.T) forecasting.FinancialModelInput {
 	t.Helper()
 	i := inputFixture()
 	i.Model = forecasting.ModelContext{Name: "mean_90", Version: financialVersion, PreprocessingVersion: financialPreprocessing}
-	result := forecasting.FinancialModelInput{Snapshot: i, Coverage: forecasting.Coverage{From: i.History[0].Date, Through: i.Cutoff, Reference: "test-only certified complete fixture"}}
+	result := forecasting.FinancialModelInput{Snapshot: i, Coverage: forecasting.Coverage{Kind: "certified", From: i.History[0].Date, Through: i.Cutoff, Reference: "test-only certified complete fixture", DataVersion: i.DataVersion}}
 	for _, day := range i.History {
 		for _, direction := range []domain.Direction{domain.Inflow, domain.Outflow} {
 			amount := day.Inflow

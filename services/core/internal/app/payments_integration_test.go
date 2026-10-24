@@ -3,6 +3,7 @@
 package app
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -10,8 +11,56 @@ import (
 
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
 	domain "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/payments"
+	ledgerService "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/ledger"
 	service "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/payments"
 )
+
+func TestHistoryCoverageCarriesAcrossMetadataAndNotFacts(t *testing.T) {
+	application, _ := testApplication(t)
+	scope := newScope(t, application)
+	fact, err := application.Ledger.CreateTransaction(t.Context(), transactionCommand(t, scope))
+	if err != nil {
+		t.Fatal(err)
+	}
+	categoryID, err := uuid.NewV7()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := application.db.ExecContext(t.Context(), "INSERT INTO core_categories(company_id,id,name,direction,semantic_kind,catalogue_code) VALUES($1,$2,'Sales','inflow','sales_receipt','sales')", scope.CompanyID, categoryID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := application.db.ExecContext(t.Context(), "INSERT INTO core_history_coverage(company_id,account_id,data_version,from_date,through_date,reference,kind,origin_data_version,artifact_sha256,limitations) VALUES($1,$2,2,'2026-07-01','2026-10-23','verified-fixture','certified',2,repeat('a',64),'[\"verified\"]'::jsonb)", scope.CompanyID, scope.AccountID); err != nil {
+		t.Fatal(err)
+	}
+	categorizer, ok := application.Ledger.(interface {
+		UpdateTransactionCategory(context.Context, ledgerService.UpdateTransactionCategoryCommand) (ledgerService.UpdateTransactionCategoryResult, error)
+	})
+	if !ok {
+		t.Fatal("ledger category operation is not wired")
+	}
+	category, err := categorizer.UpdateTransactionCategory(t.Context(), ledgerService.UpdateTransactionCategoryCommand{Scope: scope, ActorID: "test-owner", TransactionID: fact.TransactionID, ExpectedVersion: 1, CategoryID: categoryID})
+	if err != nil || category.DataVersion != 3 {
+		t.Fatalf("category mutation: result=%+v err=%v", category, err)
+	}
+	payment, err := application.Payments.CreatePayment(t.Context(), paymentCommand(t, scope, 3))
+	if err != nil || payment.DataVersion != 4 {
+		t.Fatalf("payment mutation: result=%+v err=%v", payment, err)
+	}
+	var carried int
+	if err := application.db.GetContext(t.Context(), &carried, "SELECT count(*) FROM core_history_coverage WHERE company_id=$1 AND account_id=$2 AND data_version=4 AND reference='verified-fixture' AND kind='certified' AND origin_data_version=2 AND artifact_sha256=repeat('a',64) AND limitations='[\"verified\"]'::jsonb", scope.CompanyID, scope.AccountID); err != nil || carried != 1 {
+		t.Fatalf("metadata mutation lost coverage provenance: count=%d err=%v", carried, err)
+	}
+	newFact := transactionCommand(t, scope)
+	newFact.ExpectedDataVersion = 4
+	if _, err := application.Ledger.CreateTransaction(t.Context(), newFact); err != nil {
+		t.Fatal(err)
+	}
+	var currentProofs int
+	if err := application.db.GetContext(t.Context(), &currentProofs, "SELECT count(*) FROM core_history_coverage WHERE company_id=$1 AND account_id=$2 AND data_version=5", scope.CompanyID, scope.AccountID); err != nil || currentProofs != 0 {
+		t.Fatalf("factual mutation inherited stale coverage: count=%d err=%v", currentProofs, err)
+	}
+	assertRevision(t, application, scope, 5)
+}
 
 func TestMatchAtomicReplayAndAllocation(t *testing.T) {
 	application, cfg := testApplication(t)

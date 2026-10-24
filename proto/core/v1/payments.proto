@@ -21,6 +21,10 @@ service PaymentsService {
   rpc CreateManualPayment(CreateManualPaymentRequest) returns (CreateManualPaymentResponse);
   rpc ListPaymentMatches(ListPaymentMatchesRequest) returns (ListPaymentMatchesResponse);
   rpc MatchPayment(MatchPaymentRequest) returns (MatchPaymentResponse);
+  rpc CreateReconciliationGroup(CreateReconciliationGroupRequest) returns (CreateReconciliationGroupResponse);
+  rpc GetReconciliationGroup(GetReconciliationGroupRequest) returns (GetReconciliationGroupResponse);
+  rpc ListReconciliationGroups(ListReconciliationGroupsRequest) returns (ListReconciliationGroupsResponse);
+  rpc RevokeReconciliationGroup(RevokeReconciliationGroupRequest) returns (RevokeReconciliationGroupResponse);
 }
 
 enum PaymentStatus {
@@ -44,6 +48,9 @@ message ExpectedPayment {
   RecordSource source = 11;
   int64 version = 12;
   google.protobuf.Timestamp created_at = 13;
+  // Absent/invalid/revoked or horizon-incompatible group means unresolved, not
+  // an automatically confirmed additional obligation or an empty calendar.
+  optional string reconciliation_group_id = 14;
 }
 message PaymentMatch {
   string id = 1;
@@ -82,6 +89,7 @@ message CreateManualPaymentRequest {
   optional string category_id = 7;
   string counterparty_name = 8;
   string description = 9;
+  optional string reconciliation_group_id = 10;
 }
 message CreateManualPaymentResponse {
   ExpectedPayment payment = 1;
@@ -131,6 +139,12 @@ message UpdatePaymentRequest {
     string category_id = 10;
     google.protobuf.Empty clear_category = 11;
   }
+  // Omission preserves linkage. Clear detaches this payment only; it does not
+  // revoke the independently persisted reconciliation group.
+  oneof reconciliation_change {
+    string reconciliation_group_id = 12;
+    google.protobuf.Empty clear_reconciliation_group = 13;
+  }
 }
 message UpdatePaymentResponse {
   ExpectedPayment payment = 1;
@@ -155,5 +169,102 @@ message RemovePaymentMatchRequest {
 }
 message RemovePaymentMatchResponse {
   ExpectedPayment payment = 1;
+  int64 data_version = 2;
+}
+
+enum ReconciliationStatus {
+  RECONCILIATION_STATUS_UNSPECIFIED = 0;
+  RECONCILIATION_STATUS_ACTIVE = 1;
+  RECONCILIATION_STATUS_REVOKED = 2;
+}
+
+message HistoricalOperationRef {
+  string transaction_id = 1;
+  int64 version = 2;
+}
+
+message AdditionalObligationConfirmation {
+  // Must be true: omission is not an explicit user confirmation.
+  bool confirmed = 1;
+}
+
+message CompleteReplacement {
+  // Nonempty, unique, same-scope references; active groups may not overlap
+  // within a snapshot. Versions must match the frozen factual view.
+  repeated HistoricalOperationRef historical_operations = 1;
+  bool complete_for_horizon = 2;
+}
+
+// Independent immutable mapping for one exact cutoff/window. Cancel/full match
+// or moving a payment outside the horizon does not revoke this group. A complete
+// replacement may have zero future occurrences and still removes historical
+// flows from residual inference. Reuse for a new horizon requires new confirmation.
+message PaymentReconciliationGroup {
+  string id = 1;
+  AccountScope scope = 2;
+  int64 version = 3;
+  ReconciliationStatus status = 4;
+  string cutoff_date = 5;
+  string horizon_start = 6;
+  string horizon_end = 7;
+  // Auth-owned actor identity and server timestamp; never client evidence.
+  string confirmed_by = 8;
+  google.protobuf.Timestamp confirmed_at = 9;
+  // Exactly one branch required; additional never excludes historical facts.
+  oneof reconciliation {
+    AdditionalObligationConfirmation additional = 10;
+    CompleteReplacement replacement = 11;
+  }
+}
+
+// FINANCIAL_WRITE/CSRF. Core generates ID/time/actor and validates the exact
+// 30-day window, scoped references/versions and non-overlap under account lock.
+// Replay returns the original group/revision before stale-state checks.
+message CreateReconciliationGroupRequest {
+  auth.v1.WriteContext context = 1;
+  AccountScope scope = 2;
+  string idempotency_key = 3;
+  string cutoff_date = 4;
+  string horizon_start = 5;
+  string horizon_end = 6;
+  oneof reconciliation {
+    AdditionalObligationConfirmation additional = 7;
+    CompleteReplacement replacement = 8;
+  }
+}
+message CreateReconciliationGroupResponse {
+  PaymentReconciliationGroup group = 1;
+  int64 data_version = 2;
+}
+message GetReconciliationGroupRequest {
+  auth.v1.BrowserContext context = 1;
+  AccountScope scope = 2;
+  string group_id = 3;
+}
+message GetReconciliationGroupResponse {
+  PaymentReconciliationGroup group = 1;
+}
+message ListReconciliationGroupsRequest {
+  auth.v1.BrowserContext context = 1;
+  AccountScope scope = 2;
+  PageRequest page = 3;
+  bool include_revoked = 4;
+}
+message ListReconciliationGroupsResponse {
+  repeated PaymentReconciliationGroup items = 1;
+  PageResponse pagination = 2;
+}
+// FINANCIAL_WRITE/CSRF. Explicit CAS revocation affects future snapshots only;
+// it preserves payment/factual history and frozen jobs. Replay does not advance
+// data_version twice. No update/un-revoke: changed mapping needs a new group.
+message RevokeReconciliationGroupRequest {
+  auth.v1.WriteContext context = 1;
+  AccountScope scope = 2;
+  string group_id = 3;
+  int64 expected_version = 4;
+  string idempotency_key = 5;
+}
+message RevokeReconciliationGroupResponse {
+  PaymentReconciliationGroup group = 1;
   int64 data_version = 2;
 }

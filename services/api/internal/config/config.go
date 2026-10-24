@@ -12,6 +12,7 @@ import (
 type Config struct {
 	Address, Origin, AuthAddress, CA, Cert, Key, HTTPCert, HTTPKey string
 	CoreAddress, CoreServerName, CoreCA, CoreCert, CoreKey         string
+	ImportSpoolDir                                                 string
 	RPCDeadline, SlowDeadline, ShutdownTimeout                     time.Duration
 }
 
@@ -19,7 +20,8 @@ func Load() (Config, error) { return FromEnv(os.Getenv) }
 
 func FromEnv(get func(string) string) (Config, error) {
 	c := Config{
-		CoreAddress: get("API_CORE_ADDRESS"), CoreServerName: get("API_CORE_SERVER_NAME"),
+		ImportSpoolDir: get("API_IMPORT_SPOOL_DIR"),
+		CoreAddress:    get("API_CORE_ADDRESS"), CoreServerName: get("API_CORE_SERVER_NAME"),
 		CoreCA: get("API_CORE_CA"), CoreCert: get("API_CORE_CERT"), CoreKey: get("API_CORE_KEY"),
 		Address: get("API_ADDRESS"), Origin: get("API_ORIGIN"), AuthAddress: get("API_AUTH_ADDRESS"),
 		CA: get("API_AUTH_CA"), Cert: get("API_AUTH_CERT"), Key: get("API_AUTH_KEY"),

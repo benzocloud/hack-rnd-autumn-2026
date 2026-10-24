@@ -13,5 +13,6 @@ RUN if [ "$SERVICE" = core ]; then CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETAR
 FROM alpine:3.23 AS runtime
 RUN apk add --no-cache ca-certificates tzdata
 COPY --from=build /out/ /app/
+RUN mkdir -p /var/lib/saldo/import-spool && chown 65532:65532 /var/lib/saldo/import-spool && chmod 0700 /var/lib/saldo/import-spool
 USER 65532:65532
 ENTRYPOINT ["/app/server"]

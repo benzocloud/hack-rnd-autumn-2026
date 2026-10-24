@@ -33,6 +33,7 @@ type MatchPaymentResult struct {
 
 type matchStore interface {
 	accountStore
+	CarryHistoryCoverage(context.Context, ledger.Scope, int64, int64) error
 	FindPayment(context.Context, ledger.Scope, uuid.UUID, ledger.Source) (domain.ExpectedPayment, int64, bool, error)
 	FindTransaction(context.Context, ledger.Scope, uuid.UUID, ledger.Source) (ledger.Transaction, int64, bool, error)
 	FactAllocated(context.Context, ledger.Scope, uuid.UUID) (money.Money, error)
@@ -136,10 +137,14 @@ func matchPayment(ctx context.Context, store matchStore, cmd MatchCommand, id uu
 	if err := store.SaveMatch(ctx, updated, allocation, cmd.ExpectedVersion); err != nil {
 		return MatchPaymentResult{}, err
 	}
+	previousRevision := account.DataVersion()
 	if err := account.AdvanceDataVersion(); err != nil {
 		return MatchPaymentResult{}, err
 	}
 	if err := store.SaveAccount(ctx, account); err != nil {
+		return MatchPaymentResult{}, err
+	}
+	if err := store.CarryHistoryCoverage(ctx, cmd.Scope, previousRevision, account.DataVersion()); err != nil {
 		return MatchPaymentResult{}, err
 	}
 	return MatchPaymentResult{MatchID: allocation.ID(), PaymentVersion: updated.Version(), DataVersion: account.DataVersion()}, nil

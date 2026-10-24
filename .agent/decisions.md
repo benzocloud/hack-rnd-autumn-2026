@@ -83,3 +83,23 @@ The GBrain runtime statements below describe the old runner on 2026-10-22. The d
   baseline endpoint is added. This supersedes the earlier two-method wording,
   not the requirement for calendar reconciliation or honest limitations. Financial
   model implementation, orchestration and completed P0 are not claimed.
+
+- **ADR-030 (Accepted by owner, 2026-10-24):** Financial demo D2.0 follows
+  sections 1–6 of `docs/core/financial-demo-decisions.md`, explicitly approved
+  after presentation. Dataset coverage is a server-enabled, scoped, digest-bound
+  fixture assumption with a visible limitation, never browser certification or
+  bank completeness. Metadata/expectation-only commands may carry exact previous
+  revision proof atomically; factual/EOD changes require reevaluation. Durable
+  import bytes use bounded PostgreSQL chunks; API uses a bounded private disk
+  spool, not the existing 16 MiB tmpfs. Quotas/cleanup/retention follow the approved
+  decision packet; no live infrastructure change is authorized by this ADR.
+  Synthetic historical calendar is a distinct mode with real recorded-at
+  provenance, excluded from historical backtests/calibration and unable to hide
+  post-cutoff settlements. Durable reconciliation groups distinguish additional
+  obligations from complete replacement; cancellation/full match do not revoke
+  a group. A single Predict analyzes only its 90-day input, preserving facts and
+  manual overrides; derived labels/hypotheses are not obligations/probabilities.
+  Explicit v2 contract/model context and schema compatibility are required before
+  future runtime activation; v1 is not silently changed. Numerical quality gates
+  in section 7 remain proposals. Approval of these decisions does not claim
+  implementation, stage acceptance, publication, merge or deployment.

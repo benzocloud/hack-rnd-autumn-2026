@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	corev1 "github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/securetls"
 )
 
@@ -22,9 +23,13 @@ func Dial(address, serverName, ca, cert, key string, timeout time.Duration) (*gr
 	}
 	tlsConfig.ServerName = serverName
 	return grpc.NewClient(address, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)), grpc.WithDisableRetry(),
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(2<<20), grpc.MaxCallSendMsgSize(1<<20)),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(2<<20), grpc.MaxCallSendMsgSize(2<<20)),
 		grpc.WithUnaryInterceptor(func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoke grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-			ctx, cancel := context.WithTimeout(ctx, timeout)
+			callTimeout := timeout
+			if method == corev1.ImportsService_CommitImport_FullMethodName {
+				callTimeout = 2 * time.Minute
+			}
+			ctx, cancel := context.WithTimeout(ctx, callTimeout)
 			defer cancel()
 			return invoke(ctx, method, req, reply, cc, opts...)
 		}))

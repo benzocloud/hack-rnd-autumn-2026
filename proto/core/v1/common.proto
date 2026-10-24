@@ -43,3 +43,21 @@ message DateRange {
   optional string from = 1;
   optional string to = 2;
 }
+
+enum HistoryCoverageKind {
+  HISTORY_COVERAGE_KIND_UNSPECIFIED = 0;
+  HISTORY_COVERAGE_KIND_CERTIFIED = 1;
+  HISTORY_COVERAGE_KIND_DATASET_FIXTURE_ASSUMPTION = 2;
+}
+
+// Server-owned proof, never accepted from a public write request. Bounds are
+// inclusive; data_version binds the proof to exactly one account revision.
+// Absence/UNSPECIFIED preserves legacy unknown provenance, never fixture access.
+message HistoryCoverage {
+  HistoryCoverageKind kind = 1;
+  string from_date = 2;
+  string through_date = 3;
+  string reference = 4;
+  int64 data_version = 5;
+  repeated string limitations = 6;
+}
