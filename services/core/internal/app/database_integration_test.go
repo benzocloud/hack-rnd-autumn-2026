@@ -62,6 +62,7 @@ func newScope(t *testing.T, application *application) ledger.Scope {
 		ctx, cancel := context.WithTimeout(context.WithoutCancel(t.Context()), 5*time.Second)
 		defer cancel()
 		for _, query := range []string{
+			"DELETE FROM core_financial_snapshots WHERE company_id=$1",
 			"DELETE FROM core_command_results WHERE company_id=$1",
 			"DELETE FROM core_payment_matches WHERE company_id=$1",
 			"DELETE FROM core_expected_payments WHERE company_id=$1",

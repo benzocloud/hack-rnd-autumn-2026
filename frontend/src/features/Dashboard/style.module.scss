@@ -2,7 +2,7 @@
 
 .dashboard {
     display: grid;
-    grid-template-columns: minmax(0, 617fr) minmax(0, 577fr);
+    grid-template-columns: minmax(0, 1.07fr) minmax(0, 1fr);
     align-items: start;
     gap: 40px;
     width: 100%;
@@ -10,6 +10,7 @@
     margin-inline: auto;
     padding: 60px 20px;
     color: global.$text;
+    transition: grid-template-columns global.$transition-duration ease, column-gap global.$transition-duration ease;
 }
 
 .hidden {
@@ -66,13 +67,65 @@
 }
 
 .chartArea {
+    --balance-chart-height: 100%;
+    position: relative;
     min-width: 0;
+    height: 280px;
+    border-radius: 20px;
+    transition: height global.$transition-duration ease;
+}
+
+.chartHint {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background-color: global.$white;
+    color: global.$text;
+    font-size: 12px;
+    line-height: 1.4;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity global.$transition-duration;
+}
+
+@media (min-width: 801px) {
+    .chartArea {
+        cursor: pointer;
+    }
+
+    .chartArea:focus-visible {
+        outline: 2px solid global.$green2;
+        outline-offset: 4px;
+    }
+
+    .chartArea:hover .chartHint,
+    .chartArea:focus-visible .chartHint {
+        opacity: 1;
+    }
+
+    .expanded {
+        grid-template-columns: minmax(0, 0fr) minmax(0, 1fr);
+        column-gap: 0;
+    }
+
+    .expanded .summary {
+        height: 0;
+        overflow: hidden;
+        opacity: 0;
+    }
+
+    .expanded .chartArea {
+        height: max(420px, calc(100dvh - 320px));
+    }
 }
 
 .placeholder {
     display: flex;
     align-items: center;
     justify-content: center;
+    height: 100%;
     min-height: 280px;
     padding: 24px;
     border-radius: 20px;
@@ -180,6 +233,11 @@
         font-size: 18px;
     }
 
+    .chartArea {
+        height: 260px;
+        border-radius: 16px;
+    }
+
     .chartCard {
         padding: 8px;
         border-radius: 24px;
@@ -198,7 +256,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .period {
+    .period,
+    .dashboard,
+    .chartArea,
+    .chartHint {
         transition: none;
     }
 }

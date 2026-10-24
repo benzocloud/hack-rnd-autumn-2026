@@ -1,5 +1,13 @@
 # Auth Saldo: адаптация референса и полный пользовательский флоу
 
+Уточнение владельца 2026-10-24: для сдачи 25 октября, 12:00 МСК приоритет —
+[интеграция готовых частей](demo-integration.md). Подтверждение email временно
+замокано: явно включённый изолированный Auth demo-profile принимает любой
+шестизначный код (ADR-028). Строгий/default режим, пароль, сессии, CSRF и права
+сохраняются. Реальная доставка писем и завершение полного 3.4 не блокируют
+финансовый сценарий. Это согласованное исключение для демо, не готовая реализация
+и не принятие 3.3–3.6; целевой контракт и исторические этапы ниже сохраняются.
+
 Дата: 2026-10-24.
 Статус: 3.1 принят владельцем; каркас и хранилище этапа 3.2 подготовлены к ревью.
 Основание: прямое поручение владельца составить план после обсуждения адаптации
@@ -145,8 +153,12 @@ HTTP/JSON на границе браузера, DDD-монолит Core и Postg
    `pgx/stdlib` только как PostgreSQL-драйвер `database/sql`, отдельная Goose CLI.
    Создание/config/Ping pool — в `internal/app/postgres`, `Close` — у сборки;
    repository принимает готовый `*sqlx.DB`/`*sqlx.Tx` и не открывает соединения.
-   Приватные реализации, validation helpers, SQL/queries.go и lint следуют
-   общим правилам `.agent/instructions.md`; toolchain закреплён в модуле Auth.
+   Операции группируются по repository-пакетам: `repository/user`, его записи
+   с db-тегами — в `user/record`, SQL — в `user/sql`, embed — в `user/queries.go`.
+   Преобразование записи БД в storage projection выполняет родительский пакет.
+   `repository/postgres` содержит общие миграции, schema check и транзакции.
+   Приватные реализации, validation helpers и lint следуют общим правилам
+   `.agent/instructions.md`; toolchain закреплён в модуле Auth.
    Не выделять общий Go-модуль только ради похожих config/log.
 7. Обычный logout отзывает текущую сессию. После успешного сброса пароля
    предлагается отзывать все сессии пользователя; отдельный UI «выйти везде» не входит.
@@ -266,7 +278,13 @@ services/auth/
     config/                            # типизированная конфигурация
     domain/                            # user, session, token, membership, invitation
     service/                           # use cases и нужные им интерфейсы
-    repository/postgres/               # SQL, транзакции и отображение строк
+    repository/
+      user/                            # операции пользователя и storage projection
+        record/                        # записи БД с db-тегами
+        sql/                           # SQL пользователя; embed в user/queries.go
+      postgres/                        # общие миграции, schema check, транзакции
+        record/                        # запись версии схемы
+        sql/                           # schema_version.sql; embed в queries.go
     handler/grpc/                      # приватный транспорт и безопасные ошибки
     handler/http/                      # live/ready
     email/                             # bounded delivery/retry и адаптер
@@ -337,7 +355,7 @@ ADR со свободным на момент реализации номеро�
 Статус: На ревью.
 Зависимости: принят 3.1; согласованы toolchain, драйвер, мигратор и доступная тестовая PostgreSQL.
 Результат: Auth запускается с проверенной конфигурацией и миграциями без публичных auth-операций.
-Компоненты: `services/auth/{cmd,internal/app,internal/config,internal/repository/postgres,migrations}`,
+Компоненты: `services/auth/{cmd,internal/app,internal/config,internal/repository,migrations}`,
 health/readiness, локальные инструкции сборки и тестов.
 
 - [x] Перенести только выбранные lifecycle/config/repository-приёмы с provenance;
@@ -354,6 +372,13 @@ health/readiness, локальные инструкции сборки и тес
   с embed в `queries.go`; весь модуль — format/import/lint, unit, integration,
   build и доступный race-check. Результат фиксируется для нового снимка отдельно
   от исторического `b102904`.
+
+Уточнение структуры по поручению владельца: пользовательские операции вынесены
+в `internal/repository/user`, записи с db-тегами — в `user/record`, SQL — в
+`user/sql` с собственным `queries.go`. В `repository/postgres` остаётся общая
+инфраструктура БД. Это исправление структуры 3.2 без изменения SQL, схемы или
+Auth-контракта; оно не начинает 3.3. Проверки этого переноса фиксируются отдельно
+от проверок предыдущего sqlx-снимка `ad50d5b`.
 
 Проверки: unit config/lifecycle; миграции на пустой БД; repository с реальной
 PostgreSQL; ошибки подключения/запуска и освобождение ресурсов; сборка и выбранный lint.
@@ -379,7 +404,7 @@ JWT, глобальный logger, backtick SQL или startup/shutdown ошиб�
 Статус: Не начат.
 Зависимости: принят 3.2.
 Результат: приватные Auth RPC реализуют аккаунт и полный жизненный цикл сессии.
-Компоненты: `services/auth/internal/{domain,service,repository/postgres,handler/grpc}`,
+Компоненты: `services/auth/internal/{domain,service,repository,handler/grpc}`,
 session/security-context migrations, service-local generated bindings.
 
 - [ ] Реализовать регистрацию без автосоздания компании/членства, проверки email,
