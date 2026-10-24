@@ -1,0 +1,97 @@
+syntax = "proto3";
+package core.v1;
+
+import "auth/v1/auth.proto";
+import "core/v1/common.proto";
+import "core/v1/imports.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1;corev1";
+
+// API peer; read FINANCIAL_READ, changes FINANCIAL_WRITE with CSRF. MVP providers
+// are explicitly mock. An external company ID is provenance, not authorization.
+service IntegrationsService {
+  rpc ListExternalProviders(ListExternalProvidersRequest) returns (ListExternalProvidersResponse);
+  rpc ListConnections(ListConnectionsRequest) returns (ListConnectionsResponse);
+  rpc CreateConnection(CreateConnectionRequest) returns (CreateConnectionResponse);
+  rpc DisableConnection(DisableConnectionRequest) returns (DisableConnectionResponse);
+  rpc SyncConnection(SyncConnectionRequest) returns (SyncConnectionResponse);
+}
+enum ConnectionStatus {
+  CONNECTION_STATUS_UNSPECIFIED = 0;
+  CONNECTION_STATUS_READY = 1;
+  CONNECTION_STATUS_DISABLED = 2;
+}
+message ExternalProvider {
+  string id = 1;
+  string name = 2;
+  // Exactly "mock" in the current REST contract.
+  string mode = 3;
+  repeated ImportRecordKind capabilities = 4;
+  string adapter = 5;
+}
+message Connection {
+  string id = 1;
+  string company_id = 2;
+  string account_id = 3;
+  string provider_id = 4;
+  string mode = 5;
+  string display_name = 6;
+  string source_company_id = 7;
+  ConnectionStatus status = 8;
+  google.protobuf.Timestamp created_at = 9;
+  int64 version = 10;
+}
+message ListExternalProvidersRequest {
+  auth.v1.BrowserContext context = 1;
+  string company_id = 2;
+  PageRequest page = 3;
+}
+message ListExternalProvidersResponse {
+  repeated ExternalProvider items = 1;
+  PageResponse pagination = 2;
+}
+message ListConnectionsRequest {
+  auth.v1.BrowserContext context = 1;
+  AccountScope scope = 2;
+  PageRequest page = 3;
+}
+message ListConnectionsResponse {
+  repeated Connection items = 1;
+  PageResponse pagination = 2;
+}
+message CreateConnectionRequest {
+  auth.v1.WriteContext context = 1;
+  AccountScope scope = 2;
+  string idempotency_key = 3;
+  string provider_id = 4;
+  string display_name = 5;
+  string source_company_id = 6;
+}
+message CreateConnectionResponse {
+  Connection connection = 1;
+}
+// Disable is idempotent for an already disabled connection; no arbitrary
+// expected version absent from the public DELETE contract is introduced.
+message DisableConnectionRequest {
+  auth.v1.WriteContext context = 1;
+  AccountScope scope = 2;
+  string connection_id = 3;
+}
+message DisableConnectionResponse {
+  Connection connection = 1;
+}
+// Sync creates a preview import; it does not commit financial records. Capabilities
+// and record_kinds are explicit, nonempty, unique; no silently discarded facts.
+message SyncConnectionRequest {
+  auth.v1.WriteContext context = 1;
+  AccountScope scope = 2;
+  string connection_id = 3;
+  string idempotency_key = 4;
+  string period_start = 5;
+  string period_end = 6;
+  repeated ImportRecordKind record_kinds = 7;
+}
+message SyncConnectionResponse {
+  ImportAccepted accepted = 1;
+}
