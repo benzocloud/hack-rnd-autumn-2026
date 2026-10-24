@@ -1,8 +1,0 @@
-abi <abi/4.0>,
-include <tunables/global>
-
-# Allow user namespaces only through our root-owned sandbox executable.
-# Its containing directory is traversable only by root and hackrnd-review.
-profile hackrnd-codex-bwrap /opt/hackrnd-agent/releases/bwrap-*/bwrap flags=(unconfined) {
-  userns,
-}

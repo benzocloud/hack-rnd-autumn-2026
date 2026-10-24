@@ -1,0 +1,5 @@
+:HL["/hack-rnd-autumn-2026/_next/static/css/75a30419033facbd.css","style"]
+:HL["/hack-rnd-autumn-2026/_next/static/css/d66aa4c66065ab81.css","style"]
+2:[["children",{"s":"__PAGE__","h":160}]]
+1:[["children",{"s":"account","h":96,"c":"$Q2"}]]
+0:{"b":"Hf-52sjOL0Mtx4L2QkROc","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
