@@ -62,13 +62,10 @@ if ! (
     compose run --rm --no-deps --env-from-file core-migrate.env --entrypoint /app/goose core -dir /app/migrations up || exit 1
     compose up -d auth core ml api || exit 1
     # Probe through the existing Saldo nginx with normal public TLS validation.
-    for _ in $(seq 1 30); do
-        if curl --fail --silent --show-error --resolve saldo.brokebyte.me:443:127.0.0.1 https://saldo.brokebyte.me/api/v1/auth/personal-data-consent >/dev/null; then
-            break
-        fi
-        sleep 2
-    done
-    curl --fail --silent --show-error --resolve saldo.brokebyte.me:443:127.0.0.1 https://saldo.brokebyte.me/api/v1/auth/personal-data-consent >/dev/null || exit 1
+    curl --fail --silent --show-error --retry 29 --retry-delay 2 \
+        --retry-all-errors --retry-max-time 60 --max-time 5 \
+        --resolve saldo.brokebyte.me:443:127.0.0.1 \
+        https://saldo.brokebyte.me/api/v1/auth/personal-data-consent >/dev/null || exit 1
     printf 'FRONTEND_IMAGE=ghcr.io/benzocloud/saldo-frontend-real@%s\n' "$7" > /opt/saldo-frontend/.env.next || exit 1
     mv /opt/saldo-frontend/.env.next /opt/saldo-frontend/.env || exit 1
     cd /opt/saldo-frontend || exit 1
