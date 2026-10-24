@@ -29,7 +29,7 @@
 
 ```bash
 docker build --platform linux/amd64 --build-arg developerMode=mock \
-  --label me.brokebyte.saldo.mode=mock -t saldo-frontend-mock:bootstrap .
+  --label me.brokebyte.saldo.mode=mock -t saldo-frontend-mock:bootstrap -f frontend/Dockerfile frontend
 docker save saldo-frontend-mock:bootstrap | gzip > /tmp/saldo-frontend.tar.gz
 # Передать архив образа, deploy/frontend и только публичный SSH-ключ на сервер.
 # На сервере, от root:
