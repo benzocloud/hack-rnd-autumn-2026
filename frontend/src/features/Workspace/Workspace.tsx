@@ -20,15 +20,10 @@ const Workspace = () => {
     const [ creating, setCreating ] = useState(false);
     const [ declined, setDeclined ] = useState<IInvitation | null>(null);
     const request = useRequest();
-    const loader = useCallback(async ( signal: AbortSignal ) => {
-        const [ companies, invitations ] = await Promise.all([
-            collectPages(( cursor ) => companiesService.listCompanies({ limit: 100, cursor }, signal)),
-            collectPages(( cursor ) => membersService.listMyInvitations({ limit: 100, cursor }, signal)),
-        ]);
-
-        return { companies, invitations };
-    }, []);
-    const resource = useResource(loader);
+    const loadCompanies = useCallback(( signal: AbortSignal ) => collectPages(( cursor ) => companiesService.listCompanies({ limit: 100, cursor }, signal)), []);
+    const loadInvitations = useCallback(( signal: AbortSignal ) => collectPages(( cursor ) => membersService.listMyInvitations({ limit: 100, cursor }, signal)), []);
+    const companies = useResource(loadCompanies);
+    const invitations = useResource(loadInvitations);
 
 
     const createCompany = async ( event: FormEvent<HTMLFormElement> ) => {
@@ -69,7 +64,7 @@ const Workspace = () => {
 
         if (result.ok) {
             setDeclined(null);
-            resource.reload();
+            invitations.reload();
         }
     };
 
@@ -79,14 +74,18 @@ const Workspace = () => {
             <PageHeading title="Мои компании" description="Выберите компанию, чтобы работать с её финансами. Данные разных компаний хранятся отдельно.">
                 <ActionButton icon="plus" onClick={() => setCreating(true)}>Создать компанию</ActionButton>
             </PageHeading>
-            <DataState loading={resource.loading} error={resource.error} onRetry={resource.reload}>
-                { resource.data && (
-                    <>
-                        { resource.data.invitations.some(( item ) => item.status === "pending") && <Panel title="Вас приглашают в команду"><div className={styles.stack}>{ resource.data.invitations.filter(( item ) => item.status === "pending").map(( item ) => <div key={item.id} className={styles.invitation}><div><h3>{ item.company_name }</h3><p>Финансист · приглашение до { formatDate(item.expires_at) }</p></div><div className={styles.actions}><ActionButton loading={request.busy} onClick={() => accept(item)}>Принять</ActionButton><ActionButton variant="secondary" disabled={request.busy} onClick={() => setDeclined(item)}>Отклонить</ActionButton></div></div>) }</div></Panel> }
-                        { resource.data.companies.length ? <div className={styles.grid}>{ resource.data.companies.map(( company ) => <Link key={company.id} className={styles.company} href={companyPath(company.id)}><div className={styles.companyTop}><span className={styles.avatar}>{ Array.from(company.name)[0] }</span><Icon name="arrow-right" /></div><h2>{ company.name }</h2><p>{ company.inn ? `ИНН ${company.inn}` : "ИНН не указан" }</p><Badge>{ company.membership.role === "owner" ? "Владелец" : "Финансист" }</Badge></Link>) }</div> : <Panel><EmptyState title="Начнём с вашей компании" icon="building" action={<ActionButton onClick={() => setCreating(true)}>Создать первую компанию</ActionButton>}>После создания укажите остаток на счёте, загрузите операции и добавьте будущие платежи.</EmptyState></Panel> }
-                    </>
+            <DataState loading={companies.loading} error={companies.error} onRetry={companies.reload}>
+                { companies.data && (
+                    companies.data.length ? <div className={styles.grid}>{ companies.data.map(( company ) => <Link key={company.id} className={styles.company} href={companyPath(company.id)}><div className={styles.companyTop}><span className={styles.avatar}>{ Array.from(company.name)[0] }</span><Icon name="arrow-right" /></div><h2>{ company.name }</h2><p>{ company.inn ? `ИНН ${company.inn}` : "ИНН не указан" }</p><Badge>{ company.membership.role === "owner" ? "Владелец" : "Финансист" }</Badge></Link>) }</div> : <Panel><EmptyState title="Начнём с вашей компании" icon="building" action={<ActionButton onClick={() => setCreating(true)}>Создать первую компанию</ActionButton>}>После создания укажите остаток на счёте, загрузите операции и добавьте будущие платежи.</EmptyState></Panel>
                 ) }
             </DataState>
+            <Panel title="Приглашения в компании">
+                <DataState loading={invitations.loading} error={invitations.error ? `Не удалось загрузить приглашения. ${invitations.error}` : null} onRetry={invitations.reload}>
+                    { invitations.data && (
+                        invitations.data.some(( item ) => item.status === "pending") ? <Panel title="Вас приглашают в команду"><div className={styles.stack}>{ invitations.data.filter(( item ) => item.status === "pending").map(( item ) => <div key={item.id} className={styles.invitation}><div><h3>{ item.company_name }</h3><p>Финансист · приглашение до { formatDate(item.expires_at) }</p></div><div className={styles.actions}><ActionButton loading={request.busy} onClick={() => accept(item)}>Принять</ActionButton><ActionButton variant="secondary" disabled={request.busy} onClick={() => setDeclined(item)}>Отклонить</ActionButton></div></div>) }</div></Panel> : <p>Нет ожидающих приглашений.</p>
+                    ) }
+                </DataState>
+            </Panel>
             { creating && <Modal title="Новая компания" busy={request.busy} onClose={() => setCreating(false)}><form className={styles.form} noValidate onSubmit={createCompany}><Field name="name" label="Название компании" placeholder="Например, ООО «Вектор»" autoComplete="organization" autoFocus disabled={request.busy} /><Field name="inn" label="ИНН — необязательно" inputMode="numeric" placeholder="10 или 12 цифр" disabled={request.busy} /><p>Валюта: российский рубль. Часовой пояс: Москва.</p><FormError message={request.error} /><ActionButton type="submit" loading={request.busy}>Создать компанию</ActionButton></form></Modal> }
             { declined && <Modal title="Отклонить приглашение?" busy={request.busy} onClose={() => setDeclined(null)}><p>Вы не присоединитесь к компании «{ declined.company_name }». Владелец сможет пригласить вас повторно.</p><div className={styles.actions}><ActionButton variant="secondary" disabled={request.busy} onClick={() => setDeclined(null)}>Оставить</ActionButton><ActionButton variant="danger" loading={request.busy} onClick={decline}>Отклонить</ActionButton></div><FormError message={request.error} /></Modal> }
         </main>
