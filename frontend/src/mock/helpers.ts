@@ -17,7 +17,10 @@ const isMockError = ( error: unknown ): error is IMockError => {
 };
 
 
-const mockId = ( prefix: string ) => `${prefix}_${crypto.randomUUID()}`;
+const mockId = ( prefix: string ) => {
+    const uuid = crypto.randomUUID();
+    return [ "cmp", "acc", "cat", "txn", "pay", "match", "con", "imp", "fc", "snap", "sc" ].includes(prefix) ? uuid : `${prefix}_${uuid}`;
+};
 
 
 const now = () => new Date().toISOString();

@@ -1,4 +1,4 @@
-import type { IAccount, ICompany, IConnection, IForecastSucceeded, IImport, IInvitation, IMatch, IMembership, IPayment, IScenario, ITransaction, IUser } from "@/interfaces";
+import type { IAccount, ICompany, IConnection, IEmailVerificationChallenge, IForecastSucceeded, IImport, IInvitation, IMatch, IMembership, IPayment, IScenario, ITransaction, IUser } from "@/interfaces";
 
 import bodies from "./bodies.json";
 
@@ -18,10 +18,11 @@ interface IMockCompanyData {
 
 
 interface IMockState {
-    schema: 1;
+    schema: 2;
     user: IUser | null;
     registeredUsers: IUser[];
     pendingEmail: string;
+    verificationChallenge: (IEmailVerificationChallenge & { consumedCode?: string }) | null;
     pendingLoginUser: IUser | null;
     resetEmail: string;
     passwordResetVerified: boolean;
@@ -32,7 +33,7 @@ interface IMockState {
 }
 
 
-const STORAGE_KEY = "saldo-mock-state-v1";
+const STORAGE_KEY = "saldo-mock-state-v2";
 
 
 const fixture = <T,>( name: keyof typeof bodies ): T => structuredClone(bodies[name]) as T;
@@ -81,23 +82,24 @@ const createState = (): IMockState => {
         const date = new Date(`${companyData.account.balance_as_of}T00:00:00Z`);
 
         date.setUTCDate(date.getUTCDate() + 2 + index * 5);
-        payment.id = `pay_demo_${index}`;
+        payment.id = crypto.randomUUID();
         payment.direction = inflow ? "inflow" : "outflow";
         payment.amount.amount_minor = amount;
         payment.remaining_amount.amount_minor = amount;
         payment.scheduled_date = date.toISOString().slice(0, 10);
         payment.counterparty_name = inflow ? "Демо-покупатель" : "Демо-поставщик";
         payment.description = inflow ? "Оплата заказа" : "Плановые расходы";
-        payment.category_id = inflow ? null : "cat_rent";
+        payment.category_id = inflow ? null : fixture<{ items: { id: string }[] }>("CategoryList").items[0].id;
         companyData.payments.push(payment);
     }
 
 
     return {
-        schema: 1,
+        schema: 2,
         user: null,
         registeredUsers: [ fixture<IUser>("User") ],
         pendingEmail: "",
+        verificationChallenge: null,
         pendingLoginUser: null,
         resetEmail: "",
         passwordResetVerified: false,
@@ -123,7 +125,7 @@ const readMockState = (): IMockState => {
         if (stored) {
             const parsed: IMockState = JSON.parse(stored);
 
-            if (parsed.schema === 1 && Array.isArray(parsed.companies) && parsed.companyData && Array.isArray(parsed.registeredUsers) && parsed.idempotency) {
+            if (parsed.schema === 2 && Array.isArray(parsed.companies) && parsed.companyData && Array.isArray(parsed.registeredUsers) && parsed.idempotency) {
                 memoryState = { ...parsed, pendingLoginUser: parsed.pendingLoginUser || null, resetEmail: parsed.resetEmail || "", passwordResetVerified: parsed.passwordResetVerified === true };
             }
         }

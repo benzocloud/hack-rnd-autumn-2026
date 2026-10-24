@@ -1,4 +1,5 @@
 import type { IUser } from "@/interfaces/Entities";
+import type { IEmailVerificationChallenge } from "./response";
 
 
 type AuthMode = "login" | "register" | "verify-code" | "forgot-password" | "reset-password";
@@ -11,6 +12,7 @@ interface IAuthState {
     user: IUser | null;
     status: "idle" | "checking" | "ready" | "failed";
     verificationEmail: string;
+    verificationChallenge: IEmailVerificationChallenge | null;
 }
 
 

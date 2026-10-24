@@ -274,3 +274,10 @@
         transition: none;
     }
 }
+
+.consentText {
+    max-height: 18rem;
+    overflow: auto;
+    white-space: pre-wrap;
+    font: inherit;
+}

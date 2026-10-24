@@ -3,15 +3,15 @@
 import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
 import getErrorMessage from "@/helpers/getErrorMessage";
 import { showErrorSnackbar, showSuccessSnackbar } from "@/helpers/snackbar";
 import validateAuthForm from "@/helpers/validateAuthForm";
 import type { AuthMode, IPersonalDataConsentDocument, VerificationPurpose } from "@/interfaces";
-import { accountService, authService } from "@/service";
-import { clearAuthUser, setAuthUser, setVerificationEmail } from "@/store/authSlice";
+import { authService } from "@/service";
+import { clearAuthUser, setAuthUser, setVerificationChallenge, setVerificationEmail } from "@/store/authSlice";
 import { setSelectedCompany } from "@/store/companySlice";
 import type { AppDispatch, RootState } from "@/store/store";
 import { AuthButton, AuthCheckbox, AuthInput, CodeInput, Spinner } from "@/widgets";
@@ -19,16 +19,11 @@ import { AuthButton, AuthCheckbox, AuthInput, CodeInput, Spinner } from "@/widge
 import styles from "./style.module.scss";
 
 
-type IProps = ({
-    mode: "register";
-    consentDocument: Pick<IPersonalDataConsentDocument, "document_version" | "document_sha256">;
-} | {
-    mode: Exclude<AuthMode, "register">;
-    consentDocument?: never;
-}) & {
+interface IProps {
+    mode: AuthMode;
     verificationPurpose?: VerificationPurpose;
     resetToken?: string;
-};
+}
 
 
 const titles: Record<AuthMode, string> = {
@@ -48,10 +43,12 @@ const buttons: Record<AuthMode, string> = {
 };
 
 
-const AuthForm = ( { mode, consentDocument, verificationPurpose = "register", resetToken = "" }: IProps ) => {
+const AuthForm = ( { mode, verificationPurpose = "register", resetToken = "" }: IProps ) => {
     const [ busy, setBusy ] = useState(false);
     const [ resendBusy, setResendBusy ] = useState(false);
-    const verificationEmail = useSelector(( state: RootState ) => state.auth.verificationEmail);
+    const [ consentDocument, setConsentDocument ] = useState<IPersonalDataConsentDocument | null>(null);
+    const [ consentFailed, setConsentFailed ] = useState(false);
+    const { user, verificationEmail, verificationChallenge } = useSelector(( state: RootState ) => state.auth);
 
     const router = useRouter();
     const dispatch = useDispatch<AppDispatch>();
@@ -60,12 +57,47 @@ const AuthForm = ( { mode, consentDocument, verificationPurpose = "register", re
     const consentRef = useRef<HTMLInputElement>(null);
     const requestRef = useRef<AbortController | null>(null);
     const resendRef = useRef<AbortController | null>(null);
+    const consentRequestRef = useRef<AbortController | null>(null);
     const isRegister = mode === "register";
     const isLogin = mode === "login";
     const isCode = mode === "verify-code";
     const isReset = mode === "reset-password";
     const codeTitles: Record<VerificationPurpose, string> = { register: "Подтверждение регистрации", login: "Подтверждение входа", reset: "Подтверждение сброса пароля" };
     const codeBackUrl = verificationPurpose === "register" ? "/register" : verificationPurpose === "reset" ? "/forgot-password" : "/login";
+
+
+    const loadConsentDocument = useCallback(() => {
+        consentRequestRef.current?.abort();
+        const controller = new AbortController();
+        consentRequestRef.current = controller;
+        return authService.getPersonalDataConsentDocument(controller.signal).then(( document ) => {
+            if (!controller.signal.aborted) {
+                setConsentDocument(document);
+            }
+        }, () => {
+            if (!controller.signal.aborted) {
+                setConsentFailed(true);
+            }
+        });
+    }, []);
+
+
+    const reloadConsentDocument = () => {
+        setConsentDocument(null);
+        setConsentFailed(false);
+        if (consentRef.current) {
+            consentRef.current.checked = false;
+        }
+        return loadConsentDocument();
+    };
+
+
+    useEffect(() => {
+        if (isRegister) {
+            void loadConsentDocument();
+        }
+        return () => consentRequestRef.current?.abort();
+    }, [ isRegister, loadConsentDocument ]);
 
 
     useEffect(() => {
@@ -107,6 +139,16 @@ const AuthForm = ( { mode, consentDocument, verificationPurpose = "register", re
             return;
         }
 
+        if (isRegister && !consentDocument) {
+            showErrorSnackbar("Дождитесь загрузки актуального текста согласия.");
+            return;
+        }
+
+        if (isCode && verificationPurpose === "register" && (!verificationChallenge || Date.parse(verificationChallenge.expires_at) <= Date.now())) {
+            showErrorSnackbar("Запросите новый код подтверждения.");
+            return;
+        }
+
         if (isReset && (!resetToken || (process.env.developerMode !== "mock" && (resetToken.length < 16 || resetToken.length > 512)))) {
             showErrorSnackbar("Ссылка восстановления недействительна. Запросите новую.");
 
@@ -135,13 +177,16 @@ const AuthForm = ( { mode, consentDocument, verificationPurpose = "register", re
                 if (process.env.developerMode === "mock") {
                     dispatch(clearAuthUser());
                     dispatch(setVerificationEmail(email || response.user.email));
+                    dispatch(setVerificationChallenge(null));
                     showSuccessSnackbar("Для подтверждения входа введите любые шесть цифр.");
                     router.push("/verify-code?purpose=login");
                 } else {
                     dispatch(setAuthUser(response.user));
-                    router.replace("/");
+                    dispatch(setVerificationEmail(response.user.email));
+                    dispatch(setVerificationChallenge(null));
+                    router.replace(response.user.email_verified ? "/" : "/verify-code");
                 }
-            } else if (isRegister) {
+            } else if (isRegister && consentDocument) {
                 const response = await authService.register({
                     data: {
                         email,
@@ -156,29 +201,30 @@ const AuthForm = ( { mode, consentDocument, verificationPurpose = "register", re
                 }, controller.signal);
 
                 dispatch(setVerificationEmail(email));
+                dispatch(setVerificationChallenge(response));
                 showSuccessSnackbar(response.message);
                 router.push("/verify-code");
             } else if (isCode) {
-                const token = String(form.get("token") || "").trim();
+                const token = String(form.get("code") || form.get("token") || "").trim();
 
                 if (verificationPurpose === "login") {
                     const response = await authService.confirmMockLogin({ data: { token } }, controller.signal);
 
                     dispatch(setAuthUser(response.user));
                     showSuccessSnackbar("Вход подтверждён.");
-                    router.replace("/");
+                    router.replace(response.user.email_verified ? "/" : "/verify-code");
                 } else if (verificationPurpose === "reset") {
                     const response = await authService.confirmMockPasswordReset({ data: { token } }, controller.signal);
 
                     showSuccessSnackbar(response.message);
                     router.replace(`/reset-password?token=${encodeURIComponent(token)}`);
-                } else {
-                    const response = await authService.verifyEmail({ data: { token } }, controller.signal);
-                    const user = await accountService.getMe(controller.signal);
+                } else if (verificationChallenge) {
+                    const response = await authService.verifyEmail({ data: { challenge_id: verificationChallenge.challenge_id, code: token } }, controller.signal);
 
-                    dispatch(setAuthUser(user));
+                    dispatch(clearAuthUser());
+                    dispatch(setVerificationChallenge(null));
                     showSuccessSnackbar(response.message);
-                    router.replace("/");
+                    router.replace("/login");
                 }
             } else if (mode === "forgot-password") {
                 const response = await authService.forgotPassword({ data: { email } }, controller.signal);
@@ -206,9 +252,7 @@ const AuthForm = ( { mode, consentDocument, verificationPurpose = "register", re
             }
 
             if (isRegister && axios.isAxiosError(error) && error.response?.data?.error?.code === "CONSENT_DOCUMENT_CHANGED") {
-                if (consentRef.current) {
-                    consentRef.current.checked = false;
-                }
+                await reloadConsentDocument();
             }
         } finally {
             requestRef.current = null;
@@ -218,7 +262,8 @@ const AuthForm = ( { mode, consentDocument, verificationPurpose = "register", re
 
 
     const resendCode = async () => {
-        if (resendRef.current || !verificationEmail) {
+        const email = verificationEmail || user?.email || emailRef.current?.value.trim();
+        if (resendRef.current || !email) {
             return;
         }
 
@@ -228,11 +273,16 @@ const AuthForm = ( { mode, consentDocument, verificationPurpose = "register", re
         setResendBusy(true);
 
         try {
-            const response = verificationPurpose === "reset"
-                ? await authService.forgotPassword({ data: { email: verificationEmail } }, controller.signal)
-                : await authService.resendVerification({ data: { email: verificationEmail } }, controller.signal);
+            if (verificationPurpose === "reset") {
+                const response = await authService.forgotPassword({ data: { email } }, controller.signal);
+                showSuccessSnackbar(response.message);
+            } else {
+                const response = await authService.resendVerification({ data: { email } }, controller.signal);
+                dispatch(setVerificationChallenge(response));
+                showSuccessSnackbar(response.message);
+            }
 
-            showSuccessSnackbar(response.message);
+            dispatch(setVerificationEmail(email));
         } catch {} finally {
             resendRef.current = null;
             setResendBusy(false);
@@ -265,7 +315,8 @@ const AuthForm = ( { mode, consentDocument, verificationPurpose = "register", re
                         ) }
 
                         { (isRegister || isReset) && <AuthInput showLabel={isRegister} name="confirm_password" label="Повторите пароль" type="password" autoComplete="new-password" /> }
-                        { isCode && (process.env.developerMode === "mock" ? <CodeInput /> : <AuthInput name="token" label="Токен подтверждения из письма" placeholder="0000" type="text" autoComplete="one-time-code" />) }
+                        { isCode && !verificationEmail && !user?.email && <AuthInput ref={emailRef} name="email" label="Почта для повторного кода" type="email" autoComplete="email" /> }
+                        { isCode && <CodeInput name={verificationPurpose === "register" ? "code" : "token"} /> }
                     </fieldset>
 
                     { isLogin && (
@@ -274,8 +325,10 @@ const AuthForm = ( { mode, consentDocument, verificationPurpose = "register", re
 
                     { isRegister && (
                         <div className={styles.consent}>
-                            <AuthCheckbox ref={consentRef} name="personal_data_consent" disabled={busy}>
-                                Я согласен на <Link className={styles.legalLink} href="/personal-data-consent" target="_blank" rel="noopener">обработку персональных данных</Link>
+                            { consentDocument ? <details open><summary>Согласие на обработку персональных данных — {consentDocument.document_version}</summary><pre className={styles.consentText}>{consentDocument.text}</pre></details> : <p role="status">{consentFailed ? "Не удалось загрузить согласие." : "Загружаем актуальный текст согласия…"}</p> }
+                            { consentFailed && <button type="button" onClick={() => void reloadConsentDocument()}>Повторить загрузку</button> }
+                            <AuthCheckbox ref={consentRef} name="personal_data_consent" disabled={busy || !consentDocument}>
+                                Я согласен на обработку персональных данных по тексту выше
                             </AuthCheckbox>
 
                             <AuthCheckbox name="privacy_policy" disabled={busy}>
@@ -284,7 +337,7 @@ const AuthForm = ( { mode, consentDocument, verificationPurpose = "register", re
                         </div>
                     ) }
 
-                    <AuthButton type="submit" loading={busy}>{ buttons[mode] }</AuthButton>
+                    <AuthButton type="submit" loading={busy} disabled={isRegister && !consentDocument}>{ buttons[mode] }</AuthButton>
                 </form>
 
                 { isLogin ? (
@@ -294,7 +347,8 @@ const AuthForm = ( { mode, consentDocument, verificationPurpose = "register", re
                     </div>
                 ) : (
                     <div className={styles.footer}>
-                        { isCode && verificationEmail && <button className={`${styles.link} ${styles.requestLink}`} type="button" disabled={resendBusy || busy} aria-busy={resendBusy || undefined} onClick={resendCode}><span className={resendBusy ? styles.contentHidden : undefined} aria-hidden={resendBusy || undefined}>Отправить код повторно</span>{ resendBusy && <span className={styles.loading}><Spinner /></span> }</button> }
+                        { isCode && user && <Link className={styles.link} href="/account">Аккаунт и выход</Link> }
+                        { isCode && <button className={`${styles.link} ${styles.requestLink}`} type="button" disabled={resendBusy || busy} aria-busy={resendBusy || undefined} onClick={resendCode}><span className={resendBusy ? styles.contentHidden : undefined} aria-hidden={resendBusy || undefined}>Отправить код повторно</span>{ resendBusy && <span className={styles.loading}><Spinner /></span> }</button> }
                         <p>{ isRegister ? "Уже есть аккаунт? " : isCode && verificationPurpose !== "login" ? "Указали не ту почту? " : "" }<Link className={styles.link} href={isCode ? codeBackUrl : "/login"}>{ isRegister ? "Войти" : isCode && verificationPurpose !== "login" ? "Обратно" : "Вернуться ко входу" }</Link></p>
                     </div>
                 ) }

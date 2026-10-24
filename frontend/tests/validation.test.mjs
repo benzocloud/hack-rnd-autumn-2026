@@ -13,14 +13,12 @@ const form = ( values = {} ) => {
 };
 
 
-test("login rejects empty or malformed email and blank passwords in every mode", () => {
-    for (const mockMode of [ true, false ]) {
-        assert.match(validateAuthForm("login", form(), mockMode), /почту/);
-        assert.match(validateAuthForm("login", form({ email: "   ", password: "password" }), mockMode), /почту/);
-        assert.match(validateAuthForm("login", form({ email: "not-an-email", password: " " }), mockMode), /адрес почты/);
-        assert.match(validateAuthForm("login", form({ email: "test@example.com", password: "" }), mockMode), /пароль/);
-        assert.match(validateAuthForm("login", form({ email: "test@example.com", password: " \t\n " }), mockMode), /пароль/);
-    }
+test("login rejects empty or malformed email and blank passwords", () => {
+    assert.match(validateAuthForm("login", form()), /почту/);
+    assert.match(validateAuthForm("login", form({ email: "   ", password: "password" })), /почту/);
+    assert.match(validateAuthForm("login", form({ email: "not-an-email", password: " " })), /адрес почты/);
+    assert.match(validateAuthForm("login", form({ email: "test@example.com", password: "" })), /пароль/);
+    assert.match(validateAuthForm("login", form({ email: "test@example.com", password: " \t\n " })), /пароль/);
 });
 
 
@@ -56,10 +54,10 @@ test("recovery and code errors are returned for snackbar display", () => {
     assert.equal(validateAuthForm("forgot-password", form({ email: "test@example.com" })), null);
 
     for (const token of [ "", "0", "0000", "00000", "0000000", "abcdef" ]) {
-        assert.ok(validateAuthForm("verify-code", form({ token }), true));
+        assert.ok(validateAuthForm("verify-code", form({ token })));
     }
 
-    assert.equal(validateAuthForm("verify-code", form({ token: "012345" }), true), null);
+    assert.equal(validateAuthForm("verify-code", form({ token: "012345" })), null);
 });
 
 
@@ -70,8 +68,9 @@ test("new password is validated in code without requiring email or registration 
 });
 
 
-test("real verification accepts the full backend token, never a locally approved short code", () => {
-    assert.ok(validateAuthForm("verify-code", form({ token: "1234" }), false));
-    assert.ok(validateAuthForm("verify-code", form({ token: "012345" }), false));
-    assert.equal(validateAuthForm("verify-code", form({ token: "a-valid-backend-token-123456" }), false), null);
+test("email verification requires exactly six ASCII digits, preserving leading zeros", () => {
+    for (const code of [ "1234", "1234567", "abcdef", "１２３４５６", "a-valid-backend-token-123456" ]) {
+        assert.ok(validateAuthForm("verify-code", form({ code })));
+    }
+    assert.equal(validateAuthForm("verify-code", form({ code: "012345" })), null);
 });

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { isAuthRoute, isPublicRoute, redirectToLogin } from "../src/helpers/auth.ts";
+import { isAuthRoute, isPublicRoute, canVerifyEmail, redirectToLogin } from "../src/helpers/auth.ts";
 
 
 test("auth: public documents, auth routes and one redirect without loops", () => {
@@ -23,4 +23,11 @@ test("auth: public documents, auth routes and one redirect without loops", () =>
     redirectToLogin();
     redirectToLogin();
     assert.deepEqual(calls, [ "/login" ]);
+});
+
+test("unverified authenticated user can reach email verification without an auth redirect loop", () => {
+    assert.ok(canVerifyEmail("/verify-code/", { email_verified: false }));
+    assert.ok(!canVerifyEmail("/login", { email_verified: false }));
+    assert.ok(!canVerifyEmail("/verify-code", { email_verified: true }));
+    assert.ok(!canVerifyEmail("/verify-code", null));
 });

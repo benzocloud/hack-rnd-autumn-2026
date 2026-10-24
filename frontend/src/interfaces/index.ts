@@ -23,4 +23,6 @@ export type { IMockResponse } from "./mock";
 export type { IPersonalDataConsentAcceptance } from "./auth/request";
 export type { IPersonalDataConsentDocument } from "./auth/response";
 export type { AuthMode, VerificationPurpose, IAuthState } from "./auth/state";
+export type { IVerifyEmailRequest } from "./auth/request";
+export type { IEmailVerificationChallenge } from "./auth/response";
 export type { ForecastPeriod, IDashboardData } from "./dashboard";

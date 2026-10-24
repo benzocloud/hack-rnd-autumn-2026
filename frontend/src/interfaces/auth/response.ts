@@ -13,6 +13,12 @@ interface IAcknowledgement {
 }
 
 
+interface IEmailVerificationChallenge extends IAcknowledgement {
+    challenge_id: string;
+    expires_at: string;
+}
+
+
 interface ISession {
     user: IUser;
     expires_at: string;
@@ -25,4 +31,4 @@ interface ICsrfToken {
 }
 
 
-export type { IPersonalDataConsentDocument, IAcknowledgement, ISession, ICsrfToken };
+export type { IPersonalDataConsentDocument, IAcknowledgement, IEmailVerificationChallenge, ISession, ICsrfToken };

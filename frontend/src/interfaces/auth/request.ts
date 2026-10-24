@@ -24,6 +24,12 @@ interface ITokenRequest {
 }
 
 
+interface IVerifyEmailRequest {
+    challenge_id: string;
+    code: string;
+}
+
+
 interface IEmailRequest {
     email: string;
 }
@@ -46,7 +52,7 @@ interface ILoginParams {
 
 
 interface IVerifyEmailParams {
-    data: ITokenRequest;
+    data: IVerifyEmailRequest;
 }
 
 
@@ -65,4 +71,4 @@ interface IResetPasswordParams {
 }
 
 
-export type { IPersonalDataConsentAcceptance, IRegisterRequest, ILoginRequest, ITokenRequest, IEmailRequest, IResetPasswordRequest, IRegisterParams, ILoginParams, IVerifyEmailParams, IResendVerificationParams, IForgotPasswordParams, IResetPasswordParams };
+export type { IPersonalDataConsentAcceptance, IRegisterRequest, ILoginRequest, ITokenRequest, IVerifyEmailRequest, IEmailRequest, IResetPasswordRequest, IRegisterParams, ILoginParams, IVerifyEmailParams, IResendVerificationParams, IForgotPasswordParams, IResetPasswordParams };

@@ -1,4 +1,4 @@
-import type { IAcknowledgement, ICsrfToken, IForgotPasswordParams, ILoginParams, IPersonalDataConsentDocument, IRegisterParams, IResendVerificationParams, IResetPasswordParams, ISession, IVerifyEmailParams } from "@/interfaces";
+import type { IAcknowledgement, ICsrfToken, IEmailVerificationChallenge, IForgotPasswordParams, ILoginParams, IPersonalDataConsentDocument, IRegisterParams, IResendVerificationParams, IResetPasswordParams, ISession, ITokenRequest, IVerifyEmailParams } from "@/interfaces";
 
 import api from "../api";
 
@@ -22,8 +22,8 @@ const getPersonalDataConsentDocument = async ( signal?: AbortSignal ): Promise<I
 };
 
 
-const register = async ( request: IRegisterParams, signal?: AbortSignal ): Promise<IAcknowledgement> => {
-    const response = await api.request<IAcknowledgement>({
+const register = async ( request: IRegisterParams, signal?: AbortSignal ): Promise<IEmailVerificationChallenge> => {
+    const response = await api.request<IEmailVerificationChallenge>({
         method: "POST",
         url: "/auth/register",
         signal,
@@ -61,8 +61,8 @@ const verifyEmail = async ( request: IVerifyEmailParams, signal?: AbortSignal ):
 };
 
 
-const resendVerification = async ( request: IResendVerificationParams, signal?: AbortSignal ): Promise<IAcknowledgement> => {
-    const response = await api.request<IAcknowledgement>({
+const resendVerification = async ( request: IResendVerificationParams, signal?: AbortSignal ): Promise<IEmailVerificationChallenge> => {
+    const response = await api.request<IEmailVerificationChallenge>({
         method: "POST",
         url: "/auth/resend-verification",
         signal,
@@ -100,7 +100,7 @@ const resetPassword = async ( request: IResetPasswordParams, signal?: AbortSigna
 };
 
 
-const confirmMockLogin = async ( request: IVerifyEmailParams, signal?: AbortSignal ): Promise<ISession> => {
+const confirmMockLogin = async ( request: { data: ITokenRequest }, signal?: AbortSignal ): Promise<ISession> => {
     if (process.env.developerMode !== "mock") {
         throw new Error("Подтверждение входа кодом пока недоступно. Вернитесь ко входу.");
     }
@@ -111,7 +111,7 @@ const confirmMockLogin = async ( request: IVerifyEmailParams, signal?: AbortSign
 };
 
 
-const confirmMockPasswordReset = async ( request: IVerifyEmailParams, signal?: AbortSignal ): Promise<IAcknowledgement> => {
+const confirmMockPasswordReset = async ( request: { data: ITokenRequest }, signal?: AbortSignal ): Promise<IAcknowledgement> => {
     if (process.env.developerMode !== "mock") {
         throw new Error("Откройте ссылку восстановления из письма.");
     }

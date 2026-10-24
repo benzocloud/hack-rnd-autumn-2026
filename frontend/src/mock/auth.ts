@@ -1,8 +1,18 @@
 import { isMockVerificationCode } from "@/helpers/verificationCode";
-import type { IEmailRequest, ILoginRequest, IRegisterRequest, ITokenRequest, IUser } from "@/interfaces";
+import type { IEmailRequest, IEmailVerificationChallenge, ILoginRequest, IRegisterRequest, ITokenRequest, IUser, IVerifyEmailRequest } from "@/interfaces";
 
 import { expiresAt, mockError, mockId } from "./helpers";
 import { fixture, type IMockState } from "./state";
+
+
+const issueVerificationChallenge = ( state: IMockState, email: string ): IEmailVerificationChallenge => {
+    const challenge = { message: "Если подтверждение требуется, письмо с кодом будет отправлено.", challenge_id: crypto.randomUUID(), expires_at: new Date(Date.now() + 600000).toISOString() };
+    if (email) {
+        state.pendingEmail = email;
+        state.verificationChallenge = challenge;
+    }
+    return challenge;
+};
 
 
 const handleMockAuth = ( path: string, data: unknown, state: IMockState ): unknown => {
@@ -27,12 +37,13 @@ const handleMockAuth = ( path: string, data: unknown, state: IMockState ): unkno
         }
 
         const existing = state.registeredUsers.find(( user ) => user.email === request.email);
-        const user: IUser = { id: existing?.id || mockId("usr"), email: request.email, display_name: request.display_name, email_verified: false };
+        if (existing) {
+            return issueVerificationChallenge(state, "");
+        }
+        const user: IUser = { id: mockId("usr"), email: request.email, display_name: request.display_name, email_verified: false };
 
         state.registeredUsers = [ ...state.registeredUsers.filter(( item ) => item.id !== user.id), user ];
-        state.pendingEmail = request.email;
-
-        return { message: "Регистрация завершена. Для подтверждения введите любые шесть цифр." };
+        return issueVerificationChallenge(state, request.email);
     }
 
     if (path === "/auth/login") {
@@ -76,29 +87,34 @@ const handleMockAuth = ( path: string, data: unknown, state: IMockState ): unkno
     }
 
     if (path === "/auth/verify-email") {
-        if (!isMockVerificationCode((data as ITokenRequest).token)) {
-            throw mockError(400, "Введите шестизначный код. В режиме mock подойдут любые цифры.", "INVALID_TOKEN");
+        const request = data as IVerifyEmailRequest;
+        const challenge = state.verificationChallenge;
+        if (!isMockVerificationCode(request.code)) {
+            throw mockError(422, "Введите шестизначный код.", "VALIDATION_ERROR");
         }
 
         const user = state.registeredUsers.find(( item ) => item.email === state.pendingEmail);
 
-        if (!user) {
-            throw mockError(400, "Сначала зарегистрируйте аккаунт.", "INVALID_TOKEN");
+        if (!challenge || request.challenge_id !== challenge.challenge_id || Date.parse(challenge.expires_at) <= Date.now() || !user || (challenge.consumedCode !== undefined && challenge.consumedCode !== request.code)) {
+            throw mockError(422, "Код недействителен или истёк. Запросите новый.", "CODE_INVALID_OR_EXPIRED");
         }
 
         user.email_verified = true;
-        state.user = user;
-        state.expiresAt = expiresAt();
-        state.pendingEmail = "";
-        state.pendingLoginUser = null;
+        if (state.user?.id === user.id) {
+            state.user.email_verified = true;
+        }
+        if (state.pendingLoginUser?.id === user.id) {
+            state.pendingLoginUser.email_verified = true;
+        }
+        challenge.consumedCode = request.code;
 
-        return { message: "Почта подтверждена. Вы вошли в аккаунт." };
+        return { message: "Почта подтверждена. Войдите в аккаунт." };
     }
 
     if (path === "/auth/resend-verification") {
-        state.pendingEmail = (data as IEmailRequest).email;
-
-        return { message: "Введите любые шесть цифр. Письмо в режиме mock не отправляется." };
+        const email = (data as IEmailRequest).email;
+        const eligible = state.registeredUsers.some(( user ) => user.email === email && !user.email_verified);
+        return issueVerificationChallenge(state, eligible ? email : "");
     }
 
     if (path === "/auth/forgot-password") {

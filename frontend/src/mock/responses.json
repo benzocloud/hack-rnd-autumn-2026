@@ -15,7 +15,7 @@
         "method": "POST",
         "path": "/auth/register",
         "status": 202,
-        "body": "Acknowledgement"
+        "body": "EmailVerificationChallenge"
     },
     {
         "method": "POST",
@@ -33,7 +33,7 @@
         "method": "POST",
         "path": "/auth/resend-verification",
         "status": 202,
-        "body": "Acknowledgement"
+        "body": "EmailVerificationChallenge"
     },
     {
         "method": "POST",

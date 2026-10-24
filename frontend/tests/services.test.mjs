@@ -51,13 +51,20 @@ test("mock: all endpoints, persisted mutations, auth, jobs, cancellation and no 
 
     const consent = await services.authService.getPersonalDataConsentDocument();
 
-    await services.authService.register({ data: { email: "demo@example.com", password: "demo-password", display_name: "Демо", personal_data_consent: { accepted: true, document_version: consent.document_version, document_sha256: consent.document_sha256 } } });
-    await assert.rejects(services.authService.verifyEmail({ data: { token: "1234" } }), ( error ) => error.response.status === 400);
-    await services.authService.resendVerification({ data: { email: "demo@example.com" } });
-    await services.authService.verifyEmail({ data: { token: "012345" } });
-    assert.equal((await services.accountService.getMe()).email, "demo@example.com");
-    assert.equal((await services.accountService.getMe()).email_verified, true);
-    await assert.rejects(services.authService.verifyEmail({ data: { token: "012345" } }), ( error ) => error.response.status === 400);
+    const registration = { email: "demo@example.com", password: "demo-password", display_name: "Демо", personal_data_consent: { accepted: true, document_version: consent.document_version, document_sha256: consent.document_sha256 } };
+    await assert.rejects(services.authService.register({ data: { ...registration, personal_data_consent: { ...registration.personal_data_consent, document_sha256: "0".repeat(64) } } }), ( error ) => error.response.status === 409 && error.response.data.error.code === "CONSENT_DOCUMENT_CHANGED");
+    const initial = await services.authService.register({ data: registration });
+    assert.match(initial.challenge_id, /^[0-9a-f-]{36}$/);
+    assert.ok(Date.parse(initial.expires_at) > Date.now() && Date.parse(initial.expires_at) <= Date.now() + 600000);
+    await assert.rejects(services.authService.verifyEmail({ data: { challenge_id: initial.challenge_id, code: "1234" } }), ( error ) => error.response.status === 422);
+    const replacement = await services.authService.resendVerification({ data: { email: registration.email } });
+    assert.notEqual(initial.challenge_id, replacement.challenge_id);
+    await assert.rejects(services.authService.verifyEmail({ data: { challenge_id: initial.challenge_id, code: "012345" } }), ( error ) => error.response.data.error.code === "CODE_INVALID_OR_EXPIRED");
+    const verification = { challenge_id: replacement.challenge_id, code: "012345" };
+    await services.authService.verifyEmail({ data: verification });
+    await services.authService.verifyEmail({ data: verification });
+    await assert.rejects(services.authService.verifyEmail({ data: { ...verification, code: "123456" } }), ( error ) => error.response.status === 422);
+    await assert.rejects(services.accountService.getMe(), ( error ) => error.response.status === 401);
 
     const session = await services.authService.login({ data: { email: "demo@example.com", password: "" } });
 
@@ -100,8 +107,8 @@ test("mock: all endpoints, persisted mutations, auth, jobs, cancellation and no 
     let transaction = await write("POST", `${base}/transactions`, { operation_date: "2026-10-25", direction: "outflow", amount: { amount_minor: "10000", currency: "RUB" }, counterparty_name: "Демо", payment_purpose: "Оплата", expected_data_version: account.data_version });
 
     assert.equal((await get(`${base}/transactions`, { direction: "inflow" })).items.length, 0);
-    transaction = await write("PATCH", `${base}/transactions/${transaction.id}/category`, { category_id: "cat_rent", version: transaction.version });
-    assert.equal((await get(`${base}/transactions`, { from: "2026-10-25", to: "2026-10-25", category_id: "cat_rent" })).items[0].id, transaction.id);
+    transaction = await write("PATCH", `${base}/transactions/${transaction.id}/category`, { category_id: "019a0c65-9800-7000-8000-000000000002", version: transaction.version });
+    assert.equal((await get(`${base}/transactions`, { from: "2026-10-25", to: "2026-10-25", category_id: "019a0c65-9800-7000-8000-000000000002" })).items[0].id, transaction.id);
 
     let payment = await write("POST", `${base}/payments`, { direction: "outflow", amount: { amount_minor: "20000", currency: "RUB" }, scheduled_date: "2026-10-25", counterparty_name: "Демо", description: "Оплата" });
 

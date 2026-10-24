@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
-import { isAuthRoute, isPublicRoute, redirectToLogin } from "@/helpers/auth";
+import { canVerifyEmail, isAuthRoute, isPublicRoute, redirectToLogin } from "@/helpers/auth";
 import { accountService } from "@/service";
 import { setAuthStatus, setAuthUser } from "@/store/authSlice";
 import type { AppDispatch, RootState } from "@/store/store";
@@ -26,6 +26,7 @@ const AuthBoundary = ( { children }: IProps ) => {
     const pathname = usePathname();
     const publicPage = isPublicRoute(pathname);
     const authPage = isAuthRoute(pathname);
+    const accountPage = pathname.replace(/\/+$/, "") === "/account";
     const router = useRouter();
     const [ checkedPath, setCheckedPath ] = useState<string | null>(null);
 
@@ -36,7 +37,9 @@ const AuthBoundary = ( { children }: IProps ) => {
         }
 
         if (user) {
-            if (authPage) {
+            if (!authPage && !accountPage && !user.email_verified) {
+                router.replace("/verify-code");
+            } else if (authPage && !canVerifyEmail(pathname, user)) {
                 router.replace("/");
             }
 
@@ -66,10 +69,10 @@ const AuthBoundary = ( { children }: IProps ) => {
         });
 
         return () => controller.abort();
-    }, [ publicPage, authPage, user, pathname, dispatch, router ]);
+    }, [ publicPage, authPage, accountPage, user, pathname, dispatch, router ]);
 
 
-    if ((publicPage && !authPage) || (authPage ? !user && checkedPath === pathname : user)) {
+    if ((publicPage && !authPage) || (authPage ? (!user && checkedPath === pathname) || canVerifyEmail(pathname, user) : user && (user.email_verified || accountPage))) {
         return children;
     }
 

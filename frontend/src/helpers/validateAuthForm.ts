@@ -14,15 +14,11 @@ const validatePassword = ( form: FormData ): string | null => {
 };
 
 
-const validateAuthForm = ( mode: AuthMode, form: FormData, mockMode = process.env.developerMode === "mock" ): string | null => {
+const validateAuthForm = ( mode: AuthMode, form: FormData ): string | null => {
     if (mode === "verify-code") {
-        const token = String(form.get("token") || "").trim();
+        const code = String(form.get("code") || form.get("token") || "").trim();
 
-        if (mockMode) {
-            return isMockVerificationCode(token) ? null : "Введите все шесть цифр кода подтверждения.";
-        }
-
-        return token.length >= 16 && token.length <= 512 ? null : "Введите токен подтверждения из письма целиком.";
+        return isMockVerificationCode(code) ? null : "Введите все шесть цифр кода подтверждения.";
     }
 
     if (mode === "reset-password") {
