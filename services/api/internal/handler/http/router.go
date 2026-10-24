@@ -18,6 +18,8 @@ import (
 )
 
 type authClient interface {
+	BeginCompanyCreation(context.Context, *authv1.BeginCompanyCreationRequest, ...grpc.CallOption) (*authv1.BeginCompanyCreationResponse, error)
+	CompleteCompanyCreation(context.Context, *authv1.CompleteCompanyCreationRequest, ...grpc.CallOption) (*authv1.CompleteCompanyCreationResponse, error)
 	ListMemberships(context.Context, *authv1.ListMembershipsRequest, ...grpc.CallOption) (*authv1.ListMembershipsResponse, error)
 	GetPersonalDataConsent(context.Context, *authv1.GetPersonalDataConsentRequest, ...grpc.CallOption) (*authv1.GetPersonalDataConsentResponse, error)
 	GetSecurityContext(context.Context, *authv1.GetSecurityContextRequest, ...grpc.CallOption) (*authv1.GetSecurityContextResponse, error)
@@ -46,6 +48,7 @@ func New(auth authClient, origin string, logger *slog.Logger, ready func(context
 // CoreClients is the composing application's typed transport boundary.
 type CoreClients struct {
 	Companies interface {
+		CreateCompanyBootstrap(context.Context, *corev1.CreateCompanyBootstrapRequest, ...grpc.CallOption) (*corev1.CreateCompanyBootstrapResponse, error)
 		ReadCompany(context.Context, *corev1.ReadCompanyRequest, ...grpc.CallOption) (*corev1.ReadCompanyResponse, error)
 	}
 	Ledger interface {

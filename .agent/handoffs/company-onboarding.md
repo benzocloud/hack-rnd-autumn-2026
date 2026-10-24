@@ -16,8 +16,8 @@ Scope/invariants/checklist: [plan](../plans/company-onboarding.md). Issue не �
 [Draft PR #41](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/41).
 Исходный checkout `prosteyshiyyy/goapi` не изменялся; отдельный worktree.
 Начальная база `fdee0ed`; main обновляется обычным merge перед каждым push.
-Последний включённый main `0f0ff73`, опубликованный head до A2 slice:
-`382fed69d3fe5885f62f3982a02568b73a65fbbd` (RPC/client remote API ref проверен).
+Последний включённый main `0f0ff73`, опубликованный recovery head:
+`b2f882b5d28e637cb35215246ac83bf1ab7ea7f5` (remote API ref проверен).
 
 ## Состояние A0–A5
 
@@ -26,12 +26,13 @@ Scope/invariants/checklist: [plan](../plans/company-onboarding.md). Issue не �
 | A0 | На ревью владельца | Docs links/diff/fences, draft/remote SHA | Caveman/Ponytail без дефектов | Docs-only, runtime не требовался |
 | A1 | На ревью владельца | Полный Auth unit/real PG integration/race/shuffle/vet/build/lint | Два independent reviews `9463e40`, дефектов нет | Auth/Core gates `7f62b72` SUCCESS |
 | A2 | На ревью владельца: recovery готов к push | Полный Auth gate, real PG recovery/race, TLS/Buf/drift | Два reviews RPC/client и recovery; clock-skew fix проверен | Новый recovery SHA требует CI |
-| A3 | Не начат | Нет POST /companies/E2E proof | Pending | Pending |
+| A3 | В работе: API adapter slice | Full API check +41 OpenAPI responses, real Core chain далее | Два reviews adapter, дефектов нет | Новый API SHA ещё не опубликован |
 | A4 | Не начат | PR40/43 из main сохранены; onboarding UI ещё не проверен | Pending | Pending |
 | A5 | Не начат | Нет полного register→owner→account→reload browser E2E | Pending | Pending |
 
-HTTP create пока отсутствует. Durable worker теперь реализован; Core в service
-integration ещё boundary fixture, полный Core/API/browser E2E остаётся A3/A5.
+HTTP create adapter реализован в текущем diff. Durable worker опубликован;
+Core в service integration пока boundary fixture, полный Core/API/browser E2E
+остаётся A3/A5 и ещё не объявляется пройденным.
 Продукт/импорт/ML/MVP готовыми не объявлять.
 
 ## Что реализовано и чем подтверждено
@@ -185,13 +186,13 @@ provision.py отказывается перезаписывать сущест�
 
 ## Следующие действия
 
-1. Опубликовать recovery checkpoint после включения свежего main, проверить
-   remote SHA и CI; A2 оставить на ревью владельца без ожидания промежуточного ответа.
-2. A3: services/api/internal/handler/http/financial.go/router.go и feature-local
-   companies handler: Begin→Core bootstrap→Complete→Read→201, safe typed errors
-   и 503 timeout, conformance/full API check и реальный HTTPS/mTLS/PG сценарий.
+1. Опубликовать текущий API adapter slice в тот же draft, verify remote SHA/CI.
+2. A3 real integration: отдельные actual Auth/Core/API binaries, HTTPS/mTLS и
+   отдельные marked Auth/Core test DB. Register/verify/login→POST company→owner/
+   empty default account без SQL membership; lost reply/restart/replay security.
 3. A4 current Workspace/useRequest/CompanySettings context/retry/redirect;
-   financial mocks off, затем A5 failures/restart/double-click/browser/reviews/CI.
+   financial mocks off, затем A5 browser/reviews/final gates/CI. Не ждать владельца
+   между этапами, но ничего не принимать за него.
 
 Known blockers продукта не подтверждены; remaining work выше не выполнен.
 Не создавать heartbeat/resume jobs; при явном takeover прекратить изменения/push.
@@ -234,3 +235,39 @@ SUCCESS; Core build ещё IN_PROGRESS. Stack verify и image(api/auth/core/ml/
 frontend-real) SUCCESS, deploy SKIPPED. Эти image checks не означают deployment.
 Источники: Auth40137448722, Core40137448706, stack40137448719. Recovery diff ещё
 не покрыт этим старым CI и требует нового чтения после push.
+
+
+## A3 adapter checkpoint — проверенный diff поверхb2f882b
+
+Новый feature-local handler companies.go оркестрирует Begin→Core bootstrap→
+Complete→ReadCompany→201. Core получает только сохранённый Auth spec/hash/IDs;
+API не нормализует его повторно и не принимает owner/command IDs от браузера.
+CompanyDTO переиспользован. Проверяются корректность ответов зависимостей и
+COMPLETED; malformed/quarantined/pending/error не выдаются за успех. Origin/CSRF,
+scoped original key и request ID сохранены. Этот POST не требует P1 Ledger/Forecast
+clients. Create endpoint использует Auth command 503 timeout semantics (Auth
+contract367), не меняя общий Core financial deadline504 mapping (Core contract144).
+
+Полный literal gate из services/api завершился exit0:
+`PATH=<pinned-tools>:$PATH PYTHON=<isolated-venv>/bin/python GOTOOLCHAIN=go1.27.3 bash scripts/check.sh`.
+Canonical generation/imports, build/unit/race/vet/format/full module lint0issues,
+Ruff/script tests, process HTTPS API→mTLS testAuth smoke/graceful shutdown,
+OpenAPI0.2.1 validation41 responses (новые company201/409/503/403/422 включены).
+Own statements90.31%, executable block lines90.89%, только internal/gen исключён
+по прежнему gate, blanket exclusions не добавлялись.
+
+Эти fixtures/conformance/process testAuth не доказывают actual Auth/Core/PG
+onboarding: A3 остаётся «В работе». Новые boundary tests доказывают saved spec,
+точный порядок RPC, отсутствие premature201, conflict/timeout/quarantine/revocation,
+strict JSON/IDs, отсутствие diagnostics/cookie в публичном response.
+Два independent pinned Caveman/Ponytail reviews diff поверхb2f882b: доказанных
+дефектов нет; full runtime gate выполнял parent, reviewers не выдавали его за свой.
+
+Tooling для API подготовлено в изолированных каталогах: Go1.27.3,
+protoc-gen-go1.36.12/protoc-gen-go-grpc1.6.2, golangci-lint2.15.0,
+Task3.48.0; Python deps из services/api/requirements-dev.txt и
+scripts/requirements-contracts.txt. Воспроизвести pip install в отдельной venv,
+plugins/task через GOBIN=<tools> go install с этими pinned версиями. Repo npm
+зависимости/production данные не затрагивались. Новый company report генерируется
+API_COMPANY_REPORT при TestCompanyCreationContractResponses; check.sh добавляет
+его к прежним smoke/financial OpenAPI captures.

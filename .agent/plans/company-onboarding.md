@@ -96,7 +96,7 @@ invitations, reset/email delivery, новые роли и полный redesign 
 | A0 | На ревью владельца | Удалённые plan/handoff и один проверенный draft PR |
 | A1 | На ревью владельца | Durable Auth command/repository и atomic owner finalization |
 | A2 | На ревью владельца | RPC, Core client и recovery после restart |
-| A3 | Не начат | Настоящий POST /companies, HTTPS/mTLS conformance |
+| A3 | В работе | Настоящий POST /companies, HTTPS/mTLS conformance |
 | A4 | Не начат | Workspace без блокирующей зависимости от invitations |
 | A5 | Не начат | Реальный полный сценарий, два ревью, CI, итоговый handoff |
 
@@ -158,12 +158,13 @@ membership, небезопасный receipt/инициатор не выдаё�
 Зависимость: A2. Компоненты: API handler/client/app, существующий Company mapping,
 REST conformance/security tests; минимальные config examples/deploy templates.
 
-- [ ] POST orchestration по canonical chain, Core получает сохранённый Auth spec.
-- [ ] Typed clients, safe Russian errors/request ID, key conflict и 503/in-progress;
+- [x] POST orchestration по canonical chain, Core получает сохранённый Auth spec.
+- [x] Typed clients, safe Russian errors/request ID, key conflict и 503/in-progress;
   201 только после COMPLETED и успешного read. Не дублировать Company domain.
-- [ ] Conformance, реальный HTTPS API → mTLS Auth/Core → PostgreSQL,
-  чужой command/peer/CSRF/revocation/timeouts/replay.
-- [ ] API check, review и отдельный checkpoint.
+- [x] OpenAPI conformance и adapter boundary regressions (201/409/503, Origin/CSRF, owner injection, revoked/malformed dependencies).
+- [ ] Реальный HTTPS API → mTLS Auth/Core → PostgreSQL: чужой command/peer/CSRF/revocation/timeouts/replay.
+- [x] Полный API check и два reviews adapter slice пройдены, отдельный checkpoint готов к push.
+- [ ] Реальная интеграция A3 и её отдельное ревью/публикация.
 
 ### A4 — Workspace и пользовательский путь
 
