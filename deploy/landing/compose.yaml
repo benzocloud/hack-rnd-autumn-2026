@@ -1,0 +1,26 @@
+name: saldo-landing
+
+services:
+  landing:
+    image: ${LANDING_IMAGE:?Set an immutable landing image}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3005"
+      HOSTNAME: 0.0.0.0
+    ports:
+      - "3005:3005"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 768m
+    cpus: 0.75
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3005/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"

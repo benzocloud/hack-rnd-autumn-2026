@@ -1,0 +1,33 @@
+@use "../../app/global" as global;
+
+.chart {
+    --chart-line: #{global.$green2};
+    --chart-text: #{global.$text};
+    --chart-grid: #{global.$gray1};
+    width: 100%;
+    min-width: 0;
+    height: var(--balance-chart-height, 280px);
+    border-radius: 20px;
+    background-color: transparent;
+    overflow: hidden;
+}
+
+.tooltip {
+    display: grid;
+    gap: 6px;
+    max-width: 220px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background-color: global.$white;
+    color: global.$text;
+    font-size: 14px;
+    line-height: 1.4;
+    box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
+}
+
+@media (max-width: 480px) {
+    .chart {
+        height: var(--balance-chart-height, 260px);
+        border-radius: 16px;
+    }
+}
