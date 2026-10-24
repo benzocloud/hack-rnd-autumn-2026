@@ -91,6 +91,24 @@ class MutualTLSTests(unittest.TestCase):
     def test_trusted_core_certificate_succeeds(self):
         self.assertEqual(len(self.call(self.core).days), 30)
 
+    def test_financial_rpc_uses_the_same_service_identity_guard(self):
+        from ml.v1 import financial_pb2_grpc as frpc
+        from test_rpc_financial import financial_request
+
+        for identity, allowed in ((self.core, True), (self.wrong_peer, False)):
+            cert, key = identity
+            credentials = grpc.ssl_channel_credentials(
+                self.root, private_key=key, certificate_chain=cert
+            )
+            with grpc.secure_channel(f"127.0.0.1:{self.port}", credentials) as channel:
+                call = frpc.FinancialForecastServiceStub(channel).PredictFinancial
+                if allowed:
+                    self.assertEqual(len(call(financial_request(), timeout=2).forecast.days), 30)
+                else:
+                    with self.assertRaises(grpc.RpcError) as error:
+                        call(financial_request(), timeout=2)
+                    self.assertEqual(error.exception.code(), grpc.StatusCode.PERMISSION_DENIED)
+
     def test_trusted_other_service_and_cn_only_are_denied(self):
         for identity in (self.wrong_peer, self.no_san):
             with self.subTest(identity=identity[0][:30]), self.assertRaises(grpc.RpcError) as error:

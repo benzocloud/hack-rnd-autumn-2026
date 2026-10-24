@@ -13,6 +13,11 @@
 [контракт, генерация, запуск и ограничения](GRPC_CONTRACT.md).
 Сам Core ещё не подключён; CLI evaluation остаётся исследовательским запуском.
 
+Для worker внутри Go Core добавлен FinancialForecastService/PredictFinancial:
+30 дней mean_90, явный календарь с заменой исторических компонент и объяснения.
+Worker общается с ML по gRPC; REST/BFF в этом стыке не участвует.
+[Подключение worker](CORE_CONNECTION.md), [проверка на C089](DATASET_RPC_RESULTS.md).
+
 ## Данные
 
 По умолчанию ожидаются `data/cashflow/raw/companies.csv` и `all_operations.csv`.

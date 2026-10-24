@@ -1,0 +1,143 @@
+syntax = "proto3";
+
+package ml.v1;
+
+import "ml/v1/forecast.proto";
+
+option go_package = "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/ml/v1;mlv1";
+
+service FinancialForecastService {
+  rpc PredictFinancial(PredictFinancialRequest) returns (PredictFinancialResponse);
+}
+
+// Caller-owned immutable facts. At most one direction is positive. Categories
+// and regularity keys are retained as metadata; they are not gap probabilities.
+message FinancialOperation {
+  string operation_id = 1;
+  string date = 2;
+  int64 inflow_minor = 3;
+  int64 outflow_minor = 4;
+  string category_code = 5;
+  string category_source = 6;
+  string regularity_key = 7;
+  uint64 version = 8;
+  optional string category_id = 9;
+  optional string category_company_id = 10;
+  string counterparty_inn = 11;
+  string counterparty_name = 12;
+  string payment_purpose = 13;
+  string factual_source_kind = 14;
+  string source_namespace = 15;
+  string external_operation_id = 16;
+}
+
+// Full schedule for one explicitly identified component over this horizon.
+// Core must certify completeness; ML cannot infer it from a missing payment.
+message CalendarGroup {
+  string group_id = 1;
+  repeated string historical_operation_ids = 2;
+  bool complete_for_horizon = 3;
+  bool additional_obligation_confirmed = 4;
+}
+
+message ScheduledPayment {
+  string payment_id = 1;
+  uint64 version = 2;
+  string effective_date = 3;
+  string original_due_date = 4;
+  int64 remaining_inflow_minor = 5;
+  int64 remaining_outflow_minor = 6;
+  string category_code = 7;
+  string group_id = 8;
+  string source = 9;
+  string regularity_key = 10;
+  optional string category_id = 11;
+  optional string category_company_id = 12;
+}
+
+message FinancialCalendar {
+  string snapshot_id = 1;
+  uint64 data_version = 2;
+  // Availability date, not the dates of the scheduled future payments.
+  // Empty for UNAVAILABLE: never invent a historical knowledge date.
+  string as_of_business_date = 3;
+  repeated CalendarGroup groups = 4;
+  repeated ScheduledPayment payments = 5;
+  CalendarKnowledgeMode knowledge_mode = 6;
+  // Required for CURRENT knowledge on cutoff+1. Core attests that no account
+  // movement occurred since the accepted cutoff EOD in the same covered view.
+  // Otherwise remaining/status may omit a payment settled after that EOD;
+  // advance the accepted cutoff or use a separately agreed intraday bridge.
+  bool no_post_cutoff_movements = 7;
+}
+
+enum CalendarKnowledgeMode {
+  CALENDAR_KNOWLEDGE_MODE_UNSPECIFIED = 0;
+  CALENDAR_KNOWLEDGE_MODE_CURRENT = 1;
+  CALENDAR_KNOWLEDGE_MODE_HISTORICAL_AS_OF_CERTIFIED = 2;
+  // History-only fallback. No groups/payments/as_of_business_date are allowed.
+  // Caller preserves historical_calendar_unavailable in availability_limitations.
+  // snapshot_id/data_version identify the facts whose calendar is unavailable.
+  CALENDAR_KNOWLEDGE_MODE_UNAVAILABLE = 3;
+}
+
+message PredictFinancialRequest {
+  // Legacy snapshot.known_payments must be empty: the typed calendar below is
+  // the only source of known payments. EOD and history use legacy validation.
+  ForecastSnapshot snapshot = 1;
+  uint32 horizon_days = 2;
+  ModelContext model = 3;
+  repeated FinancialOperation operations = 4;
+  FinancialCalendar calendar = 5;
+  repeated string availability_limitations = 6;
+}
+
+message ForecastComponent {
+  string component_id = 1;
+  string date = 2;
+  string category_code = 3;
+  int64 inflow_minor = 4;
+  int64 outflow_minor = 5;
+  string kind = 6;
+  repeated string source_ids = 7;
+  string regularity_key = 8;
+  optional string category_id = 9;
+  optional string category_company_id = 10;
+}
+
+message EmpiricalBalanceBand {
+  string date = 1;
+  int64 lower_minor = 2;
+  int64 upper_minor = 3;
+}
+
+message HistoryGroupEvidence {
+  string evidence_id = 1;
+  repeated string historical_operation_ids = 2;
+  string category_source = 3;
+}
+
+message ForecastUncertainty {
+  string method = 1;
+  uint32 scenarios = 2;
+  uint32 block_days = 3;
+  uint64 seed = 4;
+  double lower_quantile = 5;
+  double upper_quantile = 6;
+  bool calibrated = 7;
+  string gap_probability_unavailable_reason = 8;
+  repeated EmpiricalBalanceBand bands = 9;
+  repeated string assumptions = 10;
+}
+
+message PredictFinancialResponse {
+  PredictResponse forecast = 1;
+  repeated ForecastComponent components = 2;
+  ForecastUncertainty uncertainty = 3;
+  string calendar_snapshot_id = 4;
+  uint64 calendar_data_version = 5;
+  repeated string replaced_historical_operation_ids = 6;
+  repeated FinancialOperation classified_operations = 7;
+  repeated string availability_limitations = 8;
+  repeated HistoryGroupEvidence history_evidence = 9;
+}

@@ -14,6 +14,9 @@ enum DaySource {
   DAY_SOURCE_UNSPECIFIED = 0;
   DAY_SOURCE_OBSERVED = 1;
   DAY_SOURCE_VERIFIED_NO_OPERATIONS = 2;
+  // Financial RPC only: reconstructed from complete covered facts and the
+  // observed cutoff EOD. This is not a separate bank balance observation.
+  DAY_SOURCE_RECONSTRUCTED_COVERED = 3;
 }
 
 // ISO dates are company-local business dates, not timestamps. Core must reject
@@ -81,6 +84,8 @@ message PredictResponse {
   // below_zero_eod, not proven insolvency. Absence means no negative reference
   // balance in the horizon; no calibrated probability is available.
   optional string first_negative_balance_date = 10;
+  // History-only baseline already contains past recurring AND one-off flows;
+  // true does not mean only recurring flows or certify future obligations.
   bool history_only_includes_recurring_flows = 11;
   repeated string warnings = 12;
 }

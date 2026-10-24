@@ -5,6 +5,11 @@
 Canonical contract: [forecast.proto](../../proto/ml/v1/forecast.proto).
 План и границы следующего этапа: [GRPC_PLAN.md](GRPC_PLAN.md).
 
+Этот документ описывает прежний history-only Predict. Для worker Core с явным
+календарём доступен отдельный PredictFinancial:
+[контракт и подготовка worker](CORE_CONNECTION.md). Его добавление не меняет
+численный результат или ограничения старого Predict.
+
 ## Что работает
 
 `ml.v1.ForecastService/Predict`: нормализованный immutable snapshot Core →

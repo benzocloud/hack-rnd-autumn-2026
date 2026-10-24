@@ -4,9 +4,12 @@ from concurrent.futures import ThreadPoolExecutor
 from ipaddress import IPv4Address
 
 import grpc
+from ml.v1 import financial_pb2 as fpb
+from ml.v1 import financial_pb2_grpc as financial_rpc
 from ml.v1 import forecast_pb2 as pb
 from ml.v1 import forecast_pb2_grpc as rpc
 
+from .financial import financial_forecast
 from .inference import InvalidSnapshot, UnsupportedContext, forecast
 
 
@@ -16,6 +19,9 @@ class ForecastService(rpc.ForecastServiceServicer):
         self.insecure_local = insecure_local
 
     def Predict(self, request, context):
+        return self._compute(request, context, lambda r: forecast(r, pb))
+
+    def _compute(self, request, context, compute):
         if not self.insecure_local:
             auth = context.auth_context()
             names = auth.get("x509_subject_alternative_name", ())
@@ -31,7 +37,7 @@ class ForecastService(rpc.ForecastServiceServicer):
         if not context.is_active():
             context.abort(grpc.StatusCode.CANCELLED, "Request cancelled")
         try:
-            result = forecast(request, pb)
+            result = compute(request)
         except InvalidSnapshot as exc:
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))
         except UnsupportedContext as exc:
@@ -39,6 +45,11 @@ class ForecastService(rpc.ForecastServiceServicer):
         if not context.is_active():
             context.abort(grpc.StatusCode.CANCELLED, "Request cancelled")
         return result
+
+
+class FinancialForecastService(ForecastService, financial_rpc.FinancialForecastServiceServicer):
+    def PredictFinancial(self, request, context):
+        return self._compute(request, context, lambda r: financial_forecast(r, pb, fpb))
 
 
 def create_server(
@@ -69,6 +80,9 @@ def create_server(
     )
     rpc.add_ForecastServiceServicer_to_server(
         ForecastService(allowed_peers, insecure_local), server
+    )
+    financial_rpc.add_FinancialForecastServiceServicer_to_server(
+        FinancialForecastService(allowed_peers, insecure_local), server
     )
     target = f"{address}:{port}"
     if insecure_local:

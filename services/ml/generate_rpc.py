@@ -29,6 +29,8 @@ def main():
                 "--as-file-descriptor-set",
                 "--path",
                 "proto/ml/v1/forecast.proto",
+                "--path",
+                "proto/ml/v1/financial.proto",
                 "--output",
                 descriptor,
             ],
@@ -45,6 +47,7 @@ def main():
                 "--python_out=" + str(service),
                 "--grpc_python_out=" + str(service),
                 "ml/v1/forecast.proto",
+                "ml/v1/financial.proto",
             ],
             check=True,
         )
