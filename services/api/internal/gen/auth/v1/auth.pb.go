@@ -1560,10 +1560,13 @@ func (x *GetSecurityContextRequest) GetClient() *ClientContext {
 }
 
 type GetSecurityContextResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Context       *SecurityContext       `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Context *SecurityContext       `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	// Server-owned UI metadata: "strict" (default) or "demo" for ADR-028.
+	// Never accepted in a request and never grants authentication or company access.
+	EmailVerificationMode string `protobuf:"bytes,2,opt,name=email_verification_mode,json=emailVerificationMode,proto3" json:"email_verification_mode,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *GetSecurityContextResponse) Reset() {
@@ -1601,6 +1604,13 @@ func (x *GetSecurityContextResponse) GetContext() *SecurityContext {
 		return x.Context
 	}
 	return nil
+}
+
+func (x *GetSecurityContextResponse) GetEmailVerificationMode() string {
+	if x != nil {
+		return x.EmailVerificationMode
+	}
+	return ""
 }
 
 type RegisterRequest struct {
@@ -3902,9 +3912,10 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\bdocument\x18\x01 \x01(\v2\x18.auth.v1.ConsentDocumentR\bdocument\"~\n" +
 	"\x19GetSecurityContextRequest\x121\n" +
 	"\acontext\x18\x01 \x01(\v2\x17.auth.v1.BrowserContextR\acontext\x12.\n" +
-	"\x06client\x18\x02 \x01(\v2\x16.auth.v1.ClientContextR\x06client\"P\n" +
+	"\x06client\x18\x02 \x01(\v2\x16.auth.v1.ClientContextR\x06client\"\x88\x01\n" +
 	"\x1aGetSecurityContextResponse\x122\n" +
-	"\acontext\x18\x01 \x01(\v2\x18.auth.v1.SecurityContextR\acontext\"\xe7\x01\n" +
+	"\acontext\x18\x01 \x01(\v2\x18.auth.v1.SecurityContextR\acontext\x126\n" +
+	"\x17email_verification_mode\x18\x02 \x01(\tR\x15emailVerificationMode\"\xe7\x01\n" +
 	"\x0fRegisterRequest\x12/\n" +
 	"\acontext\x18\x01 \x01(\v2\x15.auth.v1.WriteContextR\acontext\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1a\n" +

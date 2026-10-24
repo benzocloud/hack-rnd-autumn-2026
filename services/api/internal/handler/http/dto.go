@@ -67,8 +67,9 @@ type document struct {
 	Hash    string `json:"document_sha256"`
 }
 type csrf struct {
-	Token   string `json:"csrf_token"`
-	Expires string `json:"expires_at"`
+	Token                 string `json:"csrf_token"`
+	Expires               string `json:"expires_at"`
+	EmailVerificationMode string `json:"email_verification_mode,omitempty"`
 }
 type session struct {
 	User    user   `json:"user"`

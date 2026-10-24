@@ -1,6 +1,6 @@
 # D1/Auth — минимальный интеграционный срез
 
-Статус: В работе; после проверок — ревью владельцем. Основание: прямое поручение
+Статус: На ревью владельцем. Основание: прямое поручение
 владельца и ADR-028, срок сдачи 25.10.2026 12:00 МСК. Это один срез D1,
 не завершение всей цепочки и не принятие старых этапов 3.3–3.6.
 
@@ -37,15 +37,16 @@ allowlisted пользователя. Purpose, user binding, expiry, revoked/blo
 закрыт до строгого подтверждения. VerifyEmail не выдаёт новую cookie/сессию.
 
 `GetSecurityContextResponse.email_verification_mode` — ответное поле `strict|demo`.
-API должен передавать его в `GET /auth/csrf` как `email_verification_mode` рядом
+API передаёт его в `GET /auth/csrf` как `email_verification_mode` рядом
 с `csrf_token` и `expires_at`. **Cookie material не попадает в JSON.** Имя закреплено
-в Auth protobuf, OpenAPI CsrfToken и frontend type; API-adapter должен подключить
-его по этому контракту. Подтверждение согласования другим человеком не заявляется.
+в Auth protobuf, OpenAPI CsrfToken, API DTO и frontend type; передача через
+настоящий API проверена по HTTPS/mTLS. Подтверждение согласования другим человеком не заявляется.
 Браузер не выбирает режим: такого поля нет в запросах и use-case inputs.
 
 На форме регистрации/подтверждения показано «Демо: подтверждение замокано» по
 серверному ответу с пояснением, что это не доказательство владения почтой.
-При ошибке загрузки режима подтверждение блокируется с retry. Никакого включения
+При загрузке, ошибке или отсутствии/неизвестном значении режима регистрация
+и подтверждение блокируются с retry. Никакого включения
 глобального frontend developerMode=mock для финансовой интеграции не требуется.
 
 ## Запуск приватного RPC
@@ -94,7 +95,41 @@ PostgreSQL — отдельная auth_test со случайной schema на 
 Дополнительно: реальный mTLS positive API/negative Core и unknown peer, structured
 ошибки без секретов, Buf/OpenAPI, полный Go lint/vet/build/tests и frontend checks.
 
-Фактические результаты и ограничения будут записаны после выполнения команд;
-план/чек-лист не является утверждением успешного прохождения тестов.
-После среза — два независимых caveman-review/ponytail-review и ревью владельцем.
-Дальнейшее расширение/merge/deployment этим отчётом не разрешаются.
+Фактически выполнено для этого среза:
+
+- Полный Auth lint — **0 issues**; format/import checks, vet с integration tag,
+  build и unit/integration с shuffle прошли. PostgreSQL 18.6 — отдельная
+  `auth_test`, случайные схемы; исходная БД не удалялась.
+- Пройден реальный protobuf → service → PostgreSQL flow, включая consent
+  rotation/evidence, строгий HMAC, demo-proof isolation, budget между resend,
+  session rotation/logout, CSRF и owner/financier/foreign company scope.
+- Настоящие процессы **HTTPS API → mTLS Auth → PostgreSQL 18.6** прошли
+  регистрацию, demo acknowledgement без автологина, неверный/правильный пароль,
+  ротацию сессии, Origin/CSRF/logout, restart в strict, запрет включения demo
+  query-параметром и отклонение неверного шестизначного кода в strict.
+  Отдельный API mode test подтверждает отсутствие cookie material в JSON.
+- API lint — **0 issues**; HTTP handler tests, vet и build прошли. Полный API
+  unit-run на Windows остановился только на существующем Unix permission test
+  `TestEphemeralPKIIdentityChainAndPermissions` (проверка `0600`); это ограничение
+  среды не выдаётся за успешный полный API unit-run.
+- Frontend: **17/17 tests**, Next typegen, TypeScript и полный ESLint прошли.
+  После merge сохранены актуальные ссылки согласия из main и наш UI mode guard.
+- Buf format/lint/build, OpenAPI validation и воспроизводимость Auth bindings
+  с закреплёнными генераторами проверены. `govulncheck`: 0 reachable findings;
+  есть одна запись только на уровне required module без вызова уязвимого кода.
+- Два независимых caveman-review и ponytail-review выполнены. Исправлены
+  замечания о status согласия, malformed metadata, cursor/order, CSRF formula,
+  Argon2 `p=1` и гонке первоначального CSRF в UI. Финальная перепроверка Auth
+  и API mode delta открытых замечаний не оставила. Это не GitHub approval.
+
+Локальный race недоступен без CGO/C compiler; для нового SHA результат Linux CI
+нужно читать отдельно после публикации, старые CI за новый код не выдаются.
+Нет утверждения о production provisioning, реальной email delivery или полном
+browser → Core → ML финансовом E2E. Core onboarding/receipt остаётся зависимостью.
+
+Перед публикацией влито `origin/main` `02ec65c1c136594755c11def50100921551bd8bc`
+обычным merge. Единственный конфликт — `docs/integration-status.md`; сохранены
+актуальные API/Core/ML сведения и фактический D1/Auth status. Published history
+не переписывалась. Перед push/PR fetch и ancestor check повторяются.
+После среза требуется ревью владельцем; дальнейшие этапы, merge и deployment
+этим отчётом не принимаются и не разрешаются.

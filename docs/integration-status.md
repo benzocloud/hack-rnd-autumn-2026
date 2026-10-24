@@ -61,7 +61,7 @@ mock подтверждения email в изолированном демо. М
 
 | Компонент | Отсутствующий результат |
 | --- | --- |
-| Go API | Десять auth/account handlers, HTTP lifecycle и mTLS Auth adapter проверены локально с test Auth; нужны реальный Auth E2E и будущая Core-интеграция |
+| Go API | Десять auth/account handlers и mTLS Auth adapter; D1/Auth дополнительно проверил настоящий HTTPS API → Auth → PostgreSQL flow и server-owned mode passthrough. Полный финансовый Core/browser E2E ещё требуется |
 | Auth | D1/Auth добавляет минимальные RPC регистрации/входа/сессии/доступа, DB consent registry/evidence и изолированный demo-profile; результат на отдельном ревью. Core onboarding/receipt, email delivery/outbox, reset и приглашения остаются; полные этапы 3.3–3.6 не объявляются завершёнными |
 | Core | Transport, Auth access adapter, company bootstrap/read/update и durable onboarding receipt для Auth; forecast orchestration. FinancialSnapshot (2.4) принят и находится в main; подготовлены API → Core proto и проверенный Go ML-клиент, handlers ещё не реализованы |
 | ML | Подключение Python gRPC через Go-клиент к orchestration/90-дневной coverage, согласование будущего календаря без двойного учёта, обоснованная вероятность и provisioned mTLS |
