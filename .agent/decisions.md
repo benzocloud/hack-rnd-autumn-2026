@@ -31,10 +31,13 @@
 
 - **ADR-023 (Accepted, 2026-10-23):** Owner authorized shared GBrain at `https://gbrain.brokebyte.me/mcp` for local development, on a dedicated host separate from runner/Fadwix. Use individual authenticated HTTPS credentials: developer read/write, reviewer server-enforced read-only, separate protected owner credential. Local agents recall relevant memory before planning/implementation and remember verified findings with provenance; Git/ADRs remain authoritative and unavailability is a disclosed fallback, never a reason to fabricate memory. This supersedes ADR-010's rollout deferral and ADR-007's private-network-only proposal for local access; it does not enable the existing runner MCP or weaken its read-only policy. Deployment pin, setup and verification are recorded in `.agent/infra/gbrain/README.md`.
 
-- **ADR-026 (Accepted by owner for stage 3.2, 2026-10-24):** [Приватный Auth и серверное управление доступом](adr/026-auth-contract.md).
+- **ADR-027 (Accepted by owner for stage 3.2, 2026-10-24):** [Приватный Auth и серверное управление доступом](adr/027-auth-contract.md).
   After corrections/review of PR #17, the owner explicitly requested implementation
   of stage 3.2. This approves the Auth contract/tooling baseline; it does not assert
   completed Core/API integration or approve stages 3.3–3.6.
+  Renumbered from 026 after checking the parallel Core registry, where 026
+  already identifies feature-local application DTOs. The original acceptance
+  and stage gates remain unchanged; this is not an approval of a new stage.
 
 ## Pending verification (not accepted implementation facts)
 - Encrypted off-host GBrain backup retention and connection of the existing review runner remain open; dedicated-host runtime, HTTPS authentication, persistence/restore and server-enforced reviewer write denial passed on 2026-10-23 (see `.agent/infra/gbrain/README.md`).

@@ -8,8 +8,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/app"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/config"
-	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/repository/postgres"
 )
 
 func main() { os.Exit(run()) }
@@ -29,7 +29,7 @@ func run() int {
 	defer stop()
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
-	if err := postgres.Migrate(ctx, cfg); err != nil {
+	if err := app.Migrate(ctx, cfg); err != nil {
 		logger.Error("auth migration stopped", "error", err)
 		return 1
 	}

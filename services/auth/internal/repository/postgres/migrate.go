@@ -4,40 +4,26 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"io"
 	"log/slog"
 	"time"
 
-	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/jmoiron/sqlx"
 	"github.com/pressly/goose/v3"
 	"github.com/pressly/goose/v3/lock"
 
-	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/config"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/migrations"
 )
 
 // Migrate is an explicit admin operation, never run implicitly by the server.
 // Provider-local state avoids goose's mutable package-level configuration.
-func Migrate(ctx context.Context, cfg config.Config) error {
-	ctx, cancel := context.WithTimeout(ctx, time.Minute)
-	defer cancel()
-	poolCfg, err := cfg.PoolConfig()
-	if err != nil {
-		return err
-	}
-	db := stdlib.OpenDB(*poolCfg.ConnConfig)
-	defer db.Close()
-	// The session lock holds one connection; migrations need a second one.
-	db.SetMaxOpenConns(2)
-	db.SetMaxIdleConns(0)
-	db.SetConnMaxLifetime(5 * time.Minute)
+func Migrate(ctx context.Context, db *sqlx.DB, queryTimeout time.Duration) error {
 	locker, err := lock.NewPostgresSessionLocker()
 	if err != nil {
 		return errors.New("auth migration lock configuration failed")
 	}
-	provider, err := goose.NewProvider(goose.DialectPostgres, db, migrations.Files,
-		goose.WithDisableGlobalRegistry(true), goose.WithSessionLocker(boundedSessionLocker{SessionLocker: locker, timeout: cfg.QueryTimeout}),
-		goose.WithSlog(slog.New(slog.NewTextHandler(io.Discard, nil))))
+	provider, err := goose.NewProvider(goose.DialectPostgres, db.DB, migrations.Files,
+		goose.WithDisableGlobalRegistry(true), goose.WithSessionLocker(boundedSessionLocker{SessionLocker: locker, timeout: queryTimeout}),
+		goose.WithSlog(slog.New(slog.DiscardHandler)))
 	if err != nil {
 		return errors.New("auth migration configuration failed")
 	}

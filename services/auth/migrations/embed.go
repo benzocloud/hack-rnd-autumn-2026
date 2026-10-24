@@ -1,4 +1,3 @@
-// Package migrations embeds the versioned Auth SQL for the migration command.
 package migrations
 
 import "embed"

@@ -2,13 +2,19 @@
 
 Дата: 24 октября 2026 года. Статус: **На ревью** в PR #17.
 Основание перехода: владелец прямо поручил выполнить 3.2 после исправлений и
-ревью 3.1 (`29477c3`). Это принятие основания 3.1/ADR-026 владельцем, не апрув
+ревью 3.1 (`29477c3`). Это принятие основания 3.1/[ADR-027](../../.agent/adr/027-auth-contract.md)
+владельцем, не апрув
 от агентов и не утверждение о завершённой интеграции API/Core.
 
 ## Результат
 
 - Самостоятельный Go-модуль [services/auth](../../services/auth/README.md).
-  Тонкие cmd/auth и cmd/migrate, ручная сборка, pgx pool, HTTP health/readiness.
+  Тонкие cmd/auth и cmd/migrate, ручная сборка, sqlx DB, HTTP health/readiness.
+- Создание/config/Ping pool — в `internal/app/postgres`, Close — у composing app.
+  pgx используется через `pgx/stdlib` как `database/sql` driver. Приватный repository
+  принимает готовый DB/Tx; узкие интерфейсы объявляются у потребителей.
+  SQL и schema check — в `sql/`, embed — в `queries.go`; row mapping, операции,
+  transaction helper и error mapping разделены по ответственности.
 - Defaults → environment → validation. TLS verify-full; plaintext только при
   explicit local + loopback. Ограничены pool, query/startup/shutdown и HTTP.
   Config formatting/slog/errors не выводят DSN/пароль или PostgreSQL Detail.
@@ -28,9 +34,53 @@
 consent/evidence/outbox, password hashing, verify/reset, memberships/invitations,
 Core orchestration и Resend sends остаются в 3.3–3.6. Каркас их не имитирует.
 
-## Фактически выполнено
+## Проверка исправленного sqlx-снимка
 
-1. gofmt, `go test ./...`, `go test -tags=integration -count=1 -timeout=90s ./...`,
+Исправление по [замечанию PR #17](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/17#issuecomment-6380966388)
+синхронизирует 3.2 с общими Go-правилами Core на `20d2adc`. Для исправленной
+редакции после `b102904` выполнены отдельные проверки:
+
+1. `golangci-lint v2.15.0`: `config verify`, format/import checks всех Go-файлов,
+   включая integration, и `run ./...` с integration tag — **0 issues**.
+   Отдельная неформатированная временная fixture дала exit 1 у `fmt --diff`:
+   CI действительно отклоняет такую ошибку, а не только печатает diff.
+2. `go test ./...`, `go test -tags=integration -count=1 -timeout=90s ./...`,
+   `go vet ./...`, compile-only integration и build обоих cmd — успешно.
+   Реальная PostgreSQL 18.6 использовала тот же изолированный loopback scratch
+   fixture ниже. Повторены fresh/repeated/concurrent migrations, constraints,
+   уникальность email, restart/persistence и readiness/service restart.
+3. Новая регрессия отменяет context после успешного InsertUser до Commit:
+   возвращается `context.Canceled`, вставленная строка не сохраняется.
+   Unit mapping-тесты проверяют `sql.ErrNoRows`, SQLSTATE и redaction, в том
+   числе private driver details в обёртке над cancellation/deadline.
+4. Повторён smoke собранных sqlx-бинарников: migrate дважды; outage PostgreSQL
+   даёт ready 503/live 200; после restart БД и Auth пользователь сохраняется;
+   invalid TLS завершает startup без секрета в выводе. Все сценарии успешны.
+5. `gopls v0.24.0 check` всех Go-файлов с integration tag — без diagnostics;
+   references NewRepository включают app и транзакционные integration callers.
+   `govulncheck v1.9.0 ./...` — **No vulnerabilities found**.
+6. Auth CI добавляет lint → unit/integration с race → build/tidy/vulnerability
+   check. Actionlint 1.7.12 проверил workflow; shellcheck/pyflakes локально
+   отсутствуют и не запускались. Для CI закреплён PostgreSQL 18.6 image digest
+   в workflow; контейнерный запуск локально не выполнялся.
+7. Отдельные read-only caveman-review и ponytail-review проверили исправления
+   всех семи замечаний; новых доказанных дефектов не нашли. Ponytail независимо
+   повторил unit tests со shuffle и vet с integration tag, оба exit 0.
+   Это агентские проверки, не человеческое принятие этапа/GitHub approval.
+
+Локальный `go test -race -tags=integration` повторно остановился с
+`-race requires cgo`: C toolchain отсутствует. Race проверяется новым Linux CI,
+но его прохождение этой локальной записью не утверждается. Результаты GitHub
+после публикации проверяются отдельно по SHA. Исторические результаты ниже
+не выдаются за подтверждение исправленного снимка.
+
+## Исторические проверки `b102904`
+
+Этот раздел относится к 24.10.2026 и SHA
+`b102904590af9d11217aeff90ac4822104e5ed62` с native pgxpool до исправлений.
+Он сохранён как история этапа, а не результат повторной проверки sqlx-редакции.
+
+1. `go test ./...`, `go test -tags=integration -count=1 -timeout=90s ./...`,
    `go vet ./...`, build обоих cmd. Go 1.27.3, pgx 5.11.0, goose 3.29.0.
 2. Config: неверный URL/режим TLS/remote plaintext/host override, pool/timeout caps,
    redaction через fmt/JSON/slog. Ошибки не содержат тестовый пароль.
@@ -57,7 +107,12 @@ SHA-256 `e2246ba91d22345bc3d017586c09ede52d9df180b1eeb480f050445f1cad84e2`,
 сверен с опубликованным рядом .sha256. Дистрибутив, scratch данные/пароль,
 бинарники и логи находятся вне Git. Контейнерный image digest не заявляется.
 
-## Ревью и ограничения
+Прежнее заявление о полном gofmt уточнено: статическое ревью `b102904`
+обнаружило неотформатированные файлы `integration/storage_test.go` и
+`integration/app_test.go`. Проверка форматирования integration в том снимке
+не была обеспечена; исторические unit/integration/vet не заменяют её или lint.
+
+## Исторические ревью и ограничения
 
 Выполнены два независимых read-only ревью: caveman-review и ponytail-review.
 Оба нашли потенциальное зависание Goose SessionUnlock без deadline. Добавлены

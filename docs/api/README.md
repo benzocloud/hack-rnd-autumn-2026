@@ -50,7 +50,7 @@ REST-пути вида `/companies/…` ниже указаны относите
 
 Этап 3.1 PR #17 детализирует этот профиль в [контракте Auth](../auth/contract.md)
 и [приватном protobuf](../../proto/auth/v1/auth.proto): RPC, TTL, матрица прав,
-consent/outbox, login/reset и восстановление компании. ADR-026 принят владельцем
+consent/outbox, login/reset и восстановление компании. [ADR-027](../../.agent/adr/027-auth-contract.md) принят владельцем
 для каркаса 3.2; [реализация и проверки](../auth/stage-3.2.md) не означают готовые
 Auth RPC или браузерный API. Межкомандная интеграция остаётся последующим этапом.
 Вход остаётся email/password. Email подтверждается кодом из шести ASCII цифр

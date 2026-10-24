@@ -1,6 +1,6 @@
 # Контракт Auth Saldo
 
-Дата: 24 октября 2026 года. Версия: 0.1.1. Статус: **принят владельцем для этапа 3.2**.
+Дата: 24 октября 2026 года. Версия: 0.1.2. Статус: **принят владельцем для этапа 3.2**.
 После исправлений/ревью владелец прямо поручил перейти к 3.2. Принятие этого
 контракта не означает готовность Auth RPC или интеграции API/Core; каркас и SQL
 проверяются отдельно в [отчёте 3.2](stage-3.2.md).
@@ -8,7 +8,7 @@
 Основание: [план Auth](../../.agent/plans/auth-service-adaptation.md),
 [PR #17](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/17),
 [API-план PR #16](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/16),
-[REST](../api/openapi.yaml), [ADR-026](../../.agent/adr/026-auth-contract.md).
+[REST](../api/openapi.yaml), [ADR-027](../../.agent/adr/027-auth-contract.md).
 Канонический приватный контракт: [auth.proto](../../proto/auth/v1/auth.proto).
 
 ## Владельцы и доверие
@@ -467,11 +467,22 @@ accepted invitation сохраняется. Уточнения применен�
 
 ## Инструменты и зависимости перед этапом 3.2
 
-Выбор для Auth, подтверждённый переходом к 3.2, без изменения Core: Go 1.27.3, PostgreSQL 18,
-pgx/v5 5.11.0, goose/v3 3.29.0, x/crypto 0.58.0 (Argon2id), grpc-go 1.84.0,
-protobuf-go 1.36.12. В 3.2 проверена отдельная PostgreSQL 18.6 из официальных EDB
-Windows binaries, SHA-256 и сценарии зафиксированы в отчёте. Container image и
-deployment не выбирались. API/Core согласуют свой toolchain отдельно.
+Выбор для Auth, подтверждённый переходом к 3.2, без изменения Core: Go 1.27.3,
+PostgreSQL 18, sqlx 1.4.0 с pgx/v5 5.11.0 только через `pgx/stdlib`
+(`database/sql` driver), goose/v3 3.29.0, x/crypto 0.58.0 (Argon2id),
+grpc-go 1.84.0, protobuf-go 1.36.12. После ревью 3.2 согласованные Go-правила
+Core применяются к Auth: создание/config/Ping `*sqlx.DB` в `internal/app/postgres`,
+`Close` у composing app; приватные repository получают готовый `*sqlx.DB`/`*sqlx.Tx`,
+без native pgxpool. SQL хранится в `sql/`, embed — в package-local `queries.go`,
+интерфейсы — узкие и около потребителя. Полные правила — `.agent/instructions.md`.
+
+Историческая проверка 3.2 на `b102904590af9d11217aeff90ac4822104e5ed62`
+использовала native pgx и PostgreSQL 18.6 из официальных EDB Windows binaries.
+SHA-256 и сценарии сохранены в отчёте; они не доказывают проверку исправленного
+sqlx-снимка. Его format/import/lint, unit/integration/build и race-check фиксируются
+отдельно в [отчёте 3.2](stage-3.2.md). Для нового Auth CI закреплён image
+PostgreSQL 18.6 в workflow; deployment image этим не выбирается.
+API/Core согласуют свой toolchain отдельно.
 Никакой код референса без выяснения права копирования не переносится: используем
 описанные lifecycle/config/repository-приёмы для собственной реализации.
 

@@ -11,7 +11,7 @@
 - `buf.yaml`: STANDARD lint, FILE breaking policy для последующих изменений.
 - `buf.auth.gen.yaml`: Go generators закреплены на 1.36.12/1.6.2, отдельные
   import mappings в internal/gen Auth, API и Core, без межмодульного internal import.
-- Proposed ADR-026 и единый контракт: границы, TTL, permissions, consent,
+- Auth ADR, сейчас [ADR-027](../../.agent/adr/027-auth-contract.md), и единый контракт: границы, TTL, permissions, consent,
   credential_version, email outbox и recovery создания компании.
 - OpenAPI 0.1.3: 54 операции/101 схема; уточнения Auth не реализуют handlers.
 
@@ -55,8 +55,10 @@
 меняет draft wire/API относительно `9b771e8`: VerifyEmail теперь challenge/code,
 Register/resend возвращают challenge metadata; старое поле token зарезервировано.
 Это согласованная миграция ещё не реализованных потребителей, а не утверждение
-об обратной совместимости старого verify-link. Auth ADR перенесён с 024 на 026
-без присвоения локальным Core ADR статуса Accepted. Выбор Resend проверен по
+об обратной совместимости старого verify-link. На `29477c3` Auth ADR перенесён
+с 024 на 026, позднее при исправлении коллизии Core-реестра — в 027;
+это не меняет историческое принятие владельцем основания 3.2 и не присваивает
+чужим Core ADR статус Accepted в этой ветке. Выбор Resend проверен по
 официальным HTTP/idempotency/error/test-address docs; реальные API sends не выполнялись.
 
 ## Независимые агентские ревью
@@ -86,5 +88,7 @@ login/reset, email provider и Core/API E2E ещё не реализованы. 
 критерии приёмки закреплены в контракте и этапах 3.2–3.6. Наличие protobuf, два
 агентских ревью и компиляция не доказывают работающую авторизацию/доставку писем.
 
-Командное принятие RPC/стыка Core и ADR-026 остаётся открытым. Ни runtime/deploy,
-ни Accepted-статус политики этим отчётом не объявляются.
+Командная приёмка RPC/стыка Core остаётся открытой. Владелец принял Auth ADR
+(теперь ADR-027) как основание 3.2 прямым поручением, зафиксированным выше;
+сам исторический отчёт не является апрувом. Runtime/deploy и принятие 3.2/3.3
+этими проверками не объявляются.

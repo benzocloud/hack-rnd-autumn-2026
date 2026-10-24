@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"errors"
-	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -48,7 +47,7 @@ func TestStartupFailureClosesDatabaseBeforeListening(t *testing.T) {
 				db.schemaErr = errors.New("TOP_SECRET")
 			}
 			listened := false
-			err := run(t.Context(), testConfig(t), slog.New(slog.NewTextHandler(io.Discard, nil)),
+			err := run(t.Context(), testConfig(t), slog.New(slog.DiscardHandler),
 				func(context.Context) (database, error) { return db, nil }, func(string, string) (net.Listener, error) { listened = true; return nil, errors.New("TOP_SECRET") })
 			if err == nil || !db.closed.Load() {
 				t.Fatal("failed startup did not release database")
@@ -67,7 +66,7 @@ func TestReadinessFailsClosedAndLivenessStaysAvailable(t *testing.T) {
 	check := func(path string, status int) {
 		t.Helper()
 		w := httptest.NewRecorder()
-		handler.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
+		handler.ServeHTTP(w, httptest.NewRequestWithContext(t.Context(), http.MethodGet, path, nil))
 		if w.Code != status {
 			t.Fatalf("%s: status %d", path, w.Code)
 		}
@@ -85,7 +84,7 @@ func TestReadinessFailsClosedAndLivenessStaysAvailable(t *testing.T) {
 	db.pingErr.Store(false)
 	check("/health/ready", 503)
 	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, httptest.NewRequest("POST", "/auth/login", nil))
+	handler.ServeHTTP(w, httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/auth/login", nil))
 	if w.Code != 404 {
 		t.Fatal("unexpected auth operation exposed")
 	}
@@ -98,8 +97,8 @@ func TestRunCancellationClosesListenerAndPool(t *testing.T) {
 	defer cancel()
 	done := make(chan error, 1)
 	go func() {
-		done <- run(ctx, testConfig(t), slog.New(slog.NewTextHandler(io.Discard, nil)), func(context.Context) (database, error) { return db, nil }, func(network, address string) (net.Listener, error) {
-			listener, err := net.Listen(network, address)
+		done <- run(ctx, testConfig(t), slog.New(slog.DiscardHandler), func(context.Context) (database, error) { return db, nil }, func(network, address string) (net.Listener, error) {
+			listener, err := (&net.ListenConfig{}).Listen(t.Context(), network, address)
 			if err == nil {
 				bound <- listener
 			}
@@ -113,12 +112,16 @@ func TestRunCancellationClosesListenerAndPool(t *testing.T) {
 		t.Fatal("server did not bind")
 	}
 	client := &http.Client{Timeout: time.Second}
-	response, err := client.Get("http://" + listener.Addr().String() + "/health/ready")
+	request, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+listener.Addr().String()+"/health/ready", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := client.Do(request)
 	if err != nil {
 		t.Fatal(err)
 	}
 	_ = response.Body.Close()
-	if response.StatusCode != 200 {
+	if response.StatusCode != http.StatusOK {
 		t.Fatal("server not ready after startup")
 	}
 	cancel()
@@ -133,7 +136,8 @@ func TestRunCancellationClosesListenerAndPool(t *testing.T) {
 	if !db.closed.Load() {
 		t.Fatal("database leaked")
 	}
-	connection, err := net.DialTimeout("tcp", listener.Addr().String(), 100*time.Millisecond)
+	dialer := &net.Dialer{Timeout: 100 * time.Millisecond}
+	connection, err := dialer.DialContext(t.Context(), "tcp", listener.Addr().String())
 	if err == nil {
 		_ = connection.Close()
 		t.Fatal("listener leaked")
@@ -162,8 +166,8 @@ func TestShutdownDeadlineCancelsInflightProbe(t *testing.T) {
 	bound := make(chan net.Listener, 1)
 	done := make(chan error, 1)
 	go func() {
-		done <- run(ctx, cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), func(context.Context) (database, error) { return db, nil }, func(network, address string) (net.Listener, error) {
-			listener, err := net.Listen(network, address)
+		done <- run(ctx, cfg, slog.New(slog.DiscardHandler), func(context.Context) (database, error) { return db, nil }, func(network, address string) (net.Listener, error) {
+			listener, err := (&net.ListenConfig{}).Listen(t.Context(), network, address)
 			if err == nil {
 				bound <- listener
 			}
@@ -180,7 +184,11 @@ func TestShutdownDeadlineCancelsInflightProbe(t *testing.T) {
 	go func() {
 		defer close(clientDone)
 		client := &http.Client{Timeout: 2 * time.Second}
-		response, err := client.Get("http://" + listener.Addr().String() + "/health/ready")
+		request, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+listener.Addr().String()+"/health/ready", nil)
+		if err != nil {
+			return
+		}
+		response, err := client.Do(request)
 		if err == nil {
 			_ = response.Body.Close()
 		}

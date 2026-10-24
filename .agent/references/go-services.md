@@ -21,6 +21,7 @@ API, gRPC/protobuf на согласованных границах Go/ML, Postg
 | `references/hack-rnd-2026-spring/services/engine-go/` | `internal/app/app.go`, `internal/service/`, `internal/domain/`, `internal/delivery/grpc/`, `internal/infrastructure/postgres/repository/` | Ручная сборка зависимостей; transport → service → repository; предметные модели/ошибки; lifecycle ресурсов | В этом источнике транспорт называется `delivery`, а не `handler`. Не переносить чужие proto, сертификаты и бизнес-логику |
 | `references/centralservice/` | `internal/app/{app,container,shutdown}.go`, `internal/handler/`, `internal/service/`, `internal/domain/`, `internal/repository/minecraft/trust/{repository,queries}.go` и `sql/` | Интерфейсы рядом с потребителем; ручная сборка; repository с DB/pool; SQL в отдельных файлах через `//go:embed`; явное владение ресурсами | Игровая предметная область и SQL/драйверы другого проекта не определяют PostgreSQL-контракты нашего проекта. Крупный container не является требованием для маленького сервиса |
 | `references/golang-arch/` | `internal/handler/router.go`, `internal/handler/part/handler.go`, `internal/service/`, `internal/repository/` | Центральная регистрация маршрутов; consumer-side interfaces; feature packages; приватный handler с явным `NewHandler` | Фактический путь здесь `internal/handler/router.go`, без `http/`. В примере есть глобальный `log` и выдача `err.Error()` наружу — это не рекомендации для переноса |
+| `references/cosmohack/backend/` | `.golangci.yml`, `internal/app/postgres/pool.go`, `internal/app/app.go` | Согласованные владельцем PostgreSQL app-пакет/sqlx и набор Go-lint правил; создание/configure/Ping в app-пакете, Close у сборки, готовый DB/Tx передаётся repository | Зафиксировано в Core-ветке `globalarray/feat/core_foundation`, SHA `20d2adc0a44be6839ee5fef3351c04ccd746e20f`, 24.10.2026; при исправлении Auth сверена эта tracked фиксация, оригинальный checkout повторно не проверялся. Не переносить бизнес-логику, URL/default pool settings или driver errors |
 | `references/auth-service/` | `internal/config/config.go`, `internal/lifecycle/readiness.go`, `internal/app/http/app.go`, `internal/delivery/http/router.go` | Типизированные секции конфигурации; разделение lifecycle и router; readiness reader/writer; владение `http.Server` на уровне приложения | Не переносить глобальное состояние logger, auth/JWT-зависимости и `sslmode=disable`. Defaults до файла, затем env/Secrets и валидация — целевой подход из замечаний maxhack; поведение готового loader нельзя считать эталонным без проверки |
 
 Все пути указаны от корня текущего репозитория. `references/` содержит
@@ -36,8 +37,9 @@ checkout к runner и не копировать их целиком ради с�
 2. В плане указать референс, выбранный приём, затрагиваемые файлы и отличия от
    источника. Отделять существующие файлы от предлагаемых новых.
 3. Создавать только нужные слои; не вводить repository, DI framework или отдельный
-   пакет исключительно ради сходства с референсом. SQL-библиотека не выбрана
-   самим фактом наличия `sqlx` в примере.
+   пакет исключительно ради сходства с референсом. Наличие `sqlx` в примере
+   само по себе не выбирает библиотеку; для Auth/Core sqlx и PostgreSQL layout
+   уже выбраны владельцем и закреплены в общих инструкциях и соответствующем плане.
 4. После адаптации проверить ошибки, context/deadline, закрытие ресурсов,
    transport mapping, тесты и совместимость наших protobuf. Локальный пример
    не заменяет тесты и не доказывает корректность заимствованного фрагмента.

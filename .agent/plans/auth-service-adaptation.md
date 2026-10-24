@@ -23,8 +23,17 @@ PR #17 после каждого этапа. Следующий этап — п�
 подтверждение email — challenge/шесть случайных цифр, включая ведущие нули,
 TTL 10 минут; reset остаётся ссылкой; email transport — Resend HTTP API.
 Auth выдаёт ненулевой Company UUIDv7 один раз на durable команду. Auth ADR
-перенумерован в 026: номера 024/025 зарезервированы параллельной Core-работой.
-Остальные границы Auth/API/Core и review gate 3.1 сохраняются.
+перенумерован в [027](../adr/027-auth-contract.md): в доступном Core-реестре
+024/025/026 уже заняты UUID, sqlx/layout и feature-local application DTOs.
+Прежние номера Auth 024 и 026 сохраняются только как история; принятие 3.1,
+границы Auth/API/Core и gate перед 3.3 не меняются.
+
+Коррекция 3.2 по [ревью PR #17](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/17#issuecomment-6380966388):
+применить общие Go-правила из Core-ветки `globalarray/feat/core_foundation`,
+снимок `20d2adc0a44be6839ee5fef3351c04ccd746e20f`: sqlx с `pgx/stdlib`,
+PostgreSQL lifecycle в `internal/app/postgres`, приватные реализации,
+consumer-side interfaces, SQL/queries.go и полный lint модуля с тестами.
+Это исправление текущего 3.2, а не начало следующего этапа.
 
 ## 1. Цель и проверенное текущее состояние
 
@@ -104,8 +113,12 @@ HTTP/JSON на границе браузера, DDD-монолит Core и Postg
 5. Для Auth выделить собственную БД/роль PostgreSQL. Допустим общий экземпляр
    PostgreSQL с Core; прямые SQL-запросы между БД сервисов и shared tables исключены.
 6. Ручная сборка зависимостей через `internal/app`; SQL и транзакции в адаптерах,
-   интерфейсы около потребителя. Для Auth предлагаются тот же выбранный toolchain
-   и подход pgx/goose, что обсуждаются для Core; это ещё не утверждённые библиотеки.
+   узкие интерфейсы около потребителя. Baseline Auth после ревью 3.2 — sqlx,
+   `pgx/stdlib` только как PostgreSQL-драйвер `database/sql`, отдельная Goose CLI.
+   Создание/config/Ping pool — в `internal/app/postgres`, `Close` — у сборки;
+   repository принимает готовый `*sqlx.DB`/`*sqlx.Tx` и не открывает соединения.
+   Приватные реализации, validation helpers, SQL/queries.go и lint следуют
+   общим правилам `.agent/instructions.md`; toolchain закреплён в модуле Auth.
    Не выделять общий Go-модуль только ради похожих config/log.
 7. Обычный logout отзывает текущую сессию. После успешного сброса пароля
    предлагается отзывать все сессии пользователя; отдельный UI «выйти везде» не входит.
@@ -221,6 +234,7 @@ services/auth/
   go.mod, go.sum, README.md, .env.example, Makefile
   internal/
     app/                               # конструкторы, ресурсы, lifecycle
+      postgres/                        # создание/config/Ping pool; Close у app
     config/                            # типизированная конфигурация
     domain/                            # user, session, token, membership, invitation
     service/                           # use cases и нужные им интерфейсы
@@ -280,11 +294,11 @@ ADR со свободным на момент реализации номеро�
 После результата — ревью разработчиком и апрув до 3.2.
 
 Материалы реализации 3.1: [контракт](../../docs/auth/contract.md),
-[Proposed ADR-026](../adr/026-auth-contract.md),
+[Accepted ADR-027](../adr/027-auth-contract.md),
 [канонический protobuf](../../proto/auth/v1/auth.proto),
 [Buf lint/breaking](../../buf.yaml) и
 [service-local generation](../../buf.auth.gen.yaml).
-Статус ADR-026 изменён на Accepted после прямого поручения владельца выполнить
+Статус Auth ADR (теперь ADR-027) изменён на Accepted после прямого поручения владельца выполнить
 3.2, а не по вердикту агентов. Исторические пункты межкомандного согласования
 не помечаются завершёнными без подтверждения ответственных. Проверки 3.1 —
 в [отчёте](../../docs/auth/verification.md); результаты 3.2 —
@@ -307,6 +321,11 @@ health/readiness, локальные инструкции сборки и тес
   остальные таблицы вводить вместе с использующим их этапом.
 - [x] Ввести самостоятельные IDs и уникальность нормализованного email;
   SQL и migration tool соответствуют выбранной версии PostgreSQL.
+- [x] Повторно проверить исправление 3.2: sqlx/pgx-stdlib, отдельный PostgreSQL
+  lifecycle, приватный repository, consumer-side interfaces и SQL в `sql/`
+  с embed в `queries.go`; весь модуль — format/import/lint, unit, integration,
+  build и доступный race-check. Результат фиксируется для нового снимка отдельно
+  от исторического `b102904`.
 
 Проверки: unit config/lifecycle; миграции на пустой БД; repository с реальной
 PostgreSQL; ошибки подключения/запуска и освобождение ресурсов; сборка и выбранный lint.
@@ -316,8 +335,13 @@ PostgreSQL; ошибки подключения/запуска и освобож
 
 Материалы: [модуль Auth](../../services/auth/README.md),
 [миграция](../../services/auth/migrations/00001_auth_foundation.sql),
-[результат проверок](../../docs/auth/stage-3.2.md). Выбраны собственный pgx/goose
-и PostgreSQL 18.6 для реальных локальных тестов; Docker/deployment не добавлялись.
+[результат проверок](../../docs/auth/stage-3.2.md). Baseline — sqlx с
+`pgx/stdlib` и Goose; первоначальные проверки `b102904` использовали native pgx.
+PostgreSQL 18.6 использовалась для повторных реальных локальных тестов sqlx;
+format/import/full-module lint, unit/integration/vet/build и оба агентских ревью
+выполнены. Локальный race-check заблокирован отсутствием CGO/C toolchain;
+новый Auth CI предусматривает race на Linux. GitHub CI проверяется отдельно
+после push; локальный Docker/deployment не добавлялись.
 Приёмы references/auth-service: типизированная config, atomic readiness,
 ручное владение pool/server и embedded SQL. Наша реализация не копирует loader,
 JWT, глобальный logger, backtick SQL или startup/shutdown ошибки референса.

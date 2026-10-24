@@ -4,9 +4,11 @@
 health/readiness и ограниченное завершение. Auth RPC и браузерные auth endpoints
 ещё не реализованы. Контракт — [Auth](../../docs/auth/contract.md).
 
-Go 1.27.3, PostgreSQL 18; pgx/v5 5.11.0, goose/v3 3.29.0. Зависимости закреплены
+Go 1.27.3, PostgreSQL 18; sqlx 1.4.0, pgx/v5 5.11.0 через `pgx/stdlib`,
+goose/v3 3.29.0. Зависимости закреплены
 в go.mod/go.sum. PostgreSQL 18 нужен в том числе для uuid_extract_version.
-Модуль независим от Core; его sqlx/layout не меняется этой поставкой.
+Модуль независим от Core; Auth следует общим правилам sqlx/layout из
+[инструкций](../../.agent/instructions.md). Native pgxpool не используется.
 
 ## Запуск
 
@@ -28,7 +30,7 @@ go run ./cmd/auth
 Первая команда применяет pending **up** migrations, берёт PostgreSQL advisory
 session lock и завершается. Migration work ограничен минутой;
 снятие lock использует отдельный deadline AUTH_QUERY_TIMEOUT даже после отмены
-основного контекста. Закрытие соединения также ограничено pgx driver.
+основного контекста.
 Сервер не запускает DDL автоматически: перед bind проверяет соединение и точную
 версию схемы. Старый/будущий/отсутствующий schema
 version запрещает запуск; live readiness также перепроверяет его.
@@ -41,7 +43,7 @@ version запрещает запуск; live readiness также перепр�
 | AUTH_DATABASE_URL | Обязательный PostgreSQL URL с host/database/user и sslmode=verify-full |
 | AUTH_ENV | production; local разрешает sslmode=disable только на loopback |
 | AUTH_HTTP_ADDRESS | 127.0.0.1:8082; literal IP/localhost, port 1–65535 (0 только local) |
-| AUTH_DB_MAX_CONNECTIONS | 5, диапазон 1–100; min=0, idle=5m, lifetime=30m |
+| AUTH_DB_MAX_CONNECTIONS | 5, диапазон 1–100; idle=5m, lifetime=30m |
 | AUTH_STARTUP_TIMEOUT | 5s, диапазон 50ms–5m |
 | AUTH_QUERY_TIMEOUT | 1s, диапазон 50ms–5m; общий deadline для transaction callback |
 | AUTH_SHUTDOWN_TIMEOUT | 5s, диапазон 50ms–5m |
@@ -65,6 +67,16 @@ Ctrl+C/SIGTERM снимает readiness, дренирует HTTP, при timeout
 
 ## Хранилище
 
+`internal/app/postgres` создаёт/configure/Ping готовый `*sqlx.DB`; composing
+`internal/app` владеет `Close`, в том числе при ошибке startup или миграции.
+Repository не открывает и не закрывает pool. `NewRepository` возвращает приватную
+реализацию и принимает готовый `sqlx.ExtContext` (`*sqlx.DB` или `*sqlx.Tx`).
+Узкие интерфейсы принадлежат потребителям; собственного зеркального интерфейса
+провайдер не публикует. SQL — в `internal/repository/postgres/sql/`, embed — в
+`queries.go`; schema, user operations, row mapping, transaction helper и errors
+разделены по ответственности. Отдельная `app.Migrate` владеет соединением
+миграционной команды, repository получает готовый DB.
+
 Миграция 1: users, credentials, security_contexts, sessions,
 verification_challenges, reset_tokens и goose history. Credential version
 принадлежит users; sessions сохраняют snapshot, без FK на изменяемую version.
@@ -73,9 +85,11 @@ Security context хранит hash cookie, nonce/key_id CSRF, срок и отз
 TTL ≤10m; reset — hash и TTL ≤15m. Код/ссылка/cookie в открытом виде не хранятся.
 Ключи HMAC/AES/CSRF, методы verify/login/reset и очистка ещё относятся к 3.3/3.4.
 
-UserRecord/Tx — низкоуровневое хранилище, не регистрация. InsertUser сохраняет
+UserRecord — storage projection, а операции repository — низкоуровневое
+хранилище, не регистрация. InsertUser сохраняет
 уже нормализованный email и UUIDv4; БД проверяет их и уникальность email.
-WithTx передаёт bounded context; ошибка callback/cancellation делает rollback.
+WithTx передаёт bounded context и `*sqlx.Tx`; callback создаёт repository над этим
+Tx. Ошибка callback/cancellation делает rollback; успешный callback — commit.
 До добавления consent/evidence/outbox в 3.3/3.4 пользовательская регистрация
 через это хранилище не предоставляется. Memberships/invitations/Company остаются
 за последующими этапами и Core. Готовность health не означает готовность Auth flow.
@@ -83,10 +97,22 @@ WithTx передаёт bounded context; ошибка callback/cancellation де
 ## Проверки
 
 ```sh
+golangci-lint fmt --diff $(git ls-files -- '*.go')
+golangci-lint run ./...
 go test ./...
-go vet ./...
+go vet -tags=integration ./...
+go build ./cmd/auth ./cmd/migrate
 go test -tags=integration -count=1 -timeout=90s ./...
 ```
+
+`.golangci.yml` адаптирует согласованный набор Core/cosmohack с Auth module
+prefix. Форматирование, импорты и lint проверяются по всему модулю, включая
+тесты и integration build tag (`run.build-tags` в конфигурации). `go vet`
+не заменяет полный lint. [Auth CI](../../.github/workflows/auth-ci.yml) задаёт
+lint, unit/integration tests с race detector и build; добавление workflow
+не подтверждает его успешное выполнение на GitHub.
+Фактические результаты и ограничения — в [отчёте 3.2](../../docs/auth/stage-3.2.md);
+список команд сам по себе не означает успешный запуск CI.
 
 Integration требует AUTH_TEST_DATABASE_URL на PostgreSQL 18, имя БД заканчивается
 на _test. Тест создаёт собственную случайную schema auth_test_<uuid> и удаляет
@@ -105,5 +131,7 @@ go test -race -tags=integration -count=1 ./...
 
 Pattern provenance: lifecycle/config/readiness и embedded parameterized SQL из
 описания references/auth-service в [.agent/references](../../.agent/references/go-services.md),
-HEAD e800594. Исходники/лицензионно невыясненный код не копируются. Наша реализация
+HEAD e800594; отдельный PostgreSQL app-пакет/sqlx и Go-lint — из согласованного
+cosmohack layout, зафиксированного в Core-снимке `20d2adc0a44be6839ee5fef3351c04ccd746e20f`.
+Исходники/лицензионно невыясненный код не копируются. Наша реализация
 исправляет cleanup, timeout, SQL и TLS проблемы референса.

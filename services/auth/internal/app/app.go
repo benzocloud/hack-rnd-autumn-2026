@@ -1,4 +1,3 @@
-// Package app wires owned resources. Stage 3.2 serves health probes only.
 package app
 
 import (
@@ -11,7 +10,6 @@ import (
 	"time"
 
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/config"
-	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/repository/postgres"
 )
 
 type database interface {
@@ -21,7 +19,11 @@ type database interface {
 }
 
 func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
-	return run(ctx, cfg, logger, func(ctx context.Context) (database, error) { return postgres.Open(ctx, cfg) }, net.Listen)
+	listenerConfig := &net.ListenConfig{}
+	return run(ctx, cfg, logger, func(ctx context.Context) (database, error) { return openDatabase(ctx, cfg) },
+		func(network, address string) (net.Listener, error) {
+			return listenerConfig.Listen(ctx, network, address)
+		})
 }
 
 func run(ctx context.Context, cfg config.Config, logger *slog.Logger, open func(context.Context) (database, error), listen func(string, string) (net.Listener, error)) error {
@@ -72,11 +74,15 @@ func run(ctx context.Context, cfg config.Config, logger *slog.Logger, open func(
 		if err := server.Shutdown(shutdown); err != nil {
 			cancelServer()
 			_ = server.Close()
-			<-served
+			if err := <-served; err != nil && !errors.Is(err, http.ErrServerClosed) {
+				return errors.New("auth health server stopped unexpectedly")
+			}
 			return errors.New("auth shutdown deadline exceeded")
 		}
 		cancelServer()
-		<-served
+		if err := <-served; err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return errors.New("auth health server stopped unexpectedly")
+		}
 		return nil
 	}
 }

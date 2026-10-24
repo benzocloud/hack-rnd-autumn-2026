@@ -1,4 +1,3 @@
-// Package config loads validated environment settings without logging secrets.
 package config
 
 import (
@@ -11,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5"
 )
 
 type Config struct {
@@ -21,7 +20,7 @@ type Config struct {
 	StartupTimeout  time.Duration
 	QueryTimeout    time.Duration
 	ShutdownTimeout time.Duration
-	MaxConnections  int32
+	MaxConnections  int
 }
 
 func (c Config) Format(w fmt.State, _ rune) { _, _ = io.WriteString(w, "AuthConfig{secrets:redacted}") }
@@ -69,67 +68,79 @@ func Load(getenv func(string) string) (Config, error) {
 		if err != nil || n < 1 || n > 100 {
 			return Config{}, errors.New("AUTH_DB_MAX_CONNECTIONS must be between 1 and 100")
 		}
-		c.MaxConnections = int32(n)
+		c.MaxConnections = n
 	}
-	if _, err := c.PoolConfig(); err != nil {
+	if _, err := c.ConnectionConfig(); err != nil {
 		return Config{}, err
 	}
 	return c, nil
 }
 
-// PoolConfig rejects implicit TLS fallback. Plaintext is an explicit local-only
+// ConnectionConfig rejects implicit TLS fallback. Plaintext is an explicit local-only
 // choice, limited to a loopback server; production always verifies its identity.
-func (c Config) PoolConfig() (*pgxpool.Config, error) {
-	u, err := url.Parse(c.databaseURL)
+func (c Config) ConnectionConfig() (*pgx.ConnConfig, error) {
+	if err := validateDatabaseURL(c.databaseURL, c.Environment); err != nil {
+		return nil, err
+	}
+	connection, err := pgx.ParseConfig(c.databaseURL)
+	if err != nil {
+		return nil, errors.New("AUTH_DATABASE_URL or TLS configuration is invalid")
+	}
+	if err := validateConnection(connection, c.Environment); err != nil {
+		return nil, err
+	}
+	connection.ConnectTimeout = c.StartupTimeout
+	connection.RuntimeParams["application_name"] = "saldo-auth"
+	return connection, nil
+}
+
+func validateDatabaseURL(raw, environment string) error {
+	u, err := url.Parse(raw)
 	if err != nil || (u.Scheme != "postgres" && u.Scheme != "postgresql") || u.Hostname() == "" || u.Path == "" || u.Path == "/" || u.User == nil || u.User.Username() == "" || u.Fragment != "" {
-		return nil, errors.New("AUTH_DATABASE_URL must be a PostgreSQL URL with host, database and user")
+		return errors.New("AUTH_DATABASE_URL must be a PostgreSQL URL with host, database and user")
 	}
 	mode := u.Query().Get("sslmode")
 	for key := range u.Query() {
 		switch key {
 		case "sslmode", "sslrootcert", "sslcert", "sslkey", "connect_timeout", "search_path", "application_name":
 		default:
-			return nil, errors.New("AUTH_DATABASE_URL contains an unsupported parameter")
+			return errors.New("AUTH_DATABASE_URL contains an unsupported parameter")
 		}
 	}
 	local := u.Hostname() == "localhost" || (net.ParseIP(u.Hostname()) != nil && net.ParseIP(u.Hostname()).IsLoopback())
-	if mode != "verify-full" && !(mode == "disable" && c.Environment == "local" && local) {
-		return nil, errors.New("AUTH_DATABASE_URL requires sslmode=verify-full (disable is local loopback only)")
+	if mode != "verify-full" && (mode != "disable" || environment != "local" || !local) {
+		return errors.New("AUTH_DATABASE_URL requires sslmode=verify-full (disable is local loopback only)")
 	}
-	pool, err := pgxpool.ParseConfig(c.databaseURL)
-	if err != nil {
-		return nil, errors.New("AUTH_DATABASE_URL or TLS configuration is invalid")
-	}
-	if mode == "disable" {
-		for _, endpoint := range append([]string{pool.ConnConfig.Host}, fallbackHosts(pool)...) {
-			ip := net.ParseIP(endpoint)
-			if endpoint != "localhost" && (ip == nil || !ip.IsLoopback()) {
-				return nil, errors.New("plaintext database must use loopback")
-			}
-		}
-	}
-	if mode == "verify-full" {
-		if pool.ConnConfig.TLSConfig == nil || pool.ConnConfig.TLSConfig.InsecureSkipVerify {
-			return nil, errors.New("database TLS must verify the server")
-		}
-		for _, fallback := range pool.ConnConfig.Fallbacks {
-			if fallback.TLSConfig == nil || fallback.TLSConfig.InsecureSkipVerify {
-				return nil, errors.New("database TLS fallback is forbidden")
-			}
-		}
-	}
-	pool.MaxConns = c.MaxConnections
-	pool.MinConns = 0
-	pool.MaxConnLifetime = 30 * time.Minute
-	pool.MaxConnIdleTime = 5 * time.Minute
-	pool.ConnConfig.ConnectTimeout = c.StartupTimeout
-	pool.ConnConfig.RuntimeParams["application_name"] = "saldo-auth"
-	return pool, nil
+	return nil
 }
 
-func fallbackHosts(pool *pgxpool.Config) []string {
-	hosts := make([]string, 0, len(pool.ConnConfig.Fallbacks))
-	for _, fallback := range pool.ConnConfig.Fallbacks {
+func validateConnection(connection *pgx.ConnConfig, environment string) error {
+	if connection.TLSConfig == nil {
+		if environment != "local" {
+			return errors.New("database TLS must verify the server")
+		}
+		for _, endpoint := range append([]string{connection.Host}, fallbackHosts(connection)...) {
+			ip := net.ParseIP(endpoint)
+			if endpoint != "localhost" && (ip == nil || !ip.IsLoopback()) {
+				return errors.New("plaintext database must use loopback")
+			}
+		}
+		return nil
+	}
+	if connection.TLSConfig.InsecureSkipVerify {
+		return errors.New("database TLS must verify the server")
+	}
+	for _, fallback := range connection.Fallbacks {
+		if fallback.TLSConfig == nil || fallback.TLSConfig.InsecureSkipVerify {
+			return errors.New("database TLS fallback is forbidden")
+		}
+	}
+	return nil
+}
+
+func fallbackHosts(connection *pgx.ConnConfig) []string {
+	hosts := make([]string, 0, len(connection.Fallbacks))
+	for _, fallback := range connection.Fallbacks {
 		hosts = append(hosts, fallback.Host)
 	}
 	return hosts

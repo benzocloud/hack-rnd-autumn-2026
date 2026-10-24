@@ -49,14 +49,14 @@ func TestConfigDefaultsTLSAndRedaction(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pool, err := cfg.PoolConfig()
+	connection, err := cfg.ConnectionConfig()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pool.ConnConfig.TLSConfig == nil || pool.ConnConfig.TLSConfig.InsecureSkipVerify {
+	if connection.TLSConfig == nil || connection.TLSConfig.InsecureSkipVerify {
 		t.Fatal("TLS verification disabled")
 	}
-	if pool.MaxConns != 5 || cfg.HTTPAddress != "127.0.0.1:8082" {
+	if cfg.MaxConnections != 5 || cfg.HTTPAddress != "127.0.0.1:8082" {
 		t.Fatal("unexpected defaults")
 	}
 	var log bytes.Buffer
