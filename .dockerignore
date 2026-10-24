@@ -13,3 +13,10 @@ build
 Dockerfile
 compose.yaml
 .dockerignore
+
+dataset
+services
+proto
+docs
+references
+deploy

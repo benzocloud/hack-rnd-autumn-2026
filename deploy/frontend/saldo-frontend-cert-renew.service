@@ -1,0 +1,9 @@
+[Unit]
+Description=Renew the Saldo frontend TLS certificate
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/saldo-frontend-cert-renew

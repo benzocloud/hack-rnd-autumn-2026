@@ -3,8 +3,8 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 
-test("auth redirects: GitHub Pages prefix, public routes and one redirect without loops", () => {
-    for (const basePath of [ "", "/hack-rnd-autumn-2026" ]) {
+test("auth redirects: optional base path, public routes and one redirect without loops", () => {
+    for (const basePath of [ "", "/demo" ]) {
         const result = spawnSync(process.execPath, [ "--import", "./tests/register.mjs", "--input-type=module", "-e", `
             import assert from "node:assert/strict";
             import { withBasePath, withoutBasePath } from "./src/helpers/basePath.ts";

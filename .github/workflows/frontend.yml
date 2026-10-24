@@ -1,0 +1,161 @@
+name: Frontend mock CI and deploy
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/frontend.yml'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - 'package*.json'
+      - '*config*'
+      - 'src/**'
+      - 'public/**'
+      - 'tests/**'
+      - 'deploy/frontend/**'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/frontend.yml'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - 'package*.json'
+      - '*config*'
+      - 'src/**'
+      - 'public/**'
+      - 'tests/**'
+      - 'deploy/frontend/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  IMAGE: ghcr.io/benzocloud/saldo-frontend-mock
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run typecheck
+      - name: Check deployment shell scripts
+        run: shellcheck deploy/frontend/*.sh
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+
+  build:
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.image.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build the mock image
+        id: image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          push: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+          tags: ${{ env.IMAGE }}:sha-${{ github.sha }}
+          build-args: |
+            developerMode=mock
+            NEXT_PUBLIC_API_URL=/api/v1
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            me.brokebyte.saldo.mode=mock
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Smoke-test the container
+        env:
+          IMAGE_TAG: ${{ env.IMAGE }}:sha-${{ github.sha }}
+        run: |
+          docker run -d --name saldo-frontend-check -p 127.0.0.1:3102:3000 "$IMAGE_TAG"
+          trap 'docker logs saldo-frontend-check; docker rm -f saldo-frontend-check' EXIT
+          for _ in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3102/login >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          for route in login register privacy-policy personal-data-consent; do
+            curl --fail --silent --show-error "http://127.0.0.1:3102/$route" >/dev/null
+          done
+
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: frontend-mock
+      url: https://saldo.brokebyte.me
+    permissions:
+      packages: read
+    steps:
+      - name: Deploy the immutable image through restricted SSH
+        env:
+          DEPLOY_KEY: ${{ secrets.FRONTEND_DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.FRONTEND_DEPLOY_KNOWN_HOSTS }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY_USER: ${{ github.actor }}
+          IMAGE_DIGEST: ${{ needs.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          [[ "$IMAGE_DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]
+          [[ "$REGISTRY_USER" =~ ^[a-zA-Z0-9_-]+$ ]]
+          test -n "$DEPLOY_KEY"
+          test -n "$KNOWN_HOSTS"
+          credential_dir=$(mktemp -d "$RUNNER_TEMP/saldo-ssh.XXXXXX")
+          trap 'rm -rf "$credential_dir"' EXIT
+          umask 077
+          printf '%s\n' "$DEPLOY_KEY" > "$credential_dir/id_ed25519"
+          printf '%s\n' "$KNOWN_HOSTS" > "$credential_dir/known_hosts"
+          printf '%s\n' "$GHCR_TOKEN" | ssh -T -p 8321 \
+            -i "$credential_dir/id_ed25519" -o IdentitiesOnly=yes \
+            -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$credential_dir/known_hosts" \
+            -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+            saldo-deploy@brokebyte.me "deploy $IMAGE_DIGEST $REGISTRY_USER"
+      - name: Verify public HTTPS
+        run: curl --fail --silent --show-error --retry 5 https://saldo.brokebyte.me/login >/dev/null
