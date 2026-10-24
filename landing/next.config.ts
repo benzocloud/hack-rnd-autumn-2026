@@ -5,6 +5,7 @@ const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://saldo.brokebyte.me")
 
 const nextConfig: NextConfig = {
     output: "standalone",
+    basePath: "/landing",
     agentRules: false,
     experimental: { useTypeScriptCli: false },
     redirects: async () => [

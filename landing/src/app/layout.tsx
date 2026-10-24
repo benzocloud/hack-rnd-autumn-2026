@@ -13,8 +13,8 @@ const metadata: Metadata = {
     description,
     applicationName: "Saldo Analytics",
     icons: {
-        icon: "/favicons/favicon.svg",
-        apple: "/favicons/apple-touch-icon.png",
+        icon: "/landing/favicons/favicon.svg",
+        apple: "/landing/favicons/apple-touch-icon.png",
     },
     openGraph: {
         title: "Saldo Analytics — смотрите на финансы вперёд",
