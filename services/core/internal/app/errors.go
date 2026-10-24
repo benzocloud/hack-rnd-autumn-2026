@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	storage "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/repository/postgres"
+	forecastService "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/forecasting"
 	ledgerService "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/ledger"
 	paymentsService "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/payments"
 )
@@ -17,6 +18,16 @@ func ledgerError(err error) error {
 		if errors.Is(err, pair.storage) {
 			return storage.WithCause(pair.application, err)
 		}
+	}
+	return err
+}
+
+func forecastingError(err error) error {
+	if errors.Is(err, storage.ErrNotFound) {
+		return storage.WithCause(forecastService.ErrNotFound, err)
+	}
+	if errors.Is(err, storage.ErrUnavailable) || errors.Is(err, storage.ErrConflict) {
+		return storage.WithCause(forecastService.ErrUnavailable, err)
 	}
 	return err
 }
