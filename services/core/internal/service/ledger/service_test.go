@@ -14,20 +14,75 @@ import (
 )
 
 type captureStore struct {
-	calls      int
-	actor, key string
+	payload, completed, digest     []byte
+	replay                         bool
+	reserveErr, completeErr, txErr error
+	operation, resource            string
+	accountReads                   int
+	calls                          int
+	actor, key                     string
+	account                        *domain.BankAccount
+	transaction                    domain.Transaction
+	transactionFound               bool
+	balance                        domain.BalanceObservation
+	balanceFound                   bool
+	revision                       int64
+	saves, inserts                 int
 }
 
-func (s *captureStore) CreateTransaction(_ context.Context, cmd ledger.TransactionCommand, record domain.Transaction) (ledger.CreateTransactionResult, error) {
-	s.calls++
-	s.actor, s.key = cmd.ActorID, cmd.IdempotencyKey
-	return ledger.CreateTransactionResult{TransactionID: record.Data().ID, TransactionVersion: 7, DataVersion: 42}, nil
+func (s *captureStore) prepare(scope domain.Scope) error {
+	if s.account != nil {
+		return nil
+	}
+	var err error
+	s.account, err = domain.NewBankAccount(scope)
+	return err
 }
 
-func (s *captureStore) RecordBalance(_ context.Context, cmd ledger.BalanceCommand, record domain.BalanceObservation) (ledger.RecordBalanceResult, error) {
+func (s *captureStore) withinTx(ctx context.Context, work ledger.Work) error {
 	s.calls++
-	s.actor, s.key = cmd.ActorID, cmd.IdempotencyKey
-	return ledger.RecordBalanceResult{Date: record.Date(), DataVersion: 42}, nil
+	if err := work(ctx, s, s); err != nil {
+		return err
+	}
+	return s.txErr
+}
+func (s *captureStore) Reserve(_ context.Context, _ domain.Scope, actor, operation, resource, key string, digest []byte) ([]byte, bool, error) {
+	s.actor, s.key = actor, key
+	s.operation, s.resource = operation, resource
+	s.digest = append([]byte(nil), digest...)
+	return s.payload, s.replay, s.reserveErr
+}
+func (s *captureStore) Complete(_ context.Context, _ domain.Scope, _, _, _, _ string, payload []byte) error {
+	s.completed = append([]byte(nil), payload...)
+	return s.completeErr
+}
+func (s *captureStore) LoadAccount(_ context.Context, scope domain.Scope) (*domain.BankAccount, error) {
+	s.accountReads++
+	if err := s.prepare(scope); err != nil {
+		return nil, err
+	}
+	return s.account, nil
+}
+func (s *captureStore) SaveAccount(_ context.Context, account *domain.BankAccount) error {
+	s.saves++
+	s.account = account
+	return nil
+}
+func (s *captureStore) FindTransaction(context.Context, domain.Scope, uuid.UUID, domain.Source) (domain.Transaction, int64, bool, error) {
+	return s.transaction, s.revision, s.transactionFound, nil
+}
+func (s *captureStore) InsertTransaction(_ context.Context, record domain.Transaction, revision int64) error {
+	s.inserts++
+	s.transaction, s.revision, s.transactionFound = record, revision, true
+	return nil
+}
+func (s *captureStore) FindBalance(context.Context, domain.Scope, domain.Date) (domain.BalanceObservation, int64, bool, error) {
+	return s.balance, s.revision, s.balanceFound, nil
+}
+func (s *captureStore) InsertBalance(_ context.Context, record domain.BalanceObservation, _ string, revision int64) error {
+	s.inserts++
+	s.balance, s.revision, s.balanceFound = record, revision, true
+	return nil
 }
 
 func transactionCommand(t *testing.T) ledger.TransactionCommand {
@@ -63,7 +118,7 @@ func TestCommandMetadata(t *testing.T) {
 						cmd.Record.Source = domain.Source{Kind: kind, Namespace: domain.Namespace{System: "dataset_v1", CompanyID: "C001"}, ExternalID: "OP1", ImportedAt: time.Now()}
 					}
 					storage := &captureStore{}
-					_, err := ledger.New(storage).CreateTransaction(t.Context(), cmd)
+					_, err := ledger.New(storage.withinTx).CreateTransaction(t.Context(), cmd)
 					valid := tc.complete || (kind == domain.Imported && tc.actor == "" && tc.key == "")
 					if valid {
 						if err != nil || storage.calls != 1 {

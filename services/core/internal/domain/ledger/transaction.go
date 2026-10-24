@@ -72,7 +72,7 @@ func (t Transaction) Categorize(category Category) (Transaction, error) {
 
 // CheckReplay compares a proposed import with a stored record of the same external
 // identity. Internal IDs and time of reimport do not change the financial fact.
-// Uniqueness and the stored-record lookup belong to the later repository stage.
+// Uniqueness and the stored-record lookup belong to the repository.
 func (t Transaction) CheckReplay(stored Transaction) (bool, error) {
 	if t.data.Scope != stored.data.Scope {
 		return false, ErrScope

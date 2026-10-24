@@ -53,3 +53,28 @@ func TestAccountSourceBindings(t *testing.T) {
 		}
 	}
 }
+
+func TestStatementFactsBindingValidation(t *testing.T) {
+	t.Parallel()
+	scope := ledger.Scope{CompanyID: uuid.New(), AccountID: uuid.New()}
+	account, err := ledger.NewBankAccount(scope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := account.BindStatementFacts(ledger.Namespace{}); !errors.Is(err, ledger.ErrInvalid) {
+		t.Fatalf("invalid namespace: %v", err)
+	}
+	if err := account.BindSupplemental(ledger.Namespace{System: "bank", CompanyID: "C001"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := account.BindStatementFacts(ledger.Namespace{System: "bank", CompanyID: "C002"}); !errors.Is(err, ledger.ErrBinding) {
+		t.Fatalf("changed company: %v", err)
+	}
+	// Failed statement binding must not partially claim factual authority.
+	if err := account.BindFacts(ledger.Source{Kind: ledger.Manual}); err != nil {
+		t.Fatal(err)
+	}
+	if err := account.BindStatementFacts(ledger.Namespace{System: "bank", CompanyID: "C001"}); !errors.Is(err, ledger.ErrSourceConflict) {
+		t.Fatalf("manual history mixed with statement: %v", err)
+	}
+}

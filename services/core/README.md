@@ -2,8 +2,9 @@
 
 Основа модульного DDD-монолита. Подэтап 2.1 содержит env-конфигурацию и
 локальный `pkg/log`; подэтап 2.2 добавляет доменные модели денег, Ledger и Payments.
-Подэтап 2.3 в работе: подготовлены sqlx pool в `internal/app/postgres`, SQL Ledger
-и миграции; write-path и полный PostgreSQL integration suite ещё не закончены.
+Подэтап 2.3 реализован локально и ожидает ревью разработчика: sqlx pool,
+миграции, атомарные операции Ledger/Payments и persistent idempotency.
+Прикладная сборка находится в `internal/app`; HTTP/gRPC ещё не реализованы.
 Сервер остаётся в следующих подэтапах
 [плана](../../.agent/plans/go-core-foundation.md).
 
@@ -35,14 +36,15 @@ Ledger отделяет company/account scope, внешнюю компанию �
 и фактическое время записи/импорта. Привязка дополнительного источника ожиданий
 не выбирает источник фактов. Повтор импорта сравнивается по внешней идентичности
 и содержимому; повторные EOD не складываются. Версия ресурса и `data_version`
-счёта разделены; прикладная транзакция будет координировать их в 2.3.
+счёта разделены; write-транзакция сохраняет их атомарно. Внешний EOD и факты
+закрепляют один factual namespace; ручной EOD и ожидания его не выбирают.
 
 Payments ограничивает match остатком ожидания и нераспределённой суммой факта,
 проверяет scope/направление и возвращает новое состояние вместе с PaymentMatch.
 Просрочка — признак для заданной даты, без автоматического перехода в факт.
 Отмена сохраняет историю распределений. Переданный в match общий объём уже
 распределённых средств должен быть прочитан для точного scoped transaction
-под блокировкой в будущей PostgreSQL-транзакции. Проверка модели не заменяет
+под блокировкой счёта в PostgreSQL-транзакции. Проверка модели не заменяет
 защиту от конкурентных записей, storage uniqueness и идемпотентность команды.
 
 
@@ -63,9 +65,68 @@ ActorID из доверенного входного адаптера; сам а
 Ручные операции требуют оба поля, импорт допускает отсутствие обоих, но не
 одного из пары. Проверка данных/генерация UUID и приватные consumer-side ports
 сохранены. Это внутренние application DTO без JSON-тегов; HTTP/protobuf mapper
-и сериализация сохранённых результатов определяются на соответствующих границах.
-Домен и сохранённый REST-контракт этим изменением не меняются. Реализации
-транзакционных storage ports по-прежнему требуют завершения подэтапа 2.3.
+и сериализация сохранённых результатов разделены: private persistence codecs в
+`service/{ledger,payments}/*_receipt.go`; будущий HTTP/protobuf mapper
+появится у транспорта. REST-контракт не менялся.
+
+## Атомарная запись
+
+`app.New(ctx, cfg)` открывает pool и передаёт сервисам явно собранные функции
+`withinTx`; приложение владеет `Close`. Конструктор не применяет
+миграции. Создание компаний/счёта будет подключено после контракта онбординга Auth;
+fixture создаёт тестовый счёт отдельно.
+
+Сервисы координируют четыре финансовых сценария: читают состояние через private
+consumer-side ports, проверяют версии, вызывают доменные методы и формируют
+operation-specific Result. SQL-репозитории возвращают доменные модели, версии
+и признак наличия записи; service command/result DTO они не принимают и не возвращают.
+
+В Ledger и Payments определено по одному публичному callback-типу `Work`.
+Private `store` и `commandStore` задают только нужные feature возможности.
+Функция из app вызывает общий `app/postgres.WithinTx` и создаёт repository
+wrappers для одного Tx. `WithinTx` управляет deadline/Begin/Commit/Rollback;
+он не знает команд, моделей, repositories или receipt. Сервис возвращает
+результат только после успешного завершения `withinTx`.
+
+Service проверяет persistent replay до account lock и stale guards, вызывает
+доменный сценарий только для новой команды и сохраняет private receipt.
+`repository/postgres/commands` хранит opaque payload и digest; service DTO и
+codecs ему неизвестны. SQL ошибки классифицируются на repository boundary,
+ошибки lifecycle — в helper, feature mapping выполняется рядом с app wiring.
+SQLx/Tx в service и в context values не передаются. Центрального реестра
+repositories, `service/transaction` и operation-specific транзакционных адаптеров нет.
+
+```text
+service → withinTx (функция из app) → app/postgres.WithinTx
+             Work ← repositories, привязанные к одному Tx
+service: replay → domain decisions → persistence → receipt
+             Commit → result; любая ошибка → zero result
+```
+
+Все четыре прикладные операции используют короткую READ COMMITTED транзакцию
+с `CORE_POSTGRES_QUERY_TIMEOUT`. Порядок блокировок: ключ команды → scoped account
+`FOR UPDATE` → ресурсы. Под блокировкой счёта проверяются текущие версии,
+источник/namespace и доступная сумма распределения. Новые данные, ресурсная версия,
+`data_version` и результат команды коммитятся вместе. Ошибка откатывает и
+финансовые изменения, и reservation. Неожиданные SQL/driver errors не выдаются
+наружу; порт возвращает безопасные application errors либо конкретные domain errors.
+Цепочка причин и SQLSTATE сохраняются через errors.Is/As; Error() не печатает
+приватные детали driver. Не выводить unwrapped cause в публичный ответ или лог с данными.
+
+Persistent scope: actor + company/account + операция/resource + IdempotencyKey.
+Digest считается по каноническому исходному запросу, с явными копейками/валютой,
+до подстановки ID/time. Явно переданные значения остаются частью digest.
+Результат проверяется до stale-version guard и возвращается после переподключения.
+Хранение минимум 24 часа: expiry записывается в БД; очистка пока не запускается,
+поэтому сохранённые ключи продолжают воспроизводиться и после этой отметки.
+Импорт без ключа защищён отдельно по external identity; повтор сохраняет текущие
+resource ID/version и первоначальную created data revision без повторной записи.
+Balance хранит собственную created_data_version, чтобы повтор EOD возвращал
+исходную revision. Импорт ожидания после match сохраняет remaining/status.
+
+Это внутренние операции для доверенного адаптера. Авторизация и проверка прав
+на компанию должны выполняться будущим транспортом при каждом запросе, включая replay.
+Финансовые данные для snapshot, очередь, importer и сервер этим этапом не добавлены.
 
 ## Проверки
 
@@ -75,7 +136,10 @@ Go **1.27.3**, golangci-lint **2.15.0**, [Task](https://taskfile.dev/) **3.48+**
 этот toolchain. Закреплены google/uuid 1.6.0, sqlx 1.4.0 и pgx 5.11.0; `go.sum` отслеживается.
 pgx/stdlib используется как database/sql driver, без native pgxpool.
 Pool создаёт `internal/app/postgres`, закрывает вызывающий app; repository
-получает готовый DB/Tx. Goose — отдельный migration CLI в 2.3.
+получает готовый DB/Tx. Goose 3.29.0 запускается отдельно через `task migrate-up`.
+Установить CLI: `GOTOOLCHAIN=go1.27.3 go install github.com/pressly/goose/v3/cmd/goose@v3.29.0`.
+Передать `GOOSE_DBSTRING` через защищённое окружение для целевой БД;
+для нестандартного пути использовать `GOOSE=/path/to/goose`. Startup миграции не запускает.
 
 ```sh
 cd services/core
@@ -90,18 +154,21 @@ task check
 доступны отдельно. База данных для этих проверок не нужна.
 Для нестандартного расположения линтера: `task lint GOLANGCI_LINT=/path/to/golangci-lint`.
 `task integration` запускает `go test -tags=integration -race -count=1 ./...`.
-Реализованы регрессии: сохранение отсутствующего счёта возвращает `sql.ErrNoRows`,
-CHECK отвергает несовместимые authority/namespace; валидные состояния проходят
-UUID roundtrip и SaveAccount. Полный набор проверок подэтапа 2.3 ещё не готов.
+Integration-проверки покрывают UUID/source CHECK, четыре операции записи,
+replay после reconnect, разные digest/scopes, откат после FK/SQL-ошибки,
+конкурентный одинаковый ключ и factual namespaces, два match разных ожиданий
+на один факт, stale versions, cross-tenant ID и отмену context без утечки pool.
 
 Использовать только одноразовую БД из `compose.integration.yml`: запустить
 `docker compose -f compose.integration.yml up -d --wait postgres`, узнать
 случайный порт через `docker compose -f compose.integration.yml port postgres 5432`.
 Передать его и тестовые настройки из Compose через `CORE_POSTGRES_*` (host
 `127.0.0.1`, database `saldo_core_test`, SSL mode `disable`); отдельно применить
-миграции закреплённым goose CLI 3.29.0, затем выполнить `task integration`.
+миграции через `task migrate-up` с закреплённым goose CLI 3.29.0, затем выполнить `task integration`.
 Перед записью тесты требуют server marker `saldo.test_database=saldo-core-integration`;
-без него завершаются ошибкой. Данные каждого теста откатываются транзакцией.
+без него завершаются ошибкой. Low-level тесты откатывают транзакции;
+прикладные тесты коммитят для проверки reconnect/concurrency и удаляют только
+свои company-scoped fixtures при завершении. Не прерывать их на постоянной БД.
 После проверки: `docker compose -f compose.integration.yml down`.
 Реальные/dev БД для этих тестов не подходят.
 
@@ -200,7 +267,7 @@ MIT, Copyright 2026 BenzoCloud; применим корневой LICENSE это
 корректность/ошибки, контексты и ресурсы, вложенность, стиль, тесты и logging.
 Дополнительно goimports разделяет stdlib, внешние и локальные imports.
 `task check` проверяет весь модуль (`./...`), включая тесты.
-Объявления embed живут в `internal/repository/postgres/ledger/queries.go`,
+Объявления embed живут в package-local `internal/repository/postgres/*/queries.go`,
 SQL — в соседнем `sql/`; pool не создаётся внутри repository.
 `New` возвращает приватную реализацию сервиса; узкие интерфейсы определяются
 на стороне потребителей. Эти правила закреплены в `.agent/instructions.md`.

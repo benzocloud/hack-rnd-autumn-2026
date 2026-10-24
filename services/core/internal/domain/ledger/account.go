@@ -32,15 +32,31 @@ func (a *BankAccount) BindFacts(source Source) error {
 	if err := source.Validate(); err != nil {
 		return err
 	}
-	if a.factual != "" && (a.factual != source.Kind || a.namespace != source.Namespace) {
+	return a.bindFacts(source.Kind, source.Namespace)
+}
+
+// BindStatementFacts chooses the factual namespace for an accepted external EOD.
+// A statement has no transaction external ID; do not fabricate one for binding.
+func (a *BankAccount) BindStatementFacts(namespace Namespace) error {
+	if err := a.scope.Validate(); err != nil {
+		return err
+	}
+	if err := namespace.Validate(); err != nil {
+		return err
+	}
+	return a.bindFacts(Imported, namespace)
+}
+
+func (a *BankAccount) bindFacts(kind SourceKind, namespace Namespace) error {
+	if a.factual != "" && (a.factual != kind || a.namespace != namespace) {
 		return ErrSourceConflict
 	}
-	if source.Kind == Imported {
-		if err := a.BindSupplemental(source.Namespace); err != nil {
+	if kind == Imported {
+		if err := a.BindSupplemental(namespace); err != nil {
 			return err
 		}
 	}
-	a.factual, a.namespace = source.Kind, source.Namespace
+	a.factual, a.namespace = kind, namespace
 	return nil
 }
 
@@ -62,7 +78,7 @@ func (a *BankAccount) BindSupplemental(namespace Namespace) error {
 	return nil
 }
 
-// AdvanceDataVersion is separate from binding and resource versions. The future
+// AdvanceDataVersion is separate from binding and resource versions. The
 // write transaction calls it once after a changed input, never on read or replay.
 func (a *BankAccount) AdvanceDataVersion() error {
 	if a.dataVersion < 1 || a.dataVersion == math.MaxInt64 {

@@ -2,14 +2,16 @@
 
 Дата: 2026-10-23.
 Статус плана: подэтап 2.1 принят разработчиком 2026-10-24;
-подэтап 2.2 принят разработчиком 2026-10-24, 2.3 в работе, 2.4 не начат.
+подэтап 2.2 принят разработчиком 2026-10-24, реализация 2.3 на ревью, 2.4 не начат.
+Последующее [упрощение транзакционной границы 2.3.R](#core-transaction-simplification)
+реализовано локально 2026-10-24; статус корректировки — «На ревью».
 Основание: исходники `ed31678886f853117ce992ad2d2ddd37d9b3632e`,
 [общая архитектура](saldo-architecture.md),
 [REST](../../docs/api/openapi.yaml),
 [паспорт данных](../references/dataset-profile.md),
 [референсы](../references/go-services.md), решения владельца в текущем обсуждении.
 Это детализация **этапа 2 общего плана**, а не перенумерация этапов 1–8.
-Подэтапы 2.1–2.2 — «Приняты», 2.3 — «В работе», 2.4 — «Не начат»;
+Подэтапы 2.1–2.2 — «Приняты», 2.3 — «На ревью», 2.4 — «Не начат»;
 общий этап 2 — «В работе».
 Режим: после каждого подэтапа реализации — результат, проверки и остановка
 до ревью и явного апрува разработчика по ADR-020.
@@ -84,6 +86,7 @@ services/core/
     app/
       app.go, app_test.go              # верхняя сборка ресурсов в 2.3
       postgres/                       # готово: pool.go, config.go, errors.go, pool_test.go
+        transaction.go                # 2.3.R: только WithinTx и lifecycle Tx
     domain/
       money/                          # точные суммы, валюта, переполнение
       ledger/                         # BankAccount, Transaction, BalanceObservation
@@ -94,10 +97,9 @@ services/core/
       payments/                       # календарь/сопоставления и их порты
       forecasting/                    # сборка снимка через узкий read-порт
     repository/postgres/
-      queries.go                      # embed координирующих SQL при подключении write-path
-      transaction.go                  # конкретная координация локальных транзакций
       ledger/                         # SQL, row mapping, факты/остатки/источник
       payments/                       # SQL и блокировки сопоставлений
+      commands/                       # 2.3.R: key/digest/opaque receipt, без use cases
       forecasting/                    # запись и чтение неизменяемого снимка
   migrations/
     00001_core_ledger.sql
@@ -107,6 +109,8 @@ services/core/
 ```
 
 Это карта файлов к завершению этапа, а не команда создавать пустые пакеты.
+Транзакционная граница уточнена в [корректировке 2.3.R](#core-transaction-simplification):
+`commands/` и общий WithinTx реализованы локально; прежние адаптеры ниже описаны как история.
 Тесты домена/repository лежат рядом с кодом; реальные SQL-проверки отделены тегом
 `integration` и используют только выделенную тестовую БД.
 `cmd/core/main.go`, `handler/grpc/`, `internal/gen/`, `client/auth/` добавляются
@@ -119,10 +123,12 @@ flowchart TB
     NEXT["Позже: Go API → gRPC handler"] --> APP["service/ledger · payments · forecasting"]
     APP --> DOMAIN["domain: поведение и инварианты"]
     APP --> PORTS["Узкие интерфейсы рядом с потребителем"]
-    PG["repository/postgres: SQL и транзакции"] -.->|реализует| PORTS
+    PG["repository/postgres: SQL и mapping"] -.->|реализует| PORTS
     PG --> DB[("PostgreSQL — источник состояния")]
     WIRE["internal/app: явные конструкторы"] --> APP
     WIRE --> PG
+    WIRE --> TX["app/postgres.WithinTx: lifecycle одной Tx"]
+    TX -->|тот же Tx для repository| PG
     WIRE --> LOG["pkg/log → *slog.Logger"]
 ```
 
@@ -419,25 +425,27 @@ validateBalanceObservation; порядок проверок и ошибки со
 
 ### 2.3 — PostgreSQL, прикладные операции и владение ресурсами
 
-Статус: В работе.
+Статус: Ожидает ревью разработчика (локальная реализация 2026-10-24).
+Внутри непринятого подэтапа отдельно запланирована
+[корректировка 2.3.R](#core-transaction-simplification); реализация и проверки завершены, ожидается ревью.
 Зависимости: приняты 2.1–2.2, sqlx/driver/goose и семантика версий; есть выделенная
 тестовая PostgreSQL, способ её локального запуска согласован без Fadwix.
 Результат: состояние Ledger/Payments сохраняется атомарно и изолированно.
 Файлы: `migrations/00001_core_ledger.sql` (включая `command_results`), `00002_payments.sql`,
 `internal/{app,service/ledger,service/payments,repository/postgres}/`.
 
-- [ ] Создать миграции, ключи/FK/CHECK/UNIQUE и индексы по company/account/date/ID.
-- [ ] Реализовать pool с ограничениями и Ping/deadline; конструктор закрывает
+- [x] Создать миграции, ключи/FK/CHECK/UNIQUE и индексы по company/account/date/ID.
+- [x] Реализовать pool с ограничениями и Ping/deadline; конструктор закрывает
   открытые ресурсы при последующей ошибке, недоступная обязательная БД — ошибка.
-- [ ] Добавить узкие consumer-side repository ports, отдельный SQL и row mapping;
+- [x] Добавить узкие consumer-side repository ports, отдельный SQL и row mapping;
   перевод no rows/unique/version conflict в безопасные доменные ошибки.
-- [ ] Реализовать внутренние команды записи факта/остатка/ожидания/match,
+- [x] Реализовать внутренние команды записи факта/остатка/ожидания/match,
   source guards и version changes в одной транзакции. Не делать bulk CSV importer.
-- [ ] Добавить persistent scope+key/digest/result для ручных create/match-команд;
+- [x] Добавить persistent scope+key/digest/result для ручных create/match-команд;
   сохранить результат атомарно с финансовой записью и data_version, воспроизвести
   его до stale-version guard. Внешние ID остаются отдельной защитой импорта.
-- [ ] Согласовать единый порядок блокировок; app собирает конкретные реализации.
-- [ ] Запускать миграции отдельной закреплённой командой; startup их не применяет.
+- [x] Согласовать единый порядок блокировок; app собирает конкретные реализации.
+- [x] Запускать миграции отдельной закреплённой командой; startup их не применяет.
   Использовать `BeginTxx` с ограниченным context; отмена context приводит к
   rollback в database/sql. Явно завершать Commit/Rollback и проверять ошибки;
   закрытие pool принадлежит приложению.
@@ -488,8 +496,8 @@ R01/ModelContext и запуск job не объявлены реализова�
 на закреплённых версиях; критические финансовые ограничения проверены;
 код не зависит от локальных референсов, не содержит credentials/чужих данных,
 контракты и схема согласованы. Для данных брать маленькие синтетические fixtures,
-а не коммитить исходный `dataset/`. Фактические проверки config/log подэтапа 2.1
-отражены выше; домен, PostgreSQL и снимок данных ещё не реализованы и не проверены.
+а не коммитить исходный `dataset/`. Фактические проверки config/log, домена и PostgreSQL отражены по подэтапам
+и в дополнениях ниже; FinancialSnapshot (2.4) ещё не реализован и не проверен.
 
 Исходный gate до старта: согласовать библиотеки PostgreSQL, диапазон Money/int64,
 семантику input revision, схему межмодульного match и границы FinancialSnapshot.
@@ -638,3 +646,691 @@ Commit/push этим апрувом не запрошены.
 UUID-контракты и инструкции; завершение write-path/idempotency/concurrency
 подэтапа 2.3 этим не объявляется. Отдельная локальная работа Auth/GBrain
 не входит в состав этого коммита.
+
+
+## Завершение реализации 2.3 — 2026-10-24
+
+Статус: **Ожидает ревью разработчика**. Поручение «давай дальше» после публикации
+20d2adc разрешило продолжить текущий подэтап. Принятие 2.3 и начало 2.4 этим
+не объявляются; новые commit/push не выполнялись.
+
+Реализованы `internal/app/app.go`, приватные PostgreSQL repository implementations
+Ledger/Payments и узкие storage ports сервисов. App открывает pool, явно собирает
+сервисы и владеет Close; все последующие конструкторы не открывают ресурсов и
+не возвращают ошибок. Подход адаптирован из `references/cosmohack/backend`:
+app-owned sqlx pool, BeginTxx и отдельные SQL/embed/row mappings. Общий command
+DTO/result или command bus не возвращены; `repository/postgres/write` содержит
+только используемые четырьмя операциями transaction/idempotency helpers.
+
+CreateTransaction, RecordBalance, CreatePayment и MatchPayment сохраняют данные,
+source bindings, версии и результат команды одной READ COMMITTED транзакцией.
+Порядок: command key → scoped account FOR UPDATE → ресурсы. Все writers одного
+счёта используют этот порядок; количество уже распределённых средств читается
+под account lock. SUM(bigint) читается как numeric text с проверкой диапазона.
+Match сохраняет remaining/status/version + allocation; фактическую операцию
+повторно не создаёт. Неизвестные ошибки SQL/driver превращаются в безопасные
+application errors; ожидаемые domain conflicts сохраняются.
+
+Digest описывает исходные значения команды, до генерации UUID/time; Money
+представлен явно копейками/валютой. Создание доменного record больше не меняет
+команду, передаваемую storage port; Match передаёт сгенерированные ID/time отдельно.
+Repository-owned result codecs отделены от application DTO. Replay выполняется
+до stale guard и сохраняется минимум 24 часа: expiry фиксируется, автоматической
+очистки пока нет. Импорт без ключа воспроизводится по external identity;
+повтор ожидания не сбрасывает remaining/status после match. Ручной EOD не выбирает
+factual authority; внешний StatementEOD закрепляет/проверяет её как фактический источник
+(исправлено по последующему ревью). В начальную migration 00001 добавлена created_data_version
+остатка для стабильного replay; это незавершённая ранее схема, проверенная только
+на одноразовой БД, без миграции существующей пользовательской БД.
+
+Миграции запускаются отдельно через `task migrate-up` с goose 3.29.0;
+startup их не применяет. Проверки и результат последнего прогона фиксируются ниже.
+
+Ограничения: транспорт и авторизация ещё не реализованы; ActorID должен поступать
+от доверенного адаптера, права при replay нужно проверять заново. Онбординг
+company/account зависит от согласованного Auth/Core контракта и не открывается
+новым публичным endpoint. FinancialSnapshot, Worker/jobs и импорт файлов не
+реализуются в 2.3. Данные исходного dataset не включены в fixtures.
+
+
+Проверки финальной рабочей копии 2.3 (2026-10-24):
+
+- `task check`: build, gofmt/goimports, unit/race, vet, full-module lint — PASS,
+  lint 0 issues. Дополнительный lint с `--build-tags=integration` — 0 issues.
+- `task integration` с race detector на выделенной loopback PostgreSQL из
+  Compose — PASS: 18 верхнеуровневых DB-тестов, включая прежние CHECK/SaveAccount.
+  Проверены четыре команды, reconnect/replay, разные actor/tenant/operation,
+  digest с изменённой суммой/ID, FK и неизвестная SQL-ошибка с полным rollback,
+  context cancellation без утечки, concurrent identical key/namespaces/matches,
+  stale versions, чужой transaction ID и сохранение remaining при reimport.
+- Goose 3.29.0: пустая БД → обе миграции up; повторный up без изменений;
+  down-to 0 → up → полный integration suite — PASS. Команда `task migrate-up`
+  проверена с закреплённым CLI; startup миграции не запускал.
+
+Новые проверки используют синтетические company-scoped данные и marker
+одноразовой БД. Дополнительные изменения Auth/GBrain и `.gitignore` сохранены
+без изменений; обсуждения текущего PR отсутствуют (открытый PR для ветки не найден).
+GBrain recall выполнен; связанные факты Auth/branding не использованы как решения Core.
+После проверок созданные test container/network удалены. Статус 2.3 остаётся
+«Ожидает ревью разработчика»; 2.4 не начат.
+
+
+Первоначальная запись итога в GBrain была отклонена автоматической проверкой
+разрешений. После прямого согласия владельца «Разрешаю сохранить итог в GBrain»
+2026-10-24 итог сохранён как fact #6 (status inserted, state committed).
+Запись явно указывает локальную неопубликованную реализацию, пройденные проверки
+и статус «Ожидает ревью разработчика»; принятие 2.3 не заявляется.
+
+
+## Исправление замечаний ревью 2.3 — 2026-10-24
+
+Статус: **Ожидает ревью разработчика**. Владелец поручил исправить P1/P2 и
+упрощение сборки; это не принятие 2.3 и не разрешение начать 2.4.
+
+- `BankAccount.BindStatementFacts` закрепляет imported factual namespace для
+  внешнего EOD без вымышленного external transaction ID. Общая приватная
+  `bindFacts` проверяет единственность authority и supplemental binding.
+  RecordBalance использует новый метод; manual EOD остаётся без выбора authority.
+- Удалён тест, ошибочно допускавший manual facts после внешнего EOD. Регрессии
+  проверяют statement → manual/другой банк, manual/другой банк → statement,
+  неизменность БД при конфликте и успешные записи прежнего namespace.
+- Safe error wrapper сохраняет классификацию и исходную причину через
+  errors.Is/As при storage/application mapping, включая rollback failure.
+  Error() возвращает только безопасное сообщение; SQLSTATE остаётся доступным
+  для диагностики без печати приватного driver message.
+- Одноразовый assemble и импорт time удалены, зависимости собираются в New.
+
+До исправления новые регрессии падали: три варианта смешивания источников
+на настоящем PostgreSQL и три проверки сохранения причин в repository tests.
+После исправления: `task check` (build, format, unit/race, vet, lint) — PASS;
+full-module lint с integration tag — 0 issues; полный `task integration` на
+одноразовой PostgreSQL с race detector — PASS. Дополнительно проверены неверный
+namespace и отсутствие частичной authority после ошибки binding; реальный FK
+conflict сохраняет SQLSTATE 23503 через сервисную границу, Error() не содержит
+driver details. Тестовый container/network удалены. Исходники после финальных
+проверок не менялись; отдельные Auth/GBrain/.gitignore правки сохранены.
+Commit/push не выполнялись; 2.3 ожидает ревью, 2.4 не начат.
+
+
+## Корректировка границы service/repository — 2026-10-24
+
+Этот раздел описывает прежнюю промежуточную схему. Локальная реализация
+[упрощения 2.3.R](#core-transaction-simplification) заменила operation-specific
+транзакционные адаптеры; результат ожидает ревью разработчика.
+
+Статус: **Ожидает ревью разработчика**. Владелец согласовал перенос координации сценариев из SQL
+repository в service; исправление выполняется в текущем непринятом подэтапе 2.3.
+Публичные REST/gRPC-контракты и финансовое поведение сохраняются.
+
+Результат: сервис владеет чтением состояния через узкие порты, проверкой версий,
+вызовами доменных методов, порядком сохранения и формированием operation-specific
+Result. Repository получает готовый Tx и выполняет только SQL/domain mapping;
+импортов service в repository не остаётся. Транзакционный/idempotency адаптер
+в internal/app/postgres связывает callback сервиса с SQL-репозиториями, Begin/Commit/
+Rollback и persistence codecs результата. SQLx/Tx не попадают в service или
+context values. Для именуемого межпакетного callback допускается публичный тип
+функции, consumer-side storage interfaces остаются приватными.
+
+Область: internal/service/{ledger,payments}, repository/postgres, app/postgres,
+app wiring и соответствующие tests; инструкции и README. Исходные миграции,
+REST, доменные инварианты и сторонние локальные изменения не меняются.
+Базовая рабочая копия прошла unit/race, integration и lint до переноса;
+снимок исходников сохранён вне Git в /private/tmp/saldo-before-service-boundary.
+Проверки: тесты прикладной логики без БД, полный task check и прежний PostgreSQL
+integration suite, включая атомарность/replay/source guards/SQLSTATE. После
+проверок — остановка на ревью; 2.4 и публикация этим не разрешаются.
+
+
+Результат переноса: createTransaction/recordBalance/createPayment/matchPayment
+находятся в соответствующих service-пакетах. Приватные storage ports возвращают
+domain-модели, revision и found; публичные callback-типы *Work позволяют
+транзакционным адаптерам реализовать private unitOfWork без экспорта storage
+interfaces. SQL repository.New получает готовый Tx; app wiring передаёт сервисам
+приватные transactions из app/postgres/{ledger,payments}. Persistence codecs
+находятся у адаптера и не менялись; общее service/command не возвращено.
+Технические SQL/lifecycle ошибки классифицируются на границе адаптера, ошибки
+прикладных guard-ов не превращаются в ErrUnavailable; приватные причины/SQLSTATE
+сохраняются. SQLFailure fixture явно отмечает свою raw-SQL границу StorageError.
+
+Проверено после переноса: task check — build/format/unit/race/vet/lint PASS,
+full-module lint и integration-tag lint — 0 issues. Полный task integration на
+выделенной PostgreSQL с race detector — PASS (прежние 18 верхнеуровневых DB-тестов).
+Новые service tests без БД проверяют stale/resource versions, factual/supplemental
+bindings, внешние replay/conflicts, отсутствующие сущности и allocation guards.
+Сверка с baseline: четыре codec, SQL и domain Go-файлы совпадают побайтно;
+repository не импортирует service, service не импортирует database/sql/sqlx и не
+передаёт Tx через context values. Дополнительные Auth/GBrain/.gitignore изменения
+не изменены. Тестовые контейнер/сеть удалены; commit/push не выполнялись.
+
+
+<a id="core-transaction-simplification"></a>
+
+## 2.3.R — упрощение транзакционной границы
+
+Дата фиксации: 2026-10-24. Статус: **На ревью**.
+Владелец разрешил выполнение корректировки сообщением «окей поправь все по плану».
+Основание: обсуждение после переноса сценариев в service и просьба владельца
+подробно записать вариант с узкой транзакционной функцией. Этот раздел задаёт
+следующую корректировку непринятого 2.3, а не повторно открывает принятые 2.1–2.2.
+Корректировка реализована локально по этому разрешению. Прежние результаты
+тестов относятся к промежуточной реализации выше; новые проверки и ограничения
+зафиксированы в результате 2.3.R в конце раздела. Принятие разработчиком не заявляется.
+
+### Цель, исходники и границы
+
+Убрать повторение транзакционных обёрток на каждую операцию. Добавление нового
+repository не должно требовать изменения общей транзакционной утилиты или
+несвязанных сервисов. Оставить явную сборку через конструкторы, понятное
+владение Tx и одну атомарную транзакцию на финансовую команду.
+
+Исходное состояние до корректировки проверено по рабочей копии поверх
+`20d2adc0a44be6839ee5fef3351c04ccd746e20f`; перечисленные изменения ещё не опубликованы:
+
+| Компонент | До корректировки | Целевое изменение |
+| --- | --- | --- |
+| [app/app.go](../../services/core/internal/app/app.go) | Pool принадлежит app; сервисы получают feature-specific `transactions` | Передавать сервисам функции, связывающие один Tx с нужными repository |
+| [service/payments/service.go](../../services/core/internal/service/payments/service.go), [match.go](../../services/core/internal/service/payments/match.go) | Private `unitOfWork`, отдельные методы и `PaymentWork`/`MatchWork` | Один `Work` и один `withinTx` на Payments; аналогично Ledger |
+| `app/postgres/payments/`, `app/postgres/ledger/` (удалены) | На каждую команду свой адаптер и codec | Удалить адаптеры после переноса canonical input/receipt в feature service |
+| `repository/postgres/write/transaction.go` (удалён) | `Run[T]` объединяет lifecycle, digest, replay и выполнение callback | Разделить технический `WithinTx`, прикладной replay и SQL-хранение receipt |
+| [repository/postgres/payments/repository.go](../../services/core/internal/repository/postgres/payments/repository.go) | Repository уже заимствует `*sqlx.Tx` | Сохранить это владение; не возвращать создание pool в repository |
+
+Сохраняются ранее согласованные решения: DDD-монолит, RUB/копейки, один
+учитываемый счёт, UUIDv7, sqlx, app-owned pool, private implementations,
+consumer-side interfaces и operation-specific application results (ADR-022/024–026).
+Применяемый приём референса `references/cosmohack/backend` — явное владение
+SQL-ресурсами в app; предлагаемая схема не копирует его предметные операции.
+
+В скоупе — четыре существующих сценария: `CreateTransaction`, `RecordBalance`,
+`CreatePayment`, `MatchPayment`, их wiring, idempotency и проверки. Финансовая
+семантика, внешний REST/gRPC, schema/migrations и зависимости не меняются.
+Нет новых endpoint, авторизации, FinancialSnapshot, Worker, брокера или импорта
+файлов. Сторонние локальные правки Auth/GBrain/`.gitignore` сохраняются.
+
+Не вводить `service/transaction`, центральный `Scope` с методами `Ledger()`/
+`Payments()`, реестр всех repositories, generic repository, DI framework или
+универсальные `command.Request`/`command.Result`. Небольшое повторение явного
+wiring для двух features предпочтительно общей фабрике с регистрацией каждой
+новой сущности. Общая функция не должна знать список repositories.
+
+### Целевое размещение кода и ответственности
+
+```text
+services/core/internal/
+  app/
+    app.go                         # Open/Close pool; конструкторы и binding Work
+    errors.go                      # storage → feature errors рядом со сборкой
+    transaction_integration_test.go # реальный lifecycle Tx с общими DB fixtures
+    postgres/
+      pool.go, config.go           # существующий lifecycle pool
+      transaction.go               # WithinTx: deadline/Begin/work/Commit/Rollback
+      transaction_test.go          # driver Commit/Rollback failures без БД
+  service/
+    ledger/
+      service.go                   # private service; New(withinTx)
+      ports.go                     # private store/commandStore; публичный Work
+      transaction.go, balance.go   # сценарии, guards, application results
+      receipt.go                   # replay/complete; *_receipt.go — private форматы
+      errors.go
+    payments/
+      service.go
+      ports.go
+      payment.go, match.go
+      receipt.go
+      errors.go
+  domain/
+    ledger/, payments/, money/    # без изменений
+  repository/postgres/
+    errors.go, cause.go            # существующая SQL-классификация, безопасная причина
+    ledger/                       # SQL + row/domain mapping; заимствованный Tx
+    payments/                     # SQL + row/domain mapping; заимствованный Tx
+    commands/
+      repository.go               # New(tx); не создаёт и не завершает Tx
+      receipt.go                  # reserve/load/complete opaque bytes
+      queries.go                  # go:embed только здесь
+      sql/                        # прежние reserve/load_result/save_result
+```
+
+Новые файлы создаются только под используемый код. Существующие operation tests
+остаются рядом со сценариями. Общие SQL errors/cause из `write/` переносятся без
+изменения классификации; feature mapping из удаляемых app-адаптеров остаётся
+в `app/errors.go`. Это перевод ошибок, а не новая обёртка на каждую команду.
+Service не импортирует repository, app/postgres, `sqlx` или `database/sql`.
+
+`WithinTx` управляет только временем жизни Tx. Repository выполняет запросы,
+отображает строки в domain и классифицирует SQL-ошибки на своей границе.
+Service решает, когда проверять replay, читать account, вызывать domain,
+сохранять состояние и формировать прикладной результат. App связывает эти части
+и переводит технические storage errors в существующие feature errors.
+
+После перехода удалить `app/postgres/{ledger,payments}/`, старые operation-specific
+`*Work`, private `unitOfWork` с методами команд и `repository/postgres/write.Run[T]`.
+SQL idempotency переезжает в `commands/`, его общая безопасная классификация —
+в технические файлы выше; пустого compatibility-пакета `write` не оставлять.
+
+### Контракт Work и сборка зависимостей
+
+В каждом feature-пакете определить собственный именованный callback. Ниже —
+эскиз формы контракта, не готовый для копирования файл со всеми методами:
+
+```go
+// service/payments/ports.go
+type store interface {
+    // Реальные методы чтения/записи Payments и нужные ему Ledger capabilities.
+    // Аргументы и ответы — domain models, revision, found и error.
+}
+
+type commandStore interface {
+    // Reserve возвращает сохранённый payload и признак replay либо конфликт.
+    // Complete сохраняет opaque payload для ранее зарезервированного ключа.
+}
+
+type Work func(context.Context, store, commandStore) error
+
+// service/payments/service.go
+type service struct {
+    withinTx func(context.Context, Work) error
+}
+
+func New(withinTx func(context.Context, Work) error) *service {
+    return &service{withinTx: withinTx}
+}
+```
+
+Ledger получает свой `ledger.Work` с собственным набором capabilities.
+Private operation ports можно встраивать в feature `store`, сохраняя узкие
+параметры внутренних функций. Он содержит только уже нужные этому feature
+методы; он не становится каталогом всех модулей Core.
+
+`Work` экспортируется, поскольку app должен назвать callback-тип. `store`,
+`commandStore` и реализации остаются приватными: app передаёт конкретные
+repository по неявному выполнению интерфейса, не называя приватные типы.
+Методы `commandStore` должны иметь совместимые сигнатуры в обоих features:
+actor, company/account scope, operation, resource, key, digest/opaque payload.
+Использовать уже доступные domain/стандартные типы; не требовать от SQL-пакета
+импорта private или service-owned receipt DTO. Не вводить общий command DTO
+только ради группировки этих аргументов.
+
+Общий технический контракт:
+
+```go
+func WithinTx(
+    ctx context.Context,
+    db *sqlx.DB,
+    timeout time.Duration,
+    work func(context.Context, *sqlx.Tx) error,
+) error
+```
+
+Binding в `app.New` делается один раз для каждого feature. Вызов функции каждый
+раз создаёт новую транзакцию, а repository wrappers внутри callback получают
+именно её. Сокращённый пример Payments:
+
+```go
+paymentsService := payments.New(
+    func(ctx context.Context, work payments.Work) error {
+        err := appPostgres.WithinTx(ctx, db, cfg.Postgres.QueryTimeout,
+            func(ctx context.Context, tx *sqlx.Tx) error {
+                return work(ctx, paymentsRepository.New(tx), commandsRepository.New(tx))
+            },
+        )
+        return paymentsError(err)
+    },
+)
+```
+
+`paymentsError` — private mapper в app, сохраняющий существующие domain/
+application errors и безопасно переводящий техническую классификацию.
+Repository constructors не выполняют запросов и не возвращают ошибки:
+они только заимствуют уже созданный Tx. Payments SQL-реализация уже использует
+Ledger-чтения на том же Tx; это не требует нового реестра или прямого вызова
+Ledger service. Новая зависимость добавляется в реальный потребляющий port и
+его wiring; `WithinTx`, Ledger и остальные features из-за этого не меняются.
+
+### Правила WithinTx и ошибок
+
+1. Производный context с `CORE_POSTGRES_QUERY_TIMEOUT` ограничивает ожидание
+   Begin, SQL и завершение команды; более ранний deadline вызывающего сохраняется.
+2. `BeginTxx` открывает одну READ COMMITTED транзакцию. Работа с key, account,
+   сущностями и receipt использует один Tx. Вложенные Tx и неявный fallback
+   к pool внутри callback запрещены.
+3. Callback вызывается синхронно один раз. Его ошибка не маскируется под
+   `ErrUnavailable`: stale/notfound, domain conflicts и отмена сохраняют
+   `errors.Is/As`. Неизвестные SQL-ошибки классифицируются в repository;
+   ошибки Begin/Commit/Rollback — в техническом helper.
+4. При nil от callback выполняется Commit. Только его успех разрешает сервису
+   вернуть ненулевой результат. Ошибка Commit означает нулевой result и ошибку,
+   даже если callback уже заполнил локальную переменную.
+5. На выходе явно попытаться Rollback; игнорировать только `sql.ErrTxDone`.
+   Реальную rollback failure присоединять безопасно, не теряя первоначальную
+   ошибку и SQLSTATE. При panic выполнить rollback и сохранить panic; не
+   превращать его в успешный вызов.
+6. Безопасный текст ошибки не содержит SQL, DSN или driver message. Причина
+   остаётся доступна для диагностики через `errors.Is/As`; перенос сохраняет
+   уже проверенное поведение safe error wrapper.
+7. Не выполнять автоматических retry, миграций, сетевых вызовов Auth/ML,
+   закрытия shared pool или запуска фоновых goroutines. Tx, repository и
+   callback context не должны использоваться после возврата callback.
+
+При ошибке соединения во время Commit итог может быть неизвестен клиенту.
+Повторять ту же команду с прежним ключом после восстановления соединения;
+не исполнять её автоматически с новым ключом. Идемпотентность разрешает
+такую неопределённость без второго изменения денег.
+
+### Публичный вызов MatchPayment и полный проход
+
+Форма вызова и `MatchPaymentResult` остаются прежними:
+
+```go
+result, err := paymentsService.MatchPayment(ctx, payments.MatchCommand{
+    Scope:               scope,
+    PaymentID:           paymentID,
+    TransactionID:       transactionID,
+    Amount:              amount,
+    ExpectedVersion:     1,
+    ExpectedDataVersion: 42,
+    ActorID:             actorID,
+    IdempotencyKey:      idempotencyKey,
+})
+```
+
+Публичный метод сначала вызывает private `validateMatchPayment`, сохраняет
+неизменной исходную команду и текущий порядок подготовки ID/time, затем вызывает
+`s.withinTx`. Внутри callback — private функция сценария с `store` и `commandStore`.
+Результат можно захватить в локальную переменную; при любой ошибке `withinTx`
+возвращается `MatchPaymentResult{}`. Не публиковать result до успешного Commit.
+
+Последовательность внутри одной команды:
+
+1. Валидировать actor/key, scope, положительную RUB-сумму, payment/transaction ID
+   и ожидаемые версии прежними private validators. Domain-инварианты оставить
+   в domain, не копировать их в transport или helper.
+2. Построить canonical body исходной команды до подстановки сгенерированных
+   UUID/time и посчитать digest. Сгенерированные значения хранить отдельно;
+   не менять `cmd`, используемую для digest. Время нормализовать в UTC так же,
+   как раньше; Money представлять явно через minor/currency.
+3. В callback сначала зарезервировать ключ в `commandStore`. Scope ключа:
+   actor + company/account + operation + resource + IdempotencyKey.
+   Для Match сохранить `operation = match_payment`, `resource = PaymentID.String()`.
+4. При совпадении ключа и digest декодировать сохранённый receipt в прежний
+   `MatchPaymentResult` и завершить callback. Не брать account lock, не применять
+   stale guards и не выполнять domain match повторно. Сохранённые версии
+   возвращаются как результат исходной команды, даже если текущие уже выросли.
+5. Тот же ключ с другим digest — `ErrIdempotencyConflict`; никаких изменений
+   финансового состояния. Некорректный/пустой сохранённый receipt — безопасная
+   ошибка, а не повторное исполнение команды.
+6. Для нового ключа загрузить scoped account с `FOR UPDATE`, проверить
+   `ExpectedDataVersion`. Общий порядок всех writers: **key → account → resources**.
+   Не добавлять account FK к reservation, создающий ранний KEY SHARE и
+   последующее повышение блокировки; существующая схема остаётся прежней.
+7. Загрузить payment по company/account и ID; проверить `ExpectedVersion`.
+   Загрузить factual transaction того же scope. Отсутствующий или чужой ID
+   не должен раскрывать чужую компанию; вернуть существующий notfound.
+8. Под account lock прочитать уже распределённую сумму факта. Сохранить
+   преобразование `SUM(bigint)` через numeric text с проверкой диапазона.
+   Domain `payment.Match` проверяет scope, направление, валюту, remaining,
+   доступный объём факта и переполнение версии.
+9. Сохранить новое remaining/status/version и allocation. Продвинуть
+   `account.data_version` ровно один раз и сохранить account на том же Tx.
+   Match не создаёт новую factual transaction и не удваивает денежный поток.
+10. Service формирует `MatchPaymentResult{MatchID, PaymentVersion, DataVersion}`,
+    кодирует отдельный stable receipt и вызывает `commandStore.Complete`.
+    Финансовые изменения и receipt фиксируются только вместе.
+11. Nil от callback → Commit в helper → возврат результата сервисом.
+    Ошибка любого шага/отмена → rollback, в том числе reservation; частичного
+    match, изменения remaining или успешно сохранённого receipt не остаётся.
+12. Если ответ потерян после успешного Commit, повтор с тем же ключом после
+    reconnect возвращает исходный MatchID/версии через шаг 4.
+
+```mermaid
+sequenceDiagram
+    participant Caller as Вызывающий код
+    participant Service as Payments service
+    participant Wire as Функция из app
+    participant Tx as app/postgres.WithinTx
+    participant Commands as Commands repository
+    participant Records as Payments/Ledger SQL
+    participant Domain as Domain payment
+    Caller->>Service: MatchPayment(ctx, cmd)
+    Service->>Service: validation; defaults отдельно от исходной cmd
+    Service->>Wire: withinTx(ctx, Work)
+    Wire->>Tx: WithinTx(ctx, pool, timeout, callback)
+    Tx->>Tx: Begin READ COMMITTED
+    Tx->>Wire: callback(ctx, tx)
+    Wire->>Service: Work(ctx, records(tx), commands(tx))
+    Service->>Service: canonical body/digest исходной cmd
+    Service->>Commands: Reserve(key, digest)
+    alt Уже есть receipt с тем же digest
+        Commands-->>Service: исходный receipt
+        Service->>Service: восстановить исходный result
+    else Новый ключ
+        Service->>Records: lock account; load payment/fact; allocated
+        Service->>Domain: Match(...)
+        Domain-->>Service: updated payment + allocation
+        Service->>Records: save match + account/version
+        Service->>Commands: Complete(key, encoded result)
+    end
+    Service-->>Wire: nil либо error из Work
+    Wire-->>Tx: nil либо error из callback
+    Tx->>Tx: Commit при nil; иначе Rollback
+    Tx-->>Wire: ошибка завершения либо nil
+    Wire-->>Service: feature-mapped error либо nil
+    Service-->>Caller: result только после Commit; иначе zero result + error
+```
+
+Прикладная аутентификация в этом этапе не появляется. Когда подключится
+доверенный transport/Auth adapter, он обязан заново проверять actor/membership
+для каждого вызова, включая replay; receipt не является разрешением доступа.
+
+### Совместимость idempotency и остальных операций
+
+SQL `commands` хранит key, digest и opaque payload, но не сериализует
+`MatchPaymentResult`/другие service DTO и не выполняет бизнес-сценарии.
+Канонизация и private persisted receipt принадлежат feature application layer,
+отдельно от публичных результатов без transport JSON-тегов (ADR-026).
+
+При переносе сохранить существующий формат:
+
+- имена операций, resource scope и полный уникальный ключ;
+- JSON canonical body: поля, их порядок/имена, UTC-нормализацию и различие
+  отсутствующего значения от переданного; SHA-256 считать по тем же байтам;
+- JSON receipt: прежние имена `id`/`version`/`payment_version`/`data_version`/
+  `date` по типу операции. Не заменять их именами публичных Go-полей;
+- min 24h retention: expiry сохраняется, автоматической очистки пока нет.
+  Эта корректировка не меняет текущий неограниченный фактический срок replay.
+
+Не сериализовать `money.Money` напрямую ради digest: его private поля не
+представляют требуемую сумму в JSON. Взятые до переноса контрольные canonical
+bytes/digest и receipt должны воспроизводиться после него. Для receipt в JSONB
+важны сохранённые поля/значения и возможность декодирования старой записи;
+порядок ключей при чтении JSONB не является новым требованием к БД.
+
+Тот же механизм применить к остальным трём операциям, сохраняя их отличия:
+
+| Сценарий | Что обязательно сохранить |
+| --- | --- |
+| CreateTransaction | Source authority/bindings; replay внешнего ID отдельно от command key; один revision/data_version при новом факте |
+| RecordBalance | Внешний StatementEOD закрепляет factual namespace; ManualEOD его не выбирает; прежний conflict/replay и created_data_version |
+| CreatePayment | Supplemental namespace не становится factual authority; reimport не сбрасывает remaining/status/version после match |
+| MatchPayment | Account/resource stale guards; отсутствие over-allocation; прежние MatchID/PaymentVersion/DataVersion при replay |
+
+У ручных операций actor/key обязательны. Для уже разрешённого внутреннего
+импорта без command key можно опустить оба, но не один из них; reservation/
+receipt пропускаются, external identity и source guards остаются.
+Keyless replay импорта не заменяется и не смешивается с командным replay.
+
+### Порядок выполнения корректировки
+
+Зависимости: принятые 2.1–2.2; текущая локальная реализация 2.3 и её тесты;
+согласование этой корректировки перед правкой кода. Принятие всего 2.3 заранее
+не требуется: это исправление внутри его текущей границы. Результат — те же
+четыре сценария с общей технической функцией и feature-local Work.
+
+Это один этап структурного рефакторинга с итоговым ревью; следующие пункты —
+порядок действий внутри него, а не разрешение начать 2.4:
+
+- [x] Зафиксировать baseline четырёх canonical body/digest/receipt и список
+  действующих ошибок/guard-ов; сохранить чужие локальные изменения без правок.
+- [x] Выделить общий `app/postgres.WithinTx` с текущим timeout/изоляцией и
+  безопасными Begin/Commit/Rollback errors. Не переносить в него idempotency.
+- [x] Из `write/` выделить SQL-only `commands.New(tx)` с Reserve/Complete;
+  перенести SQL/embed и общие errors/cause без изменения запросов и схемы.
+- [x] В Ledger/Payments определить по одному Work и private consumer ports.
+  Перенести canonical input/receipt в feature-local файлы, сохранив форматы.
+- [x] Перевести четыре публичных метода на `withinTx`: replay и complete
+  управляются service, финансовая логика остаётся в private scenario functions.
+  Сохранить порядок validation/defaults/guards; убрать operation-specific UoW.
+- [x] В `app.New` связать feature callbacks с конкретными repositories одного Tx;
+  сохранить Open/Ping/Close pool. Перенести feature error mapping рядом с wiring.
+- [x] Удалить заменённые app-адаптеры/Run[T]/callback-типы после перевода всех
+  callers и tests; не оставлять второй параллельный transaction path.
+- [x] Согласовать README и правило 18 `.agent/instructions.md` с фактически
+  получившейся схемой. Не объявлять предлагаемый рефакторинг принятым ADR.
+- [x] Выполнить проверки ниже, представить diff/результаты и перевести 2.3.R
+  в «На ревью». Остановиться на ревью разработчика по ADR-020.
+
+### Проверки и наблюдаемые критерии завершения
+
+Проверки выполнены после корректировки 2.3.R. Прогоны промежуточной
+реализации выше не использованы вместо этих проверок.
+
+- [x] Сервисные tests без БД: переданные порты действительно вызываются;
+  guards и domain errors сохраняются; replay идёт до чтения account и stale
+  guards; другой digest конфликтует; invalid input не открывает транзакцию.
+- [x] Каждый из четырёх методов обнуляет result при ошибке завершения Tx,
+  даже если Work вернул результат. Достаточно управляемого `withinTx` в unit
+  test; не писать tests, повторяющие каждую строку wiring.
+- [x] Fixture до переноса даёт те же canonical bytes/SHA-256 после переноса;
+  старые persisted receipts всех четырёх типов читаются и возвращают исходные
+  IDs/версии. Сумма/валюта/expected versions входят в digest как раньше.
+- [x] Настоящая одноразовая PostgreSQL: helper фиксирует успешную запись,
+  откатывает ошибку/cancellation/panic, не оставляет занятого соединения;
+  репозитории внутри одной команды используют одну транзакцию.
+- [x] Полный существующий integration suite: reconnect/replay, одинаковые
+  concurrent keys, actor/tenant/operation isolation, изменённое тело ключа,
+  source guards, external reimport, stale versions, конкурирующие match,
+  overflow/allocation, FK и неизвестный SQL с полным rollback.
+- [x] После ошибки до Commit reservation откатывается и не мешает следующей
+  попытке. Успешно committed receipt после reconnect даёт исходный результат
+  без второго allocation и data_version bump.
+- [x] Сохранены `errors.Is/As`, SQLSTATE и безопасный `Error()`; отдельно ошибка
+  callback вместе с rollback failure не теряет первоначальную классификацию.
+- [x] `task -d services/core check`: build, format/imports, unit/race, vet и
+  lint всего модуля. Дополнительно lint с integration tag и `task integration`
+  с race detector по существующему Taskfile и закреплённым инструментам.
+- [x] Статическая сверка: service не импортирует SQL/app/repository; SQL repos
+  не импортируют service; Tx не передаётся через context; WithinTx не знает
+  command key, digest, result codecs, domain или конкретные repositories.
+  Нет `service/transaction`, registry и неиспользуемых старых адаптеров.
+- [x] Миграции, domain, внешние контракты и сторонние локальные правки не
+  изменились; новые зависимости отсутствуют. Созданные test container/network
+  удалены после проверки; Fadwix не затронут.
+
+Для DB-проверок использовать только согласованный локальный
+`services/core/compose.integration.yml`: одноразовая тестовая БД с marker,
+публикация на `127.0.0.1`, синтетические данные. Не подключаться к существующим
+dev/production БД и не печатать credentials.
+
+Критерий завершения: добавление нового сценария в feature требует его логики,
+нужных storage capabilities и тестов, но не нового транзакционного метода
+в инфраструктурном адаптере. Добавление repository не меняет WithinTx и
+несвязанные features. Четыре команды сохраняют прежние результаты, ошибки,
+идемпотентность и атомарность на настоящем PostgreSQL.
+
+### Риски, вопросы и точка ревью
+
+Основные риски — изменение canonical digest/receipt при перемещении codecs,
+потеря причины SQL-ошибки, возврат result до Commit и нарушение порядка lock.
+Их закрывают перечисленные проверки, а не новая абстракция. Feature `store`
+не раздувать возможностями будущих модулей; `commands` не превращать в command bus.
+Не переставлять генерацию UUID/time или доменные guards ради упрощения кода
+без отдельного обоснования: это структурный перенос с прежним поведением.
+
+Продуктовых вопросов, блокирующих эту корректировку, нет; изменения Auth/Core
+онбординга и план 2.4 остаются отдельными зависимостями. Приведённые имена
+новых private helpers уточняются по Go-стилю при реализации без изменения границ.
+Корректировка согласована поручением владельца; реализация передана на
+ревью разработчика. Самостоятельный переход к 2.4, commit/push, PR, deployment
+или новая запись GBrain этим планом не разрешаются.
+
+
+### Результат 2.3.R — 2026-10-24
+
+Реализованы один `app/postgres.WithinTx`, по одному `ledger.Work`/`payments.Work`
+и явный binding repository constructors в `app.New`. Общий helper содержит
+только deadline/Begin/Commit/Rollback. Четыре сценария и operation-specific
+results остаются в service, private canonical input/receipt — в feature-local
+`*_receipt.go`. SQL-only `commands` хранит digest и opaque payload; прежние
+operation-specific app-адаптеры, UoW и `write.Run[T]` удалены.
+
+SQL/row errors теперь классифицируются на границах repositories; lifecycle —
+в helper; mapping в feature errors — в app. Callback errors не переклассифицируются
+helper. Безопасные сообщения, `errors.Is/As` и SQLSTATE сохранены. Validation,
+подготовка UUID/time, domain functions, SQL-запросы, миграции и версии не менялись.
+Результат возвращается только после успешного `withinTx`, включая replay.
+
+Подтверждения:
+
+- До переноса сохранены восемь synthetic fixtures: default/explicit canonical
+  body, SHA-256 и receipt для четырёх операций. После переноса bytes/digest
+  совпали; исходные codec declarations/mapping совпадают с baseline после
+  удаления self-package import. Replay прежних JSON receipt проверен сервисами.
+- `task check` — build, format/imports, unit/race, vet и full-module lint PASS;
+  lint — 0 issues. Дополнительный full-module lint с integration tag — 0 issues.
+- `task integration` с race detector на выделенной PostgreSQL — PASS: 19
+  верхнеуровневых DB-тестов, включая новый lifecycle suite с commit/error/
+  cancellation/panic/уже завершённым Tx. Существующие replay, source guards,
+  concurrency, allocation и SQLSTATE регрессии сохранены.
+- Driver Commit error и callback + Rollback failure проверены отдельным
+  test-only database/sql driver без новой зависимости. DB-сценарий с заранее
+  откатанным Tx проверяет ошибку завершения, но не моделирует обрыв сети во
+  время Commit; реальная сетевая неопределённость этим прогоном не доказана.
+- Сервисные tests проверяют replay до resource reads, malformed/null receipt,
+  reservation conflict, receipt-write/commit error с нулевым result для всех
+  четырёх команд. Ошибки не теряют application/domain классификацию.
+- Первоначальный integration-прогон остановился на перенесённой SQL-failure
+  fixture с коротким digest. Fixture исправлена на настоящий SHA-256; полный
+  последующий прогон прошёл. CHECK/schema ради теста не изменялись.
+- Сверены зависимости: service не импортирует app/repository/sqlx/database/sql;
+  repository не импортирует service; Tx отсутствует в context values.
+  SQL idempotency, domain, миграции и сторонние Auth/GBrain/`.gitignore` правки
+  совпали с сохранённым снимком до рефакторинга.
+
+Goose применил существующие миграции к новой одноразовой БД. Проверки использовали
+только Compose-проект `saldo-core-tx-refactor` с loopback-портом и marker;
+созданные container/network удалены. Файлы исходного dataset не использовались.
+Открытого PR для текущей ветки GitHub API не обнаружил; PR discussion отсутствует.
+GBrain recall выполнен, дополнительной записи не делалось. README и правило 18
+instructions приведены к фактическому коду. Commit/push/PR/deployment не выполнялись.
+
+Статус 2.3.R и всего 2.3 — **На ревью**; 2.4 не начат. Следующая работа —
+ревью и явный апрув разработчика согласно ADR-020.
+
+
+### Исправление ревью 2.3.R — 2026-10-24
+
+Статус: **На ревью**. Владелец поручил исправить два замечания caveman-review/
+ponytail-review. Принятие 2.3 и переход к 2.4 этим не объявляются.
+
+- После JSON decode каждый feature проверяет обязательные поля своего private
+  receipt: ненулевой ID, положительные resource/data versions; Balance —
+  корректную business date и положительный data_version. Private validators
+  находятся рядом с соответствующими receipt types и вызываются перед mapping
+  replay в application result. Повреждённый/неполный payload возвращает
+  ErrUnavailable и нулевой результат до чтения account; сценарий не повторяется.
+- Добавлены регрессии для `{}`, отсутствующих/null полей, nil UUID, нулевых/
+  отрицательных версий и некорректной даты. До исправления 45 новых случаев
+  воспроизводили успешный replay некорректного результата; после — проходят.
+  Контрольные canonical body/digest и форматы корректных receipt сохранены.
+- SQL-тела InsertTransaction/InsertBalance перенесены непосредственно в methods
+  private repository. Свободные функции с единственным forwarding caller удалены;
+  удалены две трёхстрочные обёртки и разделители (8 строк). Запросы и аргументы
+  сохранены, внешних callers этих свободных функций не было.
+
+Проверки после исправления: focused transaction-boundary/compatibility tests,
+полный `task check` (build, format/imports, unit/race, vet, lint) — PASS;
+full-module lint и lint с integration tag — 0 issues. Полный `task integration`
+с race detector на новой выделенной PostgreSQL — PASS, 19 верхнеуровневых DB-тестов.
+Goose применил существующие миграции без изменения схемы; созданные Compose
+container/network удалены. Миграции, SQL-файлы, domain, контракты и посторонние
+Auth/GBrain/`.gitignore` изменения не тронуты. Commit/push не выполнялись;
+2.3.R и весь 2.3 ожидают ревью разработчика, 2.4 не начат.

@@ -6,14 +6,16 @@ import (
 	domain "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
 )
 
-type store interface {
-	CreateTransaction(context.Context, TransactionCommand, domain.Transaction) (CreateTransactionResult, error)
-	RecordBalance(context.Context, BalanceCommand, domain.BalanceObservation) (RecordBalanceResult, error)
+type accountStore interface {
+	LoadAccount(context.Context, domain.Scope) (*domain.BankAccount, error)
+	SaveAccount(context.Context, *domain.BankAccount) error
 }
 
-type service struct{ store store }
+type service struct {
+	withinTx func(context.Context, Work) error
+}
 
-func New(storage store) *service { return &service{store: storage} }
+func New(withinTx func(context.Context, Work) error) *service { return &service{withinTx: withinTx} }
 
 func validateActorAndKey(actorID, idempotencyKey string, required bool) error {
 	if actorID == "" && idempotencyKey == "" && !required {

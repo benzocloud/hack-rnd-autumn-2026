@@ -92,6 +92,7 @@ CREATE TABLE core_balances (
     source_company_id text,
     recorded_at timestamptz NOT NULL,
     note text NOT NULL,
+    created_data_version bigint NOT NULL CHECK (created_data_version > 0),
     PRIMARY KEY (company_id, account_id, balance_date),
     FOREIGN KEY (company_id, account_id) REFERENCES core_accounts(company_id, id),
     FOREIGN KEY (company_id, account_id, source_system, source_company_id)

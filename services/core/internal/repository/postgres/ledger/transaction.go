@@ -2,7 +2,11 @@ package ledger
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"time"
+
+	storage "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/repository/postgres"
 
 	"github.com/google/uuid"
 
@@ -33,12 +37,12 @@ func scanTransaction(row *sqlx.Row, scope domain.Scope) (domain.Transaction, int
 	err := row.Scan(&d.ID, &date, &d.Direction, &amount, &currency, &d.Source.Kind, &d.Source.Namespace.System,
 		&d.Source.Namespace.CompanyID, &d.Source.ExternalID, &imported, &category, &d.CounterpartyINN, &d.CounterpartyName, &d.Purpose, &version, &revision)
 	if err != nil {
-		return domain.Transaction{}, 0, err
+		return domain.Transaction{}, 0, storage.StorageError(err)
 	}
 	d.Date = domain.Date(date)
 	d.Amount, err = money.New(amount, currency)
 	if err != nil {
-		return domain.Transaction{}, 0, err
+		return domain.Transaction{}, 0, storage.StorageError(err)
 	}
 	if imported != nil {
 		d.Source.ImportedAt = imported.UTC()
@@ -47,18 +51,26 @@ func scanTransaction(row *sqlx.Row, scope domain.Scope) (domain.Transaction, int
 		d.Category = domain.Category{ID: category.UUID, CompanyID: scope.CompanyID}
 	}
 	record, err := domain.RestoreTransaction(d, version)
-	return record, revision, err
+	return record, revision, storage.StorageError(err)
 }
 
-func InsertTransaction(ctx context.Context, tx *sqlx.Tx, record domain.Transaction, revision int64) error {
+func (r *repository) InsertTransaction(ctx context.Context, record domain.Transaction, revision int64) error {
 	d := record.Data()
 	var imported *time.Time
 	if !d.Source.ImportedAt.IsZero() {
 		at := d.Source.ImportedAt
 		imported = &at
 	}
-	_, err := tx.ExecContext(ctx, queryInsertTransaction, d.Scope.CompanyID, d.Scope.AccountID, d.ID, string(d.Date), d.Direction,
+	_, err := r.tx.ExecContext(ctx, queryInsertTransaction, d.Scope.CompanyID, d.Scope.AccountID, d.ID, string(d.Date), d.Direction,
 		d.Amount.Minor(), d.Amount.Currency(), d.Source.Kind, d.Source.Namespace.System, d.Source.Namespace.CompanyID,
 		d.Source.ExternalID, imported, uuid.NullUUID{UUID: d.Category.ID, Valid: d.Category.ID != uuid.Nil}, d.CounterpartyINN, d.CounterpartyName, d.Purpose, record.Version(), revision)
-	return err
+	return storage.StorageError(err)
+}
+
+func (r *repository) FindTransaction(ctx context.Context, scope domain.Scope, id uuid.UUID, source domain.Source) (domain.Transaction, int64, bool, error) {
+	record, revision, err := LoadTransaction(ctx, r.tx, scope, id, source)
+	if errors.Is(err, sql.ErrNoRows) {
+		return domain.Transaction{}, 0, false, nil
+	}
+	return record, revision, err == nil, storage.StorageError(err)
 }

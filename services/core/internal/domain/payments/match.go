@@ -32,7 +32,7 @@ func (m PaymentMatch) Amount() money.Money { return m.amount }
 func (m PaymentMatch) CreatedAt() time.Time { return m.createdAt }
 
 // Match returns a new payment and allocation without changing either input.
-// The later application/repository stage must read factAllocated for this exact
+// The repository must read factAllocated for this exact
 // scoped transaction and persist both results under one database transaction.
 // Pure domain checks alone do not protect against concurrent allocations or replay.
 func (p ExpectedPayment) Match(id uuid.UUID, fact ledger.Transaction, factAllocated, amount money.Money, at time.Time) (ExpectedPayment, PaymentMatch, error) {

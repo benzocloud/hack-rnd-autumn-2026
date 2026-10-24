@@ -1,0 +1,22 @@
+{
+  "balance_defaults": {
+    "body": "{\"Scope\":{\"CompanyID\":\"00000000-0000-0000-0000-000000000000\",\"AccountID\":\"00000000-0000-0000-0000-000000000000\"},\"Date\":\"\",\"Amount\":0,\"Currency\":\"\",\"Source\":{\"Kind\":\"\",\"Namespace\":{\"System\":\"\",\"CompanyID\":\"\"},\"RecordedAt\":\"0001-01-01T00:00:00Z\"},\"Note\":\"\",\"ExpectedDataVersion\":0}",
+    "digest": "f5dcf471d378e7bc6497e37bb70a094aab1f9107ae8ef39b051d9c7b3423fa17",
+    "receipt": "{\"date\":\"2026-10-23\",\"data_version\":42}"
+  },
+  "balance_explicit": {
+    "body": "{\"Scope\":{\"CompanyID\":\"019a0c65-9800-7000-8000-000000000001\",\"AccountID\":\"019a0c65-9800-7000-8000-000000000002\"},\"Date\":\"2026-10-23\",\"Amount\":123456,\"Currency\":\"RUB\",\"Source\":{\"Kind\":\"statement_eod\",\"Namespace\":{\"System\":\"bank\",\"CompanyID\":\"C001\"},\"RecordedAt\":\"2026-10-23T10:14:15.123Z\"},\"Note\":\"counted\",\"ExpectedDataVersion\":42}",
+    "digest": "6b0b2affa7b99be2e85d881bfcf86a39f8da68626c93c872387a73d7422f9da6",
+    "receipt": "{\"date\":\"2026-10-23\",\"data_version\":43}"
+  },
+  "transaction_defaults": {
+    "body": "{\"ID\":\"00000000-0000-0000-0000-000000000000\",\"Scope\":{\"CompanyID\":\"00000000-0000-0000-0000-000000000000\",\"AccountID\":\"00000000-0000-0000-0000-000000000000\"},\"Date\":\"\",\"Direction\":\"\",\"Amount\":0,\"Currency\":\"\",\"Source\":{\"Kind\":\"\",\"Namespace\":{\"System\":\"\",\"CompanyID\":\"\"},\"ExternalID\":\"\",\"ImportedAt\":\"0001-01-01T00:00:00Z\"},\"Category\":{\"ID\":\"00000000-0000-0000-0000-000000000000\",\"CompanyID\":\"00000000-0000-0000-0000-000000000000\"},\"CounterpartyINN\":\"\",\"CounterpartyName\":\"\",\"Purpose\":\"\",\"ExpectedDataVersion\":0}",
+    "digest": "1e857dba03f5f345db3247f4408aa3e2c327c5ca2bbf052bf415e55b69c3efbf",
+    "receipt": "{\"id\":\"019a0c65-9800-7000-8000-000000000003\",\"version\":1,\"data_version\":42}"
+  },
+  "transaction_explicit": {
+    "body": "{\"ID\":\"019a0c65-9800-7000-8000-000000000003\",\"Scope\":{\"CompanyID\":\"019a0c65-9800-7000-8000-000000000001\",\"AccountID\":\"019a0c65-9800-7000-8000-000000000002\"},\"Date\":\"2026-10-23\",\"Direction\":\"inflow\",\"Amount\":123456,\"Currency\":\"RUB\",\"Source\":{\"Kind\":\"imported\",\"Namespace\":{\"System\":\"bank\",\"CompanyID\":\"C001\"},\"ExternalID\":\"OP1\",\"ImportedAt\":\"2026-10-23T10:14:15.123Z\"},\"Category\":{\"ID\":\"019a0c65-9800-7000-8000-000000000003\",\"CompanyID\":\"019a0c65-9800-7000-8000-000000000001\"},\"CounterpartyINN\":\"1234567890\",\"CounterpartyName\":\"Example\",\"Purpose\":\"Payment\",\"ExpectedDataVersion\":42}",
+    "digest": "aeacd0bc8ecea3b4038035a2cab9c7b87046f85241788fd5f1fca0f0a095b319",
+    "receipt": "{\"id\":\"019a0c65-9800-7000-8000-000000000003\",\"version\":1,\"data_version\":43}"
+  }
+}
