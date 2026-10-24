@@ -14,4 +14,5 @@ go vet ./...
 "$python_bin" -m ruff format --check scripts
 "$python_bin" -m unittest discover -s scripts -p test_data_contracts.py
 "$python_bin" scripts/smoke.py --output artifacts/smoke.json
-"$python_bin" scripts/contract.py artifacts/smoke.json
+API_FINANCIAL_REPORT="$PWD/artifacts/financial.json" go test -count=1 ./internal/handler/http -run '^TestFinancialContractResponses$'
+"$python_bin" scripts/contract.py artifacts/smoke.json artifacts/financial.json

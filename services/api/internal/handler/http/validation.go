@@ -72,6 +72,8 @@ func decode(w http.ResponseWriter, r *http.Request, into any) error {
 func exactFields(data []byte, into any) error {
 	var allowed []string
 	switch into.(type) {
+	case *createForecastRequest:
+		allowed = []string{"cutoff_date", "horizon_days"}
 	case *registerRequest:
 		allowed = []string{"email", "password", "display_name", "personal_data_consent"}
 	case *loginRequest:

@@ -160,3 +160,21 @@ func TestServeLifecycleReadinessAndForcedShutdown(t *testing.T) {
 		t.Fatal("unexpected serve failure hidden")
 	}
 }
+
+func TestRunConfiguredCoreLifecycle(t *testing.T) {
+	p, err := testauth.GeneratePKI(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Config{Address: "127.0.0.1:0", Origin: "https://localhost", AuthAddress: "127.0.0.1:1", CA: p.CA, Cert: p.APICert, Key: p.APIKey, CoreAddress: "127.0.0.1:2", CoreCA: "missing", CoreCert: p.APICert, CoreKey: p.APIKey, RPCDeadline: time.Second, SlowDeadline: time.Second, ShutdownTimeout: time.Second}
+	logger := slog.New(slog.DiscardHandler)
+	if err := Run(t.Context(), cfg, logger); err == nil {
+		t.Fatal("invalid Core CA")
+	}
+	cfg.CoreCA = p.CA
+	ctx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
+	defer cancel()
+	if err := Run(ctx, cfg, logger); err != nil {
+		t.Fatal(err)
+	}
+}

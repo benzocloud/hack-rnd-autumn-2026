@@ -10,9 +10,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"google.golang.org/grpc/connectivity"
+
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/client/auth"
+	coreclient "github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/client/core"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/config"
 	authv1 "github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/auth/v1"
+	corev1 "github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1"
 	httpapi "github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/handler/http"
 )
 
@@ -40,14 +44,30 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	if cfg.HTTPCert != "" {
 		listener = tls.NewListener(listener, &tls.Config{MinVersion: tls.VersionTLS13, Certificates: []tls.Certificate{cert}})
 	}
-	return Serve(ctx, cfg, logger, client, listener)
+	var financial httpapi.CoreClients
+	var coreReady func() bool
+	if cfg.CoreAddress != "" {
+		coreConn, coreErr := coreclient.Dial(cfg.CoreAddress, cfg.CoreServerName, cfg.CoreCA, cfg.CoreCert, cfg.CoreKey, cfg.RPCDeadline)
+		if coreErr != nil {
+			return coreErr
+		}
+		defer func() { _ = coreConn.Close() }()
+		coreConn.Connect()
+		coreReady = func() bool { return coreConn.GetState() == connectivity.Ready }
+		financial = httpapi.CoreClients{Companies: corev1.NewCompanyServiceClient(coreConn), Ledger: corev1.NewLedgerServiceClient(coreConn), Forecasts: corev1.NewForecastingServiceClient(coreConn)}
+	}
+	return serve(ctx, cfg, logger, client, listener, financial, coreReady)
 }
 
 // Serve owns HTTP connections; the caller owns the dependency and listener.
 func Serve(ctx context.Context, cfg config.Config, logger *slog.Logger, client authv1.AuthServiceClient, listener net.Listener) error {
+	return serve(ctx, cfg, logger, client, listener, httpapi.CoreClients{}, nil)
+}
+
+func serve(ctx context.Context, cfg config.Config, logger *slog.Logger, client authv1.AuthServiceClient, listener net.Listener, financial httpapi.CoreClients, coreReady func() bool) error {
 	var stopping atomic.Bool
 	ready := func(ctx context.Context) bool {
-		if stopping.Load() {
+		if stopping.Load() || coreReady != nil && !coreReady() {
 			return false
 		}
 		probe, cancel := context.WithTimeout(ctx, time.Second)
@@ -57,7 +77,7 @@ func Serve(ctx context.Context, cfg config.Config, logger *slog.Logger, client a
 	}
 	serverCtx, cancelServer := context.WithCancel(context.Background())
 	defer cancelServer()
-	server := &http.Server{Handler: httpapi.New(client, cfg.Origin, logger, ready), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: max(cfg.RPCDeadline, cfg.SlowDeadline) + 20*time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10, BaseContext: func(net.Listener) context.Context { return serverCtx }}
+	server := &http.Server{Handler: httpapi.NewWithCore(client, cfg.Origin, logger, ready, financial), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: max(cfg.RPCDeadline, cfg.SlowDeadline) + 20*time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10, BaseContext: func(net.Listener) context.Context { return serverCtx }}
 	errorsCh := make(chan error, 1)
 	go func() { errorsCh <- server.Serve(listener) }()
 	logger.InfoContext(ctx, "API started", "address", listener.Addr().String())

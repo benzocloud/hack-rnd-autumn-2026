@@ -1,7 +1,8 @@
-# Go HTTP API → Auth gRPC
+# Go HTTP API → Auth/Core gRPC
 
 Запускаемый браузерный адаптер Saldo: **HTTPS → Go API → mTLS gRPC → Auth**.
-Реализованы ровно десять продуктовых endpoints плюс два служебных health routes.
+Реализованы десять Auth endpoints, шесть финансовых маршрутов первого прохода
+и два служебных health routes.
 Контракты не изменены: [OpenAPI 0.2.1](../../docs/api/openapi.yaml),
 [Auth protobuf](../../proto/auth/v1/auth.proto), [security/mapping](../../docs/auth/contract.md).
 
@@ -10,6 +11,47 @@ protobuf по gRPC, но не является настоящим Auth: нет �
 hashing, писем, consent evidence/outbox, production rate limits и полного lifecycle.
 В production-приложение fixture не подключается. Handlers используют интерфейс
 клиента и не зависят от fixture или его фиксированных ответов.
+
+## Первый финансовый проход (локально, ожидает ревью)
+
+Сценарий: вход → уже подготовленная компания → основной счёт → запуск прогноза
+на 30 дней → polling → график и повторное чтение результата. Регистрация новой
+компании, CSV, приглашения, ручные финансовые writes и сценарии в этот срез не входят.
+
+| REST (после `/api/v1`) | Private RPC |
+| --- | --- |
+| GET `/companies` | Auth.ListMemberships → Core.CompanyService.ReadCompany |
+| GET `/companies/{company_id}` | Core.CompanyService.ReadCompany |
+| GET `/companies/{company_id}/account` | Core.LedgerService.GetDefaultAccount |
+| GET `/companies/{company_id}/forecasts` | GetDefaultAccount → ForecastingService.ListForecasts |
+| POST `/companies/{company_id}/forecasts` | GetDefaultAccount → ForecastingService.CreateForecast |
+| GET `/companies/{company_id}/forecasts/{forecast_id}` | GetDefaultAccount → ForecastingService.GetForecast |
+
+POST принимает только `cutoff_date` и `horizon_days` (30–90 в REST; поддержку
+конкретной модели определяет Core). Обязательны исходные cookie, CSRF,
+разрешённый Origin/Referer и Idempotency-Key. API получает account scope из Core,
+не принимает actor/role/account_id из браузера и не выбирает ML-модель.
+Возвращает 202 с `id`, `status=queued`, `status_url` и `poll_after_ms` из Core.
+Клиент повторяет GET status_url с указанной паузой; GET не запускает расчёт.
+Состояния queued/running/succeeded/failed, null/optional поля, даты, UUID,
+RUB/int64 строки и typed ошибки явно отображаются в REST. Недоступная вероятность
+не превращается в ноль. Ответ с чужим scope или нарушенной структурой — 503.
+
+Включение Core: задать `API_CORE_ADDRESS=host:port`; при необходимости задать
+`API_CORE_SERVER_NAME` для DNS имени сертификата. `API_CORE_CA`, `API_CORE_CERT`,
+`API_CORE_KEY` по умолчанию наследуют соответствующие Auth mTLS-файлы, но могут
+указывать на отдельно выданные файлы вне Git. Проверяются обычная TLS chain/name
+и единственный URI peer `spiffe://saldo.local/core`. App владеет соединением и
+закрывает его при завершении; автоматических write retry нет. RPC получает
+`API_RPC_TIMEOUT`, весь финансовый HTTP-проход ограничен 10 секундами.
+При включённом Core readiness требует также готового Core gRPC-соединения.
+Без Core auth-режим остаётся доступным, финансовые маршруты отвечают 503.
+
+Для реального запуска нужны работающие Auth ListMemberships/AuthorizeCompany,
+Core ReadCompany/GetDefaultAccount/CreateForecast/GetForecast/ListForecasts,
+компания с историей/EOD, durable jobs/results, ML и выданные mTLS identities.
+Тестовые fixtures не доказывают наличие этих зависимостей. API не хранит jobs,
+не обращается к БД Core и не вызывает ML напрямую.
 
 ## Требования и единая проверка
 
@@ -206,5 +248,5 @@ ClientConn/health Auth. Liveness не зависит от Auth; readiness не �
 Для настоящего Auth заменить адрес и выдать сертификаты с правильными SAN
 (`spiffe://saldo.local/api` клиент, `spiffe://saldo.local/auth` сервер), реализовать
 имеющиеся RPC/ошибки по контракту и проверить реальный flow с PostgreSQL/email.
-Handlers менять не требуется. В API отсутствуют Core/companies/финансы/ML,
-миграции чужих БД, frontend переделки и production deployment.
+Auth handlers менять не требуется. Финансовые Core adapters описаны выше.
+Миграции чужих БД, frontend переделки и production deployment в этот срез не входят.

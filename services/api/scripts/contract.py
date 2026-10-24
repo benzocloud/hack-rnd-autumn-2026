@@ -9,10 +9,12 @@ import yaml
 from jsonschema import Draft202012Validator, FormatChecker
 
 
-def validate(report):
+def validate(report, extra_reports=()):
     root = Path(__file__).resolve().parents[3]
     spec = yaml.safe_load((root / "docs/api/openapi.yaml").read_text())
     results = json.loads(report.read_text())
+    for extra in extra_reports:
+        results.extend(json.loads(extra.read_text()))
     checked = 0
     for result in results:
         operation = spec["paths"][result["path"].removeprefix("/api/v1")][result["method"].lower()]
@@ -34,4 +36,7 @@ def validate(report):
 
 
 if __name__ == "__main__":
-    validate(Path(sys.argv[1] if len(sys.argv) > 1 else "artifacts/smoke.json"))
+    validate(
+        Path(sys.argv[1] if len(sys.argv) > 1 else "artifacts/smoke.json"),
+        [Path(p) for p in sys.argv[2:]],
+    )

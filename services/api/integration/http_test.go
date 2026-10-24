@@ -286,7 +286,7 @@ func TestSecurityAndValidation(t *testing.T) {
 	if code != 401 {
 		t.Fatal("logout session remains active")
 	}
-	for _, path := range []string{"/api/v1/companies", "/not-a-route", "/api/v1/auth/login/"} {
+	for _, path := range []string{"/not-a-route", "/api/v1/auth/login/"} {
 		code, _, _ := f.call(t, "GET", path, "", nil)
 		if code != 404 {
 			t.Fatalf("scope leak %s %d", path, code)

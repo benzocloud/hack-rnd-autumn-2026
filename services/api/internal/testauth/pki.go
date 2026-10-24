@@ -23,6 +23,8 @@ type PKI struct {
 	APIKey   string
 	AuthCert string
 	AuthKey  string
+	CoreCert string
+	CoreKey  string
 	HTTPCert string
 	HTTPKey  string
 }
@@ -59,6 +61,7 @@ func GeneratePKI(directory string) (PKI, error) {
 		CA:      filepath.Join(directory, "ca.pem"),
 		APICert: filepath.Join(directory, "api.pem"), APIKey: filepath.Join(directory, "api-key.pem"),
 		AuthCert: filepath.Join(directory, "auth.pem"), AuthKey: filepath.Join(directory, "auth-key.pem"),
+		CoreCert: filepath.Join(directory, "core.pem"), CoreKey: filepath.Join(directory, "core-key.pem"),
 		HTTPCert: filepath.Join(directory, "https.pem"), HTTPKey: filepath.Join(directory, "https-key.pem"),
 	}
 	if err := writePEM(paths.CA, "CERTIFICATE", caDER); err != nil {
@@ -70,6 +73,7 @@ func GeneratePKI(directory string) (PKI, error) {
 	}{
 		{"test API", "spiffe://saldo.local/api", paths.APICert, paths.APIKey, x509.ExtKeyUsageClientAuth},
 		{"test Auth", "spiffe://saldo.local/auth", paths.AuthCert, paths.AuthKey, x509.ExtKeyUsageServerAuth},
+		{"test Core", "spiffe://saldo.local/core", paths.CoreCert, paths.CoreKey, x509.ExtKeyUsageServerAuth},
 		{"test HTTPS", "", paths.HTTPCert, paths.HTTPKey, x509.ExtKeyUsageServerAuth},
 	}
 	for i, item := range certificates {
