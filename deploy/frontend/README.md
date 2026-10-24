@@ -49,9 +49,9 @@ CI не заменяет root-owned shell scripts, Nginx config и Compose confi
 Workflow `.github/workflows/frontend.yml`:
 
 1. PR: lint/typecheck, отдельные tests и Docker build/smoke-test. Без deployment.
-2. `main`: те же проверки, публикация `sha-<commit>` в GHCR и deployment
-   **по digest**, без `latest`.
-3. `workflow_dispatch` разрешает повторный deployment только на `main`.
+2. `main`: те же проверки и публикация `sha-<commit>` в GHCR, без deployment.
+3. Только явный `workflow_dispatch` на `main`: проверки, публикация и deployment
+   **по digest**, без `latest`. Merge и push сами не обновляют сервер.
 
 Environment `frontend-mock` разрешает deployment только с ветки `main`.
 Два Actions secrets хранятся только в environment `frontend-mock`,
@@ -67,9 +67,8 @@ root-only директории и удаляется при завершении
 Для первого GHCR push организация должна разрешать создание packages;
 package привязывается к этому репозиторию через OCI source label.
 
-CI начинает автоматический deployment только после merge workflow и frontend
-в `main`. Первичный административный запуск до merge не доказывает прохождение
-этого будущего CI deployment.
+Deployment требует отдельного ручного запуска workflow на `main`. Первичный
+административный запуск не доказывает прохождение будущего CI deployment.
 
 ## Проверки и откат
 
