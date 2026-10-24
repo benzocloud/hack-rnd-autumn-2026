@@ -1,0 +1,162 @@
+syntax = "proto3";
+
+package core.v1;
+
+import "auth/v1/auth.proto";
+import "core/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1;corev1";
+
+// API peer only. Reads require FINANCIAL_READ; writes FINANCIAL_WRITE with
+// Auth's write-context/CSRF check before financial data is read or changed.
+service LedgerService {
+  rpc GetDefaultAccount(GetDefaultAccountRequest) returns (GetDefaultAccountResponse);
+  rpc RecordManualBalance(RecordManualBalanceRequest) returns (RecordManualBalanceResponse);
+  rpc ListCategories(ListCategoriesRequest) returns (ListCategoriesResponse);
+  rpc ListTransactions(ListTransactionsRequest) returns (ListTransactionsResponse);
+  rpc CreateManualTransaction(CreateManualTransactionRequest) returns (CreateManualTransactionResponse);
+}
+
+enum BalanceSource {
+  BALANCE_SOURCE_UNSPECIFIED = 0;
+  BALANCE_SOURCE_STATEMENT_EOD = 1;
+  BALANCE_SOURCE_MANUAL = 2;
+}
+
+message DatedBalance {
+  Money amount = 1;
+  string as_of = 2;
+  BalanceSource source = 3;
+}
+
+enum FactualSourceMode {
+  FACTUAL_SOURCE_MODE_UNSPECIFIED = 0;
+  FACTUAL_SOURCE_MODE_MANUAL = 1;
+  FACTUAL_SOURCE_MODE_IMPORTED = 2;
+}
+message FactualSourceBinding {
+  FactualSourceMode mode = 1;
+  string source_system = 2;
+  optional string source_company_id = 3;
+}
+
+message Account {
+  string id = 1;
+  string company_id = 2;
+  string name = 3;
+  string currency = 4;
+  // Absent means unknown, not a zero current balance.
+  DatedBalance balance = 5;
+  int64 data_version = 6;
+  // Absent until factual history is first bound. Manual EOD does not bind it.
+  FactualSourceBinding transaction_source = 7;
+}
+
+message Category {
+  string id = 1;
+  string name = 2;
+  // UNSPECIFIED is the REST null (category valid for both directions).
+  Direction direction = 3;
+  string semantic_kind = 4;
+}
+
+enum RecordSourceKind {
+  RECORD_SOURCE_KIND_UNSPECIFIED = 0;
+  RECORD_SOURCE_KIND_MANUAL = 1;
+  RECORD_SOURCE_KIND_FILE = 2;
+  RECORD_SOURCE_KIND_MOCK_EXTERNAL = 3;
+}
+
+// Read projection of provenance. Not accepted by manual-write RPCs. Imported
+// facts/plans keep different external ID namespaces and immutable economics.
+message RecordSource {
+  RecordSourceKind kind = 1;
+  string source_system = 2;
+  optional string source_company_id = 3;
+  optional string external_operation_id = 4;
+  optional string external_payment_id = 5;
+  optional string import_id = 6;
+  optional string connection_id = 7;
+}
+
+message Transaction {
+  string id = 1;
+  string account_id = 2;
+  string operation_date = 3;
+  Direction direction = 4;
+  Money amount = 5;
+  optional string counterparty_inn = 6;
+  string counterparty_name = 7;
+  string payment_purpose = 8;
+  optional string category_id = 9;
+  RecordSource source = 10;
+  int64 version = 11;
+  google.protobuf.Timestamp created_at = 12;
+}
+
+message GetDefaultAccountRequest {
+  auth.v1.BrowserContext context = 1;
+  string company_id = 2;
+}
+message GetDefaultAccountResponse {
+  Account account = 1;
+}
+
+// Explicit EOD for an unobserved date, not a manufactured transaction. Reject
+// a future date in company timezone and any different observation on that day.
+message RecordManualBalanceRequest {
+  auth.v1.WriteContext context = 1;
+  AccountScope scope = 2;
+  string idempotency_key = 3;
+  int64 expected_data_version = 4;
+  Money balance = 5;
+  string as_of = 6;
+  string note = 7;
+}
+message RecordManualBalanceResponse {
+  Account account = 1;
+}
+
+message ListCategoriesRequest {
+  auth.v1.BrowserContext context = 1;
+  string company_id = 2;
+  PageRequest page = 3;
+}
+message ListCategoriesResponse {
+  repeated Category items = 1;
+  PageResponse pagination = 2;
+}
+
+message ListTransactionsRequest {
+  auth.v1.BrowserContext context = 1;
+  AccountScope scope = 2;
+  PageRequest page = 3;
+  DateRange dates = 4;
+  optional Direction direction = 5;
+  optional string category_id = 6;
+}
+message ListTransactionsResponse {
+  repeated Transaction items = 1;
+  PageResponse pagination = 2;
+}
+
+// Source is always manual_v1; IDs/time/actor come from Core/Auth. Imported
+// provenance is never inferred from public JSON, headers or an external INN.
+message CreateManualTransactionRequest {
+  auth.v1.WriteContext context = 1;
+  AccountScope scope = 2;
+  string idempotency_key = 3;
+  int64 expected_data_version = 4;
+  string operation_date = 5;
+  Direction direction = 6;
+  Money amount = 7;
+  optional string counterparty_inn = 8;
+  string counterparty_name = 9;
+  string payment_purpose = 10;
+  optional string category_id = 11;
+}
+message CreateManualTransactionResponse {
+  Transaction transaction = 1;
+  int64 data_version = 2;
+}

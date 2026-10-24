@@ -308,3 +308,46 @@ MIT, Copyright 2026 BenzoCloud; применим корневой LICENSE это
 SQL — в соседнем `sql/`; pool не создаётся внутри repository.
 `New` возвращает приватную реализацию сервиса; узкие интерфейсы определяются
 на стороне потребителей. Эти правила закреплены в `.agent/instructions.md`.
+
+### ML client (Core → ML)
+
+`internal/client/ml` borrows a reusable gRPC connection owned by app. App must
+supply mTLS credentials and close the connection; the client does not dial per
+request. `Predict` applies a maximum 30-second deadline (a shorter parent deadline
+wins), 2 MiB message limits, validates snapshot/model echoes and projection
+arithmetic, and returns safe classified errors with inspectable causes.
+
+The canonical contract comes unchanged from ML PR #27,
+`994ed6e0c33969020e4fa911b1125a0fdfe7f6ea`. Current model: `mean_90` /
+`mean_90_v1` / `daily_snapshot_v1`. It requires 90 verified consecutive daily
+observations/confirmed no-operation days. It rejects a known-payment calendar;
+it supplies no calibrated probability. Missing history is never filled with
+zeros. FinancialSnapshot alone does not yet supply this verified daily coverage.
+This client is not yet wired into forecast persistence or a running Core server.
+
+Generate the service-local Core/Auth/ML bindings from the repository root:
+
+```sh
+buf generate --template buf.core.gen.yaml
+```
+
+Use Buf 1.75.0; the template pins local Go plugins to v1.36.12 / v1.6.2.
+The initial API → Core contract and remaining runtime gaps are documented in
+[Core contract](../../docs/core/contract.md). Canonical proto lives at repository
+root; consuming modules generate their own packages, never import another
+service's internal bindings.
+
+Cross-language regression, with a separately checked-out ML source and isolated
+Python environment containing its pinned `requirements-rpc-dev.txt` dependencies
+and generated Python bindings:
+
+```sh
+CORE_ML_TEST_PYTHON=/absolute/path/to/venv/bin/python \
+CORE_ML_TEST_SOURCE=/absolute/path/to/ml-checkout/services/ml \
+  go test -tags=mlintegration -race -count=1 -run TestPythonPredictMTLS ./internal/client/ml
+```
+
+The test creates temporary certificates, starts the real Python server on an
+OS-selected loopback port with mTLS and a `saldo-core` SAN, checks the prediction,
+and terminates its own process. The ordinary CI unit job does not run Python;
+missing integration environment variables cause an explicit skip.
