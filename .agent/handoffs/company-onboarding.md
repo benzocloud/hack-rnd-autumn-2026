@@ -1,6 +1,6 @@
 # Company onboarding — продолжение работы
 
-Обновлено 2026-10-24. Реализация в работе; owner review pending; не сливать.
+Обновлено 2026-10-25. Реализация в работе; owner review pending; не сливать.
 
 ## Авторизация и ownership
 
@@ -32,14 +32,15 @@ Remote checkpoint SHA следует проверять через ls-remote; SH
 | Этап | Статус | Tests | Review | CI |
 | --- | --- | --- | --- | --- |
 | A0 | На ревью владельца | Docs diff/links/stage markers/fences и staged diff --check прошли | Caveman/Ponytail A0: подтверждённых замечаний нет | Checks пусты для docs SHA `6bd70b2` |
-| A1 | В работе: repository slice | Auth unit/race + real PG integration/race/vet/build/lint прошли | Caveman/Ponytail: исправлен один CHECK blocker, других доказанных дефектов нет | Awaiting checkpoint CI |
+| A1 | В работе: service/finalizer slice | Полный Auth unit/race + real PG integration/race/vet/build/lint прошли | Repository reviewed; service final reviews interrupted by usage limit | Последний проверенный CI — `1ffd947`, детали ниже |
 | A2 | Не начат | Не запускались | Pending | Не запускался |
 | A3 | Не начат | Не запускались | Pending | Не запускался |
 | A4 | Не начат | Не запускались | Pending | Не запускался |
 | A5 | Не начат | Не запускались | Pending | Не запускался |
 
-A0 docs опубликованы. В текущем A1 diff — durable storage/domain/migration и
-regressions; app/RPC/finalizer/reconciler не подключены, HTTP create ещё отсутствует.
+A0 и A1 repository опубликованы. В текущем A1 service diff подключены command
+store/app-owned Tx, Begin/Authorize business methods и Complete/common finalizer.
+RPC/Core client/reconciler ещё не подключены, HTTP create отсутствует.
 Финансовых fixtures нет. Runtime suite docs-only A0 не требовался; A1 проверен ниже.
 
 Проверено на `fdee0ed` + docs diff:
@@ -137,12 +138,12 @@ config env для нового Auth→Core client пока не реализов
 
 ## Следующие действия
 
-1. Продолжать A1 в PR #41 после repository checkpoint. Auth account.Work/app.New
-   должны связать новый command store и owner insert с существующим checkContext.
-2. Реализовать Begin/replay под user→session→command locks, затем общий finalizer
-   с receipt verification и user→command lock; никаких locks/Tx во время RPC.
-3. Проверить service-path concurrency/disabled/deleted/expired/revoked и перейти
-   к A2 RPC/client/recovery checkpoints по плану; не дублировать Core bootstrap.
+1. Завершить два независимых review A1 service/finalizer diff: оба были прерваны
+   usage limit, итоговый успех не заявлен. Проверенный parent — `1ffd947` + service diff.
+2. Опубликовать service checkpoint и проверить remote SHA/CI; при review findings
+   исправить, повторить относящиеся checks и сразу push.
+3. A2: реальные Auth RPC/Core client/generated bindings, app lifecycle и durable
+   reconciler. Buf ещё не установлен: предыдущий approval review завершился quota error.
 
 Продолжать все A0–A5 по поручению, не запрашивать промежуточное разрешение на
 согласованную работу. При недоступном первом gate сохранить честный checkpoint
@@ -199,3 +200,52 @@ Tooling воспроизводится без изменения go.mod:
 Добавить этот каталог в PATH либо вызвать установленный binary по пути.
 Текущий worker/PKI/client config не создан; runtime CI надо читать после push,
 исторические green checks не доказательство нового SHA.
+
+## A1 — service/finalizer checkpoint (2026-10-25)
+
+Снимок: `1ffd9473d7f32f82262710e5751df4f2c901ea34` + service/app/tests diff.
+account.Work расширен feature-local command store; app.New связывает repository
+с тем же sqlx.Tx. Begin использует live/verified session/CSRF, user→session→command
+locks, UUIDv4/UUIDv7 создаются только после scoped key lookup. CreatedAt усечён
+до PostgreSQL microseconds, чтобы первый ответ совпадал с durable replay.
+Authorize bootstrap проверяет durable command и verified/enabled initiator;
+чужой input не карантинит корректную команду. Complete читает Core через
+consumer-side port после commit первой Tx; общий finalizer повторно берёт
+user→command locks, сверяет receipt и атомарно пишет owner+COMPLETED.
+Disabled/deleted user и mismatch дают committed QUARANTINED без membership;
+completed replay не восстанавливает удалённую membership.
+
+Core port пока тестовый boundary, не реальный mTLS client; business methods
+не зарегистрированы как RPC. Это не доказательство полного onboarding/E2E.
+Существующие login/verify не требуют Core клиента и прошли повторный regression.
+
+Проверено на этом diff в services/auth, pinned Go1.27.3:
+
+- Полный `go test -race -shuffle=on -count=1 -timeout=90s ./...` — exit0.
+- Полный `go test -race -tags=integration -shuffle=on -count=1 -timeout=90s ./...`
+  на том же отдельном marked PostgreSQL18.6 fixture — exit0, не skipped.
+- `go vet -tags=integration ./...`, `go build ./...`, full-module
+  `golangci-lint run ./...` — exit0, lint0issues; formatting/import применены.
+- Реальные две service replicas/pools: concurrent Begin даёт один command,
+  same key/different spec conflict, missing receipt оставляет PREPARED;
+  fresh service/pool после restart завершает owner, completed replay сохраняет
+  отзыв доступа. SQL NOWAIT regression подтверждает отсутствие user lock через RPC.
+- Disabled user во время receipt read даёт durable QUARANTINED/no membership.
+  Unit cases дополнительно покрывают mismatch всех receipt fields, invalid/missing
+  account/commit, deleted user, foreign command, CSRF/expired session и rollback.
+
+Два service reviewers были запущены, но оба завершились usage limit до финального
+отчёта. Ponytail успел сообщить предварительное отсутствие доказанных дефектов;
+это не завершённое review. Repository reviews выше действуют только на старый slice.
+
+Последний прочитанный GitHub CI (`1ffd947`): Auth lint/tests, Core contracts/lint,
+infra safety/ml-tests — SUCCESS; Auth build и Core tests — IN_PROGRESS, общий успех
+не заявлен. Источники: Auth run40132488413, Core run40132488424, infra run40132488402.
+
+Подтверждённый environment failure: установка Buf1.75.0 через pinned go install
+не запущена — automatic approval reviewer сообщил usage limit и retry at12:50AM.
+Это сбой проверки разрешения, не признание команды небезопасной. Не обходить
+reviewer и не выдавать Buf установленным; восстановить quota/approval service,
+затем повторить обычную разрешённую проверку. Последний remote checkpoint до
+service публикации — `1ffd947`; весь service diff пока локален, пока новый push
+и remote SHA не подтверждены.

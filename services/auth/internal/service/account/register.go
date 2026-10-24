@@ -41,7 +41,7 @@ func (s *service) Register(ctx context.Context, input RegisterInput) (Challenge,
 	if err != nil {
 		return Challenge{}, ErrUnavailable
 	}
-	err = s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, challenges challengeStore, consents consentStore, _ membershipStore) error {
+	err = s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, challenges challengeStore, consents consentStore, _ membershipStore, _ creationStore) error {
 		active, err := consents.GetActiveDocument(ctx, true)
 		if err != nil {
 			return err
@@ -111,7 +111,7 @@ func (s *service) ResendVerification(ctx context.Context, input WriteContext, ra
 		return Challenge{}, err
 	}
 	result := Challenge{ID: inert.ID, ExpiresAt: inert.ExpiresAt}
-	err = s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, challenges challengeStore, _ consentStore, _ membershipStore) error {
+	err = s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, challenges challengeStore, _ consentStore, _ membershipStore, _ creationStore) error {
 		peek, eligible, err := s.resendCandidate(ctx, users, contexts, input, email)
 		if err != nil {
 			return err

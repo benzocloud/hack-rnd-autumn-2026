@@ -93,7 +93,7 @@ func (s *service) newContext(user domain.User) (domain.SecurityContext, string, 
 }
 func (s *service) GetSecurityContext(ctx context.Context, cookie string) (SecurityContext, error) {
 	var result SecurityContext
-	err := s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, _ challengeStore, _ consentStore, _ membershipStore) error {
+	err := s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, _ challengeStore, _ consentStore, _ membershipStore, _ creationStore) error {
 		current, _, err := s.checkContext(ctx, users, contexts, WriteContext{CookieToken: cookie}, false, false)
 		token := cookie
 		if errors.Is(err, ErrAuthRequired) {
@@ -115,7 +115,7 @@ func (s *service) GetSecurityContext(ctx context.Context, cookie string) (Securi
 }
 func (s *service) GetCurrentAccount(ctx context.Context, cookie string) (User, error) {
 	var result User
-	err := s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, _ challengeStore, _ consentStore, _ membershipStore) error {
+	err := s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, _ challengeStore, _ consentStore, _ membershipStore, _ creationStore) error {
 		_, user, err := s.checkContext(ctx, users, contexts, WriteContext{CookieToken: cookie}, false, true)
 		if err != nil {
 			return err
@@ -129,7 +129,7 @@ func (s *service) GetCurrentAccount(ctx context.Context, cookie string) (User, e
 	return result, nil
 }
 func (s *service) Logout(ctx context.Context, input WriteContext) error {
-	return s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, _ challengeStore, _ consentStore, _ membershipStore) error {
+	return s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, _ challengeStore, _ consentStore, _ membershipStore, _ creationStore) error {
 		current, _, err := s.checkContext(ctx, users, contexts, input, true, false)
 		if err != nil {
 			return err

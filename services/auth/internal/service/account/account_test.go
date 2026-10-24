@@ -22,13 +22,15 @@ type memoryStore struct {
 	contexts     map[string]domain.SecurityContext
 	challenges   map[uuid.UUID]domain.Challenge
 	memberships  map[uuid.UUID]domain.Membership
+	creations    map[uuid.UUID]domain.CompanyCreation
 	evidence     []domain.ConsentEvidence
 	failEvidence bool
+	failComplete bool
 	document     Document
 }
 
 func freshStore() *memoryStore {
-	return &memoryStore{users: map[uuid.UUID]domain.User{}, contexts: map[string]domain.SecurityContext{}, challenges: map[uuid.UUID]domain.Challenge{}, memberships: map[uuid.UUID]domain.Membership{}}
+	return &memoryStore{users: map[uuid.UUID]domain.User{}, contexts: map[string]domain.SecurityContext{}, challenges: map[uuid.UUID]domain.Challenge{}, memberships: map[uuid.UUID]domain.Membership{}, creations: map[uuid.UUID]domain.CompanyCreation{}}
 }
 func cloneMap[K comparable, V any](in map[K]V) map[K]V {
 	out := make(map[K]V, len(in))
@@ -45,16 +47,19 @@ func (m *memoryStore) work(ctx context.Context, fn Work) error {
 	working.contexts = cloneMap(m.contexts)
 	working.challenges = cloneMap(m.challenges)
 	working.memberships = cloneMap(m.memberships)
+	working.creations = cloneMap(m.creations)
 	working.evidence = append([]domain.ConsentEvidence(nil), m.evidence...)
 	working.failEvidence = m.failEvidence
+	working.failComplete = m.failComplete
 	working.document = m.document
-	if err := fn(ctx, working, working, working, working, working); err != nil {
+	if err := fn(ctx, working, working, working, working, working, working); err != nil {
 		return err
 	}
 	m.users = working.users
 	m.contexts = working.contexts
 	m.challenges = working.challenges
 	m.memberships = working.memberships
+	m.creations = working.creations
 	m.evidence = working.evidence
 	m.document = working.document
 	return nil
