@@ -87,7 +87,8 @@
     font-family: inherit;
     font-size: global.$text-input;
     line-height: 1.3;
-    transition: background-color global.$transition-duration, opacity global.$transition-duration;
+    box-shadow: 0 0 0 2px transparent, 0 0 0 4px transparent;
+    transition: background-color global.$transition-duration, opacity global.$transition-duration, box-shadow global.$transition-duration;
 
     &::placeholder {
         color: global.$input-placeholder;
@@ -99,13 +100,18 @@
     }
 
     &:focus-visible {
-        outline: 2px solid global.$green2;
-        outline-offset: 2px;
+        outline: none;
+        box-shadow: 0 0 0 2px global.$white, 0 0 0 4px global.$green2;
     }
 
     &:disabled {
         opacity: 0.4;
         cursor: not-allowed;
+    }
+
+    &[aria-invalid="true"] {
+        box-shadow: 0 0 0 2px global.$white, 0 0 0 4px global.$red;
+        outline: none;
     }
 }
 

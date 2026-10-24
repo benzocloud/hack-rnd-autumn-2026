@@ -1,0 +1,73 @@
+@use "./global" as global;
+
+.page {
+    display: grid;
+    flex: 1;
+    place-items: center;
+    min-width: 0;
+    padding: 40px 10px 60px;
+}
+
+.card {
+    width: 100%;
+    max-width: 750px;
+    padding: clamp(28px, 5vw, 60px);
+    border-radius: 30px;
+    background: global.$white;
+    text-align: center;
+    animation: appear global.$transition-duration ease-out;
+
+    h1 { margin: 14px 0; font-size: clamp(26px, 4vw, 38px); line-height: 1.2; font-weight: 600; }
+    p { max-width: 480px; margin: 0 auto; color: #525252; font-size: 17px; line-height: 1.6; }
+}
+
+.visual {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    width: fit-content;
+    margin: 0 auto 30px;
+    font-size: clamp(90px, 18vw, 160px);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.06em;
+
+    .zero { color: global.$green2; }
+    svg { position: absolute; inset: 35% -8% auto; width: 116%; height: 65%; overflow: visible; pointer-events: none; }
+    path { stroke: global.$green1; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 400; stroke-dashoffset: 400; animation: chart 0.9s ease-in forwards; }
+}
+
+.eyebrow { color: #525252; font-size: 14px; }
+.actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 30px; }
+.primary, .secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    min-height: 50px;
+    padding: 13px 22px;
+    border-radius: 14px;
+    color: global.$text;
+    font-size: 16px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity global.$transition-duration;
+
+    &:hover { opacity: 0.4; }
+    &:focus-visible { outline: 2px solid global.$green2; outline-offset: 4px; }
+}
+.primary { background: global.$green1; }
+.secondary { background: global.$gray1; }
+@keyframes appear { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes chart { to { stroke-dashoffset: 0; } }
+@media (max-width: 480px) {
+    .page { padding-block: 30px; }
+    .card { padding: 30px 20px; border-radius: 24px; p { font-size: 16px; } }
+    .actions { flex-direction: column; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .card { animation: none; }
+    .visual path { animation: none; stroke-dashoffset: 0; }
+    .primary, .secondary { transition: none; }
+}

@@ -17,6 +17,12 @@ const isPublicRoute = ( pathname: string ): boolean => {
 };
 
 
+const isKnownRoute = ( pathname: string ): boolean => {
+    const path = pathname.replace(/\/+$/, "") || "/";
+    return isPublicRoute(path) || [ "/", "/workspace", "/account" ].includes(path) || /^\/companies\/[^/]+\/(dashboard|settings|transactions|calendar|scenarios|imports|members|forecasts\/[^/]+)$/.test(path);
+};
+
+
 const redirectToLogin = () => {
     if (typeof window === "undefined" || isPublicRoute(window.location.pathname) || loginRedirectPending) {
         return;
@@ -27,4 +33,4 @@ const redirectToLogin = () => {
 };
 
 
-export { isAuthRoute, isPublicRoute, canVerifyEmail, redirectToLogin };
+export { isAuthRoute, isPublicRoute, isKnownRoute, canVerifyEmail, redirectToLogin };

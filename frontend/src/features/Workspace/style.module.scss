@@ -3,6 +3,7 @@
 
 .page { @include finance.page; }
 .stack { @include finance.stack; }
+.sections { display: grid; gap: 15px; min-width: 0; }
 .form { @include finance.form; }
 .actions { @include finance.row; }
 .grid {
