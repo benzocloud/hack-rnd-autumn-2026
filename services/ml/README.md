@@ -7,9 +7,11 @@
   за последние 8 недель. Для любого будущего дня используются только прошлые данные.
 
 Из прогнозных потоков рассчитывается остаток от наблюдаемого EOD даты среза.
-В этих двух baseline обучения, вероятности риска, категоризации, платёжного
-календаря и gRPC нет; дополнительные локальные эксперименты описаны ниже.
-Это локальный эксперимент, не реализованный сервис или принятый API-контракт.
+В этих двух baseline обучения, вероятности риска, категоризации и платёжного
+календаря нет; дополнительные локальные эксперименты описаны ниже.
+Для mean_90 добавлен отдельный gRPC endpoint по снимку Core:
+[контракт, генерация, запуск и ограничения](GRPC_CONTRACT.md).
+Сам Core ещё не подключён; CLI evaluation остаётся исследовательским запуском.
 
 ## Данные
 
@@ -298,3 +300,32 @@ baseline и 1 232 среза проверяются перед сравнени�
 улучшения не доказано, default сохранён. Поздняя часть ранее изучалась.
 68 ML-тестов и два полных совпавших запуска проверены. Итог:
 [причины ложных тревог](../../.agent/research/ml-expense-warning-results.md).
+
+
+## ML gRPC
+
+Canonical контракт — `proto/ml/v1/forecast.proto`, приватный
+`ml.v1.ForecastService/Predict`. Вход — согласованный Core snapshot за 90 дней,
+дневные суммы в копейках, observed EOD на cutoff и явные версии. Ответ —
+1..30 дневных прогнозов mean_90. Непустой known_payments отклоняется до
+согласования устранения двойного учёта. Вероятность разрыва не рассчитывается.
+
+```powershell
+.venv/Scripts/python.exe -m pip install -r services/ml/requirements-rpc-dev.txt
+.venv/Scripts/python.exe services/ml/generate_rpc.py --buf path/to/buf.exe
+.venv/Scripts/python.exe -B services/ml/run_server.py --insecure-local
+```
+
+Buf закреплён на 1.75.0. Во втором терминале выполнить synthetic smoke:
+
+```powershell
+.venv/Scripts/python.exe -B services/ml/smoke_rpc.py
+.venv/Scripts/python.exe -B services/ml/check_rpc_tests.py
+```
+
+Рабочий режим требует mTLS и SAN Core; insecure-local разрешён только на
+127.0.0.1. Сервис не читает dataset, CSV или Core DB. Python bindings
+генерируются локально и не включаются в Git. Отдельный workflow ML RPC checks
+проверяет Buf, повторную генерацию и все RPC/mTLS tests без skips.
+Core client/snapshot orchestration и deployment — следующие отдельные работы.
+[Полное описание и статусы ошибок](GRPC_CONTRACT.md), [этапы](GRPC_PLAN.md).

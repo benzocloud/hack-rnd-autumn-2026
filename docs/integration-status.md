@@ -13,6 +13,12 @@
 | ML | [#15](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/15), `decdbf3` | Локальные Python baseline, диагностика и исследования; без HTTP/gRPC сервера |
 | Frontend | [#21](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/21), `25e714e` | Next.js, страницы, HTTP-клиент, browser-local mock, тесты и Docker/CI; remote `frontend` и PR head сверены, оба указывают на этот SHA |
 
+Продолжение ML: реализованы canonical [protobuf](../proto/ml/v1/forecast.proto)
+и Python gRPC-сервис `mean_90` по готовому snapshot. Есть проверка версий,
+денежной арифметики, mTLS/идентичности Core и локального сетевого вызова.
+Это дополняет историческую строку PR #15; сам Core ещё не формирует и не передаёт
+snapshot. Команды и ограничения: [ML RPC](../services/ml/GRPC_CONTRACT.md).
+
 История исходных веток сохраняется merge-коммитами. Их авторские ветки не
 переписываются. Статусы принятия этапов сохраняются в соответствующих планах;
 общая поставка не объявляет следующие продуктовые этапы реализованными.
@@ -42,7 +48,7 @@
 | Go API | Исполняемый сервис, HTTP handlers/middleware, cookie/CSRF/Origin, Auth/Core adapters и проверка полного browser flow |
 | Auth | Бизнес-RPC регистрации/входа/подтверждения/reset, consent/outbox/email delivery, компании/членства/приглашения; этапы 3.3–3.6 не начаты |
 | Core | Transport, Auth access adapter, company bootstrap/read/update и durable onboarding receipt для Auth; snapshot/forecast orchestration, этап 2.4 не начат |
-| ML | Согласованный protobuf adapter/service над прогнозом; вход от Core snapshot, а не обращение Go API к CSV/CLI |
+| ML | Подключение реализованного protobuf/Python gRPC к Core snapshot; Go consumer client и orchestration, согласование будущего календаря без двойного учёта, provisioned mTLS |
 | End-to-end | Реальная цепочка Frontend → API → Auth/Core → ML, provisioned TLS/credentials и согласованная проверка результата |
 
 Текущая Core Company содержит ID; наличие таблицы ещё не даёт company profile
