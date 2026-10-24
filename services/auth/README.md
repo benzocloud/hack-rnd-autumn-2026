@@ -69,13 +69,42 @@ Ctrl+C/SIGTERM снимает readiness, дренирует HTTP, при timeout
 
 `internal/app/postgres` создаёт/configure/Ping готовый `*sqlx.DB`; composing
 `internal/app` владеет `Close`, в том числе при ошибке startup или миграции.
-Repository не открывает и не закрывает pool. `NewRepository` возвращает приватную
+Repository не открывает и не закрывает pool. `user.NewRepository` возвращает приватную
 реализацию и принимает готовый `sqlx.ExtContext` (`*sqlx.DB` или `*sqlx.Tx`).
 Узкие интерфейсы принадлежат потребителям; собственного зеркального интерфейса
-провайдер не публикует. SQL — в `internal/repository/postgres/sql/`, embed — в
-`queries.go`; schema, user operations, row mapping, transaction helper и errors
-разделены по ответственности. Отдельная `app.Migrate` владеет соединением
-миграционной команды, repository получает готовый DB.
+провайдер не публикует. Пользовательские операции, записи и SQL принадлежат
+`internal/repository/user`; `internal/repository/postgres` содержит общую
+инфраструктуру PostgreSQL: schema check, миграции, транзакции и общие ошибки.
+
+```text
+internal/repository/
+  user/
+    repository.go           # приватная реализация и конструктор
+    insert_user.go
+    user_by_email.go
+    user.go                 # storage projection без db-тегов
+    errors.go               # ошибки пользовательских операций
+    queries.go              # embed только пользовательских SQL
+    record/user.go          # запись БД с db-тегами
+    sql/insert_user.sql
+    sql/user_by_email.sql
+  postgres/
+    schema.go               # приватный schemaRepository и NewSchemaRepository
+    record/schema_version.go
+    queries.go              # embed schema_version.sql
+    sql/schema_version.sql
+    transaction.go
+    migrate.go
+    errors.go
+```
+
+Преобразование `record.User` в `user.User` выполняет родительский пакет `user`;
+пакет записей не импортирует родителя. Каждый repository хранит собственные SQL
+в своём `sql/` и embed в `queries.go`. Отдельная `app.Migrate` владеет соединением
+миграционной команды, инфраструктурный пакет получает готовый DB.
+Проверка схемы создаётся через `postgres.NewSchemaRepository`; её запись БД
+принадлежит `postgres/record`. Ошибки поиска, email conflict и invalid user record
+принадлежат `user`; общая недоступность БД — `postgres`.
 
 Миграция 1: users, credentials, security_contexts, sessions,
 verification_challenges, reset_tokens и goose history. Credential version
@@ -85,7 +114,7 @@ Security context хранит hash cookie, nonce/key_id CSRF, срок и отз
 TTL ≤10m; reset — hash и TTL ≤15m. Код/ссылка/cookie в открытом виде не хранятся.
 Ключи HMAC/AES/CSRF, методы verify/login/reset и очистка ещё относятся к 3.3/3.4.
 
-UserRecord — storage projection, а операции repository — низкоуровневое
+`user.User` — storage projection, а операции repository — низкоуровневое
 хранилище, не регистрация. InsertUser сохраняет
 уже нормализованный email и UUIDv4; БД проверяет их и уникальность email.
 WithTx передаёт bounded context и `*sqlx.Tx`; callback создаёт repository над этим
