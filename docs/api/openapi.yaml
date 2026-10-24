@@ -1040,7 +1040,7 @@ paths:
       summary: Upload CSV for asynchronous validation
       tags:
       - Imports
-      description: 'dataset_v1 only: UTF-8 BOM tolerated/expected, semicolon separator, ISO dates, decimal ruble amounts with dot. Required columns: company_id,operation_id,operation_date,amount,direction,counterparty_inn,counterparty_name,payment_purpose,balance_eod. Dataset amount must be positive with at most two decimal places; map Поступление→inflow, Списание→outflow, parse exact decimal to minor units. INN remains text with leading zeros. Empty purpose/INN allowed with warnings. Explicit source_company_id selects rows of exactly one external company; aggregate file rows for other source companies are not imported and excluded count shown as warning, no tenant creation. Dataset file always selects record_kinds=[transactions,balance_observations]. First successful commit atomically binds the single account transaction_source to external (dataset_v1, selected source_company_id); another factual namespace or manual history gives 409 FACTUAL_SOURCE_CONFLICT. This authority also governs external balance imports. Per-source source_company_id is separately immutable (409 SOURCE_BINDING_CONFLICT); supplemental sources may coexist only for explicitly selected planned_payments. No binding is acquired by upload or preview alone. No mixed-company rows can mutate another tenant. Up to provisional 100 MiB/300000 rows; exceeded limit 413, no partial acceptance. Persist bytes+job before 202; no facts applied until preview commit. Equivalent aggregate/per-company inputs deduplicate by scoped external operation ID, independent of filename/hash. Invalid source selection/format gives failed import or 422 before enqueue, never silent success.'
+      description: 'dataset_v1 only: UTF-8 BOM tolerated/expected, semicolon separator, ISO dates, decimal ruble amounts with dot. Required columns: company_id,operation_id,operation_date,amount,direction,counterparty_inn,counterparty_name,payment_purpose,balance_eod. Dataset amount must be positive with at most two decimal places; map Поступление→inflow, Списание→outflow, parse exact decimal to minor units. INN remains text with leading zeros. Empty purpose/INN allowed with warnings. Explicit source_company_id selects rows of exactly one external company; aggregate file rows for other source companies are not imported and excluded count shown as warning, no tenant creation. Dataset file always selects record_kinds=[transactions,balance_observations]. First successful commit atomically binds the single account transaction_source to external (dataset_v1, selected source_company_id); another factual namespace or manual history gives 409 FACTUAL_SOURCE_CONFLICT. This authority also governs external balance imports. Per-source source_company_id is separately immutable (409 SOURCE_BINDING_CONFLICT); supplemental sources may coexist only for explicitly selected planned_payments. No binding is acquired by upload or preview alone. No mixed-company rows can mutate another tenant. Up to 100 MiB/300000 CSV data rows; HTTP multipart envelope <=101 MiB with exactly one file part and bounded known fields. File/row/envelope limit gives 413 PAYLOAD_TOO_LARGE, no partial acceptance; API/Core account/global staging quota exhaustion gives 429 RATE_LIMITED. The original bytes and queued job are durable before 202. API private disk spool is deleted after transfer/refusal; Core staging cleanup preserves resource, provenance and idempotency receipt. Persist bytes+job before 202; no facts applied until preview commit. Equivalent aggregate/per-company inputs deduplicate by scoped external operation ID, independent of filename/hash. Invalid source selection/format gives failed import or 422 before enqueue, never silent success.'
       responses:
         '202':
           $ref: '#/components/responses/SuccessImportAccepted'
@@ -1992,6 +1992,166 @@ paths:
           "$ref": "#/components/responses/Error429"
         "503":
           "$ref": "#/components/responses/Error503"
+  /companies/{company_id}/reconciliation-groups:
+    parameters:
+    - $ref: '#/components/parameters/company_id'
+    get:
+      operationId: listReconciliationGroups
+      summary: List immutable calendar reconciliation groups
+      tags:
+      - Payments
+      description: Live company membership and FINANCIAL_READ are checked by Core on each read; API resolves account
+        from authorized default account. Cross-tenant/unknown group returns 404. No financial contents are logged.
+        Ordered confirmed_at DESC,id DESC. Default excludes revoked; cursor binds actor/account/include_revoked.
+      responses:
+        '200':
+          description: ReconciliationGroupList
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReconciliationGroupList'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '503':
+          $ref: '#/components/responses/Error503'
+      parameters:
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/cursor'
+      - name: include_revoked
+        in: query
+        schema:
+          type: boolean
+          default: false
+    post:
+      operationId: createReconciliationGroup
+      summary: Confirm additional obligation or complete historical replacement
+      tags:
+      - Payments
+      description: 'Requires FINANCIAL_WRITE, exact trusted Origin/Referer, CSRF and Idempotency-Key. Core reauthorizes
+        and uses key/account/resource locking in one transaction; revision/proof transfer and stale forecasts update
+        atomically. Invalid dates/IDs/overlap: 422 VALIDATION_ERROR; inaccessible resource:404; CAS:409 VERSION_CONFLICT;
+        incompatible state:409 PAYMENT_STATE_CONFLICT; key payload mismatch:409 IDEMPOTENCY_CONFLICT. Group confirmation
+        never creates facts/payments or infers recurrence.'
+      responses:
+        '201':
+          description: ReconciliationGroup
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReconciliationGroup'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '503':
+          $ref: '#/components/responses/Error503'
+      parameters:
+      - $ref: '#/components/parameters/Csrf'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReconciliationGroupRequest'
+  /companies/{company_id}/reconciliation-groups/{group_id}:
+    parameters:
+    - $ref: '#/components/parameters/company_id'
+    - $ref: '#/components/parameters/group_id'
+    get:
+      operationId: getReconciliationGroup
+      summary: Read a calendar reconciliation group
+      tags:
+      - Payments
+      description: Live company membership and FINANCIAL_READ are checked by Core on each read; API resolves account
+        from authorized default account. Cross-tenant/unknown group returns 404. No financial contents are logged.
+      responses:
+        '200':
+          description: ReconciliationGroup
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReconciliationGroup'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '503':
+          $ref: '#/components/responses/Error503'
+  /companies/{company_id}/reconciliation-groups/{group_id}/revoke:
+    parameters:
+    - $ref: '#/components/parameters/company_id'
+    - $ref: '#/components/parameters/group_id'
+    post:
+      operationId: revokeReconciliationGroup
+      summary: Explicitly revoke a reconciliation group
+      tags:
+      - Payments
+      description: 'Requires FINANCIAL_WRITE, exact trusted Origin/Referer, CSRF and Idempotency-Key. Core reauthorizes
+        and uses key/account/resource locking in one transaction; revision/proof transfer and stale forecasts update
+        atomically. Invalid dates/IDs/overlap: 422 VALIDATION_ERROR; inaccessible resource:404; CAS:409 VERSION_CONFLICT;
+        incompatible state:409 PAYMENT_STATE_CONFLICT; key payload mismatch:409 IDEMPOTENCY_CONFLICT. Returns saved
+        group; replay never increments revision twice. Clearing a payment association does not revoke this group.'
+      responses:
+        '200':
+          description: ReconciliationGroup
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReconciliationGroup'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '503':
+          $ref: '#/components/responses/Error503'
+      parameters:
+      - $ref: '#/components/parameters/Csrf'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeReconciliationGroupRequest'
 components:
   securitySchemes:
     cookieSession:
@@ -2000,6 +2160,14 @@ components:
       name: "__Host-saldo_session"
       description: "Opaque server-side session cookie; Secure, HttpOnly, SameSite=Lax, Path=/. Only same-origin browser traffic in this baseline. CSRF header is additionally required on all writes."
   parameters:
+    group_id:
+      name: group_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResourceID'
+      description: Opaque reconciliation group ID in the authorized company/default account; inaccessible group returns
+        404.
     company_id:
       name: "company_id"
       in: "path"
@@ -5304,6 +5472,13 @@ components:
           anyOf:
           - $ref: '#/components/schemas/TransactionSourceBinding'
           - type: 'null'
+        history_coverage:
+          anyOf:
+          - $ref: '#/components/schemas/HistoryCoverage'
+          - type: 'null'
+          readOnly: true
+          description: Server-owned proof or null when unavailable/legacy. Preview is a proposal; only successful atomic
+            commit establishes proof. Omission remains valid for legacy responses.
       required:
       - source_company_id
       - source_system
@@ -5410,6 +5585,22 @@ components:
           - type: 'null'
         record_kinds:
           $ref: '#/components/schemas/ImportRecordKinds'
+        history_coverage:
+          anyOf:
+          - $ref: '#/components/schemas/HistoryCoverage'
+          - type: 'null'
+          readOnly: true
+          description: Server-owned proof or null when unavailable/legacy. Preview is a proposal; only successful atomic
+            commit establishes proof. Omission remains valid for legacy responses.
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+            pattern: ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$
+          - type: 'null'
+          readOnly: true
+          description: Server-owned pending-preview expiry, UTC; null/omitted for legacy or non-expiring state. Expired
+            preview fails with IMPORT_STATE_CONFLICT; raw cleanup preserves resource/replay metadata.
       required:
       - id
       - account_id
@@ -5784,6 +5975,11 @@ components:
           pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$"
           examples:
             - "2026-10-23T12:00:00Z"
+        reconciliation_group_id:
+          $ref: '#/components/schemas/NullableResourceID'
+          readOnly: true
+          description: Saved group association or null/omitted for unresolved legacy payment. Only an active group compatible
+            with the frozen forecast window reconciles the payment; cancel/match/date changes do not revoke the group.
       required:
         - "id"
         - "account_id"
@@ -5831,6 +6027,10 @@ components:
           $ref: "#/components/schemas/NullableResourceID"
           examples:
             - "019a0c65-9800-7000-8000-000000000003"
+        reconciliation_group_id:
+          $ref: '#/components/schemas/NullableResourceID'
+          description: Optional scoped group ID; omitted/null leaves unresolved. Server validates group/account/window.
+            Does not infer replacement from category or description.
       required:
         - "direction"
         - "amount"
@@ -5876,6 +6076,10 @@ components:
           description: "Opaque decimal integer version encoded as a string. Compare for equality; do not increment in the browser."
           examples:
             - "42"
+        reconciliation_group_id:
+          $ref: '#/components/schemas/NullableResourceID'
+          description: Omitted preserves association; UUID assigns a scoped group; explicit null clears association without
+            revoking the persisted group. Payment version CAS remains required.
       required:
         - "version"
       description: "At least one editable field required; client supplies current version. Direction/amount changes cannot invalidate existing matches. Matched/partially matched source economics cannot be rewritten; 409 when incompatible. Updated source imported expectation is treated as an explicit audited user correction, not silently overwritten on future sync."
@@ -5898,6 +6102,8 @@ components:
         -
           required:
             - "category_id"
+        - required:
+            - reconciliation_group_id
     Match:
       type: "object"
       additionalProperties: false
@@ -6110,6 +6316,29 @@ components:
           - below_zero_eod
         model_context:
           $ref: '#/components/schemas/ModelContext'
+        history_coverage:
+          anyOf:
+          - $ref: '#/components/schemas/HistoryCoverage'
+          - type: 'null'
+          readOnly: true
+          description: Server-owned proof or null when unavailable/legacy. Preview is a proposal; only successful atomic
+            commit establishes proof. Omission remains valid for legacy responses.
+        calendar_mode:
+          type: string
+          enum:
+          - available
+          - synthetic_scenario
+          default: available
+          description: available preserves ordinary calendar availability rules; synthetic_scenario requires server-enabled
+            dataset manifest plus explicit user selection. Missing legacy field means available, never synthetic.
+          readOnly: true
+        scenario_context:
+          anyOf:
+          - $ref: '#/components/schemas/SyntheticScenarioContext'
+          - type: 'null'
+          readOnly: true
+          description: Frozen server-owned context for synthetic_scenario; null/omitted for ordinary or legacy forecasts.
+            Browser cannot provide identity, recorded_at or provenance.
       required:
       - snapshot_id
       - data_version
@@ -6125,6 +6354,21 @@ components:
       - risk_definition
       - model_context
       description: Immutable snapshot. Historical mode excludes facts and derived features after cutoff_date. start_date must equal cutoff_date+1 calendar day; data_as_of is latest usable factual coverage; balance_as_of must equal cutoff_date. opening_balance is a dated accepted EOD observation at cutoff, never a silent carry-forward of an earlier balance. Missing cutoff EOD causes BALANCE_AS_OF_UNAVAILABLE; no assumption of zero unobserved cashflow. A new explicit manual dated balance on an unobserved date may supply an onboarding/later-cutoff anchor with its provenance/quality warning, without changing the transaction-history source binding; a same-date statement observation cannot be overwritten. Known future payments in backtests require point-in-time availability; dataset has no such labels. below_zero_eod is a transparent negative-EOD-balance proxy, not a verified unpaid-obligation metric or credit-limit-aware insolvency prediction. Horizon counts calendar days, timezone company Europe/Moscow.
+      allOf:
+        - if:
+            properties:
+              calendar_mode:
+                const: synthetic_scenario
+            required: [calendar_mode]
+          then:
+            required: [scenario_context]
+            properties:
+              scenario_context:
+                $ref: '#/components/schemas/SyntheticScenarioContext'
+          else:
+            properties:
+              scenario_context:
+                type: 'null'
     CreateForecastRequest:
       type: object
       additionalProperties: false
@@ -6140,10 +6384,18 @@ components:
           - 30
           minimum: 30
           maximum: 90
+        calendar_mode:
+          type: string
+          enum:
+          - available
+          - synthetic_scenario
+          default: available
+          description: available preserves ordinary calendar availability rules; synthetic_scenario requires server-enabled
+            dataset manifest plus explicit user selection. Missing legacy field means available, never synthetic.
       required:
       - cutoff_date
       - horizon_days
-      description: Explicit historical cutoff required for this dataset/demo; no silent use of future history. Server derives start_date=cutoff_date+1 calendar day; client must not send start_date; cutoff cannot be future in company timezone. Default-account snapshot and model context selected server-side and frozen transactionally with durable job. An accepted dated EOD balance at cutoff is required; missing cutoff balance cannot be replaced by an older statement balance. Fail with BALANCE_AS_OF_UNAVAILABLE rather than bridge unknown days with zeros. Existing newer facts are excluded; historical calendar inclusion requires demonstrable known_at<=cutoff.
+      description: Explicit historical cutoff required for this dataset/demo; no silent use of future history. Server derives start_date=cutoff_date+1 calendar day; client must not send start_date; cutoff cannot be future in company timezone. Default-account snapshot and model context selected server-side and frozen transactionally with durable job. An accepted dated EOD balance at cutoff is required; missing cutoff balance cannot be replaced by an older statement balance. Fail with BALANCE_AS_OF_UNAVAILABLE rather than bridge unknown days with zeros. Existing newer facts are excluded; ordinary historical calendar inclusion requires demonstrable known_at<=cutoff. Explicit synthetic_scenario is a separately labelled dataset demonstration, never historical fact/backtest/calibration; Core issues and freezes its context. Calendar mode/context participate in idempotency and job reuse. Only the selected profile's supported horizon is accepted (current demo 30 days); other values fail explicitly without fallback.
     ForecastAccepted:
       type: "object"
       additionalProperties: false
@@ -6508,7 +6760,17 @@ components:
           items:
             $ref: '#/components/schemas/EffectiveOccurrence'
           maxItems: 10000
-          description: Complete server-computed pieces for every immutable base component, including zero and outside-horizon portions. No silent truncation; provisional 10000-piece validation/resource cap requires owner review. If decomposition exceeds the supported cap, calculation fails explicitly with COMPONENT_LIMIT_EXCEEDED rather than returning incomplete action targets. New hypothetical one-off expenses remain in scenario changes/daily points and are not payable-action targets.
+          description: Complete server-computed pieces for every immutable base component, including zero and outside-horizon
+            portions. No silent truncation; provisional 10000-piece validation/resource cap requires owner review. If
+            decomposition exceeds the supported cap, calculation fails explicitly with COMPONENT_LIMIT_EXCEEDED rather
+            than returning incomplete action targets. New hypothetical one-off expenses remain in scenario changes/daily
+            points and are not payable-action targets.
+        analysis:
+          oneOf:
+          - $ref: '#/components/schemas/ForecastAnalysis'
+          - type: 'null'
+          readOnly: true
+          description: Absent/null for legacy or not-yet-analyzed snapshots. Analysis never mutates facts.
       required:
       - metrics
       - daily_points
@@ -6517,7 +6779,11 @@ components:
       - recommendations
       - assumptions
       - effective_occurrences
-      description: Daily points exactly cover input.start_date..end_date. Components refer to same immutable snapshot and are sufficient for advertised scenario capabilities; missing granularity is explicit. Facts are never exposed as mutable scenario targets. components preserve BASE dates/amounts; effective_occurrences supplies current post-transformation pieces for browser action selection. Never reconstruct current pieces from base components on the frontend.
+      description: Daily points exactly cover input.start_date..end_date. Components refer to same immutable snapshot
+        and are sufficient for advertised scenario capabilities; missing granularity is explicit. Facts are never exposed
+        as mutable scenario targets. components preserve BASE dates/amounts; effective_occurrences supplies current
+        post-transformation pieces for browser action selection. Never reconstruct current pieces from base components
+        on the frontend.
     ForecastPending:
       type: "object"
       additionalProperties: false
@@ -6773,6 +7039,22 @@ components:
           $ref: "#/components/schemas/NullableResourceID"
           examples:
             - "019a0c65-9800-7000-8000-00000000000f"
+        calendar_mode:
+          type: string
+          enum:
+          - available
+          - synthetic_scenario
+          default: available
+          description: available preserves ordinary calendar availability rules; synthetic_scenario requires server-enabled
+            dataset manifest plus explicit user selection. Missing legacy field means available, never synthetic.
+          readOnly: true
+        scenario_context:
+          anyOf:
+          - $ref: '#/components/schemas/SyntheticScenarioContext'
+          - type: 'null'
+          readOnly: true
+          description: Frozen server-owned context for synthetic_scenario; null/omitted for ordinary or legacy forecasts.
+            Browser cannot provide identity, recorded_at or provenance.
       required:
         - "id"
         - "status"
@@ -6782,6 +7064,21 @@ components:
         - "created_at"
         - "is_stale"
         - "scenario_id"
+      allOf:
+        - if:
+            properties:
+              calendar_mode:
+                const: synthetic_scenario
+            required: [calendar_mode]
+          then:
+            required: [scenario_context]
+            properties:
+              scenario_context:
+                $ref: '#/components/schemas/SyntheticScenarioContext'
+          else:
+            properties:
+              scenario_context:
+                type: 'null'
     OccurrenceTarget:
       type: "object"
       additionalProperties: false
@@ -7803,3 +8100,439 @@ components:
       - comparison_parent_scenario_id
       - response_action
       description: Response to a successful DIRECT independent stress scenario. Server derives base_forecast_id and inherits the complete immutable changes in their saved order, then applies this action to the parent result. Client must not send base_forecast_id, changes or source_date. Parent and resulting forecast keep exactly the same snapshot/horizon/currency/risk/model context and seeded trajectories. Reject unavailable parent or deeper nesting with 409; server stores full inherited conditions in returned Scenario, never merely the delta.
+    HistoryCoverage:
+      type: object
+      additionalProperties: false
+      readOnly: true
+      properties:
+        kind:
+          type: string
+          enum:
+          - certified
+          - dataset_fixture_assumption
+        from_date:
+          type: string
+          format: date
+        through_date:
+          type: string
+          format: date
+        reference:
+          type: string
+          minLength: 1
+          maxLength: 256
+        data_version:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          maxLength: 19
+          description: Positive signed int64 decimal string; server checks <=9223372036854775807 before conversion.
+        limitations:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 256
+          uniqueItems: true
+      required:
+      - kind
+      - from_date
+      - through_date
+      - reference
+      - data_version
+      - limitations
+      description: Server-owned inclusive history proof, never writable by browser. Dataset fixture assumption requires
+        an allowlisted file hash/company/account/window and limitation dataset_coverage_assumed_not_bank_certified;
+        readiness stays limited. Dates are ordered and scoped to the immutable data version. Unknown/legacy proof is
+        null, never inferred from reference prefix.
+      allOf:
+      - if:
+          properties:
+            kind:
+              const: dataset_fixture_assumption
+          required:
+          - kind
+        then:
+          properties:
+            limitations:
+              contains:
+                const: dataset_coverage_assumed_not_bank_certified
+    SyntheticScenarioContext:
+      type: object
+      additionalProperties: false
+      readOnly: true
+      properties:
+        scenario_reference:
+          type: string
+          minLength: 1
+          maxLength: 256
+        recorded_at:
+          type: string
+          format: date-time
+          pattern: ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$
+        scenario_business_date:
+          type: string
+          format: date
+      required:
+      - scenario_reference
+      - recorded_at
+      - scenario_business_date
+      description: Core-owned immutable identity and actual recording time; scenario_business_date equals forecast cutoff.
+        Requires synthetic_calendar_scenario_not_historical_fact in forecast limitations; never used for historical
+        evaluation/calibration or claimed as current bank state.
+    HistoricalOperationRef:
+      type: object
+      additionalProperties: false
+      properties:
+        transaction_id:
+          $ref: '#/components/schemas/ResourceID'
+        version:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          maxLength: 19
+          description: Positive signed int64 decimal string; server checks <=9223372036854775807 before conversion.
+      required:
+      - transaction_id
+      - version
+    AdditionalObligationConfirmation:
+      type: object
+      additionalProperties: false
+      properties:
+        confirmed:
+          type: boolean
+          const: true
+      required:
+      - confirmed
+      description: Explicit additional obligation, without historical operation IDs. Actor and actual confirmation time
+        are issued by Core from the authenticated command, never by the browser.
+    CompleteReplacement:
+      type: object
+      additionalProperties: false
+      properties:
+        historical_operations:
+          type: array
+          minItems: 1
+          maxItems: 20000
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/HistoricalOperationRef'
+        complete_for_horizon:
+          type: boolean
+          const: true
+      required:
+      - historical_operations
+      - complete_for_horizon
+      description: Explicit complete schedule replacement for exactly the declared window; historical IDs must be unique,
+        belong to the same account/covered input, match their versions, and not overlap another active replacement group.
+        Server validates identity uniqueness even across different supplied versions. Category/text similarity never
+        establishes completeness.
+    CreateReconciliationGroupRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        cutoff_date:
+          type: string
+          format: date
+        horizon_start:
+          type: string
+          format: date
+        horizon_end:
+          type: string
+          format: date
+        kind:
+          type: string
+          enum:
+          - additional
+          - replacement
+        additional:
+          $ref: '#/components/schemas/AdditionalObligationConfirmation'
+        replacement:
+          $ref: '#/components/schemas/CompleteReplacement'
+      required:
+      - cutoff_date
+      - horizon_start
+      - horizon_end
+      - kind
+      oneOf:
+      - properties:
+          kind:
+            const: additional
+        required:
+        - additional
+        not:
+          required:
+          - replacement
+      - properties:
+          kind:
+            const: replacement
+        required:
+        - replacement
+        not:
+          required:
+          - additional
+      description: Creates an immutable scoped reconciliation group. horizon_start=cutoff_date+1; horizon_end closes
+        the supported forecast window (30 days in demo). One tagged branch required; no client-supplied actor/time/status.
+        Replacement accepts no additional confirmation and vice versa. Server checks all dates/IDs/versions and live
+        FINANCIAL_WRITE/CSRF. Repeating key and equivalent payload returns the original group; key with different semantic
+        payload gives IDEMPOTENCY_CONFLICT.
+    ReconciliationGroup:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          $ref: '#/components/schemas/ResourceID'
+        account_id:
+          $ref: '#/components/schemas/ResourceID'
+        version:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          maxLength: 19
+          description: Positive signed int64 decimal string; server checks <=9223372036854775807 before conversion.
+        status:
+          type: string
+          enum:
+          - active
+          - revoked
+        cutoff_date:
+          type: string
+          format: date
+        horizon_start:
+          type: string
+          format: date
+        horizon_end:
+          type: string
+          format: date
+        confirmed_by:
+          type: string
+          minLength: 1
+          maxLength: 128
+          readOnly: true
+        confirmed_at:
+          type: string
+          format: date-time
+          pattern: ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$
+          readOnly: true
+        kind:
+          type: string
+          enum:
+          - additional
+          - replacement
+        additional:
+          $ref: '#/components/schemas/AdditionalObligationConfirmation'
+        replacement:
+          $ref: '#/components/schemas/CompleteReplacement'
+      required:
+      - id
+      - account_id
+      - version
+      - status
+      - cutoff_date
+      - horizon_start
+      - horizon_end
+      - confirmed_by
+      - confirmed_at
+      - kind
+      oneOf:
+      - properties:
+          kind:
+            const: additional
+        required:
+        - additional
+        not:
+          required:
+          - replacement
+      - properties:
+          kind:
+            const: replacement
+        required:
+        - replacement
+        not:
+          required:
+          - additional
+      description: Persisted group; all resource fields server-owned. Financial read authorization is checked on every
+        request. A payment references at most one group; groups survive cancelled/matched/out-of-horizon occurrences
+        and can have no remaining payments. Revocation is explicit; re-confirming a new window creates a new group and
+        explicitly revokes the old one. Existing snapshots/results never change.
+    ReconciliationGroupList:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/ReconciliationGroup'
+        next_cursor:
+          type:
+          - string
+          - 'null'
+          maxLength: 1024
+      required:
+      - items
+      - next_cursor
+    RevokeReconciliationGroupRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        version:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          maxLength: 19
+          description: Positive signed int64 decimal string; server checks <=9223372036854775807 before conversion.
+      required:
+      - version
+      description: CAS against current group.version; revokes group, preserving payments and frozen snapshots. Idempotency
+        replay is checked before stale-version guards; same key/different semantic payload conflicts.
+
+    ClassifiedOperationAnalysis:
+      type: object
+      additionalProperties: false
+      properties:
+        transaction_id:
+          $ref: '#/components/schemas/ResourceID'
+        version:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          maxLength: 19
+        category_code:
+          type: string
+          minLength: 1
+          maxLength: 128
+        category_source:
+          type: string
+          enum:
+          - manual
+          - rules
+          - unknown
+        category_rule_id:
+          type: string
+          maxLength: 128
+        category_id:
+          oneOf:
+          - $ref: '#/components/schemas/ResourceID'
+          - type: 'null'
+      required:
+      - transaction_id
+      - version
+      - category_code
+      - category_source
+      - category_rule_id
+      description: Derived label for the exact scoped factual version; manual category wins. No financial fact is changed.
+        Rule identifiers are allowlisted; no raw PII in evidence identifiers.
+    RecurringHypothesis:
+      type: object
+      additionalProperties: false
+      properties:
+        pattern_id:
+          type: string
+          minLength: 1
+          maxLength: 256
+        rule_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+        direction:
+          type: string
+          enum:
+          - inflow
+          - outflow
+        historical_operations:
+          type: array
+          minItems: 1
+          maxItems: 20000
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/HistoricalOperationRef'
+        day_of_month:
+          type: integer
+          minimum: 1
+          maximum: 31
+        month_end:
+          type: boolean
+          const: true
+        weekend_shift:
+          type: string
+          enum:
+          - none
+          - previous
+          - next
+        expected_amount_minor:
+          type: string
+          pattern: ^[1-9][0-9]*$
+          maxLength: 19
+        confirmations:
+          type: integer
+          minimum: 1
+        expected_periods:
+          type: integer
+          minimum: 1
+        first_evidence_date: &id001
+          type: string
+          format: date
+        last_evidence_date: *id001
+        category_code:
+          type: string
+          minLength: 1
+          maxLength: 128
+        rule_version:
+          type: string
+          minLength: 1
+          maxLength: 128
+        status:
+          type: string
+          const: hypothesis
+      required:
+      - pattern_id
+      - rule_id
+      - direction
+      - historical_operations
+      - weekend_shift
+      - expected_amount_minor
+      - confirmations
+      - expected_periods
+      - first_evidence_date
+      - last_evidence_date
+      - category_code
+      - rule_version
+      - status
+      oneOf:
+      - required:
+        - day_of_month
+        not:
+          required:
+          - month_end
+      - required:
+        - month_end
+        not:
+          required:
+          - day_of_month
+      description: Derived monthly hypothesis only; never an obligation or risk probability. Core checks scoped unique
+        IDs/versions within the exact analysis window, static rule IDs, signed int64 amount and evidence limits; party
+        display resolves from authorized facts. No PII embedded in pattern IDs.
+    ForecastAnalysis:
+      type: object
+      additionalProperties: false
+      properties:
+        analysis_version:
+          type: string
+          const: text_categories_monthly_v1
+        window_from: *id001
+        window_through: *id001
+        classified_operations:
+          type: array
+          maxItems: 20000
+          items:
+            $ref: '#/components/schemas/ClassifiedOperationAnalysis'
+        recurring_hypotheses:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/RecurringHypothesis'
+      required:
+      - analysis_version
+      - window_from
+      - window_through
+      - classified_operations
+      - recurring_hypotheses
+      readOnly: true
+      description: Immutable derived analysis for this snapshot/model and its exact 90-day window. Total recurrence
+        evidence references <=20000. Old/absent analysis means not analyzed, not unknown classification; hypotheses
+        never create payments. No human-measured accuracy is claimed.

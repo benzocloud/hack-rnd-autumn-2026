@@ -9,6 +9,8 @@ package mlv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -91,6 +93,11 @@ const (
 	// Caller preserves historical_calendar_unavailable in availability_limitations.
 	// snapshot_id/data_version identify the facts whose calendar is unavailable.
 	CalendarKnowledgeMode_CALENDAR_KNOWLEDGE_MODE_UNAVAILABLE CalendarKnowledgeMode = 3
+	// An explicitly authorized isolated historical demo, never historical proof.
+	// Requires synthetic_calendar_scenario_not_historical_fact limitation,
+	// empty as_of_business_date and no_post_cutoff_movements=false. Existing
+	// coverage/EOD/replacement checks still apply. No backtest or calibration.
+	CalendarKnowledgeMode_CALENDAR_KNOWLEDGE_MODE_SYNTHETIC_SCENARIO CalendarKnowledgeMode = 4
 )
 
 // Enum value maps for CalendarKnowledgeMode.
@@ -100,12 +107,14 @@ var (
 		1: "CALENDAR_KNOWLEDGE_MODE_CURRENT",
 		2: "CALENDAR_KNOWLEDGE_MODE_HISTORICAL_AS_OF_CERTIFIED",
 		3: "CALENDAR_KNOWLEDGE_MODE_UNAVAILABLE",
+		4: "CALENDAR_KNOWLEDGE_MODE_SYNTHETIC_SCENARIO",
 	}
 	CalendarKnowledgeMode_value = map[string]int32{
 		"CALENDAR_KNOWLEDGE_MODE_UNSPECIFIED":                0,
 		"CALENDAR_KNOWLEDGE_MODE_CURRENT":                    1,
 		"CALENDAR_KNOWLEDGE_MODE_HISTORICAL_AS_OF_CERTIFIED": 2,
 		"CALENDAR_KNOWLEDGE_MODE_UNAVAILABLE":                3,
+		"CALENDAR_KNOWLEDGE_MODE_SYNTHETIC_SCENARIO":         4,
 	}
 )
 
@@ -134,6 +143,153 @@ func (x CalendarKnowledgeMode) Number() protoreflect.EnumNumber {
 // Deprecated: Use CalendarKnowledgeMode.Descriptor instead.
 func (CalendarKnowledgeMode) EnumDescriptor() ([]byte, []int) {
 	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{1}
+}
+
+type RecurringDirection int32
+
+const (
+	RecurringDirection_RECURRING_DIRECTION_UNSPECIFIED RecurringDirection = 0
+	RecurringDirection_RECURRING_DIRECTION_INFLOW      RecurringDirection = 1
+	RecurringDirection_RECURRING_DIRECTION_OUTFLOW     RecurringDirection = 2
+)
+
+// Enum value maps for RecurringDirection.
+var (
+	RecurringDirection_name = map[int32]string{
+		0: "RECURRING_DIRECTION_UNSPECIFIED",
+		1: "RECURRING_DIRECTION_INFLOW",
+		2: "RECURRING_DIRECTION_OUTFLOW",
+	}
+	RecurringDirection_value = map[string]int32{
+		"RECURRING_DIRECTION_UNSPECIFIED": 0,
+		"RECURRING_DIRECTION_INFLOW":      1,
+		"RECURRING_DIRECTION_OUTFLOW":     2,
+	}
+)
+
+func (x RecurringDirection) Enum() *RecurringDirection {
+	p := new(RecurringDirection)
+	*p = x
+	return p
+}
+
+func (x RecurringDirection) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RecurringDirection) Descriptor() protoreflect.EnumDescriptor {
+	return file_ml_v1_forecast_proto_enumTypes[2].Descriptor()
+}
+
+func (RecurringDirection) Type() protoreflect.EnumType {
+	return &file_ml_v1_forecast_proto_enumTypes[2]
+}
+
+func (x RecurringDirection) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RecurringDirection.Descriptor instead.
+func (RecurringDirection) EnumDescriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{2}
+}
+
+type RecurringWeekendShift int32
+
+const (
+	RecurringWeekendShift_RECURRING_WEEKEND_SHIFT_UNSPECIFIED RecurringWeekendShift = 0
+	RecurringWeekendShift_RECURRING_WEEKEND_SHIFT_NONE        RecurringWeekendShift = 1
+	RecurringWeekendShift_RECURRING_WEEKEND_SHIFT_PREVIOUS    RecurringWeekendShift = 2
+	RecurringWeekendShift_RECURRING_WEEKEND_SHIFT_NEXT        RecurringWeekendShift = 3
+)
+
+// Enum value maps for RecurringWeekendShift.
+var (
+	RecurringWeekendShift_name = map[int32]string{
+		0: "RECURRING_WEEKEND_SHIFT_UNSPECIFIED",
+		1: "RECURRING_WEEKEND_SHIFT_NONE",
+		2: "RECURRING_WEEKEND_SHIFT_PREVIOUS",
+		3: "RECURRING_WEEKEND_SHIFT_NEXT",
+	}
+	RecurringWeekendShift_value = map[string]int32{
+		"RECURRING_WEEKEND_SHIFT_UNSPECIFIED": 0,
+		"RECURRING_WEEKEND_SHIFT_NONE":        1,
+		"RECURRING_WEEKEND_SHIFT_PREVIOUS":    2,
+		"RECURRING_WEEKEND_SHIFT_NEXT":        3,
+	}
+)
+
+func (x RecurringWeekendShift) Enum() *RecurringWeekendShift {
+	p := new(RecurringWeekendShift)
+	*p = x
+	return p
+}
+
+func (x RecurringWeekendShift) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RecurringWeekendShift) Descriptor() protoreflect.EnumDescriptor {
+	return file_ml_v1_forecast_proto_enumTypes[3].Descriptor()
+}
+
+func (RecurringWeekendShift) Type() protoreflect.EnumType {
+	return &file_ml_v1_forecast_proto_enumTypes[3]
+}
+
+func (x RecurringWeekendShift) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RecurringWeekendShift.Descriptor instead.
+func (RecurringWeekendShift) EnumDescriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{3}
+}
+
+type RecurringHypothesisStatus int32
+
+const (
+	RecurringHypothesisStatus_RECURRING_HYPOTHESIS_STATUS_UNSPECIFIED RecurringHypothesisStatus = 0
+	RecurringHypothesisStatus_RECURRING_HYPOTHESIS_STATUS_HYPOTHESIS  RecurringHypothesisStatus = 1
+)
+
+// Enum value maps for RecurringHypothesisStatus.
+var (
+	RecurringHypothesisStatus_name = map[int32]string{
+		0: "RECURRING_HYPOTHESIS_STATUS_UNSPECIFIED",
+		1: "RECURRING_HYPOTHESIS_STATUS_HYPOTHESIS",
+	}
+	RecurringHypothesisStatus_value = map[string]int32{
+		"RECURRING_HYPOTHESIS_STATUS_UNSPECIFIED": 0,
+		"RECURRING_HYPOTHESIS_STATUS_HYPOTHESIS":  1,
+	}
+)
+
+func (x RecurringHypothesisStatus) Enum() *RecurringHypothesisStatus {
+	p := new(RecurringHypothesisStatus)
+	*p = x
+	return p
+}
+
+func (x RecurringHypothesisStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RecurringHypothesisStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_ml_v1_forecast_proto_enumTypes[4].Descriptor()
+}
+
+func (RecurringHypothesisStatus) Type() protoreflect.EnumType {
+	return &file_ml_v1_forecast_proto_enumTypes[4]
+}
+
+func (x RecurringHypothesisStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RecurringHypothesisStatus.Descriptor instead.
+func (RecurringHypothesisStatus) EnumDescriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{4}
 }
 
 // ISO dates are company-local business dates, not timestamps. Core must reject
@@ -690,8 +846,16 @@ type PredictResponse struct {
 	ClassifiedOperations              []*FinancialOperation   `protobuf:"bytes,20,rep,name=classified_operations,json=classifiedOperations,proto3" json:"classified_operations,omitempty"`
 	AvailabilityLimitations           []string                `protobuf:"bytes,21,rep,name=availability_limitations,json=availabilityLimitations,proto3" json:"availability_limitations,omitempty"`
 	HistoryEvidence                   []*HistoryGroupEvidence `protobuf:"bytes,22,rep,name=history_evidence,json=historyEvidence,proto3" json:"history_evidence,omitempty"`
-	unknownFields                     protoimpl.UnknownFields
-	sizeCache                         protoimpl.SizeCache
+	// Only the explicitly selected v2 profile provides derived analysis. Absence
+	// on a legacy result means not analyzed, never an empty successful analysis.
+	AnalysisContext *AnalysisContext `protobuf:"bytes,23,opt,name=analysis_context,json=analysisContext,proto3" json:"analysis_context,omitempty"`
+	// At most 1000 hypotheses and 20000 evidence references in the whole response.
+	// Hypotheses do not create obligations or certify calendar completeness.
+	RecurringHypotheses []*RecurringHypothesis `protobuf:"bytes,24,rep,name=recurring_hypotheses,json=recurringHypotheses,proto3" json:"recurring_hypotheses,omitempty"`
+	// Exact echo of the synthetic calendar context; absent in every other mode.
+	ScenarioContext *SyntheticScenarioContext `protobuf:"bytes,25,opt,name=scenario_context,json=scenarioContext,proto3" json:"scenario_context,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *PredictResponse) Reset() {
@@ -878,6 +1042,27 @@ func (x *PredictResponse) GetHistoryEvidence() []*HistoryGroupEvidence {
 	return nil
 }
 
+func (x *PredictResponse) GetAnalysisContext() *AnalysisContext {
+	if x != nil {
+		return x.AnalysisContext
+	}
+	return nil
+}
+
+func (x *PredictResponse) GetRecurringHypotheses() []*RecurringHypothesis {
+	if x != nil {
+		return x.RecurringHypotheses
+	}
+	return nil
+}
+
+func (x *PredictResponse) GetScenarioContext() *SyntheticScenarioContext {
+	if x != nil {
+		return x.ScenarioContext
+	}
+	return nil
+}
+
 // Caller-owned immutable facts. At most one direction is positive. Categories
 // and regularity keys are retained as metadata; they are not gap probabilities.
 type FinancialOperation struct {
@@ -898,8 +1083,12 @@ type FinancialOperation struct {
 	FactualSourceKind   string                 `protobuf:"bytes,14,opt,name=factual_source_kind,json=factualSourceKind,proto3" json:"factual_source_kind,omitempty"`
 	SourceNamespace     string                 `protobuf:"bytes,15,opt,name=source_namespace,json=sourceNamespace,proto3" json:"source_namespace,omitempty"`
 	ExternalOperationId string                 `protobuf:"bytes,16,opt,name=external_operation_id,json=externalOperationId,proto3" json:"external_operation_id,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Derived allowlisted rule ID. Manual category/code/UUID takes precedence;
+	// date, amount, direction, version and factual provenance never change.
+	// Empty on legacy results and manual labels; not a confidence/probability.
+	CategoryRuleId string `protobuf:"bytes,17,opt,name=category_rule_id,json=categoryRuleId,proto3" json:"category_rule_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *FinancialOperation) Reset() {
@@ -1040,6 +1229,13 @@ func (x *FinancialOperation) GetSourceNamespace() string {
 func (x *FinancialOperation) GetExternalOperationId() string {
 	if x != nil {
 		return x.ExternalOperationId
+	}
+	return ""
+}
+
+func (x *FinancialOperation) GetCategoryRuleId() string {
+	if x != nil {
+		return x.CategoryRuleId
 	}
 	return ""
 }
@@ -1261,8 +1457,10 @@ type FinancialCalendar struct {
 	// Otherwise remaining/status may omit a payment settled after that EOD;
 	// advance the accepted cutoff or use a separately agreed intraday bridge.
 	NoPostCutoffMovements bool `protobuf:"varint,7,opt,name=no_post_cutoff_movements,json=noPostCutoffMovements,proto3" json:"no_post_cutoff_movements,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// Required only for SYNTHETIC_SCENARIO; forbidden in other knowledge modes.
+	ScenarioContext *SyntheticScenarioContext `protobuf:"bytes,8,opt,name=scenario_context,json=scenarioContext,proto3" json:"scenario_context,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *FinancialCalendar) Reset() {
@@ -1344,6 +1542,388 @@ func (x *FinancialCalendar) GetNoPostCutoffMovements() bool {
 	return false
 }
 
+func (x *FinancialCalendar) GetScenarioContext() *SyntheticScenarioContext {
+	if x != nil {
+		return x.ScenarioContext
+	}
+	return nil
+}
+
+// Core owns identity/provenance and freezes this with the financial input.
+// Adding these fields does not enable the mode on an unsupported model version.
+type SyntheticScenarioContext struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	ScenarioReference string                 `protobuf:"bytes,1,opt,name=scenario_reference,json=scenarioReference,proto3" json:"scenario_reference,omitempty"`
+	// Actual recording time, not a claim of knowledge at the historical cutoff.
+	RecordedAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=recorded_at,json=recordedAt,proto3" json:"recorded_at,omitempty"`
+	// Hypothetical scenario origin, exactly the snapshot cutoff business date.
+	ScenarioBusinessDate string `protobuf:"bytes,3,opt,name=scenario_business_date,json=scenarioBusinessDate,proto3" json:"scenario_business_date,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *SyntheticScenarioContext) Reset() {
+	*x = SyntheticScenarioContext{}
+	mi := &file_ml_v1_forecast_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyntheticScenarioContext) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyntheticScenarioContext) ProtoMessage() {}
+
+func (x *SyntheticScenarioContext) ProtoReflect() protoreflect.Message {
+	mi := &file_ml_v1_forecast_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyntheticScenarioContext.ProtoReflect.Descriptor instead.
+func (*SyntheticScenarioContext) Descriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *SyntheticScenarioContext) GetScenarioReference() string {
+	if x != nil {
+		return x.ScenarioReference
+	}
+	return ""
+}
+
+func (x *SyntheticScenarioContext) GetRecordedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RecordedAt
+	}
+	return nil
+}
+
+func (x *SyntheticScenarioContext) GetScenarioBusinessDate() string {
+	if x != nil {
+		return x.ScenarioBusinessDate
+	}
+	return ""
+}
+
+// Explicit v2 profile: mean_90_components_v2 / calendar_analysis_v2 /
+// mean_90_components_analysis90_v2; analysis text_categories_monthly_v1.
+// Core pins the complete context; fields never select a model or cause fallback.
+// Analysis is limited to the same 90 covered days and 20000 input operations.
+// With the same unavailable-calendar input, monetary outputs equal v1.
+type AnalysisContext struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	AnalysisVersion string                 `protobuf:"bytes,1,opt,name=analysis_version,json=analysisVersion,proto3" json:"analysis_version,omitempty"`
+	WindowFrom      string                 `protobuf:"bytes,2,opt,name=window_from,json=windowFrom,proto3" json:"window_from,omitempty"`
+	WindowThrough   string                 `protobuf:"bytes,3,opt,name=window_through,json=windowThrough,proto3" json:"window_through,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *AnalysisContext) Reset() {
+	*x = AnalysisContext{}
+	mi := &file_ml_v1_forecast_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AnalysisContext) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AnalysisContext) ProtoMessage() {}
+
+func (x *AnalysisContext) ProtoReflect() protoreflect.Message {
+	mi := &file_ml_v1_forecast_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AnalysisContext.ProtoReflect.Descriptor instead.
+func (*AnalysisContext) Descriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *AnalysisContext) GetAnalysisVersion() string {
+	if x != nil {
+		return x.AnalysisVersion
+	}
+	return ""
+}
+
+func (x *AnalysisContext) GetWindowFrom() string {
+	if x != nil {
+		return x.WindowFrom
+	}
+	return ""
+}
+
+func (x *AnalysisContext) GetWindowThrough() string {
+	if x != nil {
+		return x.WindowThrough
+	}
+	return ""
+}
+
+type OperationVersionReference struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OperationId   string                 `protobuf:"bytes,1,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
+	Version       uint64                 `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OperationVersionReference) Reset() {
+	*x = OperationVersionReference{}
+	mi := &file_ml_v1_forecast_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OperationVersionReference) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OperationVersionReference) ProtoMessage() {}
+
+func (x *OperationVersionReference) ProtoReflect() protoreflect.Message {
+	mi := &file_ml_v1_forecast_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OperationVersionReference.ProtoReflect.Descriptor instead.
+func (*OperationVersionReference) Descriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *OperationVersionReference) GetOperationId() string {
+	if x != nil {
+		return x.OperationId
+	}
+	return ""
+}
+
+func (x *OperationVersionReference) GetVersion() uint64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+// A monthly hypothesis within AnalysisContext's window, stored as derived data
+// by snapshot/model/operation version. It never mutates caller-owned facts.
+type RecurringHypothesis struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Opaque model-local key derived from snapshot/rule/version/source UUIDs;
+	// never embed raw party identifiers, payment purposes or amounts in IDs.
+	PatternId string             `protobuf:"bytes,1,opt,name=pattern_id,json=patternId,proto3" json:"pattern_id,omitempty"`
+	RuleId    string             `protobuf:"bytes,2,opt,name=rule_id,json=ruleId,proto3" json:"rule_id,omitempty"`
+	Direction RecurringDirection `protobuf:"varint,3,opt,name=direction,proto3,enum=ml.v1.RecurringDirection" json:"direction,omitempty"`
+	// Unique scoped input references; party display resolves from these facts.
+	HistoricalOperations []*OperationVersionReference `protobuf:"bytes,4,rep,name=historical_operations,json=historicalOperations,proto3" json:"historical_operations,omitempty"`
+	// Exactly one anchor: day_of_month is 1..31, clamped to the month's last day.
+	//
+	// Types that are valid to be assigned to MonthlyAnchor:
+	//
+	//	*RecurringHypothesis_DayOfMonth
+	//	*RecurringHypothesis_MonthEnd
+	MonthlyAnchor isRecurringHypothesis_MonthlyAnchor `protobuf_oneof:"monthly_anchor"`
+	WeekendShift  RecurringWeekendShift               `protobuf:"varint,7,opt,name=weekend_shift,json=weekendShift,proto3,enum=ml.v1.RecurringWeekendShift" json:"weekend_shift,omitempty"`
+	// Positive minor units. This expectation is not a known future obligation.
+	ExpectedAmountMinor int64                     `protobuf:"varint,8,opt,name=expected_amount_minor,json=expectedAmountMinor,proto3" json:"expected_amount_minor,omitempty"`
+	Confirmations       uint32                    `protobuf:"varint,9,opt,name=confirmations,proto3" json:"confirmations,omitempty"`
+	ExpectedPeriods     uint32                    `protobuf:"varint,10,opt,name=expected_periods,json=expectedPeriods,proto3" json:"expected_periods,omitempty"`
+	FirstEvidenceDate   string                    `protobuf:"bytes,11,opt,name=first_evidence_date,json=firstEvidenceDate,proto3" json:"first_evidence_date,omitempty"`
+	LastEvidenceDate    string                    `protobuf:"bytes,12,opt,name=last_evidence_date,json=lastEvidenceDate,proto3" json:"last_evidence_date,omitempty"`
+	CategoryCode        string                    `protobuf:"bytes,13,opt,name=category_code,json=categoryCode,proto3" json:"category_code,omitempty"`
+	RuleVersion         string                    `protobuf:"bytes,14,opt,name=rule_version,json=ruleVersion,proto3" json:"rule_version,omitempty"`
+	Status              RecurringHypothesisStatus `protobuf:"varint,15,opt,name=status,proto3,enum=ml.v1.RecurringHypothesisStatus" json:"status,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *RecurringHypothesis) Reset() {
+	*x = RecurringHypothesis{}
+	mi := &file_ml_v1_forecast_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecurringHypothesis) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecurringHypothesis) ProtoMessage() {}
+
+func (x *RecurringHypothesis) ProtoReflect() protoreflect.Message {
+	mi := &file_ml_v1_forecast_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecurringHypothesis.ProtoReflect.Descriptor instead.
+func (*RecurringHypothesis) Descriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *RecurringHypothesis) GetPatternId() string {
+	if x != nil {
+		return x.PatternId
+	}
+	return ""
+}
+
+func (x *RecurringHypothesis) GetRuleId() string {
+	if x != nil {
+		return x.RuleId
+	}
+	return ""
+}
+
+func (x *RecurringHypothesis) GetDirection() RecurringDirection {
+	if x != nil {
+		return x.Direction
+	}
+	return RecurringDirection_RECURRING_DIRECTION_UNSPECIFIED
+}
+
+func (x *RecurringHypothesis) GetHistoricalOperations() []*OperationVersionReference {
+	if x != nil {
+		return x.HistoricalOperations
+	}
+	return nil
+}
+
+func (x *RecurringHypothesis) GetMonthlyAnchor() isRecurringHypothesis_MonthlyAnchor {
+	if x != nil {
+		return x.MonthlyAnchor
+	}
+	return nil
+}
+
+func (x *RecurringHypothesis) GetDayOfMonth() uint32 {
+	if x != nil {
+		if x, ok := x.MonthlyAnchor.(*RecurringHypothesis_DayOfMonth); ok {
+			return x.DayOfMonth
+		}
+	}
+	return 0
+}
+
+func (x *RecurringHypothesis) GetMonthEnd() *emptypb.Empty {
+	if x != nil {
+		if x, ok := x.MonthlyAnchor.(*RecurringHypothesis_MonthEnd); ok {
+			return x.MonthEnd
+		}
+	}
+	return nil
+}
+
+func (x *RecurringHypothesis) GetWeekendShift() RecurringWeekendShift {
+	if x != nil {
+		return x.WeekendShift
+	}
+	return RecurringWeekendShift_RECURRING_WEEKEND_SHIFT_UNSPECIFIED
+}
+
+func (x *RecurringHypothesis) GetExpectedAmountMinor() int64 {
+	if x != nil {
+		return x.ExpectedAmountMinor
+	}
+	return 0
+}
+
+func (x *RecurringHypothesis) GetConfirmations() uint32 {
+	if x != nil {
+		return x.Confirmations
+	}
+	return 0
+}
+
+func (x *RecurringHypothesis) GetExpectedPeriods() uint32 {
+	if x != nil {
+		return x.ExpectedPeriods
+	}
+	return 0
+}
+
+func (x *RecurringHypothesis) GetFirstEvidenceDate() string {
+	if x != nil {
+		return x.FirstEvidenceDate
+	}
+	return ""
+}
+
+func (x *RecurringHypothesis) GetLastEvidenceDate() string {
+	if x != nil {
+		return x.LastEvidenceDate
+	}
+	return ""
+}
+
+func (x *RecurringHypothesis) GetCategoryCode() string {
+	if x != nil {
+		return x.CategoryCode
+	}
+	return ""
+}
+
+func (x *RecurringHypothesis) GetRuleVersion() string {
+	if x != nil {
+		return x.RuleVersion
+	}
+	return ""
+}
+
+func (x *RecurringHypothesis) GetStatus() RecurringHypothesisStatus {
+	if x != nil {
+		return x.Status
+	}
+	return RecurringHypothesisStatus_RECURRING_HYPOTHESIS_STATUS_UNSPECIFIED
+}
+
+type isRecurringHypothesis_MonthlyAnchor interface {
+	isRecurringHypothesis_MonthlyAnchor()
+}
+
+type RecurringHypothesis_DayOfMonth struct {
+	DayOfMonth uint32 `protobuf:"varint,5,opt,name=day_of_month,json=dayOfMonth,proto3,oneof"`
+}
+
+type RecurringHypothesis_MonthEnd struct {
+	MonthEnd *emptypb.Empty `protobuf:"bytes,6,opt,name=month_end,json=monthEnd,proto3,oneof"`
+}
+
+func (*RecurringHypothesis_DayOfMonth) isRecurringHypothesis_MonthlyAnchor() {}
+
+func (*RecurringHypothesis_MonthEnd) isRecurringHypothesis_MonthlyAnchor() {}
+
 type ForecastComponent struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	ComponentId       string                 `protobuf:"bytes,1,opt,name=component_id,json=componentId,proto3" json:"component_id,omitempty"`
@@ -1362,7 +1942,7 @@ type ForecastComponent struct {
 
 func (x *ForecastComponent) Reset() {
 	*x = ForecastComponent{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[11]
+	mi := &file_ml_v1_forecast_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1374,7 +1954,7 @@ func (x *ForecastComponent) String() string {
 func (*ForecastComponent) ProtoMessage() {}
 
 func (x *ForecastComponent) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[11]
+	mi := &file_ml_v1_forecast_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1387,7 +1967,7 @@ func (x *ForecastComponent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForecastComponent.ProtoReflect.Descriptor instead.
 func (*ForecastComponent) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{11}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ForecastComponent) GetComponentId() string {
@@ -1471,7 +2051,7 @@ type EmpiricalBalanceBand struct {
 
 func (x *EmpiricalBalanceBand) Reset() {
 	*x = EmpiricalBalanceBand{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[12]
+	mi := &file_ml_v1_forecast_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1483,7 +2063,7 @@ func (x *EmpiricalBalanceBand) String() string {
 func (*EmpiricalBalanceBand) ProtoMessage() {}
 
 func (x *EmpiricalBalanceBand) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[12]
+	mi := &file_ml_v1_forecast_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1496,7 +2076,7 @@ func (x *EmpiricalBalanceBand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EmpiricalBalanceBand.ProtoReflect.Descriptor instead.
 func (*EmpiricalBalanceBand) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{12}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *EmpiricalBalanceBand) GetDate() string {
@@ -1531,7 +2111,7 @@ type HistoryGroupEvidence struct {
 
 func (x *HistoryGroupEvidence) Reset() {
 	*x = HistoryGroupEvidence{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[13]
+	mi := &file_ml_v1_forecast_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1543,7 +2123,7 @@ func (x *HistoryGroupEvidence) String() string {
 func (*HistoryGroupEvidence) ProtoMessage() {}
 
 func (x *HistoryGroupEvidence) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[13]
+	mi := &file_ml_v1_forecast_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1556,7 +2136,7 @@ func (x *HistoryGroupEvidence) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HistoryGroupEvidence.ProtoReflect.Descriptor instead.
 func (*HistoryGroupEvidence) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{13}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *HistoryGroupEvidence) GetEvidenceId() string {
@@ -1598,7 +2178,7 @@ type ForecastUncertainty struct {
 
 func (x *ForecastUncertainty) Reset() {
 	*x = ForecastUncertainty{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[14]
+	mi := &file_ml_v1_forecast_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1610,7 +2190,7 @@ func (x *ForecastUncertainty) String() string {
 func (*ForecastUncertainty) ProtoMessage() {}
 
 func (x *ForecastUncertainty) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[14]
+	mi := &file_ml_v1_forecast_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1623,7 +2203,7 @@ func (x *ForecastUncertainty) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForecastUncertainty.ProtoReflect.Descriptor instead.
 func (*ForecastUncertainty) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{14}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ForecastUncertainty) GetMethod() string {
@@ -1709,7 +2289,7 @@ type CalibratedEstimate struct {
 
 func (x *CalibratedEstimate) Reset() {
 	*x = CalibratedEstimate{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[15]
+	mi := &file_ml_v1_forecast_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1721,7 +2301,7 @@ func (x *CalibratedEstimate) String() string {
 func (*CalibratedEstimate) ProtoMessage() {}
 
 func (x *CalibratedEstimate) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[15]
+	mi := &file_ml_v1_forecast_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1734,7 +2314,7 @@ func (x *CalibratedEstimate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CalibratedEstimate.ProtoReflect.Descriptor instead.
 func (*CalibratedEstimate) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{15}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *CalibratedEstimate) GetValue() float64 {
@@ -1771,7 +2351,7 @@ type FinancialProbability struct {
 
 func (x *FinancialProbability) Reset() {
 	*x = FinancialProbability{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[16]
+	mi := &file_ml_v1_forecast_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1783,7 +2363,7 @@ func (x *FinancialProbability) String() string {
 func (*FinancialProbability) ProtoMessage() {}
 
 func (x *FinancialProbability) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[16]
+	mi := &file_ml_v1_forecast_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1796,7 +2376,7 @@ func (x *FinancialProbability) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FinancialProbability.ProtoReflect.Descriptor instead.
 func (*FinancialProbability) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{16}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *FinancialProbability) GetEstimate() isFinancialProbability_Estimate {
@@ -1844,7 +2424,7 @@ var File_ml_v1_forecast_proto protoreflect.FileDescriptor
 
 const file_ml_v1_forecast_proto_rawDesc = "" +
 	"\n" +
-	"\x14ml/v1/forecast.proto\x12\x05ml.v1\"\xba\x02\n" +
+	"\x14ml/v1/forecast.proto\x12\x05ml.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xba\x02\n" +
 	"\rHistoricalDay\x12\x12\n" +
 	"\x04date\x18\x01 \x01(\tR\x04date\x12&\n" +
 	"\finflow_minor\x18\x02 \x01(\x03H\x00R\vinflowMinor\x88\x01\x01\x12(\n" +
@@ -1905,7 +2485,8 @@ const file_ml_v1_forecast_proto_rawDesc = "" +
 	"\x13balance_upper_minor\x18\x06 \x01(\x03H\x01R\x11balanceUpperMinor\x88\x01\x01\x12]\n" +
 	"\x1cnegative_balance_probability\x18\a \x01(\v2\x1b.ml.v1.FinancialProbabilityR\x1anegativeBalanceProbabilityB\x16\n" +
 	"\x14_balance_lower_minorB\x16\n" +
-	"\x14_balance_upper_minor\"\xf8\b\n" +
+	"\x14_balance_upper_minor\"\xd6\n" +
+	"\n" +
 	"\x0fPredictResponse\x12\x1f\n" +
 	"\vsnapshot_id\x18\x01 \x01(\tR\n" +
 	"snapshotId\x12\x1d\n" +
@@ -1936,8 +2517,11 @@ const file_ml_v1_forecast_proto_rawDesc = "" +
 	"!replaced_historical_operation_ids\x18\x13 \x03(\tR\x1ereplacedHistoricalOperationIds\x12N\n" +
 	"\x15classified_operations\x18\x14 \x03(\v2\x19.ml.v1.FinancialOperationR\x14classifiedOperations\x129\n" +
 	"\x18availability_limitations\x18\x15 \x03(\tR\x17availabilityLimitations\x12F\n" +
-	"\x10history_evidence\x18\x16 \x03(\v2\x1b.ml.v1.HistoryGroupEvidenceR\x0fhistoryEvidenceB\x1e\n" +
-	"\x1c_first_negative_balance_date\"\xb5\x05\n" +
+	"\x10history_evidence\x18\x16 \x03(\v2\x1b.ml.v1.HistoryGroupEvidenceR\x0fhistoryEvidence\x12A\n" +
+	"\x10analysis_context\x18\x17 \x01(\v2\x16.ml.v1.AnalysisContextR\x0fanalysisContext\x12M\n" +
+	"\x14recurring_hypotheses\x18\x18 \x03(\v2\x1a.ml.v1.RecurringHypothesisR\x13recurringHypotheses\x12J\n" +
+	"\x10scenario_context\x18\x19 \x01(\v2\x1f.ml.v1.SyntheticScenarioContextR\x0fscenarioContextB\x1e\n" +
+	"\x1c_first_negative_balance_date\"\xdf\x05\n" +
 	"\x12FinancialOperation\x12!\n" +
 	"\foperation_id\x18\x01 \x01(\tR\voperationId\x12\x12\n" +
 	"\x04date\x18\x02 \x01(\tR\x04date\x12!\n" +
@@ -1956,7 +2540,8 @@ const file_ml_v1_forecast_proto_rawDesc = "" +
 	"\x0fpayment_purpose\x18\r \x01(\tR\x0epaymentPurpose\x12.\n" +
 	"\x13factual_source_kind\x18\x0e \x01(\tR\x11factualSourceKind\x12)\n" +
 	"\x10source_namespace\x18\x0f \x01(\tR\x0fsourceNamespace\x122\n" +
-	"\x15external_operation_id\x18\x10 \x01(\tR\x13externalOperationIdB\x0e\n" +
+	"\x15external_operation_id\x18\x10 \x01(\tR\x13externalOperationId\x12(\n" +
+	"\x10category_rule_id\x18\x11 \x01(\tR\x0ecategoryRuleIdB\x0e\n" +
 	"\f_category_idB\x16\n" +
 	"\x14_category_company_id\"\xde\x01\n" +
 	"\rCalendarGroup\x12\x19\n" +
@@ -1981,7 +2566,7 @@ const file_ml_v1_forecast_proto_rawDesc = "" +
 	"categoryId\x88\x01\x01\x123\n" +
 	"\x13category_company_id\x18\f \x01(\tH\x01R\x11categoryCompanyId\x88\x01\x01B\x0e\n" +
 	"\f_category_idB\x16\n" +
-	"\x14_category_company_id\"\xe7\x02\n" +
+	"\x14_category_company_id\"\xb3\x03\n" +
 	"\x11FinancialCalendar\x12\x1f\n" +
 	"\vsnapshot_id\x18\x01 \x01(\tR\n" +
 	"snapshotId\x12!\n" +
@@ -1990,7 +2575,41 @@ const file_ml_v1_forecast_proto_rawDesc = "" +
 	"\x06groups\x18\x04 \x03(\v2\x14.ml.v1.CalendarGroupR\x06groups\x123\n" +
 	"\bpayments\x18\x05 \x03(\v2\x17.ml.v1.ScheduledPaymentR\bpayments\x12C\n" +
 	"\x0eknowledge_mode\x18\x06 \x01(\x0e2\x1c.ml.v1.CalendarKnowledgeModeR\rknowledgeMode\x127\n" +
-	"\x18no_post_cutoff_movements\x18\a \x01(\bR\x15noPostCutoffMovements\"\x94\x03\n" +
+	"\x18no_post_cutoff_movements\x18\a \x01(\bR\x15noPostCutoffMovements\x12J\n" +
+	"\x10scenario_context\x18\b \x01(\v2\x1f.ml.v1.SyntheticScenarioContextR\x0fscenarioContext\"\xbc\x01\n" +
+	"\x18SyntheticScenarioContext\x12-\n" +
+	"\x12scenario_reference\x18\x01 \x01(\tR\x11scenarioReference\x12;\n" +
+	"\vrecorded_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"recordedAt\x124\n" +
+	"\x16scenario_business_date\x18\x03 \x01(\tR\x14scenarioBusinessDate\"\x84\x01\n" +
+	"\x0fAnalysisContext\x12)\n" +
+	"\x10analysis_version\x18\x01 \x01(\tR\x0fanalysisVersion\x12\x1f\n" +
+	"\vwindow_from\x18\x02 \x01(\tR\n" +
+	"windowFrom\x12%\n" +
+	"\x0ewindow_through\x18\x03 \x01(\tR\rwindowThrough\"X\n" +
+	"\x19OperationVersionReference\x12!\n" +
+	"\foperation_id\x18\x01 \x01(\tR\voperationId\x12\x18\n" +
+	"\aversion\x18\x02 \x01(\x04R\aversion\"\xf2\x05\n" +
+	"\x13RecurringHypothesis\x12\x1d\n" +
+	"\n" +
+	"pattern_id\x18\x01 \x01(\tR\tpatternId\x12\x17\n" +
+	"\arule_id\x18\x02 \x01(\tR\x06ruleId\x127\n" +
+	"\tdirection\x18\x03 \x01(\x0e2\x19.ml.v1.RecurringDirectionR\tdirection\x12U\n" +
+	"\x15historical_operations\x18\x04 \x03(\v2 .ml.v1.OperationVersionReferenceR\x14historicalOperations\x12\"\n" +
+	"\fday_of_month\x18\x05 \x01(\rH\x00R\n" +
+	"dayOfMonth\x125\n" +
+	"\tmonth_end\x18\x06 \x01(\v2\x16.google.protobuf.EmptyH\x00R\bmonthEnd\x12A\n" +
+	"\rweekend_shift\x18\a \x01(\x0e2\x1c.ml.v1.RecurringWeekendShiftR\fweekendShift\x122\n" +
+	"\x15expected_amount_minor\x18\b \x01(\x03R\x13expectedAmountMinor\x12$\n" +
+	"\rconfirmations\x18\t \x01(\rR\rconfirmations\x12)\n" +
+	"\x10expected_periods\x18\n" +
+	" \x01(\rR\x0fexpectedPeriods\x12.\n" +
+	"\x13first_evidence_date\x18\v \x01(\tR\x11firstEvidenceDate\x12,\n" +
+	"\x12last_evidence_date\x18\f \x01(\tR\x10lastEvidenceDate\x12#\n" +
+	"\rcategory_code\x18\r \x01(\tR\fcategoryCode\x12!\n" +
+	"\frule_version\x18\x0e \x01(\tR\vruleVersion\x128\n" +
+	"\x06status\x18\x0f \x01(\x0e2 .ml.v1.RecurringHypothesisStatusR\x06statusB\x10\n" +
+	"\x0emonthly_anchor\"\x94\x03\n" +
 	"\x11ForecastComponent\x12!\n" +
 	"\fcomponent_id\x18\x01 \x01(\tR\vcomponentId\x12\x12\n" +
 	"\x04date\x18\x02 \x01(\tR\x04date\x12#\n" +
@@ -2050,12 +2669,25 @@ const file_ml_v1_forecast_proto_rawDesc = "" +
 	"!DAY_SOURCE_VERIFIED_NO_OPERATIONS\x10\x02\x12$\n" +
 	" DAY_SOURCE_RECONSTRUCTED_COVERED\x10\x03\x12\x16\n" +
 	"\x12DAY_SOURCE_PARTIAL\x10\x04\x12\x1a\n" +
-	"\x16DAY_SOURCE_UNAVAILABLE\x10\x05*\xc6\x01\n" +
+	"\x16DAY_SOURCE_UNAVAILABLE\x10\x05*\xf6\x01\n" +
 	"\x15CalendarKnowledgeMode\x12'\n" +
 	"#CALENDAR_KNOWLEDGE_MODE_UNSPECIFIED\x10\x00\x12#\n" +
 	"\x1fCALENDAR_KNOWLEDGE_MODE_CURRENT\x10\x01\x126\n" +
 	"2CALENDAR_KNOWLEDGE_MODE_HISTORICAL_AS_OF_CERTIFIED\x10\x02\x12'\n" +
-	"#CALENDAR_KNOWLEDGE_MODE_UNAVAILABLE\x10\x032K\n" +
+	"#CALENDAR_KNOWLEDGE_MODE_UNAVAILABLE\x10\x03\x12.\n" +
+	"*CALENDAR_KNOWLEDGE_MODE_SYNTHETIC_SCENARIO\x10\x04*z\n" +
+	"\x12RecurringDirection\x12#\n" +
+	"\x1fRECURRING_DIRECTION_UNSPECIFIED\x10\x00\x12\x1e\n" +
+	"\x1aRECURRING_DIRECTION_INFLOW\x10\x01\x12\x1f\n" +
+	"\x1bRECURRING_DIRECTION_OUTFLOW\x10\x02*\xaa\x01\n" +
+	"\x15RecurringWeekendShift\x12'\n" +
+	"#RECURRING_WEEKEND_SHIFT_UNSPECIFIED\x10\x00\x12 \n" +
+	"\x1cRECURRING_WEEKEND_SHIFT_NONE\x10\x01\x12$\n" +
+	" RECURRING_WEEKEND_SHIFT_PREVIOUS\x10\x02\x12 \n" +
+	"\x1cRECURRING_WEEKEND_SHIFT_NEXT\x10\x03*t\n" +
+	"\x19RecurringHypothesisStatus\x12+\n" +
+	"'RECURRING_HYPOTHESIS_STATUS_UNSPECIFIED\x10\x00\x12*\n" +
+	"&RECURRING_HYPOTHESIS_STATUS_HYPOTHESIS\x10\x012K\n" +
 	"\x0fForecastService\x128\n" +
 	"\aPredict\x12\x15.ml.v1.PredictRequest\x1a\x16.ml.v1.PredictResponseBRZPgithub.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/ml/v1;mlv1b\x06proto3"
 
@@ -2071,57 +2703,76 @@ func file_ml_v1_forecast_proto_rawDescGZIP() []byte {
 	return file_ml_v1_forecast_proto_rawDescData
 }
 
-var file_ml_v1_forecast_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_ml_v1_forecast_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_ml_v1_forecast_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
+var file_ml_v1_forecast_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_ml_v1_forecast_proto_goTypes = []any{
-	(DaySource)(0),               // 0: ml.v1.DaySource
-	(CalendarKnowledgeMode)(0),   // 1: ml.v1.CalendarKnowledgeMode
-	(*HistoricalDay)(nil),        // 2: ml.v1.HistoricalDay
-	(*ModelContext)(nil),         // 3: ml.v1.ModelContext
-	(*KnownPayment)(nil),         // 4: ml.v1.KnownPayment
-	(*ForecastSnapshot)(nil),     // 5: ml.v1.ForecastSnapshot
-	(*PredictRequest)(nil),       // 6: ml.v1.PredictRequest
-	(*ForecastDay)(nil),          // 7: ml.v1.ForecastDay
-	(*PredictResponse)(nil),      // 8: ml.v1.PredictResponse
-	(*FinancialOperation)(nil),   // 9: ml.v1.FinancialOperation
-	(*CalendarGroup)(nil),        // 10: ml.v1.CalendarGroup
-	(*ScheduledPayment)(nil),     // 11: ml.v1.ScheduledPayment
-	(*FinancialCalendar)(nil),    // 12: ml.v1.FinancialCalendar
-	(*ForecastComponent)(nil),    // 13: ml.v1.ForecastComponent
-	(*EmpiricalBalanceBand)(nil), // 14: ml.v1.EmpiricalBalanceBand
-	(*HistoryGroupEvidence)(nil), // 15: ml.v1.HistoryGroupEvidence
-	(*ForecastUncertainty)(nil),  // 16: ml.v1.ForecastUncertainty
-	(*CalibratedEstimate)(nil),   // 17: ml.v1.CalibratedEstimate
-	(*FinancialProbability)(nil), // 18: ml.v1.FinancialProbability
+	(DaySource)(0),                    // 0: ml.v1.DaySource
+	(CalendarKnowledgeMode)(0),        // 1: ml.v1.CalendarKnowledgeMode
+	(RecurringDirection)(0),           // 2: ml.v1.RecurringDirection
+	(RecurringWeekendShift)(0),        // 3: ml.v1.RecurringWeekendShift
+	(RecurringHypothesisStatus)(0),    // 4: ml.v1.RecurringHypothesisStatus
+	(*HistoricalDay)(nil),             // 5: ml.v1.HistoricalDay
+	(*ModelContext)(nil),              // 6: ml.v1.ModelContext
+	(*KnownPayment)(nil),              // 7: ml.v1.KnownPayment
+	(*ForecastSnapshot)(nil),          // 8: ml.v1.ForecastSnapshot
+	(*PredictRequest)(nil),            // 9: ml.v1.PredictRequest
+	(*ForecastDay)(nil),               // 10: ml.v1.ForecastDay
+	(*PredictResponse)(nil),           // 11: ml.v1.PredictResponse
+	(*FinancialOperation)(nil),        // 12: ml.v1.FinancialOperation
+	(*CalendarGroup)(nil),             // 13: ml.v1.CalendarGroup
+	(*ScheduledPayment)(nil),          // 14: ml.v1.ScheduledPayment
+	(*FinancialCalendar)(nil),         // 15: ml.v1.FinancialCalendar
+	(*SyntheticScenarioContext)(nil),  // 16: ml.v1.SyntheticScenarioContext
+	(*AnalysisContext)(nil),           // 17: ml.v1.AnalysisContext
+	(*OperationVersionReference)(nil), // 18: ml.v1.OperationVersionReference
+	(*RecurringHypothesis)(nil),       // 19: ml.v1.RecurringHypothesis
+	(*ForecastComponent)(nil),         // 20: ml.v1.ForecastComponent
+	(*EmpiricalBalanceBand)(nil),      // 21: ml.v1.EmpiricalBalanceBand
+	(*HistoryGroupEvidence)(nil),      // 22: ml.v1.HistoryGroupEvidence
+	(*ForecastUncertainty)(nil),       // 23: ml.v1.ForecastUncertainty
+	(*CalibratedEstimate)(nil),        // 24: ml.v1.CalibratedEstimate
+	(*FinancialProbability)(nil),      // 25: ml.v1.FinancialProbability
+	(*timestamppb.Timestamp)(nil),     // 26: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),             // 27: google.protobuf.Empty
 }
 var file_ml_v1_forecast_proto_depIdxs = []int32{
 	0,  // 0: ml.v1.HistoricalDay.source:type_name -> ml.v1.DaySource
-	2,  // 1: ml.v1.ForecastSnapshot.history:type_name -> ml.v1.HistoricalDay
-	4,  // 2: ml.v1.ForecastSnapshot.known_payments:type_name -> ml.v1.KnownPayment
-	5,  // 3: ml.v1.PredictRequest.snapshot:type_name -> ml.v1.ForecastSnapshot
-	3,  // 4: ml.v1.PredictRequest.model:type_name -> ml.v1.ModelContext
-	9,  // 5: ml.v1.PredictRequest.operations:type_name -> ml.v1.FinancialOperation
-	12, // 6: ml.v1.PredictRequest.calendar:type_name -> ml.v1.FinancialCalendar
-	18, // 7: ml.v1.ForecastDay.negative_balance_probability:type_name -> ml.v1.FinancialProbability
-	3,  // 8: ml.v1.PredictResponse.model:type_name -> ml.v1.ModelContext
-	7,  // 9: ml.v1.PredictResponse.days:type_name -> ml.v1.ForecastDay
-	13, // 10: ml.v1.PredictResponse.components:type_name -> ml.v1.ForecastComponent
-	18, // 11: ml.v1.PredictResponse.gap_probability:type_name -> ml.v1.FinancialProbability
-	16, // 12: ml.v1.PredictResponse.uncertainty:type_name -> ml.v1.ForecastUncertainty
-	9,  // 13: ml.v1.PredictResponse.classified_operations:type_name -> ml.v1.FinancialOperation
-	15, // 14: ml.v1.PredictResponse.history_evidence:type_name -> ml.v1.HistoryGroupEvidence
-	10, // 15: ml.v1.FinancialCalendar.groups:type_name -> ml.v1.CalendarGroup
-	11, // 16: ml.v1.FinancialCalendar.payments:type_name -> ml.v1.ScheduledPayment
-	1,  // 17: ml.v1.FinancialCalendar.knowledge_mode:type_name -> ml.v1.CalendarKnowledgeMode
-	14, // 18: ml.v1.ForecastUncertainty.bands:type_name -> ml.v1.EmpiricalBalanceBand
-	17, // 19: ml.v1.FinancialProbability.calibrated:type_name -> ml.v1.CalibratedEstimate
-	6,  // 20: ml.v1.ForecastService.Predict:input_type -> ml.v1.PredictRequest
-	8,  // 21: ml.v1.ForecastService.Predict:output_type -> ml.v1.PredictResponse
-	21, // [21:22] is the sub-list for method output_type
-	20, // [20:21] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	5,  // 1: ml.v1.ForecastSnapshot.history:type_name -> ml.v1.HistoricalDay
+	7,  // 2: ml.v1.ForecastSnapshot.known_payments:type_name -> ml.v1.KnownPayment
+	8,  // 3: ml.v1.PredictRequest.snapshot:type_name -> ml.v1.ForecastSnapshot
+	6,  // 4: ml.v1.PredictRequest.model:type_name -> ml.v1.ModelContext
+	12, // 5: ml.v1.PredictRequest.operations:type_name -> ml.v1.FinancialOperation
+	15, // 6: ml.v1.PredictRequest.calendar:type_name -> ml.v1.FinancialCalendar
+	25, // 7: ml.v1.ForecastDay.negative_balance_probability:type_name -> ml.v1.FinancialProbability
+	6,  // 8: ml.v1.PredictResponse.model:type_name -> ml.v1.ModelContext
+	10, // 9: ml.v1.PredictResponse.days:type_name -> ml.v1.ForecastDay
+	20, // 10: ml.v1.PredictResponse.components:type_name -> ml.v1.ForecastComponent
+	25, // 11: ml.v1.PredictResponse.gap_probability:type_name -> ml.v1.FinancialProbability
+	23, // 12: ml.v1.PredictResponse.uncertainty:type_name -> ml.v1.ForecastUncertainty
+	12, // 13: ml.v1.PredictResponse.classified_operations:type_name -> ml.v1.FinancialOperation
+	22, // 14: ml.v1.PredictResponse.history_evidence:type_name -> ml.v1.HistoryGroupEvidence
+	17, // 15: ml.v1.PredictResponse.analysis_context:type_name -> ml.v1.AnalysisContext
+	19, // 16: ml.v1.PredictResponse.recurring_hypotheses:type_name -> ml.v1.RecurringHypothesis
+	16, // 17: ml.v1.PredictResponse.scenario_context:type_name -> ml.v1.SyntheticScenarioContext
+	13, // 18: ml.v1.FinancialCalendar.groups:type_name -> ml.v1.CalendarGroup
+	14, // 19: ml.v1.FinancialCalendar.payments:type_name -> ml.v1.ScheduledPayment
+	1,  // 20: ml.v1.FinancialCalendar.knowledge_mode:type_name -> ml.v1.CalendarKnowledgeMode
+	16, // 21: ml.v1.FinancialCalendar.scenario_context:type_name -> ml.v1.SyntheticScenarioContext
+	26, // 22: ml.v1.SyntheticScenarioContext.recorded_at:type_name -> google.protobuf.Timestamp
+	2,  // 23: ml.v1.RecurringHypothesis.direction:type_name -> ml.v1.RecurringDirection
+	18, // 24: ml.v1.RecurringHypothesis.historical_operations:type_name -> ml.v1.OperationVersionReference
+	27, // 25: ml.v1.RecurringHypothesis.month_end:type_name -> google.protobuf.Empty
+	3,  // 26: ml.v1.RecurringHypothesis.weekend_shift:type_name -> ml.v1.RecurringWeekendShift
+	4,  // 27: ml.v1.RecurringHypothesis.status:type_name -> ml.v1.RecurringHypothesisStatus
+	21, // 28: ml.v1.ForecastUncertainty.bands:type_name -> ml.v1.EmpiricalBalanceBand
+	24, // 29: ml.v1.FinancialProbability.calibrated:type_name -> ml.v1.CalibratedEstimate
+	9,  // 30: ml.v1.ForecastService.Predict:input_type -> ml.v1.PredictRequest
+	11, // 31: ml.v1.ForecastService.Predict:output_type -> ml.v1.PredictResponse
+	31, // [31:32] is the sub-list for method output_type
+	30, // [30:31] is the sub-list for method input_type
+	30, // [30:30] is the sub-list for extension type_name
+	30, // [30:30] is the sub-list for extension extendee
+	0,  // [0:30] is the sub-list for field type_name
 }
 
 func init() { file_ml_v1_forecast_proto_init() }
@@ -2136,8 +2787,12 @@ func file_ml_v1_forecast_proto_init() {
 	file_ml_v1_forecast_proto_msgTypes[6].OneofWrappers = []any{}
 	file_ml_v1_forecast_proto_msgTypes[7].OneofWrappers = []any{}
 	file_ml_v1_forecast_proto_msgTypes[9].OneofWrappers = []any{}
-	file_ml_v1_forecast_proto_msgTypes[11].OneofWrappers = []any{}
-	file_ml_v1_forecast_proto_msgTypes[16].OneofWrappers = []any{
+	file_ml_v1_forecast_proto_msgTypes[14].OneofWrappers = []any{
+		(*RecurringHypothesis_DayOfMonth)(nil),
+		(*RecurringHypothesis_MonthEnd)(nil),
+	}
+	file_ml_v1_forecast_proto_msgTypes[15].OneofWrappers = []any{}
+	file_ml_v1_forecast_proto_msgTypes[20].OneofWrappers = []any{
 		(*FinancialProbability_Calibrated)(nil),
 		(*FinancialProbability_UnavailableReason)(nil),
 	}
@@ -2146,8 +2801,8 @@ func file_ml_v1_forecast_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ml_v1_forecast_proto_rawDesc), len(file_ml_v1_forecast_proto_rawDesc)),
-			NumEnums:      2,
-			NumMessages:   17,
+			NumEnums:      5,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

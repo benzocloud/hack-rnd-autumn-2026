@@ -85,6 +85,10 @@ def financial_forecast(request, pb):
         raise InvalidSnapshot("Financial demo requires exactly 30 daily points")
     if not request.HasField("snapshot") or not request.HasField("calendar"):
         raise InvalidSnapshot("Financial snapshot and explicit calendar context are required")
+    if request.calendar.HasField("scenario_context") or any(
+        operation.category_rule_id for operation in request.operations
+    ):
+        raise InvalidSnapshot("Requested v2 financial fields are unavailable in this model version")
     # Reuse all coverage/EOD/money checks without changing the legacy RPC/version.
     base_request = pb.PredictRequest(
         snapshot=request.snapshot,

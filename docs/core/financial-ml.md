@@ -7,6 +7,24 @@
 
 ## Доступные версии
 
+Контракт D2.0 дополнен ADR-030: schema/proto описывают будущий explicit v2,
+synthetic scenario и 90-дневный analysis. Runtime сейчас поддерживает только
+версии таблицы ниже. V1 явно отвергает новые v2-only поля; наличие generated
+DTO не означает активации v2. Новый профиль/worker/schema2 реализуются D2.4–D2.5.
+Точные решения: [financial-demo-decisions](financial-demo-decisions.md).
+
+ML `operation_id` проецируется в Core/REST `transaction_id` только после проверки
+scope/version. `monthly_anchor.month_end` (protobuf Empty) — REST `month_end:true`;
+false, оба anchor или ни одного недопустимы.
+ML uint64 version >MaxInt64 отклоняется до Core int64 conversion. Существующий
+ML category_source=`user` отображается в публичный `manual`, category UUID
+сохраняется; rules/unknown имеют явный mapping. У manual/unknown category_rule_id
+пустой, у rules — allowlisted stable rule ID, не произвольный текст.
+Direction/weekend/status имеют
+явный enum mapping; unspecified/unknown отклоняются. REST int64 остаются строками.
+ForecastResult.analysis отсутствует/null для старых результатов; новые derived
+данные привязаны к immutable snapshot/model, не меняют факты и ручные категории.
+
 | Назначение | model_name | model_version | preprocessing_version |
 | --- | --- | --- | --- |
 | Продуктовый финансовый расчёт | mean_90 | mean_90_components_v1 | calendar_replacement_v1 |

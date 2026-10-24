@@ -10,6 +10,7 @@ import (
 	v1 "github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/auth/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -78,6 +79,218 @@ func (ForecastStatus) EnumDescriptor() ([]byte, []int) {
 	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{0}
 }
 
+// Request selection, not an assertion that a usable calendar is available.
+// UNSPECIFIED retains legacy AVAILABLE behavior; unknown values are rejected.
+type ForecastCalendarMode int32
+
+const (
+	ForecastCalendarMode_FORECAST_CALENDAR_MODE_UNSPECIFIED        ForecastCalendarMode = 0
+	ForecastCalendarMode_FORECAST_CALENDAR_MODE_AVAILABLE          ForecastCalendarMode = 1
+	ForecastCalendarMode_FORECAST_CALENDAR_MODE_SYNTHETIC_SCENARIO ForecastCalendarMode = 2
+)
+
+// Enum value maps for ForecastCalendarMode.
+var (
+	ForecastCalendarMode_name = map[int32]string{
+		0: "FORECAST_CALENDAR_MODE_UNSPECIFIED",
+		1: "FORECAST_CALENDAR_MODE_AVAILABLE",
+		2: "FORECAST_CALENDAR_MODE_SYNTHETIC_SCENARIO",
+	}
+	ForecastCalendarMode_value = map[string]int32{
+		"FORECAST_CALENDAR_MODE_UNSPECIFIED":        0,
+		"FORECAST_CALENDAR_MODE_AVAILABLE":          1,
+		"FORECAST_CALENDAR_MODE_SYNTHETIC_SCENARIO": 2,
+	}
+)
+
+func (x ForecastCalendarMode) Enum() *ForecastCalendarMode {
+	p := new(ForecastCalendarMode)
+	*p = x
+	return p
+}
+
+func (x ForecastCalendarMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ForecastCalendarMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_core_v1_forecasting_proto_enumTypes[1].Descriptor()
+}
+
+func (ForecastCalendarMode) Type() protoreflect.EnumType {
+	return &file_core_v1_forecasting_proto_enumTypes[1]
+}
+
+func (x ForecastCalendarMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ForecastCalendarMode.Descriptor instead.
+func (ForecastCalendarMode) EnumDescriptor() ([]byte, []int) {
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{1}
+}
+
+type RecurringWeekendShift int32
+
+const (
+	RecurringWeekendShift_RECURRING_WEEKEND_SHIFT_UNSPECIFIED RecurringWeekendShift = 0
+	RecurringWeekendShift_RECURRING_WEEKEND_SHIFT_NONE        RecurringWeekendShift = 1
+	RecurringWeekendShift_RECURRING_WEEKEND_SHIFT_PREVIOUS    RecurringWeekendShift = 2
+	RecurringWeekendShift_RECURRING_WEEKEND_SHIFT_NEXT        RecurringWeekendShift = 3
+)
+
+// Enum value maps for RecurringWeekendShift.
+var (
+	RecurringWeekendShift_name = map[int32]string{
+		0: "RECURRING_WEEKEND_SHIFT_UNSPECIFIED",
+		1: "RECURRING_WEEKEND_SHIFT_NONE",
+		2: "RECURRING_WEEKEND_SHIFT_PREVIOUS",
+		3: "RECURRING_WEEKEND_SHIFT_NEXT",
+	}
+	RecurringWeekendShift_value = map[string]int32{
+		"RECURRING_WEEKEND_SHIFT_UNSPECIFIED": 0,
+		"RECURRING_WEEKEND_SHIFT_NONE":        1,
+		"RECURRING_WEEKEND_SHIFT_PREVIOUS":    2,
+		"RECURRING_WEEKEND_SHIFT_NEXT":        3,
+	}
+)
+
+func (x RecurringWeekendShift) Enum() *RecurringWeekendShift {
+	p := new(RecurringWeekendShift)
+	*p = x
+	return p
+}
+
+func (x RecurringWeekendShift) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RecurringWeekendShift) Descriptor() protoreflect.EnumDescriptor {
+	return file_core_v1_forecasting_proto_enumTypes[2].Descriptor()
+}
+
+func (RecurringWeekendShift) Type() protoreflect.EnumType {
+	return &file_core_v1_forecasting_proto_enumTypes[2]
+}
+
+func (x RecurringWeekendShift) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RecurringWeekendShift.Descriptor instead.
+func (RecurringWeekendShift) EnumDescriptor() ([]byte, []int) {
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{2}
+}
+
+type RecurringHypothesisStatus int32
+
+const (
+	RecurringHypothesisStatus_RECURRING_HYPOTHESIS_STATUS_UNSPECIFIED RecurringHypothesisStatus = 0
+	RecurringHypothesisStatus_RECURRING_HYPOTHESIS_STATUS_HYPOTHESIS  RecurringHypothesisStatus = 1
+)
+
+// Enum value maps for RecurringHypothesisStatus.
+var (
+	RecurringHypothesisStatus_name = map[int32]string{
+		0: "RECURRING_HYPOTHESIS_STATUS_UNSPECIFIED",
+		1: "RECURRING_HYPOTHESIS_STATUS_HYPOTHESIS",
+	}
+	RecurringHypothesisStatus_value = map[string]int32{
+		"RECURRING_HYPOTHESIS_STATUS_UNSPECIFIED": 0,
+		"RECURRING_HYPOTHESIS_STATUS_HYPOTHESIS":  1,
+	}
+)
+
+func (x RecurringHypothesisStatus) Enum() *RecurringHypothesisStatus {
+	p := new(RecurringHypothesisStatus)
+	*p = x
+	return p
+}
+
+func (x RecurringHypothesisStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RecurringHypothesisStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_core_v1_forecasting_proto_enumTypes[3].Descriptor()
+}
+
+func (RecurringHypothesisStatus) Type() protoreflect.EnumType {
+	return &file_core_v1_forecasting_proto_enumTypes[3]
+}
+
+func (x RecurringHypothesisStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RecurringHypothesisStatus.Descriptor instead.
+func (RecurringHypothesisStatus) EnumDescriptor() ([]byte, []int) {
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{3}
+}
+
+// Core-owned identity and real recording time for a historical demonstration.
+// scenario_business_date equals cutoff; it is not a certified knowledge date.
+// Present only for SYNTHETIC_SCENARIO and never accepted from the browser.
+type SyntheticScenarioContext struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	ScenarioReference    string                 `protobuf:"bytes,1,opt,name=scenario_reference,json=scenarioReference,proto3" json:"scenario_reference,omitempty"`
+	RecordedAt           *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=recorded_at,json=recordedAt,proto3" json:"recorded_at,omitempty"`
+	ScenarioBusinessDate string                 `protobuf:"bytes,3,opt,name=scenario_business_date,json=scenarioBusinessDate,proto3" json:"scenario_business_date,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *SyntheticScenarioContext) Reset() {
+	*x = SyntheticScenarioContext{}
+	mi := &file_core_v1_forecasting_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyntheticScenarioContext) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyntheticScenarioContext) ProtoMessage() {}
+
+func (x *SyntheticScenarioContext) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_forecasting_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyntheticScenarioContext.ProtoReflect.Descriptor instead.
+func (*SyntheticScenarioContext) Descriptor() ([]byte, []int) {
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *SyntheticScenarioContext) GetScenarioReference() string {
+	if x != nil {
+		return x.ScenarioReference
+	}
+	return ""
+}
+
+func (x *SyntheticScenarioContext) GetRecordedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RecordedAt
+	}
+	return nil
+}
+
+func (x *SyntheticScenarioContext) GetScenarioBusinessDate() string {
+	if x != nil {
+		return x.ScenarioBusinessDate
+	}
+	return ""
+}
+
 type ForecastModelContext struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	Id                   string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -94,7 +307,7 @@ type ForecastModelContext struct {
 
 func (x *ForecastModelContext) Reset() {
 	*x = ForecastModelContext{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[0]
+	mi := &file_core_v1_forecasting_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -106,7 +319,7 @@ func (x *ForecastModelContext) String() string {
 func (*ForecastModelContext) ProtoMessage() {}
 
 func (x *ForecastModelContext) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[0]
+	mi := &file_core_v1_forecasting_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -119,7 +332,7 @@ func (x *ForecastModelContext) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForecastModelContext.ProtoReflect.Descriptor instead.
 func (*ForecastModelContext) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{0}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ForecastModelContext) GetId() string {
@@ -185,15 +398,18 @@ type ForecastInput struct {
 	OpeningBalance *Money                 `protobuf:"bytes,10,opt,name=opening_balance,json=openingBalance,proto3" json:"opening_balance,omitempty"`
 	BalanceAsOf    string                 `protobuf:"bytes,11,opt,name=balance_as_of,json=balanceAsOf,proto3" json:"balance_as_of,omitempty"`
 	// Exactly "below_zero_eod"; unknown overdraft never silently changes it.
-	RiskDefinition string                `protobuf:"bytes,12,opt,name=risk_definition,json=riskDefinition,proto3" json:"risk_definition,omitempty"`
-	ModelContext   *ForecastModelContext `protobuf:"bytes,13,opt,name=model_context,json=modelContext,proto3" json:"model_context,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	RiskDefinition  string                    `protobuf:"bytes,12,opt,name=risk_definition,json=riskDefinition,proto3" json:"risk_definition,omitempty"`
+	ModelContext    *ForecastModelContext     `protobuf:"bytes,13,opt,name=model_context,json=modelContext,proto3" json:"model_context,omitempty"`
+	HistoryCoverage *HistoryCoverage          `protobuf:"bytes,14,opt,name=history_coverage,json=historyCoverage,proto3" json:"history_coverage,omitempty"`
+	CalendarMode    ForecastCalendarMode      `protobuf:"varint,15,opt,name=calendar_mode,json=calendarMode,proto3,enum=core.v1.ForecastCalendarMode" json:"calendar_mode,omitempty"`
+	ScenarioContext *SyntheticScenarioContext `protobuf:"bytes,16,opt,name=scenario_context,json=scenarioContext,proto3" json:"scenario_context,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ForecastInput) Reset() {
 	*x = ForecastInput{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[1]
+	mi := &file_core_v1_forecasting_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -205,7 +421,7 @@ func (x *ForecastInput) String() string {
 func (*ForecastInput) ProtoMessage() {}
 
 func (x *ForecastInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[1]
+	mi := &file_core_v1_forecasting_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -218,7 +434,7 @@ func (x *ForecastInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForecastInput.ProtoReflect.Descriptor instead.
 func (*ForecastInput) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{1}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ForecastInput) GetSnapshotId() string {
@@ -312,6 +528,27 @@ func (x *ForecastInput) GetModelContext() *ForecastModelContext {
 	return nil
 }
 
+func (x *ForecastInput) GetHistoryCoverage() *HistoryCoverage {
+	if x != nil {
+		return x.HistoryCoverage
+	}
+	return nil
+}
+
+func (x *ForecastInput) GetCalendarMode() ForecastCalendarMode {
+	if x != nil {
+		return x.CalendarMode
+	}
+	return ForecastCalendarMode_FORECAST_CALENDAR_MODE_UNSPECIFIED
+}
+
+func (x *ForecastInput) GetScenarioContext() *SyntheticScenarioContext {
+	if x != nil {
+		return x.ScenarioContext
+	}
+	return nil
+}
+
 type ForecastReadiness struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// ready / limited / insufficient; unknown coverage cannot be ready.
@@ -326,7 +563,7 @@ type ForecastReadiness struct {
 
 func (x *ForecastReadiness) Reset() {
 	*x = ForecastReadiness{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[2]
+	mi := &file_core_v1_forecasting_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -338,7 +575,7 @@ func (x *ForecastReadiness) String() string {
 func (*ForecastReadiness) ProtoMessage() {}
 
 func (x *ForecastReadiness) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[2]
+	mi := &file_core_v1_forecasting_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -351,7 +588,7 @@ func (x *ForecastReadiness) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForecastReadiness.ProtoReflect.Descriptor instead.
 func (*ForecastReadiness) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{2}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ForecastReadiness) GetStatus() string {
@@ -404,7 +641,7 @@ type Probability struct {
 
 func (x *Probability) Reset() {
 	*x = Probability{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[3]
+	mi := &file_core_v1_forecasting_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -416,7 +653,7 @@ func (x *Probability) String() string {
 func (*Probability) ProtoMessage() {}
 
 func (x *Probability) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[3]
+	mi := &file_core_v1_forecasting_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -429,7 +666,7 @@ func (x *Probability) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Probability.ProtoReflect.Descriptor instead.
 func (*Probability) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{3}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Probability) GetEstimate() isProbability_Estimate {
@@ -483,7 +720,7 @@ type CashGap struct {
 
 func (x *CashGap) Reset() {
 	*x = CashGap{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[4]
+	mi := &file_core_v1_forecasting_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -495,7 +732,7 @@ func (x *CashGap) String() string {
 func (*CashGap) ProtoMessage() {}
 
 func (x *CashGap) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[4]
+	mi := &file_core_v1_forecasting_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -508,7 +745,7 @@ func (x *CashGap) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CashGap.ProtoReflect.Descriptor instead.
 func (*CashGap) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{4}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *CashGap) GetDate() string {
@@ -538,7 +775,7 @@ type ForecastMetrics struct {
 
 func (x *ForecastMetrics) Reset() {
 	*x = ForecastMetrics{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[5]
+	mi := &file_core_v1_forecasting_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -550,7 +787,7 @@ func (x *ForecastMetrics) String() string {
 func (*ForecastMetrics) ProtoMessage() {}
 
 func (x *ForecastMetrics) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[5]
+	mi := &file_core_v1_forecasting_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -563,7 +800,7 @@ func (x *ForecastMetrics) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForecastMetrics.ProtoReflect.Descriptor instead.
 func (*ForecastMetrics) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{5}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ForecastMetrics) GetFirstGap() *CashGap {
@@ -616,7 +853,7 @@ type ForecastPoint struct {
 
 func (x *ForecastPoint) Reset() {
 	*x = ForecastPoint{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[6]
+	mi := &file_core_v1_forecasting_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -628,7 +865,7 @@ func (x *ForecastPoint) String() string {
 func (*ForecastPoint) ProtoMessage() {}
 
 func (x *ForecastPoint) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[6]
+	mi := &file_core_v1_forecasting_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -641,7 +878,7 @@ func (x *ForecastPoint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForecastPoint.ProtoReflect.Descriptor instead.
 func (*ForecastPoint) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{6}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ForecastPoint) GetDate() string {
@@ -705,7 +942,7 @@ type Evidence struct {
 
 func (x *Evidence) Reset() {
 	*x = Evidence{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[7]
+	mi := &file_core_v1_forecasting_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -717,7 +954,7 @@ func (x *Evidence) String() string {
 func (*Evidence) ProtoMessage() {}
 
 func (x *Evidence) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[7]
+	mi := &file_core_v1_forecasting_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -730,7 +967,7 @@ func (x *Evidence) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Evidence.ProtoReflect.Descriptor instead.
 func (*Evidence) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{7}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *Evidence) GetType() string {
@@ -775,7 +1012,7 @@ type Recommendation struct {
 
 func (x *Recommendation) Reset() {
 	*x = Recommendation{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[8]
+	mi := &file_core_v1_forecasting_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -787,7 +1024,7 @@ func (x *Recommendation) String() string {
 func (*Recommendation) ProtoMessage() {}
 
 func (x *Recommendation) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[8]
+	mi := &file_core_v1_forecasting_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -800,7 +1037,7 @@ func (x *Recommendation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Recommendation.ProtoReflect.Descriptor instead.
 func (*Recommendation) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{8}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *Recommendation) GetId() string {
@@ -865,7 +1102,7 @@ type ForecastComponent struct {
 
 func (x *ForecastComponent) Reset() {
 	*x = ForecastComponent{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[9]
+	mi := &file_core_v1_forecasting_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -877,7 +1114,7 @@ func (x *ForecastComponent) String() string {
 func (*ForecastComponent) ProtoMessage() {}
 
 func (x *ForecastComponent) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[9]
+	mi := &file_core_v1_forecasting_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -890,7 +1127,7 @@ func (x *ForecastComponent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForecastComponent.ProtoReflect.Descriptor instead.
 func (*ForecastComponent) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{9}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ForecastComponent) GetId() string {
@@ -990,7 +1227,7 @@ type ScenarioCapabilities struct {
 
 func (x *ScenarioCapabilities) Reset() {
 	*x = ScenarioCapabilities{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[10]
+	mi := &file_core_v1_forecasting_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1002,7 +1239,7 @@ func (x *ScenarioCapabilities) String() string {
 func (*ScenarioCapabilities) ProtoMessage() {}
 
 func (x *ScenarioCapabilities) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[10]
+	mi := &file_core_v1_forecasting_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1015,7 +1252,7 @@ func (x *ScenarioCapabilities) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScenarioCapabilities.ProtoReflect.Descriptor instead.
 func (*ScenarioCapabilities) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{10}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ScenarioCapabilities) GetDelayReceipt() bool {
@@ -1071,7 +1308,7 @@ type EffectiveOccurrence struct {
 
 func (x *EffectiveOccurrence) Reset() {
 	*x = EffectiveOccurrence{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[11]
+	mi := &file_core_v1_forecasting_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1083,7 +1320,7 @@ func (x *EffectiveOccurrence) String() string {
 func (*EffectiveOccurrence) ProtoMessage() {}
 
 func (x *EffectiveOccurrence) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[11]
+	mi := &file_core_v1_forecasting_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1096,7 +1333,7 @@ func (x *EffectiveOccurrence) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EffectiveOccurrence.ProtoReflect.Descriptor instead.
 func (*EffectiveOccurrence) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{11}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *EffectiveOccurrence) GetEffectiveOccurrenceId() string {
@@ -1171,13 +1408,15 @@ type ForecastResult struct {
 	Recommendations      []*Recommendation      `protobuf:"bytes,5,rep,name=recommendations,proto3" json:"recommendations,omitempty"`
 	Assumptions          []string               `protobuf:"bytes,6,rep,name=assumptions,proto3" json:"assumptions,omitempty"`
 	EffectiveOccurrences []*EffectiveOccurrence `protobuf:"bytes,7,rep,name=effective_occurrences,json=effectiveOccurrences,proto3" json:"effective_occurrences,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// Absent on legacy/not-analyzed results. Derived data never changes Ledger.
+	Analysis      *ForecastAnalysis `protobuf:"bytes,8,opt,name=analysis,proto3" json:"analysis,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ForecastResult) Reset() {
 	*x = ForecastResult{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[12]
+	mi := &file_core_v1_forecasting_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1189,7 +1428,7 @@ func (x *ForecastResult) String() string {
 func (*ForecastResult) ProtoMessage() {}
 
 func (x *ForecastResult) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[12]
+	mi := &file_core_v1_forecasting_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1202,7 +1441,7 @@ func (x *ForecastResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForecastResult.ProtoReflect.Descriptor instead.
 func (*ForecastResult) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{12}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ForecastResult) GetMetrics() *ForecastMetrics {
@@ -1254,6 +1493,365 @@ func (x *ForecastResult) GetEffectiveOccurrences() []*EffectiveOccurrence {
 	return nil
 }
 
+func (x *ForecastResult) GetAnalysis() *ForecastAnalysis {
+	if x != nil {
+		return x.Analysis
+	}
+	return nil
+}
+
+type ClassifiedOperationAnalysis struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	TransactionId  string                 `protobuf:"bytes,1,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
+	Version        int64                  `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+	CategoryCode   string                 `protobuf:"bytes,3,opt,name=category_code,json=categoryCode,proto3" json:"category_code,omitempty"`
+	CategorySource string                 `protobuf:"bytes,4,opt,name=category_source,json=categorySource,proto3" json:"category_source,omitempty"`
+	CategoryRuleId string                 `protobuf:"bytes,5,opt,name=category_rule_id,json=categoryRuleId,proto3" json:"category_rule_id,omitempty"`
+	CategoryId     *string                `protobuf:"bytes,6,opt,name=category_id,json=categoryId,proto3,oneof" json:"category_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ClassifiedOperationAnalysis) Reset() {
+	*x = ClassifiedOperationAnalysis{}
+	mi := &file_core_v1_forecasting_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClassifiedOperationAnalysis) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClassifiedOperationAnalysis) ProtoMessage() {}
+
+func (x *ClassifiedOperationAnalysis) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_forecasting_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClassifiedOperationAnalysis.ProtoReflect.Descriptor instead.
+func (*ClassifiedOperationAnalysis) Descriptor() ([]byte, []int) {
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *ClassifiedOperationAnalysis) GetTransactionId() string {
+	if x != nil {
+		return x.TransactionId
+	}
+	return ""
+}
+
+func (x *ClassifiedOperationAnalysis) GetVersion() int64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *ClassifiedOperationAnalysis) GetCategoryCode() string {
+	if x != nil {
+		return x.CategoryCode
+	}
+	return ""
+}
+
+func (x *ClassifiedOperationAnalysis) GetCategorySource() string {
+	if x != nil {
+		return x.CategorySource
+	}
+	return ""
+}
+
+func (x *ClassifiedOperationAnalysis) GetCategoryRuleId() string {
+	if x != nil {
+		return x.CategoryRuleId
+	}
+	return ""
+}
+
+func (x *ClassifiedOperationAnalysis) GetCategoryId() string {
+	if x != nil && x.CategoryId != nil {
+		return *x.CategoryId
+	}
+	return ""
+}
+
+// Core-owned projection of model-local monthly evidence. References resolve in
+// the frozen company/account view, never by matching payment text or category.
+type RecurringHypothesis struct {
+	state                protoimpl.MessageState    `protogen:"open.v1"`
+	PatternId            string                    `protobuf:"bytes,1,opt,name=pattern_id,json=patternId,proto3" json:"pattern_id,omitempty"`
+	RuleId               string                    `protobuf:"bytes,2,opt,name=rule_id,json=ruleId,proto3" json:"rule_id,omitempty"`
+	Direction            Direction                 `protobuf:"varint,3,opt,name=direction,proto3,enum=core.v1.Direction" json:"direction,omitempty"`
+	HistoricalOperations []*HistoricalOperationRef `protobuf:"bytes,4,rep,name=historical_operations,json=historicalOperations,proto3" json:"historical_operations,omitempty"`
+	// Types that are valid to be assigned to MonthlyAnchor:
+	//
+	//	*RecurringHypothesis_DayOfMonth
+	//	*RecurringHypothesis_MonthEnd
+	MonthlyAnchor       isRecurringHypothesis_MonthlyAnchor `protobuf_oneof:"monthly_anchor"`
+	WeekendShift        RecurringWeekendShift               `protobuf:"varint,7,opt,name=weekend_shift,json=weekendShift,proto3,enum=core.v1.RecurringWeekendShift" json:"weekend_shift,omitempty"`
+	ExpectedAmountMinor int64                               `protobuf:"varint,8,opt,name=expected_amount_minor,json=expectedAmountMinor,proto3" json:"expected_amount_minor,omitempty"`
+	Confirmations       uint32                              `protobuf:"varint,9,opt,name=confirmations,proto3" json:"confirmations,omitempty"`
+	ExpectedPeriods     uint32                              `protobuf:"varint,10,opt,name=expected_periods,json=expectedPeriods,proto3" json:"expected_periods,omitempty"`
+	FirstEvidenceDate   string                              `protobuf:"bytes,11,opt,name=first_evidence_date,json=firstEvidenceDate,proto3" json:"first_evidence_date,omitempty"`
+	LastEvidenceDate    string                              `protobuf:"bytes,12,opt,name=last_evidence_date,json=lastEvidenceDate,proto3" json:"last_evidence_date,omitempty"`
+	CategoryCode        string                              `protobuf:"bytes,13,opt,name=category_code,json=categoryCode,proto3" json:"category_code,omitempty"`
+	RuleVersion         string                              `protobuf:"bytes,14,opt,name=rule_version,json=ruleVersion,proto3" json:"rule_version,omitempty"`
+	Status              RecurringHypothesisStatus           `protobuf:"varint,15,opt,name=status,proto3,enum=core.v1.RecurringHypothesisStatus" json:"status,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *RecurringHypothesis) Reset() {
+	*x = RecurringHypothesis{}
+	mi := &file_core_v1_forecasting_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecurringHypothesis) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecurringHypothesis) ProtoMessage() {}
+
+func (x *RecurringHypothesis) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_forecasting_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecurringHypothesis.ProtoReflect.Descriptor instead.
+func (*RecurringHypothesis) Descriptor() ([]byte, []int) {
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *RecurringHypothesis) GetPatternId() string {
+	if x != nil {
+		return x.PatternId
+	}
+	return ""
+}
+
+func (x *RecurringHypothesis) GetRuleId() string {
+	if x != nil {
+		return x.RuleId
+	}
+	return ""
+}
+
+func (x *RecurringHypothesis) GetDirection() Direction {
+	if x != nil {
+		return x.Direction
+	}
+	return Direction_DIRECTION_UNSPECIFIED
+}
+
+func (x *RecurringHypothesis) GetHistoricalOperations() []*HistoricalOperationRef {
+	if x != nil {
+		return x.HistoricalOperations
+	}
+	return nil
+}
+
+func (x *RecurringHypothesis) GetMonthlyAnchor() isRecurringHypothesis_MonthlyAnchor {
+	if x != nil {
+		return x.MonthlyAnchor
+	}
+	return nil
+}
+
+func (x *RecurringHypothesis) GetDayOfMonth() uint32 {
+	if x != nil {
+		if x, ok := x.MonthlyAnchor.(*RecurringHypothesis_DayOfMonth); ok {
+			return x.DayOfMonth
+		}
+	}
+	return 0
+}
+
+func (x *RecurringHypothesis) GetMonthEnd() *emptypb.Empty {
+	if x != nil {
+		if x, ok := x.MonthlyAnchor.(*RecurringHypothesis_MonthEnd); ok {
+			return x.MonthEnd
+		}
+	}
+	return nil
+}
+
+func (x *RecurringHypothesis) GetWeekendShift() RecurringWeekendShift {
+	if x != nil {
+		return x.WeekendShift
+	}
+	return RecurringWeekendShift_RECURRING_WEEKEND_SHIFT_UNSPECIFIED
+}
+
+func (x *RecurringHypothesis) GetExpectedAmountMinor() int64 {
+	if x != nil {
+		return x.ExpectedAmountMinor
+	}
+	return 0
+}
+
+func (x *RecurringHypothesis) GetConfirmations() uint32 {
+	if x != nil {
+		return x.Confirmations
+	}
+	return 0
+}
+
+func (x *RecurringHypothesis) GetExpectedPeriods() uint32 {
+	if x != nil {
+		return x.ExpectedPeriods
+	}
+	return 0
+}
+
+func (x *RecurringHypothesis) GetFirstEvidenceDate() string {
+	if x != nil {
+		return x.FirstEvidenceDate
+	}
+	return ""
+}
+
+func (x *RecurringHypothesis) GetLastEvidenceDate() string {
+	if x != nil {
+		return x.LastEvidenceDate
+	}
+	return ""
+}
+
+func (x *RecurringHypothesis) GetCategoryCode() string {
+	if x != nil {
+		return x.CategoryCode
+	}
+	return ""
+}
+
+func (x *RecurringHypothesis) GetRuleVersion() string {
+	if x != nil {
+		return x.RuleVersion
+	}
+	return ""
+}
+
+func (x *RecurringHypothesis) GetStatus() RecurringHypothesisStatus {
+	if x != nil {
+		return x.Status
+	}
+	return RecurringHypothesisStatus_RECURRING_HYPOTHESIS_STATUS_UNSPECIFIED
+}
+
+type isRecurringHypothesis_MonthlyAnchor interface {
+	isRecurringHypothesis_MonthlyAnchor()
+}
+
+type RecurringHypothesis_DayOfMonth struct {
+	DayOfMonth uint32 `protobuf:"varint,5,opt,name=day_of_month,json=dayOfMonth,proto3,oneof"`
+}
+
+type RecurringHypothesis_MonthEnd struct {
+	MonthEnd *emptypb.Empty `protobuf:"bytes,6,opt,name=month_end,json=monthEnd,proto3,oneof"`
+}
+
+func (*RecurringHypothesis_DayOfMonth) isRecurringHypothesis_MonthlyAnchor() {}
+
+func (*RecurringHypothesis_MonthEnd) isRecurringHypothesis_MonthlyAnchor() {}
+
+// Analysis of exactly the 90-day frozen input. Operation IDs/versions and manual
+// overrides are validated against that view; category UUIDs belong to Core.
+// At most 1000 hypotheses and 20000 evidence refs, no silent truncation. Missing
+// analysis is not an empty successful analysis; hypotheses are not obligations.
+type ForecastAnalysis struct {
+	state                protoimpl.MessageState         `protogen:"open.v1"`
+	AnalysisVersion      string                         `protobuf:"bytes,1,opt,name=analysis_version,json=analysisVersion,proto3" json:"analysis_version,omitempty"`
+	WindowFrom           string                         `protobuf:"bytes,2,opt,name=window_from,json=windowFrom,proto3" json:"window_from,omitempty"`
+	WindowThrough        string                         `protobuf:"bytes,3,opt,name=window_through,json=windowThrough,proto3" json:"window_through,omitempty"`
+	ClassifiedOperations []*ClassifiedOperationAnalysis `protobuf:"bytes,4,rep,name=classified_operations,json=classifiedOperations,proto3" json:"classified_operations,omitempty"`
+	RecurringHypotheses  []*RecurringHypothesis         `protobuf:"bytes,5,rep,name=recurring_hypotheses,json=recurringHypotheses,proto3" json:"recurring_hypotheses,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *ForecastAnalysis) Reset() {
+	*x = ForecastAnalysis{}
+	mi := &file_core_v1_forecasting_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ForecastAnalysis) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ForecastAnalysis) ProtoMessage() {}
+
+func (x *ForecastAnalysis) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_forecasting_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ForecastAnalysis.ProtoReflect.Descriptor instead.
+func (*ForecastAnalysis) Descriptor() ([]byte, []int) {
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ForecastAnalysis) GetAnalysisVersion() string {
+	if x != nil {
+		return x.AnalysisVersion
+	}
+	return ""
+}
+
+func (x *ForecastAnalysis) GetWindowFrom() string {
+	if x != nil {
+		return x.WindowFrom
+	}
+	return ""
+}
+
+func (x *ForecastAnalysis) GetWindowThrough() string {
+	if x != nil {
+		return x.WindowThrough
+	}
+	return ""
+}
+
+func (x *ForecastAnalysis) GetClassifiedOperations() []*ClassifiedOperationAnalysis {
+	if x != nil {
+		return x.ClassifiedOperations
+	}
+	return nil
+}
+
+func (x *ForecastAnalysis) GetRecurringHypotheses() []*RecurringHypothesis {
+	if x != nil {
+		return x.RecurringHypotheses
+	}
+	return nil
+}
+
 type ForecastPending struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Only QUEUED or RUNNING. Completed/result/error map to REST null.
@@ -1264,7 +1862,7 @@ type ForecastPending struct {
 
 func (x *ForecastPending) Reset() {
 	*x = ForecastPending{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[13]
+	mi := &file_core_v1_forecasting_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1276,7 +1874,7 @@ func (x *ForecastPending) String() string {
 func (*ForecastPending) ProtoMessage() {}
 
 func (x *ForecastPending) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[13]
+	mi := &file_core_v1_forecasting_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1289,7 +1887,7 @@ func (x *ForecastPending) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForecastPending.ProtoReflect.Descriptor instead.
 func (*ForecastPending) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{13}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ForecastPending) GetStatus() ForecastStatus {
@@ -1309,7 +1907,7 @@ type ForecastSucceeded struct {
 
 func (x *ForecastSucceeded) Reset() {
 	*x = ForecastSucceeded{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[14]
+	mi := &file_core_v1_forecasting_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1321,7 +1919,7 @@ func (x *ForecastSucceeded) String() string {
 func (*ForecastSucceeded) ProtoMessage() {}
 
 func (x *ForecastSucceeded) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[14]
+	mi := &file_core_v1_forecasting_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1334,7 +1932,7 @@ func (x *ForecastSucceeded) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForecastSucceeded.ProtoReflect.Descriptor instead.
 func (*ForecastSucceeded) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{14}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ForecastSucceeded) GetCompletedAt() *timestamppb.Timestamp {
@@ -1361,7 +1959,7 @@ type ForecastFailed struct {
 
 func (x *ForecastFailed) Reset() {
 	*x = ForecastFailed{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[15]
+	mi := &file_core_v1_forecasting_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1373,7 +1971,7 @@ func (x *ForecastFailed) String() string {
 func (*ForecastFailed) ProtoMessage() {}
 
 func (x *ForecastFailed) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[15]
+	mi := &file_core_v1_forecasting_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1386,7 +1984,7 @@ func (x *ForecastFailed) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForecastFailed.ProtoReflect.Descriptor instead.
 func (*ForecastFailed) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{15}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ForecastFailed) GetCompletedAt() *timestamppb.Timestamp {
@@ -1427,7 +2025,7 @@ type Forecast struct {
 
 func (x *Forecast) Reset() {
 	*x = Forecast{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[16]
+	mi := &file_core_v1_forecasting_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1439,7 +2037,7 @@ func (x *Forecast) String() string {
 func (*Forecast) ProtoMessage() {}
 
 func (x *Forecast) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[16]
+	mi := &file_core_v1_forecasting_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1452,7 +2050,7 @@ func (x *Forecast) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Forecast.ProtoReflect.Descriptor instead.
 func (*Forecast) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{16}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *Forecast) GetId() string {
@@ -1568,22 +2166,24 @@ func (*Forecast_Succeeded) isForecast_State() {}
 func (*Forecast_Failed) isForecast_State() {}
 
 type ForecastSummary struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Status        ForecastStatus         `protobuf:"varint,2,opt,name=status,proto3,enum=core.v1.ForecastStatus" json:"status,omitempty"`
-	CutoffDate    string                 `protobuf:"bytes,3,opt,name=cutoff_date,json=cutoffDate,proto3" json:"cutoff_date,omitempty"`
-	StartDate     string                 `protobuf:"bytes,4,opt,name=start_date,json=startDate,proto3" json:"start_date,omitempty"`
-	EndDate       string                 `protobuf:"bytes,5,opt,name=end_date,json=endDate,proto3" json:"end_date,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	IsStale       bool                   `protobuf:"varint,7,opt,name=is_stale,json=isStale,proto3" json:"is_stale,omitempty"`
-	ScenarioId    *string                `protobuf:"bytes,8,opt,name=scenario_id,json=scenarioId,proto3,oneof" json:"scenario_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState    `protogen:"open.v1"`
+	Id              string                    `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Status          ForecastStatus            `protobuf:"varint,2,opt,name=status,proto3,enum=core.v1.ForecastStatus" json:"status,omitempty"`
+	CutoffDate      string                    `protobuf:"bytes,3,opt,name=cutoff_date,json=cutoffDate,proto3" json:"cutoff_date,omitempty"`
+	StartDate       string                    `protobuf:"bytes,4,opt,name=start_date,json=startDate,proto3" json:"start_date,omitempty"`
+	EndDate         string                    `protobuf:"bytes,5,opt,name=end_date,json=endDate,proto3" json:"end_date,omitempty"`
+	CreatedAt       *timestamppb.Timestamp    `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	IsStale         bool                      `protobuf:"varint,7,opt,name=is_stale,json=isStale,proto3" json:"is_stale,omitempty"`
+	ScenarioId      *string                   `protobuf:"bytes,8,opt,name=scenario_id,json=scenarioId,proto3,oneof" json:"scenario_id,omitempty"`
+	CalendarMode    ForecastCalendarMode      `protobuf:"varint,9,opt,name=calendar_mode,json=calendarMode,proto3,enum=core.v1.ForecastCalendarMode" json:"calendar_mode,omitempty"`
+	ScenarioContext *SyntheticScenarioContext `protobuf:"bytes,10,opt,name=scenario_context,json=scenarioContext,proto3" json:"scenario_context,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ForecastSummary) Reset() {
 	*x = ForecastSummary{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[17]
+	mi := &file_core_v1_forecasting_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1595,7 +2195,7 @@ func (x *ForecastSummary) String() string {
 func (*ForecastSummary) ProtoMessage() {}
 
 func (x *ForecastSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[17]
+	mi := &file_core_v1_forecasting_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1608,7 +2208,7 @@ func (x *ForecastSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForecastSummary.ProtoReflect.Descriptor instead.
 func (*ForecastSummary) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{17}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ForecastSummary) GetId() string {
@@ -1667,6 +2267,20 @@ func (x *ForecastSummary) GetScenarioId() string {
 	return ""
 }
 
+func (x *ForecastSummary) GetCalendarMode() ForecastCalendarMode {
+	if x != nil {
+		return x.CalendarMode
+	}
+	return ForecastCalendarMode_FORECAST_CALENDAR_MODE_UNSPECIFIED
+}
+
+func (x *ForecastSummary) GetScenarioContext() *SyntheticScenarioContext {
+	if x != nil {
+		return x.ScenarioContext
+	}
+	return nil
+}
+
 type ForecastAccepted struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -1679,7 +2293,7 @@ type ForecastAccepted struct {
 
 func (x *ForecastAccepted) Reset() {
 	*x = ForecastAccepted{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[18]
+	mi := &file_core_v1_forecasting_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1691,7 +2305,7 @@ func (x *ForecastAccepted) String() string {
 func (*ForecastAccepted) ProtoMessage() {}
 
 func (x *ForecastAccepted) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[18]
+	mi := &file_core_v1_forecasting_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1704,7 +2318,7 @@ func (x *ForecastAccepted) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForecastAccepted.ProtoReflect.Descriptor instead.
 func (*ForecastAccepted) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{18}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ForecastAccepted) GetId() string {
@@ -1735,14 +2349,17 @@ type CreateForecastRequest struct {
 	IdempotencyKey string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	CutoffDate     string                 `protobuf:"bytes,4,opt,name=cutoff_date,json=cutoffDate,proto3" json:"cutoff_date,omitempty"`
 	// REST 30..90; unsupported model horizon fails explicitly, never truncates.
-	HorizonDays   uint32 `protobuf:"varint,5,opt,name=horizon_days,json=horizonDays,proto3" json:"horizon_days,omitempty"`
+	HorizonDays uint32 `protobuf:"varint,5,opt,name=horizon_days,json=horizonDays,proto3" json:"horizon_days,omitempty"`
+	// Server must authorize the fixture profile for synthetic mode. Mode and
+	// frozen server context participate in idempotency/reuse; no implicit upgrade.
+	CalendarMode  ForecastCalendarMode `protobuf:"varint,6,opt,name=calendar_mode,json=calendarMode,proto3,enum=core.v1.ForecastCalendarMode" json:"calendar_mode,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateForecastRequest) Reset() {
 	*x = CreateForecastRequest{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[19]
+	mi := &file_core_v1_forecasting_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1754,7 +2371,7 @@ func (x *CreateForecastRequest) String() string {
 func (*CreateForecastRequest) ProtoMessage() {}
 
 func (x *CreateForecastRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[19]
+	mi := &file_core_v1_forecasting_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1767,7 +2384,7 @@ func (x *CreateForecastRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateForecastRequest.ProtoReflect.Descriptor instead.
 func (*CreateForecastRequest) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{19}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *CreateForecastRequest) GetContext() *v1.WriteContext {
@@ -1805,6 +2422,13 @@ func (x *CreateForecastRequest) GetHorizonDays() uint32 {
 	return 0
 }
 
+func (x *CreateForecastRequest) GetCalendarMode() ForecastCalendarMode {
+	if x != nil {
+		return x.CalendarMode
+	}
+	return ForecastCalendarMode_FORECAST_CALENDAR_MODE_UNSPECIFIED
+}
+
 type CreateForecastResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Accepted      *ForecastAccepted      `protobuf:"bytes,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
@@ -1814,7 +2438,7 @@ type CreateForecastResponse struct {
 
 func (x *CreateForecastResponse) Reset() {
 	*x = CreateForecastResponse{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[20]
+	mi := &file_core_v1_forecasting_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1826,7 +2450,7 @@ func (x *CreateForecastResponse) String() string {
 func (*CreateForecastResponse) ProtoMessage() {}
 
 func (x *CreateForecastResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[20]
+	mi := &file_core_v1_forecasting_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1839,7 +2463,7 @@ func (x *CreateForecastResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateForecastResponse.ProtoReflect.Descriptor instead.
 func (*CreateForecastResponse) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{20}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *CreateForecastResponse) GetAccepted() *ForecastAccepted {
@@ -1860,7 +2484,7 @@ type GetForecastRequest struct {
 
 func (x *GetForecastRequest) Reset() {
 	*x = GetForecastRequest{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[21]
+	mi := &file_core_v1_forecasting_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1872,7 +2496,7 @@ func (x *GetForecastRequest) String() string {
 func (*GetForecastRequest) ProtoMessage() {}
 
 func (x *GetForecastRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[21]
+	mi := &file_core_v1_forecasting_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1885,7 +2509,7 @@ func (x *GetForecastRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetForecastRequest.ProtoReflect.Descriptor instead.
 func (*GetForecastRequest) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{21}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *GetForecastRequest) GetContext() *v1.BrowserContext {
@@ -1918,7 +2542,7 @@ type GetForecastResponse struct {
 
 func (x *GetForecastResponse) Reset() {
 	*x = GetForecastResponse{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[22]
+	mi := &file_core_v1_forecasting_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1930,7 +2554,7 @@ func (x *GetForecastResponse) String() string {
 func (*GetForecastResponse) ProtoMessage() {}
 
 func (x *GetForecastResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[22]
+	mi := &file_core_v1_forecasting_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1943,7 +2567,7 @@ func (x *GetForecastResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetForecastResponse.ProtoReflect.Descriptor instead.
 func (*GetForecastResponse) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{22}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *GetForecastResponse) GetForecast() *Forecast {
@@ -1965,7 +2589,7 @@ type ListForecastsRequest struct {
 
 func (x *ListForecastsRequest) Reset() {
 	*x = ListForecastsRequest{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[23]
+	mi := &file_core_v1_forecasting_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1977,7 +2601,7 @@ func (x *ListForecastsRequest) String() string {
 func (*ListForecastsRequest) ProtoMessage() {}
 
 func (x *ListForecastsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[23]
+	mi := &file_core_v1_forecasting_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1990,7 +2614,7 @@ func (x *ListForecastsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListForecastsRequest.ProtoReflect.Descriptor instead.
 func (*ListForecastsRequest) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{23}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ListForecastsRequest) GetContext() *v1.BrowserContext {
@@ -2031,7 +2655,7 @@ type ListForecastsResponse struct {
 
 func (x *ListForecastsResponse) Reset() {
 	*x = ListForecastsResponse{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[24]
+	mi := &file_core_v1_forecasting_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2043,7 +2667,7 @@ func (x *ListForecastsResponse) String() string {
 func (*ListForecastsResponse) ProtoMessage() {}
 
 func (x *ListForecastsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[24]
+	mi := &file_core_v1_forecasting_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2056,7 +2680,7 @@ func (x *ListForecastsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListForecastsResponse.ProtoReflect.Descriptor instead.
 func (*ListForecastsResponse) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{24}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ListForecastsResponse) GetItems() []*ForecastSummary {
@@ -2093,7 +2717,7 @@ type Comparison struct {
 
 func (x *Comparison) Reset() {
 	*x = Comparison{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[25]
+	mi := &file_core_v1_forecasting_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2105,7 +2729,7 @@ func (x *Comparison) String() string {
 func (*Comparison) ProtoMessage() {}
 
 func (x *Comparison) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[25]
+	mi := &file_core_v1_forecasting_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2118,7 +2742,7 @@ func (x *Comparison) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Comparison.ProtoReflect.Descriptor instead.
 func (*Comparison) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{25}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *Comparison) GetReferenceForecastId() string {
@@ -2217,7 +2841,7 @@ type CompareForecastsRequest struct {
 
 func (x *CompareForecastsRequest) Reset() {
 	*x = CompareForecastsRequest{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[26]
+	mi := &file_core_v1_forecasting_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2229,7 +2853,7 @@ func (x *CompareForecastsRequest) String() string {
 func (*CompareForecastsRequest) ProtoMessage() {}
 
 func (x *CompareForecastsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[26]
+	mi := &file_core_v1_forecasting_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2242,7 +2866,7 @@ func (x *CompareForecastsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompareForecastsRequest.ProtoReflect.Descriptor instead.
 func (*CompareForecastsRequest) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{26}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *CompareForecastsRequest) GetContext() *v1.BrowserContext {
@@ -2282,7 +2906,7 @@ type CompareForecastsResponse struct {
 
 func (x *CompareForecastsResponse) Reset() {
 	*x = CompareForecastsResponse{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[27]
+	mi := &file_core_v1_forecasting_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2294,7 +2918,7 @@ func (x *CompareForecastsResponse) String() string {
 func (*CompareForecastsResponse) ProtoMessage() {}
 
 func (x *CompareForecastsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[27]
+	mi := &file_core_v1_forecasting_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2307,7 +2931,7 @@ func (x *CompareForecastsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompareForecastsResponse.ProtoReflect.Descriptor instead.
 func (*CompareForecastsResponse) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{27}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *CompareForecastsResponse) GetComparison() *Comparison {
@@ -2329,7 +2953,7 @@ type ActualCoverage struct {
 
 func (x *ActualCoverage) Reset() {
 	*x = ActualCoverage{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[28]
+	mi := &file_core_v1_forecasting_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2341,7 +2965,7 @@ func (x *ActualCoverage) String() string {
 func (*ActualCoverage) ProtoMessage() {}
 
 func (x *ActualCoverage) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[28]
+	mi := &file_core_v1_forecasting_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2354,7 +2978,7 @@ func (x *ActualCoverage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ActualCoverage.ProtoReflect.Descriptor instead.
 func (*ActualCoverage) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{28}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *ActualCoverage) GetStatus() string {
@@ -2402,7 +3026,7 @@ type PlanFactPoint struct {
 
 func (x *PlanFactPoint) Reset() {
 	*x = PlanFactPoint{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[29]
+	mi := &file_core_v1_forecasting_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2414,7 +3038,7 @@ func (x *PlanFactPoint) String() string {
 func (*PlanFactPoint) ProtoMessage() {}
 
 func (x *PlanFactPoint) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[29]
+	mi := &file_core_v1_forecasting_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2427,7 +3051,7 @@ func (x *PlanFactPoint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlanFactPoint.ProtoReflect.Descriptor instead.
 func (*PlanFactPoint) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{29}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *PlanFactPoint) GetDate() string {
@@ -2508,7 +3132,7 @@ type PlanFact struct {
 
 func (x *PlanFact) Reset() {
 	*x = PlanFact{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[30]
+	mi := &file_core_v1_forecasting_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2520,7 +3144,7 @@ func (x *PlanFact) String() string {
 func (*PlanFact) ProtoMessage() {}
 
 func (x *PlanFact) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[30]
+	mi := &file_core_v1_forecasting_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2533,7 +3157,7 @@ func (x *PlanFact) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlanFact.ProtoReflect.Descriptor instead.
 func (*PlanFact) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{30}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *PlanFact) GetForecastId() string {
@@ -2597,7 +3221,7 @@ type GetPlanFactRequest struct {
 
 func (x *GetPlanFactRequest) Reset() {
 	*x = GetPlanFactRequest{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[31]
+	mi := &file_core_v1_forecasting_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2609,7 +3233,7 @@ func (x *GetPlanFactRequest) String() string {
 func (*GetPlanFactRequest) ProtoMessage() {}
 
 func (x *GetPlanFactRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[31]
+	mi := &file_core_v1_forecasting_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2622,7 +3246,7 @@ func (x *GetPlanFactRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPlanFactRequest.ProtoReflect.Descriptor instead.
 func (*GetPlanFactRequest) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{31}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *GetPlanFactRequest) GetContext() *v1.BrowserContext {
@@ -2662,7 +3286,7 @@ type GetPlanFactResponse struct {
 
 func (x *GetPlanFactResponse) Reset() {
 	*x = GetPlanFactResponse{}
-	mi := &file_core_v1_forecasting_proto_msgTypes[32]
+	mi := &file_core_v1_forecasting_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2674,7 +3298,7 @@ func (x *GetPlanFactResponse) String() string {
 func (*GetPlanFactResponse) ProtoMessage() {}
 
 func (x *GetPlanFactResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_v1_forecasting_proto_msgTypes[32]
+	mi := &file_core_v1_forecasting_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2687,7 +3311,7 @@ func (x *GetPlanFactResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPlanFactResponse.ProtoReflect.Descriptor instead.
 func (*GetPlanFactResponse) Descriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{32}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *GetPlanFactResponse) GetPlanFact() *PlanFact {
@@ -2701,7 +3325,12 @@ var File_core_v1_forecasting_proto protoreflect.FileDescriptor
 
 const file_core_v1_forecasting_proto_rawDesc = "" +
 	"\n" +
-	"\x19core/v1/forecasting.proto\x12\acore.v1\x1a\x12auth/v1/auth.proto\x1a\x14core/v1/common.proto\x1a\x14core/v1/errors.proto\x1a\x15core/v1/imports.proto\x1a\x14core/v1/ledger.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc5\x02\n" +
+	"\x19core/v1/forecasting.proto\x12\acore.v1\x1a\x12auth/v1/auth.proto\x1a\x14core/v1/common.proto\x1a\x14core/v1/errors.proto\x1a\x15core/v1/imports.proto\x1a\x14core/v1/ledger.proto\x1a\x16core/v1/payments.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xbc\x01\n" +
+	"\x18SyntheticScenarioContext\x12-\n" +
+	"\x12scenario_reference\x18\x01 \x01(\tR\x11scenarioReference\x12;\n" +
+	"\vrecorded_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"recordedAt\x124\n" +
+	"\x16scenario_business_date\x18\x03 \x01(\tR\x14scenarioBusinessDate\"\xc5\x02\n" +
 	"\x14ForecastModelContext\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -2713,7 +3342,7 @@ const file_core_v1_forecasting_proto_rawDesc = "" +
 	"randomSeed\x88\x01\x01\x12.\n" +
 	"\x10trajectory_count\x18\a \x01(\rH\x01R\x0ftrajectoryCount\x88\x01\x01B\x0e\n" +
 	"\f_random_seedB\x13\n" +
-	"\x11_trajectory_count\"\xf4\x03\n" +
+	"\x11_trajectory_count\"\xcb\x05\n" +
 	"\rForecastInput\x12\x1f\n" +
 	"\vsnapshot_id\x18\x01 \x01(\tR\n" +
 	"snapshotId\x12!\n" +
@@ -2733,7 +3362,10 @@ const file_core_v1_forecasting_proto_rawDesc = "" +
 	" \x01(\v2\x0e.core.v1.MoneyR\x0eopeningBalance\x12\"\n" +
 	"\rbalance_as_of\x18\v \x01(\tR\vbalanceAsOf\x12'\n" +
 	"\x0frisk_definition\x18\f \x01(\tR\x0eriskDefinition\x12B\n" +
-	"\rmodel_context\x18\r \x01(\v2\x1d.core.v1.ForecastModelContextR\fmodelContext\"\xd2\x01\n" +
+	"\rmodel_context\x18\r \x01(\v2\x1d.core.v1.ForecastModelContextR\fmodelContext\x12C\n" +
+	"\x10history_coverage\x18\x0e \x01(\v2\x18.core.v1.HistoryCoverageR\x0fhistoryCoverage\x12B\n" +
+	"\rcalendar_mode\x18\x0f \x01(\x0e2\x1d.core.v1.ForecastCalendarModeR\fcalendarMode\x12L\n" +
+	"\x10scenario_context\x18\x10 \x01(\v2!.core.v1.SyntheticScenarioContextR\x0fscenarioContext\"\xd2\x01\n" +
 	"\x11ForecastReadiness\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\x12!\n" +
 	"\fhistory_days\x18\x02 \x01(\rR\vhistoryDays\x12#\n" +
@@ -2814,7 +3446,7 @@ const file_core_v1_forecasting_proto_rawDesc = "" +
 	"\n" +
 	"in_horizon\x18\b \x01(\bR\tinHorizon\x128\n" +
 	"\x18response_action_eligible\x18\t \x01(\bR\x16responseActionEligibleB\r\n" +
-	"\v_payment_id\"\xc7\x03\n" +
+	"\v_payment_id\"\xfe\x03\n" +
 	"\x0eForecastResult\x122\n" +
 	"\ametrics\x18\x01 \x01(\v2\x18.core.v1.ForecastMetricsR\ametrics\x129\n" +
 	"\fdaily_points\x18\x02 \x03(\v2\x16.core.v1.ForecastPointR\vdailyPoints\x12:\n" +
@@ -2824,7 +3456,44 @@ const file_core_v1_forecasting_proto_rawDesc = "" +
 	"\x15scenario_capabilities\x18\x04 \x01(\v2\x1d.core.v1.ScenarioCapabilitiesR\x14scenarioCapabilities\x12A\n" +
 	"\x0frecommendations\x18\x05 \x03(\v2\x17.core.v1.RecommendationR\x0frecommendations\x12 \n" +
 	"\vassumptions\x18\x06 \x03(\tR\vassumptions\x12Q\n" +
-	"\x15effective_occurrences\x18\a \x03(\v2\x1c.core.v1.EffectiveOccurrenceR\x14effectiveOccurrences\"B\n" +
+	"\x15effective_occurrences\x18\a \x03(\v2\x1c.core.v1.EffectiveOccurrenceR\x14effectiveOccurrences\x125\n" +
+	"\banalysis\x18\b \x01(\v2\x19.core.v1.ForecastAnalysisR\banalysis\"\x8c\x02\n" +
+	"\x1bClassifiedOperationAnalysis\x12%\n" +
+	"\x0etransaction_id\x18\x01 \x01(\tR\rtransactionId\x12\x18\n" +
+	"\aversion\x18\x02 \x01(\x03R\aversion\x12#\n" +
+	"\rcategory_code\x18\x03 \x01(\tR\fcategoryCode\x12'\n" +
+	"\x0fcategory_source\x18\x04 \x01(\tR\x0ecategorySource\x12(\n" +
+	"\x10category_rule_id\x18\x05 \x01(\tR\x0ecategoryRuleId\x12$\n" +
+	"\vcategory_id\x18\x06 \x01(\tH\x00R\n" +
+	"categoryId\x88\x01\x01B\x0e\n" +
+	"\f_category_id\"\xee\x05\n" +
+	"\x13RecurringHypothesis\x12\x1d\n" +
+	"\n" +
+	"pattern_id\x18\x01 \x01(\tR\tpatternId\x12\x17\n" +
+	"\arule_id\x18\x02 \x01(\tR\x06ruleId\x120\n" +
+	"\tdirection\x18\x03 \x01(\x0e2\x12.core.v1.DirectionR\tdirection\x12T\n" +
+	"\x15historical_operations\x18\x04 \x03(\v2\x1f.core.v1.HistoricalOperationRefR\x14historicalOperations\x12\"\n" +
+	"\fday_of_month\x18\x05 \x01(\rH\x00R\n" +
+	"dayOfMonth\x125\n" +
+	"\tmonth_end\x18\x06 \x01(\v2\x16.google.protobuf.EmptyH\x00R\bmonthEnd\x12C\n" +
+	"\rweekend_shift\x18\a \x01(\x0e2\x1e.core.v1.RecurringWeekendShiftR\fweekendShift\x122\n" +
+	"\x15expected_amount_minor\x18\b \x01(\x03R\x13expectedAmountMinor\x12$\n" +
+	"\rconfirmations\x18\t \x01(\rR\rconfirmations\x12)\n" +
+	"\x10expected_periods\x18\n" +
+	" \x01(\rR\x0fexpectedPeriods\x12.\n" +
+	"\x13first_evidence_date\x18\v \x01(\tR\x11firstEvidenceDate\x12,\n" +
+	"\x12last_evidence_date\x18\f \x01(\tR\x10lastEvidenceDate\x12#\n" +
+	"\rcategory_code\x18\r \x01(\tR\fcategoryCode\x12!\n" +
+	"\frule_version\x18\x0e \x01(\tR\vruleVersion\x12:\n" +
+	"\x06status\x18\x0f \x01(\x0e2\".core.v1.RecurringHypothesisStatusR\x06statusB\x10\n" +
+	"\x0emonthly_anchor\"\xb1\x02\n" +
+	"\x10ForecastAnalysis\x12)\n" +
+	"\x10analysis_version\x18\x01 \x01(\tR\x0fanalysisVersion\x12\x1f\n" +
+	"\vwindow_from\x18\x02 \x01(\tR\n" +
+	"windowFrom\x12%\n" +
+	"\x0ewindow_through\x18\x03 \x01(\tR\rwindowThrough\x12Y\n" +
+	"\x15classified_operations\x18\x04 \x03(\v2$.core.v1.ClassifiedOperationAnalysisR\x14classifiedOperations\x12O\n" +
+	"\x14recurring_hypotheses\x18\x05 \x03(\v2\x1c.core.v1.RecurringHypothesisR\x13recurringHypotheses\"B\n" +
 	"\x0fForecastPending\x12/\n" +
 	"\x06status\x18\x01 \x01(\x0e2\x17.core.v1.ForecastStatusR\x06status\"\x83\x01\n" +
 	"\x11ForecastSucceeded\x12=\n" +
@@ -2850,7 +3519,7 @@ const file_core_v1_forecasting_proto_rawDesc = "" +
 	" \x01(\v2\x1a.core.v1.ForecastSucceededH\x00R\tsucceeded\x121\n" +
 	"\x06failed\x18\v \x01(\v2\x17.core.v1.ForecastFailedH\x00R\x06failedB\a\n" +
 	"\x05stateB\x0e\n" +
-	"\f_scenario_id\"\xb9\x02\n" +
+	"\f_scenario_id\"\xcb\x03\n" +
 	"\x0fForecastSummary\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12/\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x17.core.v1.ForecastStatusR\x06status\x12\x1f\n" +
@@ -2863,19 +3532,23 @@ const file_core_v1_forecasting_proto_rawDesc = "" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x19\n" +
 	"\bis_stale\x18\a \x01(\bR\aisStale\x12$\n" +
 	"\vscenario_id\x18\b \x01(\tH\x00R\n" +
-	"scenarioId\x88\x01\x01B\x0e\n" +
+	"scenarioId\x88\x01\x01\x12B\n" +
+	"\rcalendar_mode\x18\t \x01(\x0e2\x1d.core.v1.ForecastCalendarModeR\fcalendarMode\x12L\n" +
+	"\x10scenario_context\x18\n" +
+	" \x01(\v2!.core.v1.SyntheticScenarioContextR\x0fscenarioContextB\x0e\n" +
 	"\f_scenario_id\"w\n" +
 	"\x10ForecastAccepted\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12/\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x17.core.v1.ForecastStatusR\x06status\x12\"\n" +
-	"\rpoll_after_ms\x18\x03 \x01(\rR\vpollAfterMs\"\xe2\x01\n" +
+	"\rpoll_after_ms\x18\x03 \x01(\rR\vpollAfterMs\"\xa6\x02\n" +
 	"\x15CreateForecastRequest\x12/\n" +
 	"\acontext\x18\x01 \x01(\v2\x15.auth.v1.WriteContextR\acontext\x12+\n" +
 	"\x05scope\x18\x02 \x01(\v2\x15.core.v1.AccountScopeR\x05scope\x12'\n" +
 	"\x0fidempotency_key\x18\x03 \x01(\tR\x0eidempotencyKey\x12\x1f\n" +
 	"\vcutoff_date\x18\x04 \x01(\tR\n" +
 	"cutoffDate\x12!\n" +
-	"\fhorizon_days\x18\x05 \x01(\rR\vhorizonDays\"O\n" +
+	"\fhorizon_days\x18\x05 \x01(\rR\vhorizonDays\x12B\n" +
+	"\rcalendar_mode\x18\x06 \x01(\x0e2\x1d.core.v1.ForecastCalendarModeR\fcalendarMode\"O\n" +
 	"\x16CreateForecastResponse\x125\n" +
 	"\baccepted\x18\x01 \x01(\v2\x19.core.v1.ForecastAcceptedR\baccepted\"\x95\x01\n" +
 	"\x12GetForecastRequest\x121\n" +
@@ -2961,7 +3634,19 @@ const file_core_v1_forecasting_proto_rawDesc = "" +
 	"\x16FORECAST_STATUS_QUEUED\x10\x01\x12\x1b\n" +
 	"\x17FORECAST_STATUS_RUNNING\x10\x02\x12\x1d\n" +
 	"\x19FORECAST_STATUS_SUCCEEDED\x10\x03\x12\x1a\n" +
-	"\x16FORECAST_STATUS_FAILED\x10\x042\xa4\x03\n" +
+	"\x16FORECAST_STATUS_FAILED\x10\x04*\x93\x01\n" +
+	"\x14ForecastCalendarMode\x12&\n" +
+	"\"FORECAST_CALENDAR_MODE_UNSPECIFIED\x10\x00\x12$\n" +
+	" FORECAST_CALENDAR_MODE_AVAILABLE\x10\x01\x12-\n" +
+	")FORECAST_CALENDAR_MODE_SYNTHETIC_SCENARIO\x10\x02*\xaa\x01\n" +
+	"\x15RecurringWeekendShift\x12'\n" +
+	"#RECURRING_WEEKEND_SHIFT_UNSPECIFIED\x10\x00\x12 \n" +
+	"\x1cRECURRING_WEEKEND_SHIFT_NONE\x10\x01\x12$\n" +
+	" RECURRING_WEEKEND_SHIFT_PREVIOUS\x10\x02\x12 \n" +
+	"\x1cRECURRING_WEEKEND_SHIFT_NEXT\x10\x03*t\n" +
+	"\x19RecurringHypothesisStatus\x12+\n" +
+	"'RECURRING_HYPOTHESIS_STATUS_UNSPECIFIED\x10\x00\x12*\n" +
+	"&RECURRING_HYPOTHESIS_STATUS_HYPOTHESIS\x10\x012\xa4\x03\n" +
 	"\x12ForecastingService\x12Q\n" +
 	"\x0eCreateForecast\x12\x1e.core.v1.CreateForecastRequest\x1a\x1f.core.v1.CreateForecastResponse\x12H\n" +
 	"\vGetForecast\x12\x1b.core.v1.GetForecastRequest\x1a\x1c.core.v1.GetForecastResponse\x12N\n" +
@@ -2981,148 +3666,173 @@ func file_core_v1_forecasting_proto_rawDescGZIP() []byte {
 	return file_core_v1_forecasting_proto_rawDescData
 }
 
-var file_core_v1_forecasting_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_core_v1_forecasting_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
+var file_core_v1_forecasting_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_core_v1_forecasting_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
 var file_core_v1_forecasting_proto_goTypes = []any{
-	(ForecastStatus)(0),              // 0: core.v1.ForecastStatus
-	(*ForecastModelContext)(nil),     // 1: core.v1.ForecastModelContext
-	(*ForecastInput)(nil),            // 2: core.v1.ForecastInput
-	(*ForecastReadiness)(nil),        // 3: core.v1.ForecastReadiness
-	(*Probability)(nil),              // 4: core.v1.Probability
-	(*CashGap)(nil),                  // 5: core.v1.CashGap
-	(*ForecastMetrics)(nil),          // 6: core.v1.ForecastMetrics
-	(*ForecastPoint)(nil),            // 7: core.v1.ForecastPoint
-	(*Evidence)(nil),                 // 8: core.v1.Evidence
-	(*Recommendation)(nil),           // 9: core.v1.Recommendation
-	(*ForecastComponent)(nil),        // 10: core.v1.ForecastComponent
-	(*ScenarioCapabilities)(nil),     // 11: core.v1.ScenarioCapabilities
-	(*EffectiveOccurrence)(nil),      // 12: core.v1.EffectiveOccurrence
-	(*ForecastResult)(nil),           // 13: core.v1.ForecastResult
-	(*ForecastPending)(nil),          // 14: core.v1.ForecastPending
-	(*ForecastSucceeded)(nil),        // 15: core.v1.ForecastSucceeded
-	(*ForecastFailed)(nil),           // 16: core.v1.ForecastFailed
-	(*Forecast)(nil),                 // 17: core.v1.Forecast
-	(*ForecastSummary)(nil),          // 18: core.v1.ForecastSummary
-	(*ForecastAccepted)(nil),         // 19: core.v1.ForecastAccepted
-	(*CreateForecastRequest)(nil),    // 20: core.v1.CreateForecastRequest
-	(*CreateForecastResponse)(nil),   // 21: core.v1.CreateForecastResponse
-	(*GetForecastRequest)(nil),       // 22: core.v1.GetForecastRequest
-	(*GetForecastResponse)(nil),      // 23: core.v1.GetForecastResponse
-	(*ListForecastsRequest)(nil),     // 24: core.v1.ListForecastsRequest
-	(*ListForecastsResponse)(nil),    // 25: core.v1.ListForecastsResponse
-	(*Comparison)(nil),               // 26: core.v1.Comparison
-	(*CompareForecastsRequest)(nil),  // 27: core.v1.CompareForecastsRequest
-	(*CompareForecastsResponse)(nil), // 28: core.v1.CompareForecastsResponse
-	(*ActualCoverage)(nil),           // 29: core.v1.ActualCoverage
-	(*PlanFactPoint)(nil),            // 30: core.v1.PlanFactPoint
-	(*PlanFact)(nil),                 // 31: core.v1.PlanFact
-	(*GetPlanFactRequest)(nil),       // 32: core.v1.GetPlanFactRequest
-	(*GetPlanFactResponse)(nil),      // 33: core.v1.GetPlanFactResponse
-	(*Money)(nil),                    // 34: core.v1.Money
-	(*ImportIssue)(nil),              // 35: core.v1.ImportIssue
-	(*RecordSource)(nil),             // 36: core.v1.RecordSource
-	(Direction)(0),                   // 37: core.v1.Direction
-	(*timestamppb.Timestamp)(nil),    // 38: google.protobuf.Timestamp
-	(*OperationError)(nil),           // 39: core.v1.OperationError
-	(*v1.WriteContext)(nil),          // 40: auth.v1.WriteContext
-	(*AccountScope)(nil),             // 41: core.v1.AccountScope
-	(*v1.BrowserContext)(nil),        // 42: auth.v1.BrowserContext
-	(*PageRequest)(nil),              // 43: core.v1.PageRequest
-	(*PageResponse)(nil),             // 44: core.v1.PageResponse
-	(*DateRange)(nil),                // 45: core.v1.DateRange
+	(ForecastStatus)(0),                 // 0: core.v1.ForecastStatus
+	(ForecastCalendarMode)(0),           // 1: core.v1.ForecastCalendarMode
+	(RecurringWeekendShift)(0),          // 2: core.v1.RecurringWeekendShift
+	(RecurringHypothesisStatus)(0),      // 3: core.v1.RecurringHypothesisStatus
+	(*SyntheticScenarioContext)(nil),    // 4: core.v1.SyntheticScenarioContext
+	(*ForecastModelContext)(nil),        // 5: core.v1.ForecastModelContext
+	(*ForecastInput)(nil),               // 6: core.v1.ForecastInput
+	(*ForecastReadiness)(nil),           // 7: core.v1.ForecastReadiness
+	(*Probability)(nil),                 // 8: core.v1.Probability
+	(*CashGap)(nil),                     // 9: core.v1.CashGap
+	(*ForecastMetrics)(nil),             // 10: core.v1.ForecastMetrics
+	(*ForecastPoint)(nil),               // 11: core.v1.ForecastPoint
+	(*Evidence)(nil),                    // 12: core.v1.Evidence
+	(*Recommendation)(nil),              // 13: core.v1.Recommendation
+	(*ForecastComponent)(nil),           // 14: core.v1.ForecastComponent
+	(*ScenarioCapabilities)(nil),        // 15: core.v1.ScenarioCapabilities
+	(*EffectiveOccurrence)(nil),         // 16: core.v1.EffectiveOccurrence
+	(*ForecastResult)(nil),              // 17: core.v1.ForecastResult
+	(*ClassifiedOperationAnalysis)(nil), // 18: core.v1.ClassifiedOperationAnalysis
+	(*RecurringHypothesis)(nil),         // 19: core.v1.RecurringHypothesis
+	(*ForecastAnalysis)(nil),            // 20: core.v1.ForecastAnalysis
+	(*ForecastPending)(nil),             // 21: core.v1.ForecastPending
+	(*ForecastSucceeded)(nil),           // 22: core.v1.ForecastSucceeded
+	(*ForecastFailed)(nil),              // 23: core.v1.ForecastFailed
+	(*Forecast)(nil),                    // 24: core.v1.Forecast
+	(*ForecastSummary)(nil),             // 25: core.v1.ForecastSummary
+	(*ForecastAccepted)(nil),            // 26: core.v1.ForecastAccepted
+	(*CreateForecastRequest)(nil),       // 27: core.v1.CreateForecastRequest
+	(*CreateForecastResponse)(nil),      // 28: core.v1.CreateForecastResponse
+	(*GetForecastRequest)(nil),          // 29: core.v1.GetForecastRequest
+	(*GetForecastResponse)(nil),         // 30: core.v1.GetForecastResponse
+	(*ListForecastsRequest)(nil),        // 31: core.v1.ListForecastsRequest
+	(*ListForecastsResponse)(nil),       // 32: core.v1.ListForecastsResponse
+	(*Comparison)(nil),                  // 33: core.v1.Comparison
+	(*CompareForecastsRequest)(nil),     // 34: core.v1.CompareForecastsRequest
+	(*CompareForecastsResponse)(nil),    // 35: core.v1.CompareForecastsResponse
+	(*ActualCoverage)(nil),              // 36: core.v1.ActualCoverage
+	(*PlanFactPoint)(nil),               // 37: core.v1.PlanFactPoint
+	(*PlanFact)(nil),                    // 38: core.v1.PlanFact
+	(*GetPlanFactRequest)(nil),          // 39: core.v1.GetPlanFactRequest
+	(*GetPlanFactResponse)(nil),         // 40: core.v1.GetPlanFactResponse
+	(*timestamppb.Timestamp)(nil),       // 41: google.protobuf.Timestamp
+	(*Money)(nil),                       // 42: core.v1.Money
+	(*HistoryCoverage)(nil),             // 43: core.v1.HistoryCoverage
+	(*ImportIssue)(nil),                 // 44: core.v1.ImportIssue
+	(*RecordSource)(nil),                // 45: core.v1.RecordSource
+	(Direction)(0),                      // 46: core.v1.Direction
+	(*HistoricalOperationRef)(nil),      // 47: core.v1.HistoricalOperationRef
+	(*emptypb.Empty)(nil),               // 48: google.protobuf.Empty
+	(*OperationError)(nil),              // 49: core.v1.OperationError
+	(*v1.WriteContext)(nil),             // 50: auth.v1.WriteContext
+	(*AccountScope)(nil),                // 51: core.v1.AccountScope
+	(*v1.BrowserContext)(nil),           // 52: auth.v1.BrowserContext
+	(*PageRequest)(nil),                 // 53: core.v1.PageRequest
+	(*PageResponse)(nil),                // 54: core.v1.PageResponse
+	(*DateRange)(nil),                   // 55: core.v1.DateRange
 }
 var file_core_v1_forecasting_proto_depIdxs = []int32{
-	34, // 0: core.v1.ForecastInput.opening_balance:type_name -> core.v1.Money
-	1,  // 1: core.v1.ForecastInput.model_context:type_name -> core.v1.ForecastModelContext
-	35, // 2: core.v1.ForecastReadiness.quality_issues:type_name -> core.v1.ImportIssue
-	34, // 3: core.v1.CashGap.shortfall:type_name -> core.v1.Money
-	5,  // 4: core.v1.ForecastMetrics.first_gap:type_name -> core.v1.CashGap
-	34, // 5: core.v1.ForecastMetrics.max_shortfall:type_name -> core.v1.Money
-	34, // 6: core.v1.ForecastMetrics.minimum_balance:type_name -> core.v1.Money
-	34, // 7: core.v1.ForecastMetrics.closing_balance:type_name -> core.v1.Money
-	4,  // 8: core.v1.ForecastMetrics.gap_probability:type_name -> core.v1.Probability
-	34, // 9: core.v1.ForecastPoint.inflow:type_name -> core.v1.Money
-	34, // 10: core.v1.ForecastPoint.outflow:type_name -> core.v1.Money
-	34, // 11: core.v1.ForecastPoint.balance:type_name -> core.v1.Money
-	34, // 12: core.v1.ForecastPoint.balance_lower:type_name -> core.v1.Money
-	34, // 13: core.v1.ForecastPoint.balance_upper:type_name -> core.v1.Money
-	4,  // 14: core.v1.ForecastPoint.negative_balance_probability:type_name -> core.v1.Probability
-	36, // 15: core.v1.Evidence.source:type_name -> core.v1.RecordSource
-	8,  // 16: core.v1.Recommendation.evidence:type_name -> core.v1.Evidence
-	37, // 17: core.v1.ForecastComponent.direction:type_name -> core.v1.Direction
-	34, // 18: core.v1.ForecastComponent.amount:type_name -> core.v1.Money
-	34, // 19: core.v1.ForecastComponent.remaining_amount:type_name -> core.v1.Money
-	36, // 20: core.v1.ForecastComponent.source:type_name -> core.v1.RecordSource
-	37, // 21: core.v1.EffectiveOccurrence.direction:type_name -> core.v1.Direction
-	34, // 22: core.v1.EffectiveOccurrence.remaining_amount:type_name -> core.v1.Money
-	6,  // 23: core.v1.ForecastResult.metrics:type_name -> core.v1.ForecastMetrics
-	7,  // 24: core.v1.ForecastResult.daily_points:type_name -> core.v1.ForecastPoint
-	10, // 25: core.v1.ForecastResult.components:type_name -> core.v1.ForecastComponent
-	11, // 26: core.v1.ForecastResult.scenario_capabilities:type_name -> core.v1.ScenarioCapabilities
-	9,  // 27: core.v1.ForecastResult.recommendations:type_name -> core.v1.Recommendation
-	12, // 28: core.v1.ForecastResult.effective_occurrences:type_name -> core.v1.EffectiveOccurrence
-	0,  // 29: core.v1.ForecastPending.status:type_name -> core.v1.ForecastStatus
-	38, // 30: core.v1.ForecastSucceeded.completed_at:type_name -> google.protobuf.Timestamp
-	13, // 31: core.v1.ForecastSucceeded.result:type_name -> core.v1.ForecastResult
-	38, // 32: core.v1.ForecastFailed.completed_at:type_name -> google.protobuf.Timestamp
-	39, // 33: core.v1.ForecastFailed.error:type_name -> core.v1.OperationError
-	38, // 34: core.v1.Forecast.created_at:type_name -> google.protobuf.Timestamp
-	2,  // 35: core.v1.Forecast.input:type_name -> core.v1.ForecastInput
-	3,  // 36: core.v1.Forecast.readiness:type_name -> core.v1.ForecastReadiness
-	14, // 37: core.v1.Forecast.pending:type_name -> core.v1.ForecastPending
-	15, // 38: core.v1.Forecast.succeeded:type_name -> core.v1.ForecastSucceeded
-	16, // 39: core.v1.Forecast.failed:type_name -> core.v1.ForecastFailed
-	0,  // 40: core.v1.ForecastSummary.status:type_name -> core.v1.ForecastStatus
-	38, // 41: core.v1.ForecastSummary.created_at:type_name -> google.protobuf.Timestamp
-	0,  // 42: core.v1.ForecastAccepted.status:type_name -> core.v1.ForecastStatus
-	40, // 43: core.v1.CreateForecastRequest.context:type_name -> auth.v1.WriteContext
-	41, // 44: core.v1.CreateForecastRequest.scope:type_name -> core.v1.AccountScope
-	19, // 45: core.v1.CreateForecastResponse.accepted:type_name -> core.v1.ForecastAccepted
-	42, // 46: core.v1.GetForecastRequest.context:type_name -> auth.v1.BrowserContext
-	41, // 47: core.v1.GetForecastRequest.scope:type_name -> core.v1.AccountScope
-	17, // 48: core.v1.GetForecastResponse.forecast:type_name -> core.v1.Forecast
-	42, // 49: core.v1.ListForecastsRequest.context:type_name -> auth.v1.BrowserContext
-	41, // 50: core.v1.ListForecastsRequest.scope:type_name -> core.v1.AccountScope
-	43, // 51: core.v1.ListForecastsRequest.page:type_name -> core.v1.PageRequest
-	18, // 52: core.v1.ListForecastsResponse.items:type_name -> core.v1.ForecastSummary
-	44, // 53: core.v1.ListForecastsResponse.pagination:type_name -> core.v1.PageResponse
-	6,  // 54: core.v1.Comparison.reference_metrics:type_name -> core.v1.ForecastMetrics
-	6,  // 55: core.v1.Comparison.candidate_metrics:type_name -> core.v1.ForecastMetrics
-	34, // 56: core.v1.Comparison.delta_max_shortfall:type_name -> core.v1.Money
-	34, // 57: core.v1.Comparison.delta_minimum_balance:type_name -> core.v1.Money
-	34, // 58: core.v1.Comparison.delta_closing_balance:type_name -> core.v1.Money
-	42, // 59: core.v1.CompareForecastsRequest.context:type_name -> auth.v1.BrowserContext
-	41, // 60: core.v1.CompareForecastsRequest.scope:type_name -> core.v1.AccountScope
-	26, // 61: core.v1.CompareForecastsResponse.comparison:type_name -> core.v1.Comparison
-	34, // 62: core.v1.PlanFactPoint.planned_inflow:type_name -> core.v1.Money
-	34, // 63: core.v1.PlanFactPoint.planned_outflow:type_name -> core.v1.Money
-	34, // 64: core.v1.PlanFactPoint.planned_balance:type_name -> core.v1.Money
-	34, // 65: core.v1.PlanFactPoint.actual_inflow:type_name -> core.v1.Money
-	34, // 66: core.v1.PlanFactPoint.actual_outflow:type_name -> core.v1.Money
-	34, // 67: core.v1.PlanFactPoint.actual_balance:type_name -> core.v1.Money
-	34, // 68: core.v1.PlanFactPoint.balance_delta:type_name -> core.v1.Money
-	29, // 69: core.v1.PlanFact.coverage:type_name -> core.v1.ActualCoverage
-	30, // 70: core.v1.PlanFact.daily_points:type_name -> core.v1.PlanFactPoint
-	34, // 71: core.v1.PlanFact.mean_absolute_balance_error:type_name -> core.v1.Money
-	42, // 72: core.v1.GetPlanFactRequest.context:type_name -> auth.v1.BrowserContext
-	41, // 73: core.v1.GetPlanFactRequest.scope:type_name -> core.v1.AccountScope
-	45, // 74: core.v1.GetPlanFactRequest.dates:type_name -> core.v1.DateRange
-	31, // 75: core.v1.GetPlanFactResponse.plan_fact:type_name -> core.v1.PlanFact
-	20, // 76: core.v1.ForecastingService.CreateForecast:input_type -> core.v1.CreateForecastRequest
-	22, // 77: core.v1.ForecastingService.GetForecast:input_type -> core.v1.GetForecastRequest
-	24, // 78: core.v1.ForecastingService.ListForecasts:input_type -> core.v1.ListForecastsRequest
-	27, // 79: core.v1.ForecastingService.CompareForecasts:input_type -> core.v1.CompareForecastsRequest
-	32, // 80: core.v1.ForecastingService.GetPlanFact:input_type -> core.v1.GetPlanFactRequest
-	21, // 81: core.v1.ForecastingService.CreateForecast:output_type -> core.v1.CreateForecastResponse
-	23, // 82: core.v1.ForecastingService.GetForecast:output_type -> core.v1.GetForecastResponse
-	25, // 83: core.v1.ForecastingService.ListForecasts:output_type -> core.v1.ListForecastsResponse
-	28, // 84: core.v1.ForecastingService.CompareForecasts:output_type -> core.v1.CompareForecastsResponse
-	33, // 85: core.v1.ForecastingService.GetPlanFact:output_type -> core.v1.GetPlanFactResponse
-	81, // [81:86] is the sub-list for method output_type
-	76, // [76:81] is the sub-list for method input_type
-	76, // [76:76] is the sub-list for extension type_name
-	76, // [76:76] is the sub-list for extension extendee
-	0,  // [0:76] is the sub-list for field type_name
+	41, // 0: core.v1.SyntheticScenarioContext.recorded_at:type_name -> google.protobuf.Timestamp
+	42, // 1: core.v1.ForecastInput.opening_balance:type_name -> core.v1.Money
+	5,  // 2: core.v1.ForecastInput.model_context:type_name -> core.v1.ForecastModelContext
+	43, // 3: core.v1.ForecastInput.history_coverage:type_name -> core.v1.HistoryCoverage
+	1,  // 4: core.v1.ForecastInput.calendar_mode:type_name -> core.v1.ForecastCalendarMode
+	4,  // 5: core.v1.ForecastInput.scenario_context:type_name -> core.v1.SyntheticScenarioContext
+	44, // 6: core.v1.ForecastReadiness.quality_issues:type_name -> core.v1.ImportIssue
+	42, // 7: core.v1.CashGap.shortfall:type_name -> core.v1.Money
+	9,  // 8: core.v1.ForecastMetrics.first_gap:type_name -> core.v1.CashGap
+	42, // 9: core.v1.ForecastMetrics.max_shortfall:type_name -> core.v1.Money
+	42, // 10: core.v1.ForecastMetrics.minimum_balance:type_name -> core.v1.Money
+	42, // 11: core.v1.ForecastMetrics.closing_balance:type_name -> core.v1.Money
+	8,  // 12: core.v1.ForecastMetrics.gap_probability:type_name -> core.v1.Probability
+	42, // 13: core.v1.ForecastPoint.inflow:type_name -> core.v1.Money
+	42, // 14: core.v1.ForecastPoint.outflow:type_name -> core.v1.Money
+	42, // 15: core.v1.ForecastPoint.balance:type_name -> core.v1.Money
+	42, // 16: core.v1.ForecastPoint.balance_lower:type_name -> core.v1.Money
+	42, // 17: core.v1.ForecastPoint.balance_upper:type_name -> core.v1.Money
+	8,  // 18: core.v1.ForecastPoint.negative_balance_probability:type_name -> core.v1.Probability
+	45, // 19: core.v1.Evidence.source:type_name -> core.v1.RecordSource
+	12, // 20: core.v1.Recommendation.evidence:type_name -> core.v1.Evidence
+	46, // 21: core.v1.ForecastComponent.direction:type_name -> core.v1.Direction
+	42, // 22: core.v1.ForecastComponent.amount:type_name -> core.v1.Money
+	42, // 23: core.v1.ForecastComponent.remaining_amount:type_name -> core.v1.Money
+	45, // 24: core.v1.ForecastComponent.source:type_name -> core.v1.RecordSource
+	46, // 25: core.v1.EffectiveOccurrence.direction:type_name -> core.v1.Direction
+	42, // 26: core.v1.EffectiveOccurrence.remaining_amount:type_name -> core.v1.Money
+	10, // 27: core.v1.ForecastResult.metrics:type_name -> core.v1.ForecastMetrics
+	11, // 28: core.v1.ForecastResult.daily_points:type_name -> core.v1.ForecastPoint
+	14, // 29: core.v1.ForecastResult.components:type_name -> core.v1.ForecastComponent
+	15, // 30: core.v1.ForecastResult.scenario_capabilities:type_name -> core.v1.ScenarioCapabilities
+	13, // 31: core.v1.ForecastResult.recommendations:type_name -> core.v1.Recommendation
+	16, // 32: core.v1.ForecastResult.effective_occurrences:type_name -> core.v1.EffectiveOccurrence
+	20, // 33: core.v1.ForecastResult.analysis:type_name -> core.v1.ForecastAnalysis
+	46, // 34: core.v1.RecurringHypothesis.direction:type_name -> core.v1.Direction
+	47, // 35: core.v1.RecurringHypothesis.historical_operations:type_name -> core.v1.HistoricalOperationRef
+	48, // 36: core.v1.RecurringHypothesis.month_end:type_name -> google.protobuf.Empty
+	2,  // 37: core.v1.RecurringHypothesis.weekend_shift:type_name -> core.v1.RecurringWeekendShift
+	3,  // 38: core.v1.RecurringHypothesis.status:type_name -> core.v1.RecurringHypothesisStatus
+	18, // 39: core.v1.ForecastAnalysis.classified_operations:type_name -> core.v1.ClassifiedOperationAnalysis
+	19, // 40: core.v1.ForecastAnalysis.recurring_hypotheses:type_name -> core.v1.RecurringHypothesis
+	0,  // 41: core.v1.ForecastPending.status:type_name -> core.v1.ForecastStatus
+	41, // 42: core.v1.ForecastSucceeded.completed_at:type_name -> google.protobuf.Timestamp
+	17, // 43: core.v1.ForecastSucceeded.result:type_name -> core.v1.ForecastResult
+	41, // 44: core.v1.ForecastFailed.completed_at:type_name -> google.protobuf.Timestamp
+	49, // 45: core.v1.ForecastFailed.error:type_name -> core.v1.OperationError
+	41, // 46: core.v1.Forecast.created_at:type_name -> google.protobuf.Timestamp
+	6,  // 47: core.v1.Forecast.input:type_name -> core.v1.ForecastInput
+	7,  // 48: core.v1.Forecast.readiness:type_name -> core.v1.ForecastReadiness
+	21, // 49: core.v1.Forecast.pending:type_name -> core.v1.ForecastPending
+	22, // 50: core.v1.Forecast.succeeded:type_name -> core.v1.ForecastSucceeded
+	23, // 51: core.v1.Forecast.failed:type_name -> core.v1.ForecastFailed
+	0,  // 52: core.v1.ForecastSummary.status:type_name -> core.v1.ForecastStatus
+	41, // 53: core.v1.ForecastSummary.created_at:type_name -> google.protobuf.Timestamp
+	1,  // 54: core.v1.ForecastSummary.calendar_mode:type_name -> core.v1.ForecastCalendarMode
+	4,  // 55: core.v1.ForecastSummary.scenario_context:type_name -> core.v1.SyntheticScenarioContext
+	0,  // 56: core.v1.ForecastAccepted.status:type_name -> core.v1.ForecastStatus
+	50, // 57: core.v1.CreateForecastRequest.context:type_name -> auth.v1.WriteContext
+	51, // 58: core.v1.CreateForecastRequest.scope:type_name -> core.v1.AccountScope
+	1,  // 59: core.v1.CreateForecastRequest.calendar_mode:type_name -> core.v1.ForecastCalendarMode
+	26, // 60: core.v1.CreateForecastResponse.accepted:type_name -> core.v1.ForecastAccepted
+	52, // 61: core.v1.GetForecastRequest.context:type_name -> auth.v1.BrowserContext
+	51, // 62: core.v1.GetForecastRequest.scope:type_name -> core.v1.AccountScope
+	24, // 63: core.v1.GetForecastResponse.forecast:type_name -> core.v1.Forecast
+	52, // 64: core.v1.ListForecastsRequest.context:type_name -> auth.v1.BrowserContext
+	51, // 65: core.v1.ListForecastsRequest.scope:type_name -> core.v1.AccountScope
+	53, // 66: core.v1.ListForecastsRequest.page:type_name -> core.v1.PageRequest
+	25, // 67: core.v1.ListForecastsResponse.items:type_name -> core.v1.ForecastSummary
+	54, // 68: core.v1.ListForecastsResponse.pagination:type_name -> core.v1.PageResponse
+	10, // 69: core.v1.Comparison.reference_metrics:type_name -> core.v1.ForecastMetrics
+	10, // 70: core.v1.Comparison.candidate_metrics:type_name -> core.v1.ForecastMetrics
+	42, // 71: core.v1.Comparison.delta_max_shortfall:type_name -> core.v1.Money
+	42, // 72: core.v1.Comparison.delta_minimum_balance:type_name -> core.v1.Money
+	42, // 73: core.v1.Comparison.delta_closing_balance:type_name -> core.v1.Money
+	52, // 74: core.v1.CompareForecastsRequest.context:type_name -> auth.v1.BrowserContext
+	51, // 75: core.v1.CompareForecastsRequest.scope:type_name -> core.v1.AccountScope
+	33, // 76: core.v1.CompareForecastsResponse.comparison:type_name -> core.v1.Comparison
+	42, // 77: core.v1.PlanFactPoint.planned_inflow:type_name -> core.v1.Money
+	42, // 78: core.v1.PlanFactPoint.planned_outflow:type_name -> core.v1.Money
+	42, // 79: core.v1.PlanFactPoint.planned_balance:type_name -> core.v1.Money
+	42, // 80: core.v1.PlanFactPoint.actual_inflow:type_name -> core.v1.Money
+	42, // 81: core.v1.PlanFactPoint.actual_outflow:type_name -> core.v1.Money
+	42, // 82: core.v1.PlanFactPoint.actual_balance:type_name -> core.v1.Money
+	42, // 83: core.v1.PlanFactPoint.balance_delta:type_name -> core.v1.Money
+	36, // 84: core.v1.PlanFact.coverage:type_name -> core.v1.ActualCoverage
+	37, // 85: core.v1.PlanFact.daily_points:type_name -> core.v1.PlanFactPoint
+	42, // 86: core.v1.PlanFact.mean_absolute_balance_error:type_name -> core.v1.Money
+	52, // 87: core.v1.GetPlanFactRequest.context:type_name -> auth.v1.BrowserContext
+	51, // 88: core.v1.GetPlanFactRequest.scope:type_name -> core.v1.AccountScope
+	55, // 89: core.v1.GetPlanFactRequest.dates:type_name -> core.v1.DateRange
+	38, // 90: core.v1.GetPlanFactResponse.plan_fact:type_name -> core.v1.PlanFact
+	27, // 91: core.v1.ForecastingService.CreateForecast:input_type -> core.v1.CreateForecastRequest
+	29, // 92: core.v1.ForecastingService.GetForecast:input_type -> core.v1.GetForecastRequest
+	31, // 93: core.v1.ForecastingService.ListForecasts:input_type -> core.v1.ListForecastsRequest
+	34, // 94: core.v1.ForecastingService.CompareForecasts:input_type -> core.v1.CompareForecastsRequest
+	39, // 95: core.v1.ForecastingService.GetPlanFact:input_type -> core.v1.GetPlanFactRequest
+	28, // 96: core.v1.ForecastingService.CreateForecast:output_type -> core.v1.CreateForecastResponse
+	30, // 97: core.v1.ForecastingService.GetForecast:output_type -> core.v1.GetForecastResponse
+	32, // 98: core.v1.ForecastingService.ListForecasts:output_type -> core.v1.ListForecastsResponse
+	35, // 99: core.v1.ForecastingService.CompareForecasts:output_type -> core.v1.CompareForecastsResponse
+	40, // 100: core.v1.ForecastingService.GetPlanFact:output_type -> core.v1.GetPlanFactResponse
+	96, // [96:101] is the sub-list for method output_type
+	91, // [91:96] is the sub-list for method input_type
+	91, // [91:91] is the sub-list for extension type_name
+	91, // [91:91] is the sub-list for extension extendee
+	0,  // [0:91] is the sub-list for field type_name
 }
 
 func init() { file_core_v1_forecasting_proto_init() }
@@ -3134,30 +3844,36 @@ func file_core_v1_forecasting_proto_init() {
 	file_core_v1_errors_proto_init()
 	file_core_v1_imports_proto_init()
 	file_core_v1_ledger_proto_init()
-	file_core_v1_forecasting_proto_msgTypes[0].OneofWrappers = []any{}
-	file_core_v1_forecasting_proto_msgTypes[3].OneofWrappers = []any{
+	file_core_v1_payments_proto_init()
+	file_core_v1_forecasting_proto_msgTypes[1].OneofWrappers = []any{}
+	file_core_v1_forecasting_proto_msgTypes[4].OneofWrappers = []any{
 		(*Probability_Value)(nil),
 		(*Probability_UnavailableReason)(nil),
 	}
-	file_core_v1_forecasting_proto_msgTypes[8].OneofWrappers = []any{}
 	file_core_v1_forecasting_proto_msgTypes[9].OneofWrappers = []any{}
 	file_core_v1_forecasting_proto_msgTypes[10].OneofWrappers = []any{}
 	file_core_v1_forecasting_proto_msgTypes[11].OneofWrappers = []any{}
-	file_core_v1_forecasting_proto_msgTypes[16].OneofWrappers = []any{
+	file_core_v1_forecasting_proto_msgTypes[12].OneofWrappers = []any{}
+	file_core_v1_forecasting_proto_msgTypes[14].OneofWrappers = []any{}
+	file_core_v1_forecasting_proto_msgTypes[15].OneofWrappers = []any{
+		(*RecurringHypothesis_DayOfMonth)(nil),
+		(*RecurringHypothesis_MonthEnd)(nil),
+	}
+	file_core_v1_forecasting_proto_msgTypes[20].OneofWrappers = []any{
 		(*Forecast_Pending)(nil),
 		(*Forecast_Succeeded)(nil),
 		(*Forecast_Failed)(nil),
 	}
-	file_core_v1_forecasting_proto_msgTypes[17].OneofWrappers = []any{}
-	file_core_v1_forecasting_proto_msgTypes[25].OneofWrappers = []any{}
-	file_core_v1_forecasting_proto_msgTypes[28].OneofWrappers = []any{}
+	file_core_v1_forecasting_proto_msgTypes[21].OneofWrappers = []any{}
+	file_core_v1_forecasting_proto_msgTypes[29].OneofWrappers = []any{}
+	file_core_v1_forecasting_proto_msgTypes[32].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_v1_forecasting_proto_rawDesc), len(file_core_v1_forecasting_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   33,
+			NumEnums:      4,
+			NumMessages:   37,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

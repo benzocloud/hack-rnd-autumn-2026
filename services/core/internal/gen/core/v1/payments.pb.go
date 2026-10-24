@@ -79,6 +79,55 @@ func (PaymentStatus) EnumDescriptor() ([]byte, []int) {
 	return file_core_v1_payments_proto_rawDescGZIP(), []int{0}
 }
 
+type ReconciliationStatus int32
+
+const (
+	ReconciliationStatus_RECONCILIATION_STATUS_UNSPECIFIED ReconciliationStatus = 0
+	ReconciliationStatus_RECONCILIATION_STATUS_ACTIVE      ReconciliationStatus = 1
+	ReconciliationStatus_RECONCILIATION_STATUS_REVOKED     ReconciliationStatus = 2
+)
+
+// Enum value maps for ReconciliationStatus.
+var (
+	ReconciliationStatus_name = map[int32]string{
+		0: "RECONCILIATION_STATUS_UNSPECIFIED",
+		1: "RECONCILIATION_STATUS_ACTIVE",
+		2: "RECONCILIATION_STATUS_REVOKED",
+	}
+	ReconciliationStatus_value = map[string]int32{
+		"RECONCILIATION_STATUS_UNSPECIFIED": 0,
+		"RECONCILIATION_STATUS_ACTIVE":      1,
+		"RECONCILIATION_STATUS_REVOKED":     2,
+	}
+)
+
+func (x ReconciliationStatus) Enum() *ReconciliationStatus {
+	p := new(ReconciliationStatus)
+	*p = x
+	return p
+}
+
+func (x ReconciliationStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ReconciliationStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_core_v1_payments_proto_enumTypes[1].Descriptor()
+}
+
+func (ReconciliationStatus) Type() protoreflect.EnumType {
+	return &file_core_v1_payments_proto_enumTypes[1]
+}
+
+func (x ReconciliationStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ReconciliationStatus.Descriptor instead.
+func (ReconciliationStatus) EnumDescriptor() ([]byte, []int) {
+	return file_core_v1_payments_proto_rawDescGZIP(), []int{1}
+}
+
 type ExpectedPayment struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -94,8 +143,11 @@ type ExpectedPayment struct {
 	Source           *RecordSource          `protobuf:"bytes,11,opt,name=source,proto3" json:"source,omitempty"`
 	Version          int64                  `protobuf:"varint,12,opt,name=version,proto3" json:"version,omitempty"`
 	CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Absent/invalid/revoked or horizon-incompatible group means unresolved, not
+	// an automatically confirmed additional obligation or an empty calendar.
+	ReconciliationGroupId *string `protobuf:"bytes,14,opt,name=reconciliation_group_id,json=reconciliationGroupId,proto3,oneof" json:"reconciliation_group_id,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *ExpectedPayment) Reset() {
@@ -217,6 +269,13 @@ func (x *ExpectedPayment) GetCreatedAt() *timestamppb.Timestamp {
 		return x.CreatedAt
 	}
 	return nil
+}
+
+func (x *ExpectedPayment) GetReconciliationGroupId() string {
+	if x != nil && x.ReconciliationGroupId != nil {
+		return *x.ReconciliationGroupId
+	}
+	return ""
 }
 
 type PaymentMatch struct {
@@ -528,18 +587,19 @@ func (x *GetPaymentResponse) GetPayment() *ExpectedPayment {
 }
 
 type CreateManualPaymentRequest struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Context          *v1.WriteContext       `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
-	Scope            *AccountScope          `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
-	IdempotencyKey   string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	Direction        Direction              `protobuf:"varint,4,opt,name=direction,proto3,enum=core.v1.Direction" json:"direction,omitempty"`
-	Amount           *Money                 `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
-	ScheduledDate    string                 `protobuf:"bytes,6,opt,name=scheduled_date,json=scheduledDate,proto3" json:"scheduled_date,omitempty"`
-	CategoryId       *string                `protobuf:"bytes,7,opt,name=category_id,json=categoryId,proto3,oneof" json:"category_id,omitempty"`
-	CounterpartyName string                 `protobuf:"bytes,8,opt,name=counterparty_name,json=counterpartyName,proto3" json:"counterparty_name,omitempty"`
-	Description      string                 `protobuf:"bytes,9,opt,name=description,proto3" json:"description,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Context               *v1.WriteContext       `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	Scope                 *AccountScope          `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
+	IdempotencyKey        string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Direction             Direction              `protobuf:"varint,4,opt,name=direction,proto3,enum=core.v1.Direction" json:"direction,omitempty"`
+	Amount                *Money                 `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
+	ScheduledDate         string                 `protobuf:"bytes,6,opt,name=scheduled_date,json=scheduledDate,proto3" json:"scheduled_date,omitempty"`
+	CategoryId            *string                `protobuf:"bytes,7,opt,name=category_id,json=categoryId,proto3,oneof" json:"category_id,omitempty"`
+	CounterpartyName      string                 `protobuf:"bytes,8,opt,name=counterparty_name,json=counterpartyName,proto3" json:"counterparty_name,omitempty"`
+	Description           string                 `protobuf:"bytes,9,opt,name=description,proto3" json:"description,omitempty"`
+	ReconciliationGroupId *string                `protobuf:"bytes,10,opt,name=reconciliation_group_id,json=reconciliationGroupId,proto3,oneof" json:"reconciliation_group_id,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *CreateManualPaymentRequest) Reset() {
@@ -631,6 +691,13 @@ func (x *CreateManualPaymentRequest) GetCounterpartyName() string {
 func (x *CreateManualPaymentRequest) GetDescription() string {
 	if x != nil {
 		return x.Description
+	}
+	return ""
+}
+
+func (x *CreateManualPaymentRequest) GetReconciliationGroupId() string {
+	if x != nil && x.ReconciliationGroupId != nil {
+		return *x.ReconciliationGroupId
 	}
 	return ""
 }
@@ -987,8 +1054,16 @@ type UpdatePaymentRequest struct {
 	//	*UpdatePaymentRequest_CategoryId
 	//	*UpdatePaymentRequest_ClearCategory
 	CategoryChange isUpdatePaymentRequest_CategoryChange `protobuf_oneof:"category_change"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Omission preserves linkage. Clear detaches this payment only; it does not
+	// revoke the independently persisted reconciliation group.
+	//
+	// Types that are valid to be assigned to ReconciliationChange:
+	//
+	//	*UpdatePaymentRequest_ReconciliationGroupId
+	//	*UpdatePaymentRequest_ClearReconciliationGroup
+	ReconciliationChange isUpdatePaymentRequest_ReconciliationChange `protobuf_oneof:"reconciliation_change"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *UpdatePaymentRequest) Reset() {
@@ -1109,6 +1184,31 @@ func (x *UpdatePaymentRequest) GetClearCategory() *emptypb.Empty {
 	return nil
 }
 
+func (x *UpdatePaymentRequest) GetReconciliationChange() isUpdatePaymentRequest_ReconciliationChange {
+	if x != nil {
+		return x.ReconciliationChange
+	}
+	return nil
+}
+
+func (x *UpdatePaymentRequest) GetReconciliationGroupId() string {
+	if x != nil {
+		if x, ok := x.ReconciliationChange.(*UpdatePaymentRequest_ReconciliationGroupId); ok {
+			return x.ReconciliationGroupId
+		}
+	}
+	return ""
+}
+
+func (x *UpdatePaymentRequest) GetClearReconciliationGroup() *emptypb.Empty {
+	if x != nil {
+		if x, ok := x.ReconciliationChange.(*UpdatePaymentRequest_ClearReconciliationGroup); ok {
+			return x.ClearReconciliationGroup
+		}
+	}
+	return nil
+}
+
 type isUpdatePaymentRequest_CategoryChange interface {
 	isUpdatePaymentRequest_CategoryChange()
 }
@@ -1124,6 +1224,22 @@ type UpdatePaymentRequest_ClearCategory struct {
 func (*UpdatePaymentRequest_CategoryId) isUpdatePaymentRequest_CategoryChange() {}
 
 func (*UpdatePaymentRequest_ClearCategory) isUpdatePaymentRequest_CategoryChange() {}
+
+type isUpdatePaymentRequest_ReconciliationChange interface {
+	isUpdatePaymentRequest_ReconciliationChange()
+}
+
+type UpdatePaymentRequest_ReconciliationGroupId struct {
+	ReconciliationGroupId string `protobuf:"bytes,12,opt,name=reconciliation_group_id,json=reconciliationGroupId,proto3,oneof"`
+}
+
+type UpdatePaymentRequest_ClearReconciliationGroup struct {
+	ClearReconciliationGroup *emptypb.Empty `protobuf:"bytes,13,opt,name=clear_reconciliation_group,json=clearReconciliationGroup,proto3,oneof"`
+}
+
+func (*UpdatePaymentRequest_ReconciliationGroupId) isUpdatePaymentRequest_ReconciliationChange() {}
+
+func (*UpdatePaymentRequest_ClearReconciliationGroup) isUpdatePaymentRequest_ReconciliationChange() {}
 
 type UpdatePaymentResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1425,11 +1541,865 @@ func (x *RemovePaymentMatchResponse) GetDataVersion() int64 {
 	return 0
 }
 
+type HistoricalOperationRef struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TransactionId string                 `protobuf:"bytes,1,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
+	Version       int64                  `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HistoricalOperationRef) Reset() {
+	*x = HistoricalOperationRef{}
+	mi := &file_core_v1_payments_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HistoricalOperationRef) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HistoricalOperationRef) ProtoMessage() {}
+
+func (x *HistoricalOperationRef) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_payments_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HistoricalOperationRef.ProtoReflect.Descriptor instead.
+func (*HistoricalOperationRef) Descriptor() ([]byte, []int) {
+	return file_core_v1_payments_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *HistoricalOperationRef) GetTransactionId() string {
+	if x != nil {
+		return x.TransactionId
+	}
+	return ""
+}
+
+func (x *HistoricalOperationRef) GetVersion() int64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+type AdditionalObligationConfirmation struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Must be true: omission is not an explicit user confirmation.
+	Confirmed     bool `protobuf:"varint,1,opt,name=confirmed,proto3" json:"confirmed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AdditionalObligationConfirmation) Reset() {
+	*x = AdditionalObligationConfirmation{}
+	mi := &file_core_v1_payments_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AdditionalObligationConfirmation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AdditionalObligationConfirmation) ProtoMessage() {}
+
+func (x *AdditionalObligationConfirmation) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_payments_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AdditionalObligationConfirmation.ProtoReflect.Descriptor instead.
+func (*AdditionalObligationConfirmation) Descriptor() ([]byte, []int) {
+	return file_core_v1_payments_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *AdditionalObligationConfirmation) GetConfirmed() bool {
+	if x != nil {
+		return x.Confirmed
+	}
+	return false
+}
+
+type CompleteReplacement struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Nonempty, unique, same-scope references; active groups may not overlap
+	// within a snapshot. Versions must match the frozen factual view.
+	HistoricalOperations []*HistoricalOperationRef `protobuf:"bytes,1,rep,name=historical_operations,json=historicalOperations,proto3" json:"historical_operations,omitempty"`
+	CompleteForHorizon   bool                      `protobuf:"varint,2,opt,name=complete_for_horizon,json=completeForHorizon,proto3" json:"complete_for_horizon,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *CompleteReplacement) Reset() {
+	*x = CompleteReplacement{}
+	mi := &file_core_v1_payments_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompleteReplacement) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompleteReplacement) ProtoMessage() {}
+
+func (x *CompleteReplacement) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_payments_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompleteReplacement.ProtoReflect.Descriptor instead.
+func (*CompleteReplacement) Descriptor() ([]byte, []int) {
+	return file_core_v1_payments_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *CompleteReplacement) GetHistoricalOperations() []*HistoricalOperationRef {
+	if x != nil {
+		return x.HistoricalOperations
+	}
+	return nil
+}
+
+func (x *CompleteReplacement) GetCompleteForHorizon() bool {
+	if x != nil {
+		return x.CompleteForHorizon
+	}
+	return false
+}
+
+// Independent immutable mapping for one exact cutoff/window. Cancel/full match
+// or moving a payment outside the horizon does not revoke this group. A complete
+// replacement may have zero future occurrences and still removes historical
+// flows from residual inference. Reuse for a new horizon requires new confirmation.
+type PaymentReconciliationGroup struct {
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Id           string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Scope        *AccountScope          `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
+	Version      int64                  `protobuf:"varint,3,opt,name=version,proto3" json:"version,omitempty"`
+	Status       ReconciliationStatus   `protobuf:"varint,4,opt,name=status,proto3,enum=core.v1.ReconciliationStatus" json:"status,omitempty"`
+	CutoffDate   string                 `protobuf:"bytes,5,opt,name=cutoff_date,json=cutoffDate,proto3" json:"cutoff_date,omitempty"`
+	HorizonStart string                 `protobuf:"bytes,6,opt,name=horizon_start,json=horizonStart,proto3" json:"horizon_start,omitempty"`
+	HorizonEnd   string                 `protobuf:"bytes,7,opt,name=horizon_end,json=horizonEnd,proto3" json:"horizon_end,omitempty"`
+	// Auth-owned actor identity and server timestamp; never client evidence.
+	ConfirmedBy string                 `protobuf:"bytes,8,opt,name=confirmed_by,json=confirmedBy,proto3" json:"confirmed_by,omitempty"`
+	ConfirmedAt *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=confirmed_at,json=confirmedAt,proto3" json:"confirmed_at,omitempty"`
+	// Exactly one branch required; additional never excludes historical facts.
+	//
+	// Types that are valid to be assigned to Reconciliation:
+	//
+	//	*PaymentReconciliationGroup_Additional
+	//	*PaymentReconciliationGroup_Replacement
+	Reconciliation isPaymentReconciliationGroup_Reconciliation `protobuf_oneof:"reconciliation"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *PaymentReconciliationGroup) Reset() {
+	*x = PaymentReconciliationGroup{}
+	mi := &file_core_v1_payments_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PaymentReconciliationGroup) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PaymentReconciliationGroup) ProtoMessage() {}
+
+func (x *PaymentReconciliationGroup) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_payments_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PaymentReconciliationGroup.ProtoReflect.Descriptor instead.
+func (*PaymentReconciliationGroup) Descriptor() ([]byte, []int) {
+	return file_core_v1_payments_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *PaymentReconciliationGroup) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *PaymentReconciliationGroup) GetScope() *AccountScope {
+	if x != nil {
+		return x.Scope
+	}
+	return nil
+}
+
+func (x *PaymentReconciliationGroup) GetVersion() int64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *PaymentReconciliationGroup) GetStatus() ReconciliationStatus {
+	if x != nil {
+		return x.Status
+	}
+	return ReconciliationStatus_RECONCILIATION_STATUS_UNSPECIFIED
+}
+
+func (x *PaymentReconciliationGroup) GetCutoffDate() string {
+	if x != nil {
+		return x.CutoffDate
+	}
+	return ""
+}
+
+func (x *PaymentReconciliationGroup) GetHorizonStart() string {
+	if x != nil {
+		return x.HorizonStart
+	}
+	return ""
+}
+
+func (x *PaymentReconciliationGroup) GetHorizonEnd() string {
+	if x != nil {
+		return x.HorizonEnd
+	}
+	return ""
+}
+
+func (x *PaymentReconciliationGroup) GetConfirmedBy() string {
+	if x != nil {
+		return x.ConfirmedBy
+	}
+	return ""
+}
+
+func (x *PaymentReconciliationGroup) GetConfirmedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ConfirmedAt
+	}
+	return nil
+}
+
+func (x *PaymentReconciliationGroup) GetReconciliation() isPaymentReconciliationGroup_Reconciliation {
+	if x != nil {
+		return x.Reconciliation
+	}
+	return nil
+}
+
+func (x *PaymentReconciliationGroup) GetAdditional() *AdditionalObligationConfirmation {
+	if x != nil {
+		if x, ok := x.Reconciliation.(*PaymentReconciliationGroup_Additional); ok {
+			return x.Additional
+		}
+	}
+	return nil
+}
+
+func (x *PaymentReconciliationGroup) GetReplacement() *CompleteReplacement {
+	if x != nil {
+		if x, ok := x.Reconciliation.(*PaymentReconciliationGroup_Replacement); ok {
+			return x.Replacement
+		}
+	}
+	return nil
+}
+
+type isPaymentReconciliationGroup_Reconciliation interface {
+	isPaymentReconciliationGroup_Reconciliation()
+}
+
+type PaymentReconciliationGroup_Additional struct {
+	Additional *AdditionalObligationConfirmation `protobuf:"bytes,10,opt,name=additional,proto3,oneof"`
+}
+
+type PaymentReconciliationGroup_Replacement struct {
+	Replacement *CompleteReplacement `protobuf:"bytes,11,opt,name=replacement,proto3,oneof"`
+}
+
+func (*PaymentReconciliationGroup_Additional) isPaymentReconciliationGroup_Reconciliation() {}
+
+func (*PaymentReconciliationGroup_Replacement) isPaymentReconciliationGroup_Reconciliation() {}
+
+// FINANCIAL_WRITE/CSRF. Core generates ID/time/actor and validates the exact
+// 30-day window, scoped references/versions and non-overlap under account lock.
+// Replay returns the original group/revision before stale-state checks.
+type CreateReconciliationGroupRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Context        *v1.WriteContext       `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	Scope          *AccountScope          `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	CutoffDate     string                 `protobuf:"bytes,4,opt,name=cutoff_date,json=cutoffDate,proto3" json:"cutoff_date,omitempty"`
+	HorizonStart   string                 `protobuf:"bytes,5,opt,name=horizon_start,json=horizonStart,proto3" json:"horizon_start,omitempty"`
+	HorizonEnd     string                 `protobuf:"bytes,6,opt,name=horizon_end,json=horizonEnd,proto3" json:"horizon_end,omitempty"`
+	// Types that are valid to be assigned to Reconciliation:
+	//
+	//	*CreateReconciliationGroupRequest_Additional
+	//	*CreateReconciliationGroupRequest_Replacement
+	Reconciliation isCreateReconciliationGroupRequest_Reconciliation `protobuf_oneof:"reconciliation"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *CreateReconciliationGroupRequest) Reset() {
+	*x = CreateReconciliationGroupRequest{}
+	mi := &file_core_v1_payments_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateReconciliationGroupRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateReconciliationGroupRequest) ProtoMessage() {}
+
+func (x *CreateReconciliationGroupRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_payments_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateReconciliationGroupRequest.ProtoReflect.Descriptor instead.
+func (*CreateReconciliationGroupRequest) Descriptor() ([]byte, []int) {
+	return file_core_v1_payments_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *CreateReconciliationGroupRequest) GetContext() *v1.WriteContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *CreateReconciliationGroupRequest) GetScope() *AccountScope {
+	if x != nil {
+		return x.Scope
+	}
+	return nil
+}
+
+func (x *CreateReconciliationGroupRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *CreateReconciliationGroupRequest) GetCutoffDate() string {
+	if x != nil {
+		return x.CutoffDate
+	}
+	return ""
+}
+
+func (x *CreateReconciliationGroupRequest) GetHorizonStart() string {
+	if x != nil {
+		return x.HorizonStart
+	}
+	return ""
+}
+
+func (x *CreateReconciliationGroupRequest) GetHorizonEnd() string {
+	if x != nil {
+		return x.HorizonEnd
+	}
+	return ""
+}
+
+func (x *CreateReconciliationGroupRequest) GetReconciliation() isCreateReconciliationGroupRequest_Reconciliation {
+	if x != nil {
+		return x.Reconciliation
+	}
+	return nil
+}
+
+func (x *CreateReconciliationGroupRequest) GetAdditional() *AdditionalObligationConfirmation {
+	if x != nil {
+		if x, ok := x.Reconciliation.(*CreateReconciliationGroupRequest_Additional); ok {
+			return x.Additional
+		}
+	}
+	return nil
+}
+
+func (x *CreateReconciliationGroupRequest) GetReplacement() *CompleteReplacement {
+	if x != nil {
+		if x, ok := x.Reconciliation.(*CreateReconciliationGroupRequest_Replacement); ok {
+			return x.Replacement
+		}
+	}
+	return nil
+}
+
+type isCreateReconciliationGroupRequest_Reconciliation interface {
+	isCreateReconciliationGroupRequest_Reconciliation()
+}
+
+type CreateReconciliationGroupRequest_Additional struct {
+	Additional *AdditionalObligationConfirmation `protobuf:"bytes,7,opt,name=additional,proto3,oneof"`
+}
+
+type CreateReconciliationGroupRequest_Replacement struct {
+	Replacement *CompleteReplacement `protobuf:"bytes,8,opt,name=replacement,proto3,oneof"`
+}
+
+func (*CreateReconciliationGroupRequest_Additional) isCreateReconciliationGroupRequest_Reconciliation() {
+}
+
+func (*CreateReconciliationGroupRequest_Replacement) isCreateReconciliationGroupRequest_Reconciliation() {
+}
+
+type CreateReconciliationGroupResponse struct {
+	state         protoimpl.MessageState      `protogen:"open.v1"`
+	Group         *PaymentReconciliationGroup `protobuf:"bytes,1,opt,name=group,proto3" json:"group,omitempty"`
+	DataVersion   int64                       `protobuf:"varint,2,opt,name=data_version,json=dataVersion,proto3" json:"data_version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateReconciliationGroupResponse) Reset() {
+	*x = CreateReconciliationGroupResponse{}
+	mi := &file_core_v1_payments_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateReconciliationGroupResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateReconciliationGroupResponse) ProtoMessage() {}
+
+func (x *CreateReconciliationGroupResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_payments_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateReconciliationGroupResponse.ProtoReflect.Descriptor instead.
+func (*CreateReconciliationGroupResponse) Descriptor() ([]byte, []int) {
+	return file_core_v1_payments_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *CreateReconciliationGroupResponse) GetGroup() *PaymentReconciliationGroup {
+	if x != nil {
+		return x.Group
+	}
+	return nil
+}
+
+func (x *CreateReconciliationGroupResponse) GetDataVersion() int64 {
+	if x != nil {
+		return x.DataVersion
+	}
+	return 0
+}
+
+type GetReconciliationGroupRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Context       *v1.BrowserContext     `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	Scope         *AccountScope          `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
+	GroupId       string                 `protobuf:"bytes,3,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetReconciliationGroupRequest) Reset() {
+	*x = GetReconciliationGroupRequest{}
+	mi := &file_core_v1_payments_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetReconciliationGroupRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetReconciliationGroupRequest) ProtoMessage() {}
+
+func (x *GetReconciliationGroupRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_payments_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetReconciliationGroupRequest.ProtoReflect.Descriptor instead.
+func (*GetReconciliationGroupRequest) Descriptor() ([]byte, []int) {
+	return file_core_v1_payments_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *GetReconciliationGroupRequest) GetContext() *v1.BrowserContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *GetReconciliationGroupRequest) GetScope() *AccountScope {
+	if x != nil {
+		return x.Scope
+	}
+	return nil
+}
+
+func (x *GetReconciliationGroupRequest) GetGroupId() string {
+	if x != nil {
+		return x.GroupId
+	}
+	return ""
+}
+
+type GetReconciliationGroupResponse struct {
+	state         protoimpl.MessageState      `protogen:"open.v1"`
+	Group         *PaymentReconciliationGroup `protobuf:"bytes,1,opt,name=group,proto3" json:"group,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetReconciliationGroupResponse) Reset() {
+	*x = GetReconciliationGroupResponse{}
+	mi := &file_core_v1_payments_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetReconciliationGroupResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetReconciliationGroupResponse) ProtoMessage() {}
+
+func (x *GetReconciliationGroupResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_payments_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetReconciliationGroupResponse.ProtoReflect.Descriptor instead.
+func (*GetReconciliationGroupResponse) Descriptor() ([]byte, []int) {
+	return file_core_v1_payments_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *GetReconciliationGroupResponse) GetGroup() *PaymentReconciliationGroup {
+	if x != nil {
+		return x.Group
+	}
+	return nil
+}
+
+type ListReconciliationGroupsRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Context        *v1.BrowserContext     `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	Scope          *AccountScope          `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
+	Page           *PageRequest           `protobuf:"bytes,3,opt,name=page,proto3" json:"page,omitempty"`
+	IncludeRevoked bool                   `protobuf:"varint,4,opt,name=include_revoked,json=includeRevoked,proto3" json:"include_revoked,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListReconciliationGroupsRequest) Reset() {
+	*x = ListReconciliationGroupsRequest{}
+	mi := &file_core_v1_payments_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListReconciliationGroupsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListReconciliationGroupsRequest) ProtoMessage() {}
+
+func (x *ListReconciliationGroupsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_payments_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListReconciliationGroupsRequest.ProtoReflect.Descriptor instead.
+func (*ListReconciliationGroupsRequest) Descriptor() ([]byte, []int) {
+	return file_core_v1_payments_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *ListReconciliationGroupsRequest) GetContext() *v1.BrowserContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *ListReconciliationGroupsRequest) GetScope() *AccountScope {
+	if x != nil {
+		return x.Scope
+	}
+	return nil
+}
+
+func (x *ListReconciliationGroupsRequest) GetPage() *PageRequest {
+	if x != nil {
+		return x.Page
+	}
+	return nil
+}
+
+func (x *ListReconciliationGroupsRequest) GetIncludeRevoked() bool {
+	if x != nil {
+		return x.IncludeRevoked
+	}
+	return false
+}
+
+type ListReconciliationGroupsResponse struct {
+	state         protoimpl.MessageState        `protogen:"open.v1"`
+	Items         []*PaymentReconciliationGroup `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	Pagination    *PageResponse                 `protobuf:"bytes,2,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListReconciliationGroupsResponse) Reset() {
+	*x = ListReconciliationGroupsResponse{}
+	mi := &file_core_v1_payments_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListReconciliationGroupsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListReconciliationGroupsResponse) ProtoMessage() {}
+
+func (x *ListReconciliationGroupsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_payments_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListReconciliationGroupsResponse.ProtoReflect.Descriptor instead.
+func (*ListReconciliationGroupsResponse) Descriptor() ([]byte, []int) {
+	return file_core_v1_payments_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *ListReconciliationGroupsResponse) GetItems() []*PaymentReconciliationGroup {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *ListReconciliationGroupsResponse) GetPagination() *PageResponse {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
+}
+
+// FINANCIAL_WRITE/CSRF. Explicit CAS revocation affects future snapshots only;
+// it preserves payment/factual history and frozen jobs. Replay does not advance
+// data_version twice. No update/un-revoke: changed mapping needs a new group.
+type RevokeReconciliationGroupRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Context         *v1.WriteContext       `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	Scope           *AccountScope          `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
+	GroupId         string                 `protobuf:"bytes,3,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	ExpectedVersion int64                  `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
+	IdempotencyKey  string                 `protobuf:"bytes,5,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *RevokeReconciliationGroupRequest) Reset() {
+	*x = RevokeReconciliationGroupRequest{}
+	mi := &file_core_v1_payments_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeReconciliationGroupRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeReconciliationGroupRequest) ProtoMessage() {}
+
+func (x *RevokeReconciliationGroupRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_payments_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeReconciliationGroupRequest.ProtoReflect.Descriptor instead.
+func (*RevokeReconciliationGroupRequest) Descriptor() ([]byte, []int) {
+	return file_core_v1_payments_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *RevokeReconciliationGroupRequest) GetContext() *v1.WriteContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *RevokeReconciliationGroupRequest) GetScope() *AccountScope {
+	if x != nil {
+		return x.Scope
+	}
+	return nil
+}
+
+func (x *RevokeReconciliationGroupRequest) GetGroupId() string {
+	if x != nil {
+		return x.GroupId
+	}
+	return ""
+}
+
+func (x *RevokeReconciliationGroupRequest) GetExpectedVersion() int64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+func (x *RevokeReconciliationGroupRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+type RevokeReconciliationGroupResponse struct {
+	state         protoimpl.MessageState      `protogen:"open.v1"`
+	Group         *PaymentReconciliationGroup `protobuf:"bytes,1,opt,name=group,proto3" json:"group,omitempty"`
+	DataVersion   int64                       `protobuf:"varint,2,opt,name=data_version,json=dataVersion,proto3" json:"data_version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeReconciliationGroupResponse) Reset() {
+	*x = RevokeReconciliationGroupResponse{}
+	mi := &file_core_v1_payments_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeReconciliationGroupResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeReconciliationGroupResponse) ProtoMessage() {}
+
+func (x *RevokeReconciliationGroupResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_payments_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeReconciliationGroupResponse.ProtoReflect.Descriptor instead.
+func (*RevokeReconciliationGroupResponse) Descriptor() ([]byte, []int) {
+	return file_core_v1_payments_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *RevokeReconciliationGroupResponse) GetGroup() *PaymentReconciliationGroup {
+	if x != nil {
+		return x.Group
+	}
+	return nil
+}
+
+func (x *RevokeReconciliationGroupResponse) GetDataVersion() int64 {
+	if x != nil {
+		return x.DataVersion
+	}
+	return 0
+}
+
 var File_core_v1_payments_proto protoreflect.FileDescriptor
 
 const file_core_v1_payments_proto_rawDesc = "" +
 	"\n" +
-	"\x16core/v1/payments.proto\x12\acore.v1\x1a\x12auth/v1/auth.proto\x1a\x14core/v1/common.proto\x1a\x14core/v1/ledger.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb5\x04\n" +
+	"\x16core/v1/payments.proto\x12\acore.v1\x1a\x12auth/v1/auth.proto\x1a\x14core/v1/common.proto\x1a\x14core/v1/ledger.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8e\x05\n" +
 	"\x0fExpectedPayment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -1447,8 +2417,10 @@ const file_core_v1_payments_proto_rawDesc = "" +
 	"\x06source\x18\v \x01(\v2\x15.core.v1.RecordSourceR\x06source\x12\x18\n" +
 	"\aversion\x18\f \x01(\x03R\aversion\x129\n" +
 	"\n" +
-	"created_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAtB\x0e\n" +
-	"\f_category_id\"\xc7\x01\n" +
+	"created_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12;\n" +
+	"\x17reconciliation_group_id\x18\x0e \x01(\tH\x01R\x15reconciliationGroupId\x88\x01\x01B\x0e\n" +
+	"\f_category_idB\x1a\n" +
+	"\x18_reconciliation_group_id\"\xc7\x01\n" +
 	"\fPaymentMatch\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -1475,7 +2447,7 @@ const file_core_v1_payments_proto_rawDesc = "" +
 	"\n" +
 	"payment_id\x18\x03 \x01(\tR\tpaymentId\"H\n" +
 	"\x12GetPaymentResponse\x122\n" +
-	"\apayment\x18\x01 \x01(\v2\x18.core.v1.ExpectedPaymentR\apayment\"\xa9\x03\n" +
+	"\apayment\x18\x01 \x01(\v2\x18.core.v1.ExpectedPaymentR\apayment\"\x82\x04\n" +
 	"\x1aCreateManualPaymentRequest\x12/\n" +
 	"\acontext\x18\x01 \x01(\v2\x15.auth.v1.WriteContextR\acontext\x12+\n" +
 	"\x05scope\x18\x02 \x01(\v2\x15.core.v1.AccountScopeR\x05scope\x12'\n" +
@@ -1486,8 +2458,11 @@ const file_core_v1_payments_proto_rawDesc = "" +
 	"\vcategory_id\x18\a \x01(\tH\x00R\n" +
 	"categoryId\x88\x01\x01\x12+\n" +
 	"\x11counterparty_name\x18\b \x01(\tR\x10counterpartyName\x12 \n" +
-	"\vdescription\x18\t \x01(\tR\vdescriptionB\x0e\n" +
-	"\f_category_id\"t\n" +
+	"\vdescription\x18\t \x01(\tR\vdescription\x12;\n" +
+	"\x17reconciliation_group_id\x18\n" +
+	" \x01(\tH\x01R\x15reconciliationGroupId\x88\x01\x01B\x0e\n" +
+	"\f_category_idB\x1a\n" +
+	"\x18_reconciliation_group_id\"t\n" +
 	"\x1bCreateManualPaymentResponse\x122\n" +
 	"\apayment\x18\x01 \x01(\v2\x18.core.v1.ExpectedPaymentR\apayment\x12!\n" +
 	"\fdata_version\x18\x02 \x01(\x03R\vdataVersion\"\xc4\x01\n" +
@@ -1515,23 +2490,26 @@ const file_core_v1_payments_proto_rawDesc = "" +
 	"\x14MatchPaymentResponse\x12+\n" +
 	"\x05match\x18\x01 \x01(\v2\x15.core.v1.PaymentMatchR\x05match\x12'\n" +
 	"\x0fpayment_version\x18\x02 \x01(\x03R\x0epaymentVersion\x12!\n" +
-	"\fdata_version\x18\x03 \x01(\x03R\vdataVersion\"\xe0\x04\n" +
+	"\fdata_version\x18\x03 \x01(\x03R\vdataVersion\"\x8b\x06\n" +
 	"\x14UpdatePaymentRequest\x12/\n" +
 	"\acontext\x18\x01 \x01(\v2\x15.auth.v1.WriteContextR\acontext\x12+\n" +
 	"\x05scope\x18\x02 \x01(\v2\x15.core.v1.AccountScopeR\x05scope\x12\x1d\n" +
 	"\n" +
 	"payment_id\x18\x03 \x01(\tR\tpaymentId\x12)\n" +
 	"\x10expected_version\x18\x04 \x01(\x03R\x0fexpectedVersion\x125\n" +
-	"\tdirection\x18\x05 \x01(\x0e2\x12.core.v1.DirectionH\x01R\tdirection\x88\x01\x01\x12&\n" +
+	"\tdirection\x18\x05 \x01(\x0e2\x12.core.v1.DirectionH\x02R\tdirection\x88\x01\x01\x12&\n" +
 	"\x06amount\x18\x06 \x01(\v2\x0e.core.v1.MoneyR\x06amount\x12*\n" +
-	"\x0escheduled_date\x18\a \x01(\tH\x02R\rscheduledDate\x88\x01\x01\x120\n" +
-	"\x11counterparty_name\x18\b \x01(\tH\x03R\x10counterpartyName\x88\x01\x01\x12%\n" +
-	"\vdescription\x18\t \x01(\tH\x04R\vdescription\x88\x01\x01\x12!\n" +
+	"\x0escheduled_date\x18\a \x01(\tH\x03R\rscheduledDate\x88\x01\x01\x120\n" +
+	"\x11counterparty_name\x18\b \x01(\tH\x04R\x10counterpartyName\x88\x01\x01\x12%\n" +
+	"\vdescription\x18\t \x01(\tH\x05R\vdescription\x88\x01\x01\x12!\n" +
 	"\vcategory_id\x18\n" +
 	" \x01(\tH\x00R\n" +
 	"categoryId\x12?\n" +
-	"\x0eclear_category\x18\v \x01(\v2\x16.google.protobuf.EmptyH\x00R\rclearCategoryB\x11\n" +
-	"\x0fcategory_changeB\f\n" +
+	"\x0eclear_category\x18\v \x01(\v2\x16.google.protobuf.EmptyH\x00R\rclearCategory\x128\n" +
+	"\x17reconciliation_group_id\x18\f \x01(\tH\x01R\x15reconciliationGroupId\x12V\n" +
+	"\x1aclear_reconciliation_group\x18\r \x01(\v2\x16.google.protobuf.EmptyH\x01R\x18clearReconciliationGroupB\x11\n" +
+	"\x0fcategory_changeB\x17\n" +
+	"\x15reconciliation_changeB\f\n" +
 	"\n" +
 	"_directionB\x11\n" +
 	"\x0f_scheduled_dateB\x14\n" +
@@ -1558,13 +2536,85 @@ const file_core_v1_payments_proto_rawDesc = "" +
 	"\x18expected_payment_version\x18\x05 \x01(\x03R\x16expectedPaymentVersion\"s\n" +
 	"\x1aRemovePaymentMatchResponse\x122\n" +
 	"\apayment\x18\x01 \x01(\v2\x18.core.v1.ExpectedPaymentR\apayment\x12!\n" +
+	"\fdata_version\x18\x02 \x01(\x03R\vdataVersion\"Y\n" +
+	"\x16HistoricalOperationRef\x12%\n" +
+	"\x0etransaction_id\x18\x01 \x01(\tR\rtransactionId\x12\x18\n" +
+	"\aversion\x18\x02 \x01(\x03R\aversion\"@\n" +
+	" AdditionalObligationConfirmation\x12\x1c\n" +
+	"\tconfirmed\x18\x01 \x01(\bR\tconfirmed\"\x9d\x01\n" +
+	"\x13CompleteReplacement\x12T\n" +
+	"\x15historical_operations\x18\x01 \x03(\v2\x1f.core.v1.HistoricalOperationRefR\x14historicalOperations\x120\n" +
+	"\x14complete_for_horizon\x18\x02 \x01(\bR\x12completeForHorizon\"\x94\x04\n" +
+	"\x1aPaymentReconciliationGroup\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12+\n" +
+	"\x05scope\x18\x02 \x01(\v2\x15.core.v1.AccountScopeR\x05scope\x12\x18\n" +
+	"\aversion\x18\x03 \x01(\x03R\aversion\x125\n" +
+	"\x06status\x18\x04 \x01(\x0e2\x1d.core.v1.ReconciliationStatusR\x06status\x12\x1f\n" +
+	"\vcutoff_date\x18\x05 \x01(\tR\n" +
+	"cutoffDate\x12#\n" +
+	"\rhorizon_start\x18\x06 \x01(\tR\fhorizonStart\x12\x1f\n" +
+	"\vhorizon_end\x18\a \x01(\tR\n" +
+	"horizonEnd\x12!\n" +
+	"\fconfirmed_by\x18\b \x01(\tR\vconfirmedBy\x12=\n" +
+	"\fconfirmed_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\vconfirmedAt\x12K\n" +
+	"\n" +
+	"additional\x18\n" +
+	" \x01(\v2).core.v1.AdditionalObligationConfirmationH\x00R\n" +
+	"additional\x12@\n" +
+	"\vreplacement\x18\v \x01(\v2\x1c.core.v1.CompleteReplacementH\x00R\vreplacementB\x10\n" +
+	"\x0ereconciliation\"\xb1\x03\n" +
+	" CreateReconciliationGroupRequest\x12/\n" +
+	"\acontext\x18\x01 \x01(\v2\x15.auth.v1.WriteContextR\acontext\x12+\n" +
+	"\x05scope\x18\x02 \x01(\v2\x15.core.v1.AccountScopeR\x05scope\x12'\n" +
+	"\x0fidempotency_key\x18\x03 \x01(\tR\x0eidempotencyKey\x12\x1f\n" +
+	"\vcutoff_date\x18\x04 \x01(\tR\n" +
+	"cutoffDate\x12#\n" +
+	"\rhorizon_start\x18\x05 \x01(\tR\fhorizonStart\x12\x1f\n" +
+	"\vhorizon_end\x18\x06 \x01(\tR\n" +
+	"horizonEnd\x12K\n" +
+	"\n" +
+	"additional\x18\a \x01(\v2).core.v1.AdditionalObligationConfirmationH\x00R\n" +
+	"additional\x12@\n" +
+	"\vreplacement\x18\b \x01(\v2\x1c.core.v1.CompleteReplacementH\x00R\vreplacementB\x10\n" +
+	"\x0ereconciliation\"\x81\x01\n" +
+	"!CreateReconciliationGroupResponse\x129\n" +
+	"\x05group\x18\x01 \x01(\v2#.core.v1.PaymentReconciliationGroupR\x05group\x12!\n" +
+	"\fdata_version\x18\x02 \x01(\x03R\vdataVersion\"\x9a\x01\n" +
+	"\x1dGetReconciliationGroupRequest\x121\n" +
+	"\acontext\x18\x01 \x01(\v2\x17.auth.v1.BrowserContextR\acontext\x12+\n" +
+	"\x05scope\x18\x02 \x01(\v2\x15.core.v1.AccountScopeR\x05scope\x12\x19\n" +
+	"\bgroup_id\x18\x03 \x01(\tR\agroupId\"[\n" +
+	"\x1eGetReconciliationGroupResponse\x129\n" +
+	"\x05group\x18\x01 \x01(\v2#.core.v1.PaymentReconciliationGroupR\x05group\"\xd4\x01\n" +
+	"\x1fListReconciliationGroupsRequest\x121\n" +
+	"\acontext\x18\x01 \x01(\v2\x17.auth.v1.BrowserContextR\acontext\x12+\n" +
+	"\x05scope\x18\x02 \x01(\v2\x15.core.v1.AccountScopeR\x05scope\x12(\n" +
+	"\x04page\x18\x03 \x01(\v2\x14.core.v1.PageRequestR\x04page\x12'\n" +
+	"\x0finclude_revoked\x18\x04 \x01(\bR\x0eincludeRevoked\"\x94\x01\n" +
+	" ListReconciliationGroupsResponse\x129\n" +
+	"\x05items\x18\x01 \x03(\v2#.core.v1.PaymentReconciliationGroupR\x05items\x125\n" +
+	"\n" +
+	"pagination\x18\x02 \x01(\v2\x15.core.v1.PageResponseR\n" +
+	"pagination\"\xef\x01\n" +
+	" RevokeReconciliationGroupRequest\x12/\n" +
+	"\acontext\x18\x01 \x01(\v2\x15.auth.v1.WriteContextR\acontext\x12+\n" +
+	"\x05scope\x18\x02 \x01(\v2\x15.core.v1.AccountScopeR\x05scope\x12\x19\n" +
+	"\bgroup_id\x18\x03 \x01(\tR\agroupId\x12)\n" +
+	"\x10expected_version\x18\x04 \x01(\x03R\x0fexpectedVersion\x12'\n" +
+	"\x0fidempotency_key\x18\x05 \x01(\tR\x0eidempotencyKey\"\x81\x01\n" +
+	"!RevokeReconciliationGroupResponse\x129\n" +
+	"\x05group\x18\x01 \x01(\v2#.core.v1.PaymentReconciliationGroupR\x05group\x12!\n" +
 	"\fdata_version\x18\x02 \x01(\x03R\vdataVersion*\xab\x01\n" +
 	"\rPaymentStatus\x12\x1e\n" +
 	"\x1aPAYMENT_STATUS_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16PAYMENT_STATUS_PLANNED\x10\x01\x12$\n" +
 	" PAYMENT_STATUS_PARTIALLY_MATCHED\x10\x02\x12\x1a\n" +
 	"\x16PAYMENT_STATUS_MATCHED\x10\x03\x12\x1c\n" +
-	"\x18PAYMENT_STATUS_CANCELLED\x10\x042\xb2\x05\n" +
+	"\x18PAYMENT_STATUS_CANCELLED\x10\x04*\x82\x01\n" +
+	"\x14ReconciliationStatus\x12%\n" +
+	"!RECONCILIATION_STATUS_UNSPECIFIED\x10\x00\x12 \n" +
+	"\x1cRECONCILIATION_STATUS_ACTIVE\x10\x01\x12!\n" +
+	"\x1dRECONCILIATION_STATUS_REVOKED\x10\x022\xf6\b\n" +
 	"\x0fPaymentsService\x12N\n" +
 	"\rUpdatePayment\x12\x1d.core.v1.UpdatePaymentRequest\x1a\x1e.core.v1.UpdatePaymentResponse\x12N\n" +
 	"\rCancelPayment\x12\x1d.core.v1.CancelPaymentRequest\x1a\x1e.core.v1.CancelPaymentResponse\x12]\n" +
@@ -1574,7 +2624,11 @@ const file_core_v1_payments_proto_rawDesc = "" +
 	"GetPayment\x12\x1a.core.v1.GetPaymentRequest\x1a\x1b.core.v1.GetPaymentResponse\x12`\n" +
 	"\x13CreateManualPayment\x12#.core.v1.CreateManualPaymentRequest\x1a$.core.v1.CreateManualPaymentResponse\x12]\n" +
 	"\x12ListPaymentMatches\x12\".core.v1.ListPaymentMatchesRequest\x1a#.core.v1.ListPaymentMatchesResponse\x12K\n" +
-	"\fMatchPayment\x12\x1c.core.v1.MatchPaymentRequest\x1a\x1d.core.v1.MatchPaymentResponseBVZTgithub.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1;corev1b\x06proto3"
+	"\fMatchPayment\x12\x1c.core.v1.MatchPaymentRequest\x1a\x1d.core.v1.MatchPaymentResponse\x12r\n" +
+	"\x19CreateReconciliationGroup\x12).core.v1.CreateReconciliationGroupRequest\x1a*.core.v1.CreateReconciliationGroupResponse\x12i\n" +
+	"\x16GetReconciliationGroup\x12&.core.v1.GetReconciliationGroupRequest\x1a'.core.v1.GetReconciliationGroupResponse\x12o\n" +
+	"\x18ListReconciliationGroups\x12(.core.v1.ListReconciliationGroupsRequest\x1a).core.v1.ListReconciliationGroupsResponse\x12r\n" +
+	"\x19RevokeReconciliationGroup\x12).core.v1.RevokeReconciliationGroupRequest\x1a*.core.v1.RevokeReconciliationGroupResponseBVZTgithub.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1;corev1b\x06proto3"
 
 var (
 	file_core_v1_payments_proto_rawDescOnce sync.Once
@@ -1588,106 +2642,150 @@ func file_core_v1_payments_proto_rawDescGZIP() []byte {
 	return file_core_v1_payments_proto_rawDescData
 }
 
-var file_core_v1_payments_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_core_v1_payments_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_core_v1_payments_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_core_v1_payments_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
 var file_core_v1_payments_proto_goTypes = []any{
-	(PaymentStatus)(0),                  // 0: core.v1.PaymentStatus
-	(*ExpectedPayment)(nil),             // 1: core.v1.ExpectedPayment
-	(*PaymentMatch)(nil),                // 2: core.v1.PaymentMatch
-	(*ListPaymentsRequest)(nil),         // 3: core.v1.ListPaymentsRequest
-	(*ListPaymentsResponse)(nil),        // 4: core.v1.ListPaymentsResponse
-	(*GetPaymentRequest)(nil),           // 5: core.v1.GetPaymentRequest
-	(*GetPaymentResponse)(nil),          // 6: core.v1.GetPaymentResponse
-	(*CreateManualPaymentRequest)(nil),  // 7: core.v1.CreateManualPaymentRequest
-	(*CreateManualPaymentResponse)(nil), // 8: core.v1.CreateManualPaymentResponse
-	(*ListPaymentMatchesRequest)(nil),   // 9: core.v1.ListPaymentMatchesRequest
-	(*ListPaymentMatchesResponse)(nil),  // 10: core.v1.ListPaymentMatchesResponse
-	(*MatchPaymentRequest)(nil),         // 11: core.v1.MatchPaymentRequest
-	(*MatchPaymentResponse)(nil),        // 12: core.v1.MatchPaymentResponse
-	(*UpdatePaymentRequest)(nil),        // 13: core.v1.UpdatePaymentRequest
-	(*UpdatePaymentResponse)(nil),       // 14: core.v1.UpdatePaymentResponse
-	(*CancelPaymentRequest)(nil),        // 15: core.v1.CancelPaymentRequest
-	(*CancelPaymentResponse)(nil),       // 16: core.v1.CancelPaymentResponse
-	(*RemovePaymentMatchRequest)(nil),   // 17: core.v1.RemovePaymentMatchRequest
-	(*RemovePaymentMatchResponse)(nil),  // 18: core.v1.RemovePaymentMatchResponse
-	(Direction)(0),                      // 19: core.v1.Direction
-	(*Money)(nil),                       // 20: core.v1.Money
-	(*RecordSource)(nil),                // 21: core.v1.RecordSource
-	(*timestamppb.Timestamp)(nil),       // 22: google.protobuf.Timestamp
-	(*v1.BrowserContext)(nil),           // 23: auth.v1.BrowserContext
-	(*AccountScope)(nil),                // 24: core.v1.AccountScope
-	(*PageRequest)(nil),                 // 25: core.v1.PageRequest
-	(*DateRange)(nil),                   // 26: core.v1.DateRange
-	(*PageResponse)(nil),                // 27: core.v1.PageResponse
-	(*v1.WriteContext)(nil),             // 28: auth.v1.WriteContext
-	(*emptypb.Empty)(nil),               // 29: google.protobuf.Empty
+	(PaymentStatus)(0),                        // 0: core.v1.PaymentStatus
+	(ReconciliationStatus)(0),                 // 1: core.v1.ReconciliationStatus
+	(*ExpectedPayment)(nil),                   // 2: core.v1.ExpectedPayment
+	(*PaymentMatch)(nil),                      // 3: core.v1.PaymentMatch
+	(*ListPaymentsRequest)(nil),               // 4: core.v1.ListPaymentsRequest
+	(*ListPaymentsResponse)(nil),              // 5: core.v1.ListPaymentsResponse
+	(*GetPaymentRequest)(nil),                 // 6: core.v1.GetPaymentRequest
+	(*GetPaymentResponse)(nil),                // 7: core.v1.GetPaymentResponse
+	(*CreateManualPaymentRequest)(nil),        // 8: core.v1.CreateManualPaymentRequest
+	(*CreateManualPaymentResponse)(nil),       // 9: core.v1.CreateManualPaymentResponse
+	(*ListPaymentMatchesRequest)(nil),         // 10: core.v1.ListPaymentMatchesRequest
+	(*ListPaymentMatchesResponse)(nil),        // 11: core.v1.ListPaymentMatchesResponse
+	(*MatchPaymentRequest)(nil),               // 12: core.v1.MatchPaymentRequest
+	(*MatchPaymentResponse)(nil),              // 13: core.v1.MatchPaymentResponse
+	(*UpdatePaymentRequest)(nil),              // 14: core.v1.UpdatePaymentRequest
+	(*UpdatePaymentResponse)(nil),             // 15: core.v1.UpdatePaymentResponse
+	(*CancelPaymentRequest)(nil),              // 16: core.v1.CancelPaymentRequest
+	(*CancelPaymentResponse)(nil),             // 17: core.v1.CancelPaymentResponse
+	(*RemovePaymentMatchRequest)(nil),         // 18: core.v1.RemovePaymentMatchRequest
+	(*RemovePaymentMatchResponse)(nil),        // 19: core.v1.RemovePaymentMatchResponse
+	(*HistoricalOperationRef)(nil),            // 20: core.v1.HistoricalOperationRef
+	(*AdditionalObligationConfirmation)(nil),  // 21: core.v1.AdditionalObligationConfirmation
+	(*CompleteReplacement)(nil),               // 22: core.v1.CompleteReplacement
+	(*PaymentReconciliationGroup)(nil),        // 23: core.v1.PaymentReconciliationGroup
+	(*CreateReconciliationGroupRequest)(nil),  // 24: core.v1.CreateReconciliationGroupRequest
+	(*CreateReconciliationGroupResponse)(nil), // 25: core.v1.CreateReconciliationGroupResponse
+	(*GetReconciliationGroupRequest)(nil),     // 26: core.v1.GetReconciliationGroupRequest
+	(*GetReconciliationGroupResponse)(nil),    // 27: core.v1.GetReconciliationGroupResponse
+	(*ListReconciliationGroupsRequest)(nil),   // 28: core.v1.ListReconciliationGroupsRequest
+	(*ListReconciliationGroupsResponse)(nil),  // 29: core.v1.ListReconciliationGroupsResponse
+	(*RevokeReconciliationGroupRequest)(nil),  // 30: core.v1.RevokeReconciliationGroupRequest
+	(*RevokeReconciliationGroupResponse)(nil), // 31: core.v1.RevokeReconciliationGroupResponse
+	(Direction)(0),                            // 32: core.v1.Direction
+	(*Money)(nil),                             // 33: core.v1.Money
+	(*RecordSource)(nil),                      // 34: core.v1.RecordSource
+	(*timestamppb.Timestamp)(nil),             // 35: google.protobuf.Timestamp
+	(*v1.BrowserContext)(nil),                 // 36: auth.v1.BrowserContext
+	(*AccountScope)(nil),                      // 37: core.v1.AccountScope
+	(*PageRequest)(nil),                       // 38: core.v1.PageRequest
+	(*DateRange)(nil),                         // 39: core.v1.DateRange
+	(*PageResponse)(nil),                      // 40: core.v1.PageResponse
+	(*v1.WriteContext)(nil),                   // 41: auth.v1.WriteContext
+	(*emptypb.Empty)(nil),                     // 42: google.protobuf.Empty
 }
 var file_core_v1_payments_proto_depIdxs = []int32{
-	19, // 0: core.v1.ExpectedPayment.direction:type_name -> core.v1.Direction
-	20, // 1: core.v1.ExpectedPayment.amount:type_name -> core.v1.Money
-	20, // 2: core.v1.ExpectedPayment.remaining_amount:type_name -> core.v1.Money
+	32, // 0: core.v1.ExpectedPayment.direction:type_name -> core.v1.Direction
+	33, // 1: core.v1.ExpectedPayment.amount:type_name -> core.v1.Money
+	33, // 2: core.v1.ExpectedPayment.remaining_amount:type_name -> core.v1.Money
 	0,  // 3: core.v1.ExpectedPayment.status:type_name -> core.v1.PaymentStatus
-	21, // 4: core.v1.ExpectedPayment.source:type_name -> core.v1.RecordSource
-	22, // 5: core.v1.ExpectedPayment.created_at:type_name -> google.protobuf.Timestamp
-	20, // 6: core.v1.PaymentMatch.amount:type_name -> core.v1.Money
-	22, // 7: core.v1.PaymentMatch.created_at:type_name -> google.protobuf.Timestamp
-	23, // 8: core.v1.ListPaymentsRequest.context:type_name -> auth.v1.BrowserContext
-	24, // 9: core.v1.ListPaymentsRequest.scope:type_name -> core.v1.AccountScope
-	25, // 10: core.v1.ListPaymentsRequest.page:type_name -> core.v1.PageRequest
-	26, // 11: core.v1.ListPaymentsRequest.dates:type_name -> core.v1.DateRange
+	34, // 4: core.v1.ExpectedPayment.source:type_name -> core.v1.RecordSource
+	35, // 5: core.v1.ExpectedPayment.created_at:type_name -> google.protobuf.Timestamp
+	33, // 6: core.v1.PaymentMatch.amount:type_name -> core.v1.Money
+	35, // 7: core.v1.PaymentMatch.created_at:type_name -> google.protobuf.Timestamp
+	36, // 8: core.v1.ListPaymentsRequest.context:type_name -> auth.v1.BrowserContext
+	37, // 9: core.v1.ListPaymentsRequest.scope:type_name -> core.v1.AccountScope
+	38, // 10: core.v1.ListPaymentsRequest.page:type_name -> core.v1.PageRequest
+	39, // 11: core.v1.ListPaymentsRequest.dates:type_name -> core.v1.DateRange
 	0,  // 12: core.v1.ListPaymentsRequest.status:type_name -> core.v1.PaymentStatus
-	1,  // 13: core.v1.ListPaymentsResponse.items:type_name -> core.v1.ExpectedPayment
-	27, // 14: core.v1.ListPaymentsResponse.pagination:type_name -> core.v1.PageResponse
-	23, // 15: core.v1.GetPaymentRequest.context:type_name -> auth.v1.BrowserContext
-	24, // 16: core.v1.GetPaymentRequest.scope:type_name -> core.v1.AccountScope
-	1,  // 17: core.v1.GetPaymentResponse.payment:type_name -> core.v1.ExpectedPayment
-	28, // 18: core.v1.CreateManualPaymentRequest.context:type_name -> auth.v1.WriteContext
-	24, // 19: core.v1.CreateManualPaymentRequest.scope:type_name -> core.v1.AccountScope
-	19, // 20: core.v1.CreateManualPaymentRequest.direction:type_name -> core.v1.Direction
-	20, // 21: core.v1.CreateManualPaymentRequest.amount:type_name -> core.v1.Money
-	1,  // 22: core.v1.CreateManualPaymentResponse.payment:type_name -> core.v1.ExpectedPayment
-	23, // 23: core.v1.ListPaymentMatchesRequest.context:type_name -> auth.v1.BrowserContext
-	24, // 24: core.v1.ListPaymentMatchesRequest.scope:type_name -> core.v1.AccountScope
-	25, // 25: core.v1.ListPaymentMatchesRequest.page:type_name -> core.v1.PageRequest
-	2,  // 26: core.v1.ListPaymentMatchesResponse.items:type_name -> core.v1.PaymentMatch
-	27, // 27: core.v1.ListPaymentMatchesResponse.pagination:type_name -> core.v1.PageResponse
-	28, // 28: core.v1.MatchPaymentRequest.context:type_name -> auth.v1.WriteContext
-	24, // 29: core.v1.MatchPaymentRequest.scope:type_name -> core.v1.AccountScope
-	20, // 30: core.v1.MatchPaymentRequest.amount:type_name -> core.v1.Money
-	2,  // 31: core.v1.MatchPaymentResponse.match:type_name -> core.v1.PaymentMatch
-	28, // 32: core.v1.UpdatePaymentRequest.context:type_name -> auth.v1.WriteContext
-	24, // 33: core.v1.UpdatePaymentRequest.scope:type_name -> core.v1.AccountScope
-	19, // 34: core.v1.UpdatePaymentRequest.direction:type_name -> core.v1.Direction
-	20, // 35: core.v1.UpdatePaymentRequest.amount:type_name -> core.v1.Money
-	29, // 36: core.v1.UpdatePaymentRequest.clear_category:type_name -> google.protobuf.Empty
-	1,  // 37: core.v1.UpdatePaymentResponse.payment:type_name -> core.v1.ExpectedPayment
-	28, // 38: core.v1.CancelPaymentRequest.context:type_name -> auth.v1.WriteContext
-	24, // 39: core.v1.CancelPaymentRequest.scope:type_name -> core.v1.AccountScope
-	1,  // 40: core.v1.CancelPaymentResponse.payment:type_name -> core.v1.ExpectedPayment
-	28, // 41: core.v1.RemovePaymentMatchRequest.context:type_name -> auth.v1.WriteContext
-	24, // 42: core.v1.RemovePaymentMatchRequest.scope:type_name -> core.v1.AccountScope
-	1,  // 43: core.v1.RemovePaymentMatchResponse.payment:type_name -> core.v1.ExpectedPayment
-	13, // 44: core.v1.PaymentsService.UpdatePayment:input_type -> core.v1.UpdatePaymentRequest
-	15, // 45: core.v1.PaymentsService.CancelPayment:input_type -> core.v1.CancelPaymentRequest
-	17, // 46: core.v1.PaymentsService.RemovePaymentMatch:input_type -> core.v1.RemovePaymentMatchRequest
-	3,  // 47: core.v1.PaymentsService.ListPayments:input_type -> core.v1.ListPaymentsRequest
-	5,  // 48: core.v1.PaymentsService.GetPayment:input_type -> core.v1.GetPaymentRequest
-	7,  // 49: core.v1.PaymentsService.CreateManualPayment:input_type -> core.v1.CreateManualPaymentRequest
-	9,  // 50: core.v1.PaymentsService.ListPaymentMatches:input_type -> core.v1.ListPaymentMatchesRequest
-	11, // 51: core.v1.PaymentsService.MatchPayment:input_type -> core.v1.MatchPaymentRequest
-	14, // 52: core.v1.PaymentsService.UpdatePayment:output_type -> core.v1.UpdatePaymentResponse
-	16, // 53: core.v1.PaymentsService.CancelPayment:output_type -> core.v1.CancelPaymentResponse
-	18, // 54: core.v1.PaymentsService.RemovePaymentMatch:output_type -> core.v1.RemovePaymentMatchResponse
-	4,  // 55: core.v1.PaymentsService.ListPayments:output_type -> core.v1.ListPaymentsResponse
-	6,  // 56: core.v1.PaymentsService.GetPayment:output_type -> core.v1.GetPaymentResponse
-	8,  // 57: core.v1.PaymentsService.CreateManualPayment:output_type -> core.v1.CreateManualPaymentResponse
-	10, // 58: core.v1.PaymentsService.ListPaymentMatches:output_type -> core.v1.ListPaymentMatchesResponse
-	12, // 59: core.v1.PaymentsService.MatchPayment:output_type -> core.v1.MatchPaymentResponse
-	52, // [52:60] is the sub-list for method output_type
-	44, // [44:52] is the sub-list for method input_type
-	44, // [44:44] is the sub-list for extension type_name
-	44, // [44:44] is the sub-list for extension extendee
-	0,  // [0:44] is the sub-list for field type_name
+	2,  // 13: core.v1.ListPaymentsResponse.items:type_name -> core.v1.ExpectedPayment
+	40, // 14: core.v1.ListPaymentsResponse.pagination:type_name -> core.v1.PageResponse
+	36, // 15: core.v1.GetPaymentRequest.context:type_name -> auth.v1.BrowserContext
+	37, // 16: core.v1.GetPaymentRequest.scope:type_name -> core.v1.AccountScope
+	2,  // 17: core.v1.GetPaymentResponse.payment:type_name -> core.v1.ExpectedPayment
+	41, // 18: core.v1.CreateManualPaymentRequest.context:type_name -> auth.v1.WriteContext
+	37, // 19: core.v1.CreateManualPaymentRequest.scope:type_name -> core.v1.AccountScope
+	32, // 20: core.v1.CreateManualPaymentRequest.direction:type_name -> core.v1.Direction
+	33, // 21: core.v1.CreateManualPaymentRequest.amount:type_name -> core.v1.Money
+	2,  // 22: core.v1.CreateManualPaymentResponse.payment:type_name -> core.v1.ExpectedPayment
+	36, // 23: core.v1.ListPaymentMatchesRequest.context:type_name -> auth.v1.BrowserContext
+	37, // 24: core.v1.ListPaymentMatchesRequest.scope:type_name -> core.v1.AccountScope
+	38, // 25: core.v1.ListPaymentMatchesRequest.page:type_name -> core.v1.PageRequest
+	3,  // 26: core.v1.ListPaymentMatchesResponse.items:type_name -> core.v1.PaymentMatch
+	40, // 27: core.v1.ListPaymentMatchesResponse.pagination:type_name -> core.v1.PageResponse
+	41, // 28: core.v1.MatchPaymentRequest.context:type_name -> auth.v1.WriteContext
+	37, // 29: core.v1.MatchPaymentRequest.scope:type_name -> core.v1.AccountScope
+	33, // 30: core.v1.MatchPaymentRequest.amount:type_name -> core.v1.Money
+	3,  // 31: core.v1.MatchPaymentResponse.match:type_name -> core.v1.PaymentMatch
+	41, // 32: core.v1.UpdatePaymentRequest.context:type_name -> auth.v1.WriteContext
+	37, // 33: core.v1.UpdatePaymentRequest.scope:type_name -> core.v1.AccountScope
+	32, // 34: core.v1.UpdatePaymentRequest.direction:type_name -> core.v1.Direction
+	33, // 35: core.v1.UpdatePaymentRequest.amount:type_name -> core.v1.Money
+	42, // 36: core.v1.UpdatePaymentRequest.clear_category:type_name -> google.protobuf.Empty
+	42, // 37: core.v1.UpdatePaymentRequest.clear_reconciliation_group:type_name -> google.protobuf.Empty
+	2,  // 38: core.v1.UpdatePaymentResponse.payment:type_name -> core.v1.ExpectedPayment
+	41, // 39: core.v1.CancelPaymentRequest.context:type_name -> auth.v1.WriteContext
+	37, // 40: core.v1.CancelPaymentRequest.scope:type_name -> core.v1.AccountScope
+	2,  // 41: core.v1.CancelPaymentResponse.payment:type_name -> core.v1.ExpectedPayment
+	41, // 42: core.v1.RemovePaymentMatchRequest.context:type_name -> auth.v1.WriteContext
+	37, // 43: core.v1.RemovePaymentMatchRequest.scope:type_name -> core.v1.AccountScope
+	2,  // 44: core.v1.RemovePaymentMatchResponse.payment:type_name -> core.v1.ExpectedPayment
+	20, // 45: core.v1.CompleteReplacement.historical_operations:type_name -> core.v1.HistoricalOperationRef
+	37, // 46: core.v1.PaymentReconciliationGroup.scope:type_name -> core.v1.AccountScope
+	1,  // 47: core.v1.PaymentReconciliationGroup.status:type_name -> core.v1.ReconciliationStatus
+	35, // 48: core.v1.PaymentReconciliationGroup.confirmed_at:type_name -> google.protobuf.Timestamp
+	21, // 49: core.v1.PaymentReconciliationGroup.additional:type_name -> core.v1.AdditionalObligationConfirmation
+	22, // 50: core.v1.PaymentReconciliationGroup.replacement:type_name -> core.v1.CompleteReplacement
+	41, // 51: core.v1.CreateReconciliationGroupRequest.context:type_name -> auth.v1.WriteContext
+	37, // 52: core.v1.CreateReconciliationGroupRequest.scope:type_name -> core.v1.AccountScope
+	21, // 53: core.v1.CreateReconciliationGroupRequest.additional:type_name -> core.v1.AdditionalObligationConfirmation
+	22, // 54: core.v1.CreateReconciliationGroupRequest.replacement:type_name -> core.v1.CompleteReplacement
+	23, // 55: core.v1.CreateReconciliationGroupResponse.group:type_name -> core.v1.PaymentReconciliationGroup
+	36, // 56: core.v1.GetReconciliationGroupRequest.context:type_name -> auth.v1.BrowserContext
+	37, // 57: core.v1.GetReconciliationGroupRequest.scope:type_name -> core.v1.AccountScope
+	23, // 58: core.v1.GetReconciliationGroupResponse.group:type_name -> core.v1.PaymentReconciliationGroup
+	36, // 59: core.v1.ListReconciliationGroupsRequest.context:type_name -> auth.v1.BrowserContext
+	37, // 60: core.v1.ListReconciliationGroupsRequest.scope:type_name -> core.v1.AccountScope
+	38, // 61: core.v1.ListReconciliationGroupsRequest.page:type_name -> core.v1.PageRequest
+	23, // 62: core.v1.ListReconciliationGroupsResponse.items:type_name -> core.v1.PaymentReconciliationGroup
+	40, // 63: core.v1.ListReconciliationGroupsResponse.pagination:type_name -> core.v1.PageResponse
+	41, // 64: core.v1.RevokeReconciliationGroupRequest.context:type_name -> auth.v1.WriteContext
+	37, // 65: core.v1.RevokeReconciliationGroupRequest.scope:type_name -> core.v1.AccountScope
+	23, // 66: core.v1.RevokeReconciliationGroupResponse.group:type_name -> core.v1.PaymentReconciliationGroup
+	14, // 67: core.v1.PaymentsService.UpdatePayment:input_type -> core.v1.UpdatePaymentRequest
+	16, // 68: core.v1.PaymentsService.CancelPayment:input_type -> core.v1.CancelPaymentRequest
+	18, // 69: core.v1.PaymentsService.RemovePaymentMatch:input_type -> core.v1.RemovePaymentMatchRequest
+	4,  // 70: core.v1.PaymentsService.ListPayments:input_type -> core.v1.ListPaymentsRequest
+	6,  // 71: core.v1.PaymentsService.GetPayment:input_type -> core.v1.GetPaymentRequest
+	8,  // 72: core.v1.PaymentsService.CreateManualPayment:input_type -> core.v1.CreateManualPaymentRequest
+	10, // 73: core.v1.PaymentsService.ListPaymentMatches:input_type -> core.v1.ListPaymentMatchesRequest
+	12, // 74: core.v1.PaymentsService.MatchPayment:input_type -> core.v1.MatchPaymentRequest
+	24, // 75: core.v1.PaymentsService.CreateReconciliationGroup:input_type -> core.v1.CreateReconciliationGroupRequest
+	26, // 76: core.v1.PaymentsService.GetReconciliationGroup:input_type -> core.v1.GetReconciliationGroupRequest
+	28, // 77: core.v1.PaymentsService.ListReconciliationGroups:input_type -> core.v1.ListReconciliationGroupsRequest
+	30, // 78: core.v1.PaymentsService.RevokeReconciliationGroup:input_type -> core.v1.RevokeReconciliationGroupRequest
+	15, // 79: core.v1.PaymentsService.UpdatePayment:output_type -> core.v1.UpdatePaymentResponse
+	17, // 80: core.v1.PaymentsService.CancelPayment:output_type -> core.v1.CancelPaymentResponse
+	19, // 81: core.v1.PaymentsService.RemovePaymentMatch:output_type -> core.v1.RemovePaymentMatchResponse
+	5,  // 82: core.v1.PaymentsService.ListPayments:output_type -> core.v1.ListPaymentsResponse
+	7,  // 83: core.v1.PaymentsService.GetPayment:output_type -> core.v1.GetPaymentResponse
+	9,  // 84: core.v1.PaymentsService.CreateManualPayment:output_type -> core.v1.CreateManualPaymentResponse
+	11, // 85: core.v1.PaymentsService.ListPaymentMatches:output_type -> core.v1.ListPaymentMatchesResponse
+	13, // 86: core.v1.PaymentsService.MatchPayment:output_type -> core.v1.MatchPaymentResponse
+	25, // 87: core.v1.PaymentsService.CreateReconciliationGroup:output_type -> core.v1.CreateReconciliationGroupResponse
+	27, // 88: core.v1.PaymentsService.GetReconciliationGroup:output_type -> core.v1.GetReconciliationGroupResponse
+	29, // 89: core.v1.PaymentsService.ListReconciliationGroups:output_type -> core.v1.ListReconciliationGroupsResponse
+	31, // 90: core.v1.PaymentsService.RevokeReconciliationGroup:output_type -> core.v1.RevokeReconciliationGroupResponse
+	79, // [79:91] is the sub-list for method output_type
+	67, // [67:79] is the sub-list for method input_type
+	67, // [67:67] is the sub-list for extension type_name
+	67, // [67:67] is the sub-list for extension extendee
+	0,  // [0:67] is the sub-list for field type_name
 }
 
 func init() { file_core_v1_payments_proto_init() }
@@ -1703,14 +2801,24 @@ func file_core_v1_payments_proto_init() {
 	file_core_v1_payments_proto_msgTypes[12].OneofWrappers = []any{
 		(*UpdatePaymentRequest_CategoryId)(nil),
 		(*UpdatePaymentRequest_ClearCategory)(nil),
+		(*UpdatePaymentRequest_ReconciliationGroupId)(nil),
+		(*UpdatePaymentRequest_ClearReconciliationGroup)(nil),
+	}
+	file_core_v1_payments_proto_msgTypes[21].OneofWrappers = []any{
+		(*PaymentReconciliationGroup_Additional)(nil),
+		(*PaymentReconciliationGroup_Replacement)(nil),
+	}
+	file_core_v1_payments_proto_msgTypes[22].OneofWrappers = []any{
+		(*CreateReconciliationGroupRequest_Additional)(nil),
+		(*CreateReconciliationGroupRequest_Replacement)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_v1_payments_proto_rawDesc), len(file_core_v1_payments_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   18,
+			NumEnums:      2,
+			NumMessages:   30,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

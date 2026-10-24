@@ -58,6 +58,18 @@ def check(descriptor_path):
         ),
         ("core.v1.UpdateCompanyRequest", "inn_change", {"inn", "clear_inn"}),
         ("core.v1.UpdatePaymentRequest", "category_change", {"category_id", "clear_category"}),
+        (
+            "core.v1.UpdatePaymentRequest",
+            "reconciliation_change",
+            {"reconciliation_group_id", "clear_reconciliation_group"},
+        ),
+        ("core.v1.PaymentReconciliationGroup", "reconciliation", {"additional", "replacement"}),
+        (
+            "core.v1.CreateReconciliationGroupRequest",
+            "reconciliation",
+            {"additional", "replacement"},
+        ),
+        ("ml.v1.RecurringHypothesis", "monthly_anchor", {"day_of_month", "month_end"}),
         ("ml.v1.FinancialProbability", "estimate", {"calibrated", "unavailable_reason"}),
     ):
         message = messages["." + message_name]
@@ -79,6 +91,8 @@ def check(descriptor_path):
         ("core.v1.ForecastModelContext", "random_seed"),
         ("core.v1.Comparison", "delta_gap_probability"),
         ("ml.v1.ForecastSnapshot", "initial_balance_minor"),
+        ("core.v1.CreateManualPaymentRequest", "reconciliation_group_id"),
+        ("core.v1.ExpectedPayment", "reconciliation_group_id"),
     ):
         field = next(f for f in messages["." + message_name].field if f.name == field_name)
         if not field.proto3_optional:

@@ -19,14 +19,18 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	PaymentsService_UpdatePayment_FullMethodName       = "/core.v1.PaymentsService/UpdatePayment"
-	PaymentsService_CancelPayment_FullMethodName       = "/core.v1.PaymentsService/CancelPayment"
-	PaymentsService_RemovePaymentMatch_FullMethodName  = "/core.v1.PaymentsService/RemovePaymentMatch"
-	PaymentsService_ListPayments_FullMethodName        = "/core.v1.PaymentsService/ListPayments"
-	PaymentsService_GetPayment_FullMethodName          = "/core.v1.PaymentsService/GetPayment"
-	PaymentsService_CreateManualPayment_FullMethodName = "/core.v1.PaymentsService/CreateManualPayment"
-	PaymentsService_ListPaymentMatches_FullMethodName  = "/core.v1.PaymentsService/ListPaymentMatches"
-	PaymentsService_MatchPayment_FullMethodName        = "/core.v1.PaymentsService/MatchPayment"
+	PaymentsService_UpdatePayment_FullMethodName             = "/core.v1.PaymentsService/UpdatePayment"
+	PaymentsService_CancelPayment_FullMethodName             = "/core.v1.PaymentsService/CancelPayment"
+	PaymentsService_RemovePaymentMatch_FullMethodName        = "/core.v1.PaymentsService/RemovePaymentMatch"
+	PaymentsService_ListPayments_FullMethodName              = "/core.v1.PaymentsService/ListPayments"
+	PaymentsService_GetPayment_FullMethodName                = "/core.v1.PaymentsService/GetPayment"
+	PaymentsService_CreateManualPayment_FullMethodName       = "/core.v1.PaymentsService/CreateManualPayment"
+	PaymentsService_ListPaymentMatches_FullMethodName        = "/core.v1.PaymentsService/ListPaymentMatches"
+	PaymentsService_MatchPayment_FullMethodName              = "/core.v1.PaymentsService/MatchPayment"
+	PaymentsService_CreateReconciliationGroup_FullMethodName = "/core.v1.PaymentsService/CreateReconciliationGroup"
+	PaymentsService_GetReconciliationGroup_FullMethodName    = "/core.v1.PaymentsService/GetReconciliationGroup"
+	PaymentsService_ListReconciliationGroups_FullMethodName  = "/core.v1.PaymentsService/ListReconciliationGroups"
+	PaymentsService_RevokeReconciliationGroup_FullMethodName = "/core.v1.PaymentsService/RevokeReconciliationGroup"
 )
 
 // PaymentsServiceClient is the client API for PaymentsService service.
@@ -44,6 +48,10 @@ type PaymentsServiceClient interface {
 	CreateManualPayment(ctx context.Context, in *CreateManualPaymentRequest, opts ...grpc.CallOption) (*CreateManualPaymentResponse, error)
 	ListPaymentMatches(ctx context.Context, in *ListPaymentMatchesRequest, opts ...grpc.CallOption) (*ListPaymentMatchesResponse, error)
 	MatchPayment(ctx context.Context, in *MatchPaymentRequest, opts ...grpc.CallOption) (*MatchPaymentResponse, error)
+	CreateReconciliationGroup(ctx context.Context, in *CreateReconciliationGroupRequest, opts ...grpc.CallOption) (*CreateReconciliationGroupResponse, error)
+	GetReconciliationGroup(ctx context.Context, in *GetReconciliationGroupRequest, opts ...grpc.CallOption) (*GetReconciliationGroupResponse, error)
+	ListReconciliationGroups(ctx context.Context, in *ListReconciliationGroupsRequest, opts ...grpc.CallOption) (*ListReconciliationGroupsResponse, error)
+	RevokeReconciliationGroup(ctx context.Context, in *RevokeReconciliationGroupRequest, opts ...grpc.CallOption) (*RevokeReconciliationGroupResponse, error)
 }
 
 type paymentsServiceClient struct {
@@ -134,6 +142,46 @@ func (c *paymentsServiceClient) MatchPayment(ctx context.Context, in *MatchPayme
 	return out, nil
 }
 
+func (c *paymentsServiceClient) CreateReconciliationGroup(ctx context.Context, in *CreateReconciliationGroupRequest, opts ...grpc.CallOption) (*CreateReconciliationGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateReconciliationGroupResponse)
+	err := c.cc.Invoke(ctx, PaymentsService_CreateReconciliationGroup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *paymentsServiceClient) GetReconciliationGroup(ctx context.Context, in *GetReconciliationGroupRequest, opts ...grpc.CallOption) (*GetReconciliationGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetReconciliationGroupResponse)
+	err := c.cc.Invoke(ctx, PaymentsService_GetReconciliationGroup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *paymentsServiceClient) ListReconciliationGroups(ctx context.Context, in *ListReconciliationGroupsRequest, opts ...grpc.CallOption) (*ListReconciliationGroupsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListReconciliationGroupsResponse)
+	err := c.cc.Invoke(ctx, PaymentsService_ListReconciliationGroups_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *paymentsServiceClient) RevokeReconciliationGroup(ctx context.Context, in *RevokeReconciliationGroupRequest, opts ...grpc.CallOption) (*RevokeReconciliationGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokeReconciliationGroupResponse)
+	err := c.cc.Invoke(ctx, PaymentsService_RevokeReconciliationGroup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PaymentsServiceServer is the server API for PaymentsService service.
 // All implementations must embed UnimplementedPaymentsServiceServer
 // for forward compatibility.
@@ -149,6 +197,10 @@ type PaymentsServiceServer interface {
 	CreateManualPayment(context.Context, *CreateManualPaymentRequest) (*CreateManualPaymentResponse, error)
 	ListPaymentMatches(context.Context, *ListPaymentMatchesRequest) (*ListPaymentMatchesResponse, error)
 	MatchPayment(context.Context, *MatchPaymentRequest) (*MatchPaymentResponse, error)
+	CreateReconciliationGroup(context.Context, *CreateReconciliationGroupRequest) (*CreateReconciliationGroupResponse, error)
+	GetReconciliationGroup(context.Context, *GetReconciliationGroupRequest) (*GetReconciliationGroupResponse, error)
+	ListReconciliationGroups(context.Context, *ListReconciliationGroupsRequest) (*ListReconciliationGroupsResponse, error)
+	RevokeReconciliationGroup(context.Context, *RevokeReconciliationGroupRequest) (*RevokeReconciliationGroupResponse, error)
 	mustEmbedUnimplementedPaymentsServiceServer()
 }
 
@@ -182,6 +234,18 @@ func (UnimplementedPaymentsServiceServer) ListPaymentMatches(context.Context, *L
 }
 func (UnimplementedPaymentsServiceServer) MatchPayment(context.Context, *MatchPaymentRequest) (*MatchPaymentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MatchPayment not implemented")
+}
+func (UnimplementedPaymentsServiceServer) CreateReconciliationGroup(context.Context, *CreateReconciliationGroupRequest) (*CreateReconciliationGroupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateReconciliationGroup not implemented")
+}
+func (UnimplementedPaymentsServiceServer) GetReconciliationGroup(context.Context, *GetReconciliationGroupRequest) (*GetReconciliationGroupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetReconciliationGroup not implemented")
+}
+func (UnimplementedPaymentsServiceServer) ListReconciliationGroups(context.Context, *ListReconciliationGroupsRequest) (*ListReconciliationGroupsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListReconciliationGroups not implemented")
+}
+func (UnimplementedPaymentsServiceServer) RevokeReconciliationGroup(context.Context, *RevokeReconciliationGroupRequest) (*RevokeReconciliationGroupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeReconciliationGroup not implemented")
 }
 func (UnimplementedPaymentsServiceServer) mustEmbedUnimplementedPaymentsServiceServer() {}
 func (UnimplementedPaymentsServiceServer) testEmbeddedByValue()                         {}
@@ -348,6 +412,78 @@ func _PaymentsService_MatchPayment_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PaymentsService_CreateReconciliationGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateReconciliationGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaymentsServiceServer).CreateReconciliationGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaymentsService_CreateReconciliationGroup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaymentsServiceServer).CreateReconciliationGroup(ctx, req.(*CreateReconciliationGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PaymentsService_GetReconciliationGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetReconciliationGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaymentsServiceServer).GetReconciliationGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaymentsService_GetReconciliationGroup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaymentsServiceServer).GetReconciliationGroup(ctx, req.(*GetReconciliationGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PaymentsService_ListReconciliationGroups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListReconciliationGroupsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaymentsServiceServer).ListReconciliationGroups(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaymentsService_ListReconciliationGroups_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaymentsServiceServer).ListReconciliationGroups(ctx, req.(*ListReconciliationGroupsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PaymentsService_RevokeReconciliationGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeReconciliationGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaymentsServiceServer).RevokeReconciliationGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaymentsService_RevokeReconciliationGroup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaymentsServiceServer).RevokeReconciliationGroup(ctx, req.(*RevokeReconciliationGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // PaymentsService_ServiceDesc is the grpc.ServiceDesc for PaymentsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -386,6 +522,22 @@ var PaymentsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MatchPayment",
 			Handler:    _PaymentsService_MatchPayment_Handler,
+		},
+		{
+			MethodName: "CreateReconciliationGroup",
+			Handler:    _PaymentsService_CreateReconciliationGroup_Handler,
+		},
+		{
+			MethodName: "GetReconciliationGroup",
+			Handler:    _PaymentsService_GetReconciliationGroup_Handler,
+		},
+		{
+			MethodName: "ListReconciliationGroups",
+			Handler:    _PaymentsService_ListReconciliationGroups_Handler,
+		},
+		{
+			MethodName: "RevokeReconciliationGroup",
+			Handler:    _PaymentsService_RevokeReconciliationGroup_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
