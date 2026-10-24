@@ -8,7 +8,10 @@
         "start": "next start",
         "lint": "eslint .",
         "typecheck": "tsc --noEmit",
-        "test": "node --import ./tests/register.mjs --test tests/*.test.mjs"
+        "test": "node --import ./tests/register.mjs --test tests/*.test.mjs",
+        "build:pages": "node scripts/build-pages.mjs",
+        "publish:pages": "node scripts/publish-pages.mjs",
+        "preview:pages": "node scripts/preview-pages.mjs"
     },
     "engines": {
         "node": ">=20.9.0"

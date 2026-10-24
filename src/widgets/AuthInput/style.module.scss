@@ -67,11 +67,11 @@
     width: 26px;
     height: 26px;
     background-color: currentColor;
-    mask: url("/icons/password/eye.svg") center / contain no-repeat;
+    mask: url("../../../public/icons/password/eye.svg") center / contain no-repeat;
 }
 
 .eyeOff {
-    mask-image: url("/icons/password/eye-off.svg");
+    mask-image: url("../../../public/icons/password/eye-off.svg");
 }
 
 .input {

@@ -1,14 +1,17 @@
+import { withBasePath, withoutBasePath } from "./basePath";
+
+
 const AUTH_ROUTES = [ "/login", "/register", "/verify-code", "/forgot-password", "/reset-password" ];
 
 
 let loginRedirectPending = false;
 
 
-const isAuthRoute = ( pathname: string ): boolean => AUTH_ROUTES.includes(pathname.replace(/\/+$/, "") || "/");
+const isAuthRoute = ( pathname: string ): boolean => AUTH_ROUTES.includes(withoutBasePath(pathname).replace(/\/+$/, "") || "/");
 
 
 const isPublicRoute = ( pathname: string ): boolean => {
-    return isAuthRoute(pathname) || [ "/personal-data-consent", "/privacy-policy" ].includes(pathname.replace(/\/+$/, ""));
+    return isAuthRoute(pathname) || [ "/personal-data-consent", "/privacy-policy" ].includes(withoutBasePath(pathname).replace(/\/+$/, ""));
 };
 
 
@@ -18,7 +21,7 @@ const redirectToLogin = () => {
     }
 
     loginRedirectPending = true;
-    window.location.replace("/login");
+    window.location.replace(withBasePath("/login"));
 };
 
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { AuthBoundary } from "@/features";
+import { withBasePath } from "@/helpers/basePath";
 import StoreProvider from "@/store/StoreProvider";
 import { Header } from "@/widgets";
 
@@ -26,15 +27,15 @@ const metadata: Metadata = {
     },
     description,
     keywords: [ "Saldo", "Saldo Analytics", "финансовое прогнозирование", "денежные потоки", "кассовые разрывы", "платёжный календарь", "план-факт", "финансы малого бизнеса" ],
-    manifest: "/favicons/site.webmanifest",
+    manifest: withBasePath("/favicons/site.webmanifest"),
     icons: {
         icon: [
-            { url: "/favicons/favicon.svg", type: "image/svg+xml" },
-            { url: "/favicons/favicon-32.png", sizes: "32x32", type: "image/png" },
-            { url: "/favicons/favicon-16.png", sizes: "16x16", type: "image/png" },
+            { url: withBasePath("/favicons/favicon.svg"), type: "image/svg+xml" },
+            { url: withBasePath("/favicons/favicon-32.png"), sizes: "32x32", type: "image/png" },
+            { url: withBasePath("/favicons/favicon-16.png"), sizes: "16x16", type: "image/png" },
         ],
-        shortcut: "/favicons/favicon.ico",
-        apple: "/favicons/apple-touch-icon.png",
+        shortcut: withBasePath("/favicons/favicon.ico"),
+        apple: withBasePath("/favicons/apple-touch-icon.png"),
     },
     openGraph: {
         title: "Saldo Analytics — финансовый прогноз для бизнеса",
