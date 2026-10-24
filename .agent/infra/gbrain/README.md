@@ -45,10 +45,7 @@ https://gbrain.brokebyte.me/health. Дата установки: 2026-10-23.
 
 ## Локальный Codex
 
-Для передачи команде: [готовый промпт подключения](../../prompts/connect-gbrain.md).
-Он сначала получает изменения из `main`, сохраняя незавершённую локальную работу.
-
-Установщик создаёт `.codex/config.toml` для текущего checkout; токена в нём нет.
+Для текущего checkout создан `.codex/config.toml`; токена в нём нет.
 HTTP header helper читает `.agent/local/gbrain-developer.token` (`0600`). Оба пути
 исключены из Git. Настройка действует только для доверенного проекта.
 Для другого checkout с Python 3.11+ и отдельно выданным credential:
