@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -95,12 +96,16 @@ func TestServeLifecycleReadinessAndForcedShutdown(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer listener.Close()
-			cfg := config.Config{Origin: "https://localhost", ShutdownTimeout: 100 * time.Millisecond}
+			cfg := config.Config{Origin: "https://localhost", ShutdownTimeout: 2 * time.Second}
+			if force {
+				cfg.ShutdownTimeout = 100 * time.Millisecond
+			}
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			done := make(chan error, 1)
 			go func() { done <- Serve(ctx, cfg, slog.New(slog.DiscardHandler), client, listener) }()
 			httpClient := &http.Client{Timeout: 3 * time.Second}
+			t.Cleanup(httpClient.CloseIdleConnections)
 			get := func(path string) int {
 				r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+listener.Addr().String()+path, nil)
 				if err != nil {
@@ -111,6 +116,9 @@ func TestServeLifecycleReadinessAndForcedShutdown(t *testing.T) {
 					return 0
 				}
 				defer res.Body.Close()
+				if _, err := io.Copy(io.Discard, res.Body); err != nil {
+					return 0
+				}
 				return res.StatusCode
 			}
 			if got := get("/health/ready"); got != 200 {

@@ -5,6 +5,23 @@
 Ревью: после каждого этапа остановка до явного апрува по ADR-020.
 Публикация, merge в main и deployment — только по отдельной авторизации владельца.
 
+## Актуальная база после синхронизации PR #30
+
+Сверка 24.10.2026: ветка PR #30 включает main `6afa1dc` обычным merge.
+Историческая таблица ниже описывает базу `31e7913`; она не является текущим
+блокером контрактов. Теперь canonical `proto/core/v1` покрывает 54 REST operationId,
+а `proto/ml/v1/forecast.proto` предоставляет один ForecastService/Predict по ADR-029.
+Финансовый профиль: mean_90 / mean_90_components_v1 / calendar_replacement_v1;
+baseline — mean_90_v1 / daily_snapshot_v1; автоматического fallback нет.
+Готовые API bindings генерируются через `buf.api-core.gen.yaml`; маршруты и
+presence/nulls/errors/job states/streaming описаны в `docs/core/api-adapter.md`,
+полная финансовая ML-семантика — `docs/core/financial-ml.md`.
+Core handlers/bootstrap/worker/persistence финансового результата ещё не готовы;
+API адаптирует этот контракт, не создаёт второй proto и не заменяет Core Python CLI.
+Auth business E2E также требует отдельной проверки настоящего Auth.
+Разработчик API сохраняет владение своим планом F1–F3; их реализация/принятие
+не объявляется завершённой этим merge.
+
 ## Проверенная база и сохранение работы
 
 - `git status` → `git fetch origin` → именованный stash с untracked → обычный

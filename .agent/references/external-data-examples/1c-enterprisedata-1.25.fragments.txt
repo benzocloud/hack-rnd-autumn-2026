@@ -17,7 +17,7 @@ LIMIT: fragments, not a standalone schema or a valid complete exchange message. 
 		</xs:sequence>
 		<xs:anyAttribute namespace="##any" processContents="lax" />
 	</xs:complexType>
-	
+
 <xs:complexType xmlns:xs="http://www.w3.org/2001/XMLSchema" name="ОбщиеСвойстваЗаявокНаОперацииСДС">
 		<xs:sequence>
 			<xs:element name="Статус" type="tns:СтатусыЗаявокНаРасходДС" minOccurs="0" />
@@ -41,7 +41,7 @@ LIMIT: fragments, not a standalone schema or a valid complete exchange message. 
 		</xs:sequence>
 		<xs:anyAttribute namespace="##any" processContents="lax" />
 	</xs:complexType>
-	
+
 <xs:complexType xmlns:xs="http://www.w3.org/2001/XMLSchema" name="ОбщиеСвойстваПБДС">
 		<xs:sequence>
 			<xs:element name="ДатаВыписки" type="xs:date" />
@@ -57,7 +57,7 @@ LIMIT: fragments, not a standalone schema or a valid complete exchange message. 
 		</xs:sequence>
 		<xs:anyAttribute namespace="##any" processContents="lax" />
 	</xs:complexType>
-	
+
 <xs:complexType xmlns:xs="http://www.w3.org/2001/XMLSchema" name="КлючевыеСвойстваПБДСРасчетыСКонтрагентами">
 		<xs:sequence>
 			<xs:element name="СсылкаВнешняяНавигационная" type="tns:ТипСсылкаВнешняяНавигационная" minOccurs="0" />
@@ -69,11 +69,10 @@ LIMIT: fragments, not a standalone schema or a valid complete exchange message. 
 		</xs:sequence>
 		<xs:anyAttribute namespace="##any" processContents="lax" />
 	</xs:complexType>
-	
+
 <xs:simpleType xmlns:xs="http://www.w3.org/2001/XMLSchema" name="ТипСумма">
 		<xs:restriction base="xs:decimal">
 			<xs:totalDigits value="15" />
 			<xs:fractionDigits value="2" />
 		</xs:restriction>
 	</xs:simpleType>
-	

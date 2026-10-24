@@ -5,11 +5,11 @@ LIMIT: fragments, not a standalone schema or a complete notification.
 
 <xs:element xmlns:ns1="http://purl.oclc.org/dsdl/schematron" xmlns:ns2="http://www.unisoftware.ru/schematron-extensions" xmlns:xs="http://www.w3.org/2001/XMLSchema" name="УвИсчСумНалог" maxOccurs="unbounded">
 								<xs:annotation>
-									
+
 									<xs:appinfo>
 										<ns1:pattern name="Проверка наличия КППДекл">
 											<ns1:rule context="УвИсчСумНалог">
-												
+
 												<ns1:assert test="(@КППДекл and ../СвНП/НПЮЛ) or (not(../СвНП/НПЮЛ))                     ">
 													<ns2:error code="0400300003" path="" value-of-select="">
                                                                           Отсутствует элемент Файл/Документ/УвИсчСумНалог/@КППДекл при наличии элемента Файл/Документ/СвНП/НПЮЛ
@@ -18,7 +18,7 @@ LIMIT: fragments, not a standalone schema or a complete notification.
 											</ns1:rule>
 										</ns1:pattern>
 									</xs:appinfo>
-									
+
 									<xs:documentation>Уведомление об исчисленных суммах налогов, авансовых платежей по налогам, сборов, страховых взносов</xs:documentation>
 								</xs:annotation>
 								<xs:complexType>
@@ -89,7 +89,7 @@ LIMIT: fragments, not a standalone schema or a complete notification.
 									</xs:attribute>
 								</xs:complexType>
 							</xs:element>
-						
+
 <xs:simpleType xmlns:xs="http://www.w3.org/2001/XMLSchema" name="ДатаТип">
 		<xs:annotation>
 			<xs:documentation>Дата в формате ДД.ММ.ГГГГ (01.01.1900 - 31.12.2099)</xs:documentation>
@@ -99,4 +99,3 @@ LIMIT: fragments, not a standalone schema or a complete notification.
 			<xs:pattern value="((((0[1-9]{1}|1[0-9]{1}|2[0-8]{1})\.(0[1-9]{1}|1[0-2]{1}))|((29|30)\.(01|0[3-9]{1}|1[0-2]{1}))|(31\.(01|03|05|07|08|10|12)))\.((19|20)[0-9]{2}))|(29\.02\.((19|20)(((0|2|4|6|8)(0|4|8))|((1|3|5|7|9)(2|6)))))" />
 		</xs:restriction>
 	</xs:simpleType>
-	
