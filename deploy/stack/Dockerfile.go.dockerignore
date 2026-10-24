@@ -1,0 +1,13 @@
+**
+!services/
+!services/api/
+!services/api/**
+!services/auth/
+!services/auth/**
+!services/core/
+!services/core/**
+**/artifacts
+**/.env*
+**/__pycache__
+**/*_test.go
+**/integration
