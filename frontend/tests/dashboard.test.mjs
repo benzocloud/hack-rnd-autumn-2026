@@ -38,6 +38,30 @@ test("dashboard searches all forecast pages and reuses the saved result", async 
 });
 
 
+test("home dashboard resolves the company from current server memberships", async ( t ) => {
+    const { company, forecast } = setup(t);
+    const memberships = t.mock.method(companiesService, "listCompanies", async () => ({ items: [ company ], next_cursor: null }));
+    const profile = t.mock.method(companiesService, "getCompany", async () => { throw new Error("stale company must not be requested"); });
+    const result = await dashboardService.getDashboardData(30, new AbortController().signal);
+
+    assert.equal(result.company, company);
+    assert.equal(result.forecast, forecast);
+    assert.equal(memberships.mock.callCount(), 1);
+    assert.equal(profile.mock.callCount(), 0);
+});
+
+
+test("explicit company routes preserve access failures without silently switching companies", async ( t ) => {
+    setup(t);
+    const denied = new Error("Company not found");
+    t.mock.method(companiesService, "getCompany", async () => { throw denied; });
+    const memberships = t.mock.method(companiesService, "listCompanies", async () => ({ items: [], next_cursor: null }));
+
+    await assert.rejects(dashboardService.getDashboardData(30, new AbortController().signal, "foreign-company"), ( error ) => error === denied);
+    assert.equal(memberships.mock.callCount(), 0);
+});
+
+
 test("dashboard reports queued/running/succeeded and polls the accepted forecast", async ( t ) => {
     const { forecast, company } = setup(t);
     let reads = 0;
