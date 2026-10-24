@@ -2,8 +2,9 @@
 
 Основа модульного DDD-монолита. Подэтап 2.1 содержит env-конфигурацию и
 локальный `pkg/log`; подэтап 2.2 добавляет доменные модели денег, Ledger и Payments.
-Подэтап 2.3 реализован локально и ожидает ревью разработчика: sqlx pool,
+Подэтап 2.3 включён в main: sqlx pool,
 миграции, атомарные операции Ledger/Payments и persistent idempotency.
+Подэтап 2.4 принят разработчиком 2026-10-24: FinancialSnapshot.
 Прикладная сборка находится в `internal/app`; HTTP/gRPC ещё не реализованы.
 Сервер остаётся в следующих подэтапах
 [плана](../../.agent/plans/go-core-foundation.md).
@@ -18,6 +19,7 @@ money/     money.go, parse.go, arithmetic.go, errors.go
 ledger/    account.go, transaction.go, balance.go
            scope.go, date.go, direction.go, source.go, category.go, errors.go
 payments/  payment.go, match.go, errors.go
+forecasting/ snapshot.go, errors.go
 ```
 
 Конструкторы проверяют инварианты; состояние Transaction и ExpectedPayment
@@ -126,7 +128,39 @@ Balance хранит собственную created_data_version, чтобы п�
 
 Это внутренние операции для доверенного адаптера. Авторизация и проверка прав
 на компанию должны выполняться будущим транспортом при каждом запросе, включая replay.
-Финансовые данные для snapshot, очередь, importer и сервер этим этапом не добавлены.
+Очередь, importer и сервер этим этапом не добавлены.
+
+## Финансовый снимок (2.4)
+
+`app.Forecasting.CaptureSnapshot(ctx, {Scope, Cutoff})` сохраняет внутренний
+FinancialSnapshot с UUIDv7, account data_version, EOD ровно на Cutoff и фактами
+с business date <= Cutoff. Даты трактуются как бизнес-даты Europe/Moscow,
+а временные метки сохраняются UTC. Без точного EOD возвращается
+`forecasting.ErrMissingBalance`; предыдущий остаток не переносится автоматически.
+`GetSnapshot(ctx, scope, id)` читает сохранённый снимок по company/account/ID.
+Создание и чтение снимка не меняют финансовую revision счёта.
+
+Все scoped read-проекции и INSERT снимка проходят в одной REPEATABLE READ
+read-write транзакции на попытку. `app/postgres.WithinRepeatableRead` повторяет
+только SQLSTATE 40001: максимум три попытки в общем QueryTimeout. Это нужно,
+в частности, при конкурентной записи account и проверке FK. Callback должен
+быть replayable без сетевых вызовов/внешних эффектов. Сервис возвращает результат
+после commit. Обычные команды Ledger/Payments используют прежний WithinTx.
+
+Таблица `core_financial_snapshots` добавляется миграцией 00003. Repository имеет
+только INSERT/SELECT; повтор ID даёт конфликт. Private JSONB codec версии 1
+сохраняет точные int64 суммы, provenance и версии фактов/остатка; доменные модели
+не сериализуются напрямую. Снимок владеет копиями срезов; изменение счёта или
+новый capture не перезаписывают существующий снимок.
+
+Текущая схема не позволяет восстановить исторические remaining/status платежей.
+Поэтому календарь явно исключён с `historical_calendar_unavailable`;
+`ExcludedPayments` — количество видимых исключённых строк на момент capture,
+не доказанное количество на cutoff. Флаг `historical_availability_unverified`
+дополнительно сообщает, что факты по бизнес-дате не доказывают доступность
+информации в прошлом. Реальные imported_at/recorded_at сохранены. Пустой календарь
+не означает отсутствия обязательств. Снимок ещё не является ForecastInput,
+ModelContext или результатом прогноза; адаптер ML и запуск job остаются далее.
 
 ## Проверки
 
@@ -158,6 +192,9 @@ Integration-проверки покрывают UUID/source CHECK, четыре 
 replay после reconnect, разные digest/scopes, откат после FK/SQL-ошибки,
 конкурентный одинаковый ключ и factual namespaces, два match разных ожиданий
 на один факт, stale versions, cross-tenant ID и отмену context без утечки pool.
+Для снимка проверяются MVCC consistency при конкурентном факте/ожидании/match,
+serialization retry без частичных записей, неизменяемость и reconnect roundtrip,
+точные границы int64, exact-cutoff EOD, исключение будущего факта и tenant scope.
 
 Использовать только одноразовую БД из `compose.integration.yml`: запустить
 `docker compose -f compose.integration.yml up -d --wait postgres`, узнать
