@@ -77,10 +77,10 @@ Pinned review skills получены в изолированном катало
 `09c434a`, cc-skills-golang `19a0626`. Чтение skill не равно проведённому review;
 A0 reviewed двумя независимыми read-only агентами: caveman-review и
 ponytail-review, подтверждённых замечаний нет (HEAD `6bd70b2` + A0 docs diff).
-Ревью кода последующих этапов ещё pending. Тот же pinned fetch можно повторить с другого
+Repository slice A1 также reviewed; service/RPC/recovery reviews ещё pending. Тот же pinned fetch можно повторить с другого
 компьютера; root-owned installer на developer машине запускать не нужно.
 Go `GOTOOLCHAIN=go1.27.3 go version` успешен; Docker server 29.9.1 доступен.
-Go lint/task/Buf ещё предстоит подготовить; runtime suites пока не запускались.
+Go lint 2.15.0 подготовлен, A1 runtime результаты ниже; task/Buf ещё предстоит подготовить.
 
 ## Воспроизводимые команды
 
@@ -106,7 +106,7 @@ PR title: `feat: implement durable company onboarding`; русское descripti
 Read full PR descriptions/conversation/reviews/inline replies с пагинацией;
 linked Issues читать только если действительно связаны, номер не выдумывать.
 
-Предстоящие gates (пока не запускались):
+Полный набор gates; фактически выполненные проверки и ограничения A1 указаны ниже:
 
 - Cwd `services/auth`: Go toolchain `go1.27.3`; golangci-lint `2.15.0`;
   `golangci-lint fmt --diff $(git ls-files -- '*.go')`,
@@ -116,7 +116,7 @@ linked Issues читать только если действительно св
   `AUTH_TEST_DATABASE_URL` — отдельная PostgreSQL 18 test DB с `_test` suffix,
   случайные disposable schemas по существующему integration helper;
   production/Core DSN не использовать. PostgreSQL CI pin 18.6, sqlx 1.4.0,
-  pgx/stdlib 5.11.0, goose 3.29.0. Новая additive миграция ещё не создана.
+  pgx/stdlib 5.11.0, goose 3.29.0. Additive миграция 3 создана и проверена, подробности в A1-разделе.
 - Cwd `services/core`: `task check`, `task integration`; предварительно
   подготовить отдельную marked Core test DB по README/current integration helper.
   Не подменять skipped integration успешной проверкой.
@@ -129,7 +129,8 @@ linked Issues читать только если действительно св
   `npm run build`; Node >=20.9.0, точные npm dependencies из package-lock.json.
   Настоящий браузер, financial mocks off, HTTPS API/mTLS services/real PostgreSQL.
 
-PKI/local topology и config env для нового Auth→Core client пока не реализованы.
+Изолированный Auth test DB fixture реализован и описан ниже; mTLS topology и
+config env для нового Auth→Core client пока не реализованы.
 Перед A2/A5 взять существующие service TLS/testauth patterns и документировать
 точные новые env names/isolated setup в Git. Секреты/ключи/cookies/.env/dumps
 не выводить и не коммитить. Живые server/CA/firewall/SSH/чужие containers не менять.
