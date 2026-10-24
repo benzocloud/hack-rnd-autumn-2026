@@ -1,0 +1,87 @@
+@use "../../app/global" as global;
+
+.shell {
+    flex: 1;
+    min-width: 0;
+}
+
+.companyLine {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    width: calc(100% - 40px);
+    max-width: 1234px;
+    margin: 24px auto 16px;
+    font-size: 14px;
+
+    > span {
+        overflow-wrap: anywhere;
+    }
+}
+
+.back {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: global.$text;
+    text-decoration: none;
+    transition: color global.$transition-duration;
+
+    &:hover {
+        color: global.$green2;
+    }
+}
+
+.navigation {
+    display: flex;
+    gap: 8px;
+    width: calc(100% - 40px);
+    max-width: 1234px;
+    margin: 0 auto 24px;
+    padding-bottom: 6px;
+    overflow-x: auto;
+
+    a {
+        display: flex;
+        flex-shrink: 0;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 10px 16px;
+        border-radius: 12px;
+        color: global.$text;
+        text-decoration: none;
+        transition: background-color global.$transition-duration;
+
+        &:hover,
+        &[aria-current="page"] {
+            background: global.$white;
+        }
+    }
+}
+
+.recovery {
+    display: flex;
+    justify-content: center;
+    margin: 20px;
+}
+
+@media (max-width: 480px) {
+    .companyLine,
+    .navigation {
+        width: calc(100% - 20px);
+    }
+
+    .companyLine {
+        margin-top: 20px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .navigation a,
+    .back {
+        transition: none;
+    }
+}

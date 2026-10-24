@@ -1,6 +1,8 @@
 "use client";
 
-import { useRef, useState, type ClipboardEvent, type KeyboardEvent } from "react";
+import { useRef, useState, type ClipboardEvent, type CSSProperties, type KeyboardEvent } from "react";
+
+import { MOCK_CODE_LENGTH } from "@/helpers/verificationCode";
 
 import styles from "./style.module.scss";
 
@@ -10,7 +12,7 @@ interface IProps {
 }
 
 
-const CODE_LENGTH = 4;
+const CODE_LENGTH = MOCK_CODE_LENGTH;
 
 
 const CodeInput = ( { name = "token" }: IProps ) => {
@@ -66,7 +68,7 @@ const CodeInput = ( { name = "token" }: IProps ) => {
 
 
     return (
-        <div className={styles.group} role="group" aria-label="Код подтверждения">
+        <div className={styles.group} style={{ "--code-length": CODE_LENGTH } as CSSProperties} role="group" aria-label="Код подтверждения">
             <input type="hidden" name={name} value={digits.join("")} />
 
             { digits.map(( digit, index ) => (

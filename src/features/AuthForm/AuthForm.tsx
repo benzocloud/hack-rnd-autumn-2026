@@ -135,7 +135,7 @@ const AuthForm = ( { mode, consentDocument, verificationPurpose = "register", re
                 if (process.env.developerMode === "mock") {
                     dispatch(clearAuthUser());
                     dispatch(setVerificationEmail(email || response.user.email));
-                    showSuccessSnackbar("Для подтверждения входа введите любые четыре цифры.");
+                    showSuccessSnackbar("Для подтверждения входа введите любые шесть цифр.");
                     router.push("/verify-code?purpose=login");
                 } else {
                     dispatch(setAuthUser(response.user));

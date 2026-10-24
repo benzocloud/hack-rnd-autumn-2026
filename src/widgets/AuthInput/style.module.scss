@@ -90,7 +90,7 @@
     transition: background-color global.$transition-duration, opacity global.$transition-duration;
 
     &::placeholder {
-        color: global.$placeholder;
+        color: global.$input-placeholder;
         opacity: 1;
     }
 

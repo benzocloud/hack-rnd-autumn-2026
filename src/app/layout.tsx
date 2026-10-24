@@ -3,10 +3,11 @@ import type { ReactNode } from "react";
 
 import { AuthBoundary } from "@/features";
 import StoreProvider from "@/store/StoreProvider";
-import { Header } from "@/widgets";
+import { Footer, Header } from "@/widgets";
 
 import "./base.css";
 import "./scrollbar.scss";
+import "./selection.scss";
 import styles from "./layout.module.scss";
 
 
@@ -57,8 +58,13 @@ const RootLayout = ( { children }: IProps ) => {
             <body className={styles.body}>
                 <StoreProvider>
                     <AuthBoundary>
-                        <Header />
-                        { children }
+                        <div className={styles.page}>
+                            <Header />
+                            <div className={styles.content}>
+                                { children }
+                            </div>
+                        </div>
+                        <Footer />
                     </AuthBoundary>
                 </StoreProvider>
             </body>

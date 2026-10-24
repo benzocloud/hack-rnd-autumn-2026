@@ -9,7 +9,7 @@ import { isAuthRoute, isPublicRoute, redirectToLogin } from "@/helpers/auth";
 import { accountService } from "@/service";
 import { setAuthStatus, setAuthUser } from "@/store/authSlice";
 import type { AppDispatch, RootState } from "@/store/store";
-import { LoadingText, Spinner } from "@/widgets";
+import { Spinner } from "@/widgets";
 
 import styles from "./style.module.scss";
 
@@ -77,7 +77,7 @@ const AuthBoundary = ( { children }: IProps ) => {
         <main className={styles.status} aria-busy="true">
             <div className={styles.message}>
                 <Spinner label="Проверяем вход" />
-                <p><LoadingText>Проверяем вход</LoadingText></p>
+                <p>Проверяем вход</p>
             </div>
         </main>
     );

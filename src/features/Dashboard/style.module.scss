@@ -8,7 +8,7 @@
     width: 100%;
     max-width: 1254px;
     margin-inline: auto;
-    padding: 40px 10px;
+    padding: 60px 20px;
     color: global.$text;
 }
 
@@ -155,7 +155,7 @@
         grid-template-columns: minmax(0, 1fr);
         gap: 24px;
         max-width: 650px;
-        padding-block: 24px;
+        padding-block: 40px;
     }
 
     .chartCard {
@@ -171,7 +171,7 @@
 @media (max-width: 480px) {
     .dashboard {
         gap: 20px;
-        padding-block: 20px;
+        padding: 30px 10px;
     }
 
     .card {
@@ -202,3 +202,9 @@
         transition: none;
     }
 }
+
+.navigation, .links { display: flex; flex-wrap: wrap; gap: 10px; }
+.navigation { max-width: 1234px; margin: 24px auto 0; padding-inline: 10px; }
+.details { grid-column: 1 / -1; display: grid; gap: 20px; min-width: 0; }
+.note { margin: 0; font-size: 14px; line-height: 1.5; }
+@media (max-width: 800px) { .details { grid-row: 3; } }

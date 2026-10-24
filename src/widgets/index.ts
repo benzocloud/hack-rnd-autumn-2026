@@ -9,3 +9,4 @@ export { default as Spinner } from "./Spinner/Spinner";
 export { default as BalanceChart } from "./BalanceChart/BalanceChart";
 export { default as LoadingText } from "./LoadingText/LoadingText";
 export { default as ComplimentSnackbar } from "./ComplimentSnackbar/ComplimentSnackbar";
+export { default as Footer } from "./Footer/Footer";

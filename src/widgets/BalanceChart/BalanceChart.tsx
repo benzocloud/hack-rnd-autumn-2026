@@ -11,6 +11,7 @@ import styles from "./style.module.scss";
 
 interface IProps {
     points: IForecastPoint[];
+    comparison?: IForecastPoint[];
 }
 
 
@@ -18,9 +19,10 @@ const dayFormatter = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "
 const numberFormatter = new Intl.NumberFormat("ru-RU", { notation: "compact", maximumFractionDigits: 1 });
 
 
-const BalanceChart = ( { points }: IProps ) => {
+const BalanceChart = ( { points, comparison }: IProps ) => {
     const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
-    const data = points.map(( point ) => ({ date: point.date, value: Number(point.balance.amount_minor) / 100, amountMinor: point.balance.amount_minor }));
+    const references = new Map(comparison?.map(( point ) => [ point.date, point.balance.amount_minor ]));
+    const data = points.map(( point ) => ({ date: point.date, value: Number(point.balance.amount_minor) / 100, amountMinor: point.balance.amount_minor, reference: references.has(point.date) ? Number(references.get(point.date)) / 100 : null, referenceMinor: references.get(point.date) }));
 
 
     return (
@@ -41,10 +43,12 @@ const BalanceChart = ( { points }: IProps ) => {
                                 <div className={styles.tooltip}>
                                     <span>{ dayFormatter.format(new Date(`${point.date}T00:00:00Z`)) }</span>
                                     <strong>{ formatMoney(point.amountMinor) }</strong>
+                                    { point.referenceMinor !== undefined && <span>База: { formatMoney(point.referenceMinor) }</span> }
                                 </div>
                             ) : null;
                         }}
                     />
+                    { comparison && <Line type="monotone" dataKey="reference" name="Исходный вариант" stroke="var(--chart-text)" strokeWidth={2} strokeDasharray="6 5" dot={false} connectNulls={false} isAnimationActive={!reducedMotion} animationDuration={900} animationEasing="ease-in" /> }
                     <Line type="monotone" dataKey="value" name="Остаток на счёте" stroke="var(--chart-line)" strokeWidth={3} strokeLinecap="round" dot={false} activeDot={{ r: 5, fill: "var(--chart-line)", stroke: "var(--chart-text)", strokeWidth: 2 }} isAnimationActive={!reducedMotion} animationDuration={900} animationEasing="ease-in" />
                 </LineChart>
             </ResponsiveContainer>

@@ -24,8 +24,8 @@ assert.deepEqual(calls.map(( item ) => item.url), [ "/companies", "/auth/csrf", 
 assert.equal(calls[2].headers.get("X-CSRF-Token"), "real-csrf");
 assert.ok(calls.every(( item ) => item.withCredentials === true));
 
-await assert.rejects(authService.confirmMockLogin({ data: { token: "0000" } }));
-await assert.rejects(authService.confirmMockPasswordReset({ data: { token: "0000" } }));
+await assert.rejects(authService.confirmMockLogin({ data: { token: "000000" } }));
+await assert.rejects(authService.confirmMockPasswordReset({ data: { token: "000000" } }));
 assert.equal(calls.length, 3);
 
 assert.deepEqual(await accountService.checkSession(), { real: true });

@@ -39,11 +39,11 @@ test("recovery and code errors are returned for snackbar display", () => {
     assert.ok(validateAuthForm("forgot-password", form({ email: "invalid" })));
     assert.equal(validateAuthForm("forgot-password", form({ email: "test@example.com" })), null);
 
-    for (const token of [ "", "0", "000", "00000", "abcd" ]) {
+    for (const token of [ "", "0", "0000", "00000", "0000000", "abcdef" ]) {
         assert.ok(validateAuthForm("verify-code", form({ token }), true));
     }
 
-    assert.equal(validateAuthForm("verify-code", form({ token: "4837" }), true), null);
+    assert.equal(validateAuthForm("verify-code", form({ token: "012345" }), true), null);
 });
 
 
@@ -56,5 +56,6 @@ test("new password is validated in code without requiring email or registration 
 
 test("real verification accepts the full backend token, never a locally approved short code", () => {
     assert.ok(validateAuthForm("verify-code", form({ token: "1234" }), false));
+    assert.ok(validateAuthForm("verify-code", form({ token: "012345" }), false));
     assert.equal(validateAuthForm("verify-code", form({ token: "a-valid-backend-token-123456" }), false), null);
 });

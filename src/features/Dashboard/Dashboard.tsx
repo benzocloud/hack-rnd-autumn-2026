@@ -4,6 +4,7 @@ import axios from "axios";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 
+import { companyPath, formatDate } from "@/helpers/finance";
 import formatMoney from "@/helpers/formatMoney";
 import getErrorMessage from "@/helpers/getErrorMessage";
 import { showErrorSnackbar } from "@/helpers/snackbar";
@@ -11,6 +12,7 @@ import type { ForecastPeriod, IDashboardData } from "@/interfaces";
 import { dashboardService } from "@/service";
 import { setSelectedCompany } from "@/store/companySlice";
 import type { AppDispatch } from "@/store/store";
+import { LinkButton, Notice } from "@/widgets/FinanceUI/FinanceUI";
 import { AuthButton, BalanceChart, LoadingText, Spinner } from "@/widgets";
 
 import styles from "./style.module.scss";
@@ -20,7 +22,7 @@ const periods: ForecastPeriod[] = [ 30, 60, 90 ];
 const dateFormatter = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", timeZone: "UTC" });
 
 
-const Dashboard = () => {
+const Dashboard = ( { companyId }: { companyId?: string } ) => {
     const [ period, setPeriod ] = useState<ForecastPeriod>(30);
     const [ attempt, setAttempt ] = useState(0);
     const [ loading, setLoading ] = useState(true);
@@ -32,7 +34,7 @@ const Dashboard = () => {
 
     useEffect(() => {
         const controller = new AbortController();
-        const request = cache.current[period] ? Promise.resolve(cache.current[period]) : dashboardService.getDashboardData(period, controller.signal);
+        const request = cache.current[period] ? Promise.resolve(cache.current[period]) : dashboardService.getDashboardData(period, controller.signal, companyId || (() => { try { return localStorage.getItem("saldo-company-id") || undefined; } catch { return undefined; } })());
 
         request.then(( response ) => {
             if (controller.signal.aborted) {
@@ -57,7 +59,7 @@ const Dashboard = () => {
         });
 
         return () => controller.abort();
-    }, [ period, attempt, dispatch ]);
+    }, [ period, attempt, dispatch, companyId ]);
 
 
     const changePeriod = ( next: ForecastPeriod ) => {
@@ -89,12 +91,14 @@ const Dashboard = () => {
 
 
     return (
+        <>
+        { !companyId && <nav className={styles.navigation} aria-label="Рабочее пространство"><LinkButton href="/workspace" secondary icon="building">Все компании</LinkButton>{ data?.company && <LinkButton href={companyPath(data.company.id)} secondary>Разделы компании</LinkButton> }</nav> }
         <main className={styles.dashboard} aria-label="Финансовый дашборд">
             <h1 className={styles.hidden}>Финансовый дашборд</h1>
 
             <div className={styles.summary} aria-live="polite">
                 <section className={styles.card}>
-                    <h2>Денег на счёте сейчас:</h2>
+                    <h2>{ data?.account?.balance_as_of ? `Остаток на ${formatDate(data.account.balance_as_of)}:` : "Остаток на счёте:" }</h2>
                     <p>{ data?.account?.balance ? formatMoney(data.account.balance.amount_minor) : loading ? <LoadingText>Загружаем</LoadingText> : "Не указан" }</p>
                 </section>
 
@@ -131,7 +135,13 @@ const Dashboard = () => {
 
                 { failed && <div className={styles.retry}><AuthButton type="button" loading={loading} onClick={retry}>Повторить загрузку</AuthButton></div> }
             </section>
+            <div className={styles.details}>
+                { data?.forecast?.is_stale && <Notice tone="warning">После расчёта данные изменились. Этот прогноз отражает сохранённый снимок.</Notice> }
+                { data?.company ? <div className={styles.links}><LinkButton href={companyPath(data.company.id, "settings")} secondary>Остаток и реквизиты</LinkButton><LinkButton href={companyPath(data.company.id, "calendar")} secondary>Ближайшие платежи</LinkButton>{ data.forecast && <LinkButton href={companyPath(data.company.id, `forecasts/${data.forecast.id}`)}>Подробнее о прогнозе</LinkButton> }</div> : !loading && <LinkButton href="/workspace">Добавить компанию</LinkButton> }
+                { data?.forecast && <p className={styles.note}>Прогноз по данным на { formatDate(data.forecast.input.data_as_of) }. Вероятность отрицательного остатка: { data.forecast.result.metrics.gap_probability.value === null ? "не оценена" : `${Math.round(data.forecast.result.metrics.gap_probability.value * 100)}%` }.</p> }
+            </div>
         </main>
+        </>
     );
 };
 

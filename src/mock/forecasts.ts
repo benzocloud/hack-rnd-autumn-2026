@@ -178,6 +178,7 @@ const handleMockForecasts = ( method: string, segments: string[], data: unknown,
         result.delta_max_shortfall = money(BigInt(forecast.result.metrics.max_shortfall.amount_minor) - BigInt(reference.result.metrics.max_shortfall.amount_minor));
         result.delta_minimum_balance = money(BigInt(forecast.result.metrics.minimum_balance.amount_minor) - BigInt(reference.result.metrics.minimum_balance.amount_minor));
         result.delta_closing_balance = money(BigInt(forecast.result.metrics.closing_balance.amount_minor) - BigInt(reference.result.metrics.closing_balance.amount_minor));
+        result.delta_gap_probability = forecast.result.metrics.gap_probability.value === null || reference.result.metrics.gap_probability.value === null ? null : forecast.result.metrics.gap_probability.value - reference.result.metrics.gap_probability.value;
         result.delta_first_gap_days = reference.result.metrics.first_gap && forecast.result.metrics.first_gap ? Math.round((Date.parse(forecast.result.metrics.first_gap.date) - Date.parse(reference.result.metrics.first_gap.date)) / 86400000) : null;
 
         return result;
@@ -200,6 +201,8 @@ const handleMockForecasts = ( method: string, segments: string[], data: unknown,
         result.coverage.missing_dates = result.daily_points.filter(( point ) => point.coverage === "unavailable").map(( point ) => point.date);
         result.coverage.observed_through = result.daily_points.filter(( point ) => point.coverage === "partial").at(-1)?.date || null;
         result.coverage.status = result.coverage.observed_through ? "partial" : "unavailable";
+
+        result.mean_absolute_balance_error = null;
 
         return result;
     }

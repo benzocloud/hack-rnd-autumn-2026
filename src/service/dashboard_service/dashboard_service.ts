@@ -46,9 +46,8 @@ const completeForecast = async ( companyId: string, forecastId: string, pollAfte
 };
 
 
-const getDashboardData = async ( period: ForecastPeriod, signal: AbortSignal ): Promise<IDashboardData> => {
-    const companies = await companiesService.listCompanies({ limit: 1 }, signal);
-    const company = companies.items[0];
+const getDashboardData = async ( period: ForecastPeriod, signal: AbortSignal, companyId?: string ): Promise<IDashboardData> => {
+    const company = companyId ? await companiesService.getCompany({ company_id: companyId }, signal) : (await companiesService.listCompanies({ limit: 1 }, signal)).items[0];
 
     if (!company) {
         return { company: null, account: null, forecast: null };

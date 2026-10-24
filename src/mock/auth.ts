@@ -1,3 +1,4 @@
+import { isMockVerificationCode } from "@/helpers/verificationCode";
 import type { IEmailRequest, ILoginRequest, IRegisterRequest, ITokenRequest, IUser } from "@/interfaces";
 
 import { expiresAt, mockError, mockId } from "./helpers";
@@ -31,7 +32,7 @@ const handleMockAuth = ( path: string, data: unknown, state: IMockState ): unkno
         state.registeredUsers = [ ...state.registeredUsers.filter(( item ) => item.id !== user.id), user ];
         state.pendingEmail = request.email;
 
-        return { message: "Регистрация завершена. Для подтверждения введите любые четыре цифры." };
+        return { message: "Регистрация завершена. Для подтверждения введите любые шесть цифр." };
     }
 
     if (path === "/auth/login") {
@@ -49,8 +50,8 @@ const handleMockAuth = ( path: string, data: unknown, state: IMockState ): unkno
     }
 
     if (path === "/auth/mock/confirm-login") {
-        if (!/^\d{4}$/.test((data as ITokenRequest).token)) {
-            throw mockError(400, "Введите четырёхзначный код. В режиме mock подойдут любые цифры.", "INVALID_TOKEN");
+        if (!isMockVerificationCode((data as ITokenRequest).token)) {
+            throw mockError(400, "Введите шестизначный код. В режиме mock подойдут любые цифры.", "INVALID_TOKEN");
         }
 
         if (!state.pendingLoginUser) {
@@ -65,8 +66,8 @@ const handleMockAuth = ( path: string, data: unknown, state: IMockState ): unkno
     }
 
     if (path === "/auth/mock/confirm-password-reset") {
-        if (!/^\d{4}$/.test((data as ITokenRequest).token) || !state.resetEmail) {
-            throw mockError(400, "Запросите восстановление пароля и введите любые четыре цифры.", "INVALID_TOKEN");
+        if (!isMockVerificationCode((data as ITokenRequest).token) || !state.resetEmail) {
+            throw mockError(400, "Запросите восстановление пароля и введите любые шесть цифр.", "INVALID_TOKEN");
         }
 
         state.passwordResetVerified = true;
@@ -75,8 +76,8 @@ const handleMockAuth = ( path: string, data: unknown, state: IMockState ): unkno
     }
 
     if (path === "/auth/verify-email") {
-        if (!/^\d{4}$/.test((data as ITokenRequest).token)) {
-            throw mockError(400, "Введите четырёхзначный код. В режиме mock подойдут любые цифры.", "INVALID_TOKEN");
+        if (!isMockVerificationCode((data as ITokenRequest).token)) {
+            throw mockError(400, "Введите шестизначный код. В режиме mock подойдут любые цифры.", "INVALID_TOKEN");
         }
 
         const user = state.registeredUsers.find(( item ) => item.email === state.pendingEmail);
@@ -97,19 +98,19 @@ const handleMockAuth = ( path: string, data: unknown, state: IMockState ): unkno
     if (path === "/auth/resend-verification") {
         state.pendingEmail = (data as IEmailRequest).email;
 
-        return { message: "Введите любые четыре цифры. Письмо в режиме mock не отправляется." };
+        return { message: "Введите любые шесть цифр. Письмо в режиме mock не отправляется." };
     }
 
     if (path === "/auth/forgot-password") {
         state.resetEmail = (data as IEmailRequest).email;
         state.passwordResetVerified = false;
 
-        return { message: "Запрос принят. Для подтверждения введите любые четыре цифры." };
+        return { message: "Запрос принят. Для подтверждения введите любые шесть цифр." };
     }
 
     if (path === "/auth/reset-password") {
-        if (!/^\d{4}$/.test((data as ITokenRequest).token) || !state.passwordResetVerified) {
-            throw mockError(400, "Сначала подтвердите сброс пароля четырёхзначным кодом.", "INVALID_TOKEN");
+        if (!isMockVerificationCode((data as ITokenRequest).token) || !state.passwordResetVerified) {
+            throw mockError(400, "Сначала подтвердите сброс пароля шестизначным кодом.", "INVALID_TOKEN");
         }
 
         state.user = null;

@@ -1,0 +1,6 @@
+@use "./global" as global;
+
+::selection {
+    background-color: global.$green2;
+    color: global.$white;
+}

@@ -5,6 +5,7 @@ import { useSelector } from "react-redux";
 
 import { authService } from "@/service";
 import type { RootState } from "@/store/store";
+import { LinkButton } from "@/widgets/FinanceUI/FinanceUI";
 import { AuthButton } from "@/widgets";
 
 import styles from "./style.module.scss";
@@ -40,6 +41,7 @@ const Account = () => {
                 <h1 id="account-title">Личный кабинет</h1>
                 <p>{ user?.display_name }</p>
                 <p>{ user?.email }</p>
+                <LinkButton href="/workspace" icon="building">Ваши компании</LinkButton>
                 <AuthButton type="button" loading={busy} onClick={logout}>Выйти</AuthButton>
             </section>
         </main>

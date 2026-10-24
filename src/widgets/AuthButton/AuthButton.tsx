@@ -13,7 +13,7 @@ interface IProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const AuthButton = ( { className = "", loading = false, disabled, children, ...props }: IProps ) => {
     return (
         <button {...props} className={`${styles.button} ${className}`} disabled={disabled || loading} aria-busy={loading || undefined}>
-            <span className={loading ? styles.contentHidden : undefined} aria-hidden={loading || undefined}>{ children }</span>
+            <span className={`${styles.content} ${loading ? styles.contentHidden : ""}`} aria-hidden={loading || undefined}>{ children }</span>
             { loading && <span className={styles.loading}><Spinner /></span> }
         </button>
     );

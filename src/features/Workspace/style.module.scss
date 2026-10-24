@@ -1,0 +1,32 @@
+@use "../../app/global" as global;
+@use "../../app/finance" as finance;
+
+.page { @include finance.page; }
+.stack { @include finance.stack; }
+.form { @include finance.form; }
+.actions { @include finance.row; }
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+    gap: 20px;
+}
+.company {
+    padding: 24px;
+    border: 2px solid transparent;
+    border-radius: 24px;
+    background: global.$white;
+    color: global.$text;
+    text-decoration: none;
+    transition: border-color global.$transition-duration, transform global.$transition-duration;
+    overflow-wrap: anywhere;
+
+    &:hover { border-color: global.$green2; transform: translateY(-3px); }
+    h2 { margin: 20px 0 10px; font-size: 24px; }
+    p { margin: 0 0 20px; font-size: 14px; }
+}
+.companyTop { @include finance.row; justify-content: space-between; }
+.avatar { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: global.$gray1; font-size: 24px; text-transform: uppercase; }
+.invitation { @include finance.row; justify-content: space-between; gap: 20px; }
+.invitation h3 { margin: 0 0 8px; }
+.invitation p { margin: 0; font-size: 14px; }
+@media (prefers-reduced-motion: reduce) { .company { transition: none; &:hover { transform: none; } } }

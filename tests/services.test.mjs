@@ -52,30 +52,30 @@ test("mock: all endpoints, persisted mutations, auth, jobs, cancellation and no 
     const consent = await services.authService.getPersonalDataConsentDocument();
 
     await services.authService.register({ data: { email: "demo@example.com", password: "demo-password", display_name: "Демо", personal_data_consent: { accepted: true, document_version: consent.document_version, document_sha256: consent.document_sha256 } } });
-    await assert.rejects(services.authService.verifyEmail({ data: { token: "12" } }), ( error ) => error.response.status === 400);
+    await assert.rejects(services.authService.verifyEmail({ data: { token: "1234" } }), ( error ) => error.response.status === 400);
     await services.authService.resendVerification({ data: { email: "demo@example.com" } });
-    await services.authService.verifyEmail({ data: { token: "4827" } });
+    await services.authService.verifyEmail({ data: { token: "012345" } });
     assert.equal((await services.accountService.getMe()).email, "demo@example.com");
     assert.equal((await services.accountService.getMe()).email_verified, true);
-    await assert.rejects(services.authService.verifyEmail({ data: { token: "4827" } }), ( error ) => error.response.status === 400);
+    await assert.rejects(services.authService.verifyEmail({ data: { token: "012345" } }), ( error ) => error.response.status === 400);
 
     const session = await services.authService.login({ data: { email: "demo@example.com", password: "" } });
 
     await assert.rejects(get("/me"), ( error ) => error.response.status === 401);
-    await assert.rejects(services.authService.confirmMockLogin({ data: { token: "12" } }), ( error ) => error.response.status === 400);
-    await services.authService.confirmMockLogin({ data: { token: "4827" } });
+    await assert.rejects(services.authService.confirmMockLogin({ data: { token: "1234" } }), ( error ) => error.response.status === 400);
+    await services.authService.confirmMockLogin({ data: { token: "012345" } });
     assert.equal(session.user.email_verified, true);
     assert.equal((await get("/me")).display_name, "Демо");
     assert.equal((await services.accountService.checkSession()).id, session.user.id);
     assert.ok(Date.parse(session.expires_at) > Date.now());
     await services.authService.forgotPassword({ data: { email: "demo@example.com" } });
-    await assert.rejects(services.authService.resetPassword({ data: { token: "4827", new_password: "new-demo-password" } }), ( error ) => error.response.status === 400);
-    await assert.rejects(services.authService.confirmMockPasswordReset({ data: { token: "12" } }), ( error ) => error.response.status === 400);
-    await services.authService.confirmMockPasswordReset({ data: { token: "4827" } });
-    await services.authService.resetPassword({ data: { token: "4827", new_password: "new-demo-password" } });
+    await assert.rejects(services.authService.resetPassword({ data: { token: "012345", new_password: "new-demo-password" } }), ( error ) => error.response.status === 400);
+    await assert.rejects(services.authService.confirmMockPasswordReset({ data: { token: "1234" } }), ( error ) => error.response.status === 400);
+    await services.authService.confirmMockPasswordReset({ data: { token: "012345" } });
+    await services.authService.resetPassword({ data: { token: "012345", new_password: "new-demo-password" } });
     await assert.rejects(get("/me"), ( error ) => error.response.status === 401);
     await services.authService.login({ data: { email: "demo@example.com", password: "" } });
-    await services.authService.confirmMockLogin({ data: { token: "4827" } });
+    await services.authService.confirmMockLogin({ data: { token: "012345" } });
     assert.ok(!storage.values().next().value.includes("new-demo-password"));
 
     const companyData = { name: "Новая", inn: null, currency: "RUB", timezone: "Europe/Moscow" };

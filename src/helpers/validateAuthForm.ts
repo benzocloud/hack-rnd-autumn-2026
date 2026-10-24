@@ -1,5 +1,7 @@
 import type { AuthMode } from "@/interfaces";
 
+import { isMockVerificationCode } from "./verificationCode";
+
 
 const validatePassword = ( form: FormData ): string | null => {
     const password = String(form.get("password") || "");
@@ -21,7 +23,7 @@ const validateAuthForm = ( mode: AuthMode, form: FormData, mockMode = process.en
         const token = String(form.get("token") || "").trim();
 
         if (mockMode) {
-            return /^\d{4}$/.test(token) ? null : "Введите все четыре цифры кода подтверждения.";
+            return isMockVerificationCode(token) ? null : "Введите все шесть цифр кода подтверждения.";
         }
 
         return token.length >= 16 && token.length <= 512 ? null : "Введите токен подтверждения из письма целиком.";
