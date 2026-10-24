@@ -1,0 +1,19 @@
+{
+  "id": "2ee1ce22-019e-11e6-9464-e4de0000007d",
+  "moment": "2016-04-14 11:02:00",
+  "updated": "2016-04-22 15:00:07",
+  "sum": 408739611676,
+  "payedSum": 0,
+  "paymentPlannedMoment": "2016-04-15 11:03:00",
+  "applicable": true,
+  "rate": {
+    "currency": {
+      "meta": {
+        "href": "https://api.moysklad.ru/api/remap/1.2/entity/currency/baac25f0-50ac-11e5-300d-c79b00000055",
+        "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/currency/metadata",
+        "type": "currency",
+        "mediaType": "application/json"
+      }
+    }
+  }
+}

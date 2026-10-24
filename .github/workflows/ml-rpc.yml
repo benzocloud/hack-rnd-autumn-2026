@@ -1,0 +1,49 @@
+name: ML RPC checks
+
+on:
+  pull_request:
+    paths: ['proto/**', 'buf.yaml', 'services/ml/**', '.github/workflows/ml-rpc.yml']
+  push:
+    paths: ['proto/**', 'buf.yaml', 'services/ml/**', '.github/workflows/ml-rpc.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  rpc:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Install pinned RPC test dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/ml-rpc-venv"
+          "$RUNNER_TEMP/ml-rpc-venv/bin/python" -m pip install -r services/ml/requirements-rpc-dev.txt
+      - name: Download and verify Buf 1.75.0
+        env:
+          BUF_SHA256: fad1e38d6909bbb583a4da81d8c02a01046e2cd663bde7e337dd24277393764b
+        run: |
+          curl --fail --location --retry 3 https://github.com/bufbuild/buf/releases/download/v1.75.0/buf-Linux-x86_64 --output "$RUNNER_TEMP/buf"
+          printf '%s  %s\n' "$BUF_SHA256" "$RUNNER_TEMP/buf" | sha256sum --check
+          chmod +x "$RUNNER_TEMP/buf"
+      - name: Check protobuf and generate service-local Python bindings
+        env:
+          BUF_CACHE_DIR: ${{ runner.temp }}/buf-cache
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          "$RUNNER_TEMP/buf" format --path proto/ml --exit-code --output "$RUNNER_TEMP/formatted-proto"
+          "$RUNNER_TEMP/buf" lint
+          "$RUNNER_TEMP/buf" build
+          if [[ -n "$BASE_SHA" && ! "$BASE_SHA" =~ ^0+$ ]]; then
+            "$RUNNER_TEMP/buf" breaking --against ".git#ref=$BASE_SHA"
+          fi
+          "$RUNNER_TEMP/ml-rpc-venv/bin/python" services/ml/generate_rpc.py --buf "$RUNNER_TEMP/buf"
+          sha256sum services/ml/ml/v1/*_pb2*.py > "$RUNNER_TEMP/bindings.sha256"
+          "$RUNNER_TEMP/ml-rpc-venv/bin/python" services/ml/generate_rpc.py --buf "$RUNNER_TEMP/buf"
+          sha256sum --check "$RUNNER_TEMP/bindings.sha256"
+      - name: Run RPC and mTLS tests with no skips
+        run: |
+          "$RUNNER_TEMP/ml-rpc-venv/bin/python" -B services/ml/check_rpc_tests.py

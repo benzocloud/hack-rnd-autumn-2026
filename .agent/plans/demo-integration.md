@@ -4,7 +4,10 @@
 подтверждения кода и поручил сосредоточиться на интеграции готовых частей.
 Документ определяет ближайший порядок работ поверх общего плана; сохраняет
 его нумерацию/историю и не объявляет незавершённые этапы принятыми.
-После каждого этапа — результат, проверки и ревью владельцем по ADR-020.
+Уточнение владельца 2026-10-24: после проверок выполнить caveman-review и
+ponytail-review, исправить замечания и продолжать. Для текущих подэтапов Core
+промежуточное ревью владельцем отложено до общего результата (ADR-020);
+agent review не означает принятия этапа владельцем.
 Публикация/merge/deployment требуют отдельного поручения.
 
 ## Цель и исходное состояние
@@ -18,9 +21,9 @@
 в этом checkout нет. Сначала сверить актуальные ветки разработчиков и readiness.
 Отдельный CLI, mock или схема не являются доказательством готовой интеграции.
 
-Уточнение владельца: protobuf-контракты для этой интеграции реализует
-ML-разработчик. Core/API согласуют необходимые операции и семантику, затем
-подключают опубликованные контракты; параллельную версию proto не создают.
+Уточнение владельца 2026-10-24: Core → ML предоставляет ML-разработчик
+(PR #27); API → Core готовим мы в рамках Go Core. Для ML используем
+опубликованный канонический proto, параллельную версию не создаём.
 Generated bindings остаются локальными у каждого потребителя по ADR-003.
 
 ## Подтверждение в демо — ADR-028
@@ -64,7 +67,7 @@ P1 после рабочего P0: первая полезная «что есл
 
 ## D1 — первый настоящий проход
 
-Статус: Не начат. Целевая контрольная точка: 24 октября, 18:00 МСК.
+Статус: В работе. Целевая контрольная точка: 24 октября, 18:00 МСК.
 Зависимости: актуальные ветки и согласованные минимальные стыки; Core 2.4 принят.
 Компоненты: frontend/API/Core/Auth/ML и их текущие контракты.
 
@@ -72,7 +75,7 @@ P1 после рабочего P0: первая полезная «что есл
 - [ ] API-разработчик составляет свой план; совместно определить минимальные
   финансовые маршруты и недостающие upstream RPC без ожидания полного Auth.
 - [ ] Подключить явно изолированное demo-подтверждение; frontend обращается к API.
-- [ ] Получить protobuf-контракты от ML-разработчика; согласовать вход ML из Core,
+- [ ] Подключить Core → ML из PR #27 и подготовить API → Core; согласовать вход ML из Core,
   суммы/даты, категории и текущий календарь, подключить bindings у потребителей.
 - [ ] Выполнить первый реальный запрос прогноза из браузера, сохранить и прочитать результат.
 
@@ -126,3 +129,178 @@ P1 после рабочего P0: первая полезная «что есл
 мок обязательной финансовой функции за готовый результат. Deployment отдельно.
 
 Промпты для передачи исполнителям: [API, ML, Auth и frontend](../prompts/demo-team-handoff.md).
+
+## Текущие подэтапы Core — 2026-10-24
+
+### D1.Core.1 — клиент существующего ML Predict
+
+Статус: Ожидает итогового ревью разработчика. Основание: main `31e7913`,
+ML PR #27 `994ed6e0c33969020e4fa911b1125a0fdfe7f6ea` (комментариев/review нет).
+Первоначальный результат D1.Core.1: canonical ML proto из PR #27, локальные Go bindings,
+`internal/client/ml`, прикладные DTO `service/forecasting` и тесты.
+Конструктор заимствует gRPC connection; TLS/Close принадлежат app, не repository.
+Проверены metadata echo, 90 дней подтверждённой истории, календарные даты,
+целочисленная арифметика/переполнение, optional zero, предупреждения, отмена,
+дедлайны и безопасная классификация статусов. Неизвестные дни не заполняются.
+
+Проверки: build/fmt/unit/race/vet/lint всего Core — PASS, lint с тегом
+mlintegration — 0 issues; реальный Python Predict из указанного SHA по mTLS — PASS.
+Python-зависимости закреплены ML PR и установлены только в отдельное tmp venv.
+Caveman-review: исправлена потеря обязательного предупреждения при допустимом
+расхождении исторической сверки на одну копейку, добавлен regression test.
+Ponytail-review: лишних абстракций/зависимостей для удаления не найдено.
+
+Готовность ограничена адаптером: существующий FinancialSnapshot не содержит
+90 подтверждённых дневных EOD/coverage. ML не принимает known payments,
+возвращает history-only baseline без вероятности; обязательные календарь и
+вероятность пока не закрыты. Forecast job/persistence и сервер не заявляются.
+При первоначальной проверке сервер Python использован из изолированного checkout.
+Затем по поручению владельца PR #27 включён обычным merge в общий PR #29.
+
+### D1.Core.2 — канонический контракт API → Core
+
+Статус: Ожидает итогового ревью разработчика. Зависимости: REST 0.2.1, ADR-027/Auth bootstrap и принятие
+владельцем ответственности за Core proto в текущем обсуждении.
+Результат: `proto/core/v1/`, документация маппинга/Auth/errors и воспроизводимая
+генерация local bindings у Core/API/Auth без импорта чужих internal пакетов.
+Сначала фиксируем company/bootstrap, ручные операции Ledger/Payments и чтения,
+нужные для первого прохода. Не объявляем proto реализацией RPC. Импорт, forecast
+jobs и scenarios расширяют контракт отдельными проверяемыми поставками.
+Проверки: Buf lint/build/breaking, сборка bindings в consuming modules,
+сверка presence/денег/версий/Auth permissions с REST, caveman/ponytail review.
+Критерий завершения: разработчики могут генерировать и компилировать клиенты;
+документ явно различает контракт и ещё не реализованные handlers.
+Риски: Auth bootstrap требует durable receipt и миграции company metadata;
+текущая core_companies хранит только ID. Серверные ошибки и права проверяются
+в последующем runtime-подэтапе, не доказываются protobuf build.
+
+
+Результат D1.Core.2: Buf 1.75.0 lint/format/build/breaking — PASS; локальные
+Core bindings совпали с повторной генерацией. API/Auth bindings скомпилированы
+в отдельных временных модулях с собственными import mappings. Проверка drift
+и совместимости добавлена отдельным Core contracts job; actionlint — PASS.
+GitHub CI этой ветки ещё не запускался, изменения не опубликованы.
+Caveman-review: исправлены несовпадения с REST в версиях Match и лишних
+требованиях к PATCH/CreatePayment. Ponytail-review: удалены неиспользуемые
+is_overdue/direction filter из черновика; no generic payload/новых библиотек.
+
+### D1.Core.3 — входы Payments по REST
+
+Статус: Ожидает итогового ревью разработчика. Зависимости: D1.Core.2 и существующий account lock/Tx.
+Компоненты: `internal/service/payments`, receipt codec и unit/PG integration tests.
+Результат: manual create без public account data_version, match по обеим
+resource versions. Старый account CAS и persisted JSON/digests сохраняются.
+Проверки: полный build/fmt/unit/race/vet/lint, реальная PostgreSQL, stale fact,
+replay/digest conflict и конкурентное распределение без account CAS; затем
+caveman-review и ponytail-review с исправлениями. Handlers/Auth не добавляются.
+Критерий завершения: новые inputs безопасно проходят существующие Tx-bound
+repositories; stale/overallocated/replay-команды не меняют финансовое состояние.
+
+
+Результат D1.Core.3: unit/race/build/vet/lint — PASS; PostgreSQL integration/race
+всего Core — PASS; дополнительный concurrent test прошёл как для старого account
+CAS, так и для обеих resource versions без account CAS. Из двух конкурирующих
+распределений принимается одно, остаток факта не превышается. Проверены stale
+fact без записи, replay без нового match и conflict при изменении версии факта
+под прежним ключом. Persisted receipts_v1 compatibility осталась без изменений.
+Caveman-review: после изменения способа CAS добавлен отдельный конкурентный
+regression test, чтобы подтвердить сохранение защиты от перераспределения.
+Ponytail-review: новые transaction adapters/общие request wrappers не нужны;
+изменения оставлены в feature-local service и receipt. Замечаний после исправлений
+нет. Generated proto не меняет фактическую готовность handlers/Auth/bootstrap.
+
+Владелец отдельно разрешил commit/push/PR текущей поставки 2026-10-24.
+Merge и deployment этим поручением не разрешены.
+
+
+### Общая поставка PR #29 с ML PR #27
+
+Владелец 2026-10-24 разрешил объединить оба PR в один и merge в main после
+проверок. ML head `994ed6e` включается без переписывания авторской истории.
+Поставляются существующий Predict и Core-контракты/клиент; предложение
+Предложение финансового расширения из PR #27 фиксируется в едином Predict;
+финансовая модель пока не реализована.
+Финансовый календарь, вероятность, handlers и E2E остаются в дальнейших этапах.
+
+### D1.Core.4 — полная фиксация контрактов до общего merge
+
+Статус: В работе. Владелец расширил задачу: зафиксировать все protobuf-стыки
+проекта, чтобы API-разработчику осталось реализовать адаптацию. Публикация и merge
+общего PR отложены до полной проверки, caveman-review/ponytail-review и исправлений.
+Зависимости: REST 0.2.1, текущий Core/Auth proto, ML PR #27 и комментарии к нему.
+Компоненты: proto/core/v1, proto/ml/v1, docs/core, генерация и проверки контрактов.
+Действия: покрыть все REST operationId явным RPC или documented API orchestration;
+сохранить типизированные DTO/presence, ошибки, async job states, provenance,
+версии и Auth permissions. Зафиксировать недостающий финансовый ML RPC отдельно
+от history-only Predict: покрытие/календарь/reconciliation без двойного учёта,
+отсутствующая вероятность не превращается в число. Новые RPC пока спецификация.
+Проверки: полное REST→RPC покрытие, protobuf lint/build/breaking, consumer
+bindings, negative presence/union checks и существующий ML/Core runtime smoke.
+Завершение: нет публичных финансовых маршрутов без конкретного контракта;
+права и ошибки документированы, agent review исправлено, CI общего PR проходит.
+Новая бизнес-реализация этих RPC и deployment в эту контрактную поставку не входят.
+
+
+Решение владельца ADR-029 уточнено: один ForecastService/Predict с явной версией
+модели. Отдельный финансовый RPC удалён до публикации; финансовые DTO включены
+в единый контракт. Пустой календарь не меняет требования модели; нет implicit
+fallback/подмены baseline. Mean_90 отклоняет неподдерживаемый финансовый контекст;
+финансовую модель, jobs и orchestration ещё предстоит реализовать.
+
+
+D1.Core.4: черновой отдельный финансовый RPC удалён по уточнению владельца.
+Один Predict дополнен типизированными facts/calendar/reconciliation/components/
+probability DTO; текущий mean_90 явно отклоняет неподдерживаемые финансовые
+параметры. Все 54 REST operationId перечислены в rest-rpc-map.json, маппинг
+union/null/errors/job states/upload — в docs/core/api-adapter.md. Выбор одной
+модели и отсутствие fallback проверяются отдельной регрессией Python transport.
+
+Результат D1.Core.4 — локально проверен, ожидает общего CI перед merge:
+
+- 54/54 REST operationId имеют конкретный RPC/цепочку; contexts, unions, exact
+  int64 money, optional presence и единственный ML Predict проверены descriptors.
+- Buf lint/format/build/breaking и generated drift — PASS; реальные API/Auth
+  generation templates скомпилированы во временных consuming modules.
+- Core build/fmt/unit/race/vet/lint и lint всех integration tags — PASS.
+  Ранее проверенные Payments PG/replay/concurrency не изменены этой поставкой.
+- ML: 82 tests PASS, 14 RPC/mTLS без skips; дополнительная защита от silent
+  fallback проверяет financial configuration/seed/facts/groups/calendar/coverage.
+  Реальный Go → Python mTLS из объединённого checkout — PASS.
+- Ruff check/format, pip check, actionlint, bash syntax, diff whitespace — PASS.
+- Caveman-review: исправлена потеря/игнорирование новых model/probability полей
+  в ограниченном Go adapter, добавлены негативные response tests; upload получил
+  size/digest для обнаружения усечённого stream до enqueue.
+- Ponytail-review: удалены второй RPC/его generated файлы и дублирующая сборка
+  generation config в checker; проверяются реальные templates (-22 строки checker).
+
+Новые Core RPC и финансовая ML-модель остаются контрактами, не runtime-реализацией.
+Модель mean_90 не закрывает известный календарь/вероятность и не подменяет их.
+Публикация/merge общего PR разрешены владельцем после этих проверок и agent review;
+deployment не разрешён и не выполняется.
+
+
+### Синхронизация свежего ML перед публикацией
+
+Финальный fetch обнаружил новый ML head `49a7862` поверх первоначального `994ed6e`:
+финансовый replacement уже реализован. Включена вся новая авторская история.
+Прежние заметки «финансовая модель пока не реализована» относятся к старому head.
+По решению владельца два RPC сведены к одному ForecastService/Predict, выбранная
+model_version определяет реализацию; financial response развёрнут без wrapper.
+Продуктовый профиль mean_90_components_v1/calendar_replacement_v1 поддерживает
+календарь/компоненты; mean_90_v1/daily_snapshot_v1 остаётся явным baseline.
+Никакого fallback. Calendar UNAVAILABLE даёт явно ограниченный результат той же
+финансовой версии, не подменяет version и не утверждает сертификацию календаря.
+Новый финансовый Go adapter/worker/API/E2E и вероятность ещё не завершены.
+
+Свежие проверки: 103 ML tests, 35 RPC/mTLS без skips — PASS. Старые 82/14 выше
+описывают предыдущую ревизию. Ранний CI build PR #29 обнаружил четыре уязвимости
+x/net0.57; обновлено до исправляющего v0.60.0, govulncheck — no vulnerabilities.
+Повторный final review проверяет эту свежую общую ревизию перед push/merge.
+
+После сведения fresh ML к одному Predict: 104 ML tests / 36 RPC/mTLS PASS.
+Отдельный тест проверяет сохранение финансовой версии при пустом календаре
+и явный отказ при missing calendar/unknown version без fallback.
+Ponytail-review: убран второй protobuf-module параметр из финансовых helper
+functions и consumers; данные/результат в одном каноническом module/message.
+Caveman-review: после flatten проверены сохранность components/provenance и
+модельный echo; response.MergeFrom сохраняет уже вычисленные финансовые поля.

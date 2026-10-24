@@ -1,0 +1,152 @@
+name: Landing CI and deploy
+
+on:
+  pull_request:
+    paths: ['landing/**', 'deploy/landing/**', 'deploy/frontend/nginx-https.conf', '.github/workflows/landing.yml']
+  push:
+    branches: [main]
+    paths: ['landing/**', 'deploy/landing/**', 'deploy/frontend/nginx-https.conf', '.github/workflows/landing.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: landing-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  IMAGE: ghcr.io/benzocloud/saldo-landing
+
+jobs:
+  lint:
+    defaults:
+      run:
+        working-directory: landing
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: landing/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run typecheck
+      - name: Check deployment shell scripts
+        working-directory: .
+        run: shellcheck deploy/landing/*.sh
+
+  test:
+    defaults:
+      run:
+        working-directory: landing
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: landing/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+
+  build:
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.image.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build the landing image
+        id: image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ./landing
+          file: ./landing/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+          tags: ${{ env.IMAGE }}:sha-${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_APP_URL=https://saldo.brokebyte.me
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            me.brokebyte.saldo.component=landing
+          cache-from: type=gha,scope=landing
+          cache-to: type=gha,mode=max,scope=landing
+      - name: Smoke-test the container
+        env:
+          IMAGE_TAG: ${{ env.IMAGE }}:sha-${{ github.sha }}
+        run: |
+          docker run -d --name saldo-landing-check -p 127.0.0.1:3105:3005 "$IMAGE_TAG"
+          trap 'docker logs saldo-landing-check; docker rm -f saldo-landing-check' EXIT
+          for _ in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3105/landing >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          node landing/scripts/smoke.mjs http://127.0.0.1:3105
+
+  deploy:
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: frontend-mock
+      url: https://saldo.brokebyte.me/landing
+    permissions:
+      packages: read
+    steps:
+      - name: Deploy the immutable image through restricted SSH
+        env:
+          DEPLOY_KEY: ${{ secrets.FRONTEND_DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.FRONTEND_DEPLOY_KNOWN_HOSTS }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY_USER: ${{ github.actor }}
+          IMAGE_DIGEST: ${{ needs.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          [[ "$IMAGE_DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]
+          [[ "$REGISTRY_USER" =~ ^[a-zA-Z0-9_-]+$ ]]
+          test -n "$DEPLOY_KEY"
+          test -n "$KNOWN_HOSTS"
+          credential_dir=$(mktemp -d "$RUNNER_TEMP/saldo-ssh.XXXXXX")
+          trap 'rm -rf "$credential_dir"' EXIT
+          umask 077
+          printf '%s\n' "$DEPLOY_KEY" > "$credential_dir/id_ed25519"
+          printf '%s\n' "$KNOWN_HOSTS" > "$credential_dir/known_hosts"
+          printf '%s\n' "$GHCR_TOKEN" | ssh -T -p 8321 \
+            -i "$credential_dir/id_ed25519" -o IdentitiesOnly=yes \
+            -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$credential_dir/known_hosts" \
+            -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+            saldo-deploy@brokebyte.me "deploy-landing $IMAGE_DIGEST $REGISTRY_USER"
+      - name: Verify landing and existing application over HTTPS
+        run: |
+          curl --fail --silent --show-error --max-time 15 --retry 5 https://saldo.brokebyte.me/landing >/dev/null
+          curl --fail --silent --show-error --max-time 15 --retry 5 https://saldo.brokebyte.me/login >/dev/null

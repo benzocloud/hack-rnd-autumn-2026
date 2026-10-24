@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package core.v1;
+
+import "auth/v1/auth.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1;corev1";
+
+// Private mTLS service. Bootstrap/result use service permissions; ordinary
+// requests re-authorize the opaque browser context with Auth on each call.
+service CompanyService {
+  rpc CreateCompanyBootstrap(CreateCompanyBootstrapRequest) returns (CreateCompanyBootstrapResponse);
+  rpc GetCompanyCreationResult(GetCompanyCreationResultRequest) returns (GetCompanyCreationResultResponse);
+  rpc ReadCompany(ReadCompanyRequest) returns (ReadCompanyResponse);
+  rpc UpdateCompany(UpdateCompanyRequest) returns (UpdateCompanyResponse);
+}
+
+message Company {
+  string id = 1;
+  string name = 2;
+  optional string inn = 3;
+  string currency = 4;
+  string timezone = 5;
+  string default_account_id = 6;
+  int64 version = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+// A durable committed receipt, never a caller-supplied "success" boolean.
+// No owner membership is implied: Auth finalizes it only after reading receipt.
+message CompanyCreationReceipt {
+  string command_id = 1;
+  string company_id = 2;
+  string request_sha256 = 3;
+  auth.v1.CompanyCreateSpec company_spec = 4;
+  string default_account_id = 5;
+  google.protobuf.Timestamp committed_at = 6;
+}
+
+// API or Auth recovery peer only. Fields must match the Auth durable command
+// returned by AuthorizeCompanyBootstrap. Core must reuse company_id unchanged.
+message CreateCompanyBootstrapRequest {
+  string command_id = 1;
+  string company_id = 2;
+  auth.v1.CompanyCreateSpec company_spec = 3;
+  string request_sha256 = 4;
+}
+message CreateCompanyBootstrapResponse {
+  CompanyCreationReceipt receipt = 1;
+}
+
+// Auth peer only, including recovery without a browser session. Missing receipt
+// is NotFound, never a fabricated empty/success receipt.
+message GetCompanyCreationResultRequest {
+  string command_id = 1;
+}
+message GetCompanyCreationResultResponse {
+  CompanyCreationReceipt receipt = 1;
+}
+
+// AuthorizeCompany(READ); no caller-provided actor_id/role is accepted.
+message ReadCompanyRequest {
+  auth.v1.BrowserContext context = 1;
+  string company_id = 2;
+}
+message ReadCompanyResponse {
+  Company company = 1;
+  // Read from Auth, never persisted/selected as a Core company attribute.
+  auth.v1.CompanyRole role = 2;
+}
+
+// AuthorizeCompany(UPDATE) with the original write context; CSRF is mandatory.
+// Missing name/inn preserves it, inn clear removes it. Empty patch is invalid.
+message UpdateCompanyRequest {
+  auth.v1.WriteContext context = 1;
+  string company_id = 2;
+  int64 expected_version = 3;
+  optional string name = 4;
+  oneof inn_change {
+    string inn = 5;
+    google.protobuf.Empty clear_inn = 6;
+  }
+}
+message UpdateCompanyResponse {
+  Company company = 1;
+  auth.v1.CompanyRole role = 2;
+}

@@ -2,10 +2,10 @@ name: Go Core CI
 
 on:
   pull_request:
-    paths: ['services/core/**', '.github/workflows/go-core-ci.yml', 'LICENSE']
+    paths: ['services/core/**', 'proto/**', 'buf*.yaml', 'scripts/**', 'docs/api/openapi.yaml', 'docs/core/rest-rpc-map.json', '.github/workflows/go-core-ci.yml', 'LICENSE']
   push:
     branches: [main]
-    paths: ['services/core/**', '.github/workflows/go-core-ci.yml', 'LICENSE']
+    paths: ['services/core/**', 'proto/**', 'buf*.yaml', 'scripts/**', 'docs/api/openapi.yaml', 'docs/core/rest-rpc-map.json', '.github/workflows/go-core-ci.yml', 'LICENSE']
   workflow_dispatch:
 
 permissions:
@@ -20,6 +20,36 @@ defaults:
     shell: bash
 
 jobs:
+  contracts:
+    name: Core contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: services/core/go.mod
+          cache: false
+      - name: Install pinned Buf with release checksum
+        run: |
+          mkdir -p "$RUNNER_TEMP/core-buf"
+          curl --fail --silent --show-error --location --retry 3 \
+            https://github.com/bufbuild/buf/releases/download/v1.75.0/buf-Linux-x86_64 \
+            --output "$RUNNER_TEMP/core-buf/buf"
+          printf '%s  %s\n' fad1e38d6909bbb583a4da81d8c02a01046e2cd663bde7e337dd24277393764b "$RUNNER_TEMP/core-buf/buf" | sha256sum --check
+          chmod +x "$RUNNER_TEMP/core-buf/buf"
+      - name: Install pinned contract validation tools
+        run: |
+          python3 -m venv "$RUNNER_TEMP/core-contract-venv"
+          "$RUNNER_TEMP/core-contract-venv/bin/python" -m pip install -r scripts/requirements-contracts.txt
+      - name: Check proto compatibility, generated drift and consumer imports
+        env:
+          CONTRACT_BASE_REF: origin/main
+        run: BUF="$RUNNER_TEMP/core-buf/buf" CONTRACT_PYTHON="$RUNNER_TEMP/core-contract-venv/bin/python" scripts/check-core-contracts.sh
+
   lint:
     name: Core lint
     runs-on: ubuntu-24.04
@@ -52,7 +82,7 @@ jobs:
 
   test:
     name: Core tests
-    needs: lint
+    needs: [lint, contracts]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     services:

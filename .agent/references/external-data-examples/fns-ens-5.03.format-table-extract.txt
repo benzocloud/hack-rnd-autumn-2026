@@ -1,0 +1,17 @@
+SOURCE: https://legalacts.ru/doc/prikaz-fns-rossii-ot-05112024-n-ed-7-8987-ob-utverzhdenii/
+DOCUMENT: FNS order 05.11.2024 ED-7-8/987@, Appendix 2, format 5.03, KND 1160082.
+EVIDENCE: text of the published order reproduced by a legal publisher; not the original downloaded XSD.
+EXTRACTION: selected code/type/required cells from the format tables. О=required, ОК=required classifier, Н=optional. No XML values invented.
+LIMIT: use as field/type evidence only; actual customer XML and original XSD not obtained.
+
+TABLE 4.2 (selected field/type/requirement cells only):
+ДатаСостСпр | А | T(=10) | О
+ВремяСостСпр | А | T(=5) | О
+СальдоЕНС | А | N(17.2) | О
+TABLE 4.22 (selected field/type/requirement cells only):
+КБК | А | T(=20) | ОК
+ОКТМО | А | T(=8) | T(=11) | ОК
+КПП | А | T(=9) | Н
+СрокУплат | А | T(=10) | Н
+Сумма | А | N(17.2) | О
+СумЗачтОбяз | А | N(17.2) | О

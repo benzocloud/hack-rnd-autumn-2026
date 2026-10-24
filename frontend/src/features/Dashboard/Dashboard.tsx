@@ -2,14 +2,14 @@
 
 import useMediaQuery from "@mui/material/useMediaQuery";
 import axios from "axios";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useDispatch } from "react-redux";
 
 import { companyPath, formatDate } from "@/helpers/finance";
 import formatMoney from "@/helpers/formatMoney";
 import getErrorMessage from "@/helpers/getErrorMessage";
 import { showErrorSnackbar } from "@/helpers/snackbar";
-import type { ForecastPeriod, IDashboardData } from "@/interfaces";
+import type { ForecastPeriod, IDashboardData, IForecast } from "@/interfaces";
 import { dashboardService } from "@/service";
 import { setSelectedCompany } from "@/store/companySlice";
 import type { AppDispatch } from "@/store/store";
@@ -32,21 +32,25 @@ const Dashboard = ( { companyId }: { companyId?: string } ) => {
     const [ attempt, setAttempt ] = useState(0);
     const [ loading, setLoading ] = useState(true);
     const [ failed, setFailed ] = useState(false);
+    const [ errorMessage, setErrorMessage ] = useState("");
+    const [ forecastStatus, setForecastStatus ] = useState<IForecast["status"] | null>(null);
     const [ data, setData ] = useState<IDashboardData | null>(null);
-    const cache = useRef<Partial<Record<ForecastPeriod, IDashboardData>>>({});
     const dispatch = useDispatch<AppDispatch>();
 
 
     useEffect(() => {
         const controller = new AbortController();
-        const request = cache.current[period] ? Promise.resolve(cache.current[period]) : dashboardService.getDashboardData(period, controller.signal, companyId || (() => { try { return localStorage.getItem("saldo-company-id") || undefined; } catch { return undefined; } })());
+        const request = dashboardService.getDashboardData(period, controller.signal, companyId || (() => { try { return localStorage.getItem("saldo-company-id") || undefined; } catch { return undefined; } })(), ( status ) => {
+            if (!controller.signal.aborted) {
+                setForecastStatus(status);
+            }
+        });
 
         request.then(( response ) => {
             if (controller.signal.aborted) {
                 return;
             }
 
-            cache.current[period] = response;
             setData(response);
             dispatch(setSelectedCompany(response.company));
             setLoading(false);
@@ -60,6 +64,7 @@ const Dashboard = ( { companyId }: { companyId?: string } ) => {
             }
 
             setFailed(true);
+            setErrorMessage(getErrorMessage(error));
             setLoading(false);
         });
 
@@ -74,6 +79,8 @@ const Dashboard = ( { companyId }: { companyId?: string } ) => {
 
         setLoading(true);
         setFailed(false);
+        setErrorMessage("");
+        setForecastStatus(null);
         setPeriod(next);
     };
 
@@ -85,14 +92,18 @@ const Dashboard = ( { companyId }: { companyId?: string } ) => {
 
         setLoading(true);
         setFailed(false);
+        setErrorMessage("");
+        setForecastStatus(null);
         setAttempt(( current ) => current + 1);
     };
 
 
     const gap = !loading ? data?.forecast?.result.metrics.first_gap : null;
     const ready = !loading && !!data?.forecast && !failed;
-    const status = loading ? <LoadingText>Загружаем прогноз</LoadingText> : failed ? "Не удалось загрузить данные" : ready ? gap ? "ОЖИДАЕТСЯ КАССОВЫЙ РАЗРЫВ" : "КАССОВЫЙ РАЗРЫВ НЕ ПРОГНОЗИРУЕТСЯ" : "НЕДОСТАТОЧНО ДАННЫХ";
-    const warning = loading ? <LoadingText>Проверяем данные</LoadingText> : failed ? "Попробуйте повторить загрузку" : gap ? `${dateFormatter.format(new Date(`${gap.date}T00:00:00Z`)).toLocaleUpperCase("ru-RU")} ПРОГНОЗИРУЕТСЯ КАССОВЫЙ РАЗРЫВ` : ready ? data?.forecast?.readiness.limitations[0] || "На выбранный период предупреждений нет" : data?.company ? "Укажите датированный остаток на счёте для построения прогноза" : "Для прогноза нужна компания с данными счёта";
+    const insufficient = data?.forecast?.readiness.status === "insufficient";
+    const loadingLabel = forecastStatus === "queued" ? "Прогноз в очереди" : forecastStatus === "running" ? "Рассчитываем прогноз" : "Загружаем прогноз";
+    const status = loading ? <LoadingText>{ loadingLabel }</LoadingText> : failed ? "Не удалось загрузить данные" : ready && !insufficient ? gap ? "ОЖИДАЕТСЯ КАССОВЫЙ РАЗРЫВ" : "КАССОВЫЙ РАЗРЫВ НЕ ПРОГНОЗИРУЕТСЯ" : "НЕДОСТАТОЧНО ДАННЫХ";
+    const warning = loading ? <LoadingText>Проверяем данные</LoadingText> : failed ? "Попробуйте повторить загрузку" : gap ? `${dateFormatter.format(new Date(`${gap.date}T00:00:00Z`)).toLocaleUpperCase("ru-RU")} ПРОГНОЗИРУЕТСЯ КАССОВЫЙ РАЗРЫВ` : ready && insufficient ? "Истории недостаточно для оценки риска. Проверьте полноту выписки." : ready ? data?.forecast?.readiness.limitations[0] || "На выбранный период предупреждений нет" : data?.company ? "Укажите датированный остаток на счёте для построения прогноза" : "Для прогноза нужна компания с данными счёта";
 
 
     return (
@@ -109,7 +120,7 @@ const Dashboard = ( { companyId }: { companyId?: string } ) => {
 
                 <section className={styles.card}>
                     <h2>Ваша ситуация:</h2>
-                    <p className={ready ? gap ? styles.danger : styles.success : undefined}>{ status }</p>
+                    <p className={ready && !insufficient ? gap ? styles.danger : styles.success : undefined}>{ status }</p>
                 </section>
 
                 <section className={styles.card}>
@@ -141,7 +152,7 @@ const Dashboard = ( { companyId }: { companyId?: string } ) => {
                         <BalanceChart key={data.forecast.id} points={data.forecast.result.daily_points} />
                     ) : (
                         <div className={styles.placeholder}>
-                            { loading ? <Spinner label="Загружаем график" /> : <p>{ failed ? "Не удалось построить график" : "Данных для графика пока нет" }</p> }
+                            { loading ? <Spinner label={loadingLabel} /> : <p>{ failed ? errorMessage : "Данных для графика пока нет" }</p> }
                         </div>
                     ) }
                     { desktop && <span className={styles.chartHint} aria-hidden="true">{ isExpanded ? "Нажмите, чтобы свернуть" : "Нажмите, чтобы развернуть" }</span> }
@@ -159,6 +170,8 @@ const Dashboard = ( { companyId }: { companyId?: string } ) => {
                 { failed && <div className={styles.retry}><AuthButton type="button" loading={loading} onClick={retry}>Повторить загрузку</AuthButton></div> }
             </section>
             <div className={styles.details}>
+                { process.env.developerMode === "mock" && <Notice tone="warning">Демонстрационные данные: финансы и прогнозы замоканы.</Notice> }
+                <div><AuthButton type="button" loading={loading} onClick={retry}>Обновить прогноз</AuthButton></div>
                 { data?.forecast?.is_stale && <Notice tone="warning">После расчёта данные изменились. Этот прогноз отражает сохранённый снимок.</Notice> }
                 { data?.company ? <div className={styles.links}><LinkButton href={companyPath(data.company.id, "settings")} secondary>Остаток и реквизиты</LinkButton><LinkButton href={companyPath(data.company.id, "calendar")} secondary>Ближайшие платежи</LinkButton>{ data.forecast && <LinkButton href={companyPath(data.company.id, `forecasts/${data.forecast.id}`)}>Подробнее о прогнозе</LinkButton> }</div> : !loading && <LinkButton href="/workspace">Добавить компанию</LinkButton> }
                 { data?.forecast && <p className={styles.note}>Прогноз по данным на { formatDate(data.forecast.input.data_as_of) }. Вероятность отрицательного остатка: { data.forecast.result.metrics.gap_probability.value === null ? "не оценена" : `${Math.round(data.forecast.result.metrics.gap_probability.value * 100)}%` }.</p> }

@@ -31,7 +31,11 @@ fi
 install -d -m 755 /usr/local/libexec
 cat > /usr/local/libexec/saldo-frontend-ssh <<'WRAPPER'
 #!/bin/sh
-exec sudo -n /usr/local/sbin/saldo-frontend-deploy "$SSH_ORIGINAL_COMMAND"
+case "$SSH_ORIGINAL_COMMAND" in
+    deploy\ *) exec sudo -n /usr/local/sbin/saldo-frontend-deploy "$SSH_ORIGINAL_COMMAND" ;;
+    deploy-landing\ *) exec sudo -n /usr/local/sbin/saldo-landing-deploy "$SSH_ORIGINAL_COMMAND" ;;
+    *) exit 2 ;;
+esac
 WRAPPER
 chmod 755 /usr/local/libexec/saldo-frontend-ssh
 install -d -o saldo-deploy -g saldo-deploy -m 700 /var/lib/saldo-deploy/.ssh

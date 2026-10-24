@@ -16,3 +16,8 @@ Next.js configuration and local Docker files under `frontend/`. Run frontend npm
 commands from `frontend/`; keep shared docs at `docs/`, deployment infrastructure
 at `deploy/frontend/`, and GitHub Actions at `.github/workflows/`. This follows
 the monorepo layout in `8925873656aeb2bfaa366519ac7b2fdf714bd131`.
+
+Owner clarification: registration contains checkboxes and links to the separate
+consent/privacy pages only. Never render the full consent document on the
+registration page. Preserve consent version/digest loading and stale-document
+handling without inserting its text into the registration form.

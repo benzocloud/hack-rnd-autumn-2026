@@ -1,0 +1,166 @@
+syntax = "proto3";
+package core.v1;
+
+import "auth/v1/auth.proto";
+import "core/v1/common.proto";
+import "core/v1/errors.proto";
+import "core/v1/ledger.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1;corev1";
+
+// API-only mTLS. Reads FINANCIAL_READ; upload/commit FINANCIAL_WRITE with CSRF.
+service ImportsService {
+  rpc ListImports(ListImportsRequest) returns (ListImportsResponse);
+  rpc UploadImport(stream UploadImportRequest) returns (UploadImportResponse);
+  rpc GetImport(GetImportRequest) returns (GetImportResponse);
+  rpc ListImportIssues(ListImportIssuesRequest) returns (ListImportIssuesResponse);
+  rpc CommitImport(CommitImportRequest) returns (CommitImportResponse);
+}
+
+enum ImportStatus {
+  IMPORT_STATUS_UNSPECIFIED = 0;
+  IMPORT_STATUS_QUEUED = 1;
+  IMPORT_STATUS_PROCESSING = 2;
+  IMPORT_STATUS_PREVIEW_READY = 3;
+  IMPORT_STATUS_APPLIED = 4;
+  IMPORT_STATUS_FAILED = 5;
+}
+enum ImportRecordKind {
+  IMPORT_RECORD_KIND_UNSPECIFIED = 0;
+  IMPORT_RECORD_KIND_TRANSACTIONS = 1;
+  IMPORT_RECORD_KIND_PLANNED_PAYMENTS = 2;
+  IMPORT_RECORD_KIND_BALANCE_OBSERVATIONS = 3;
+}
+enum IssueSeverity {
+  ISSUE_SEVERITY_UNSPECIFIED = 0;
+  ISSUE_SEVERITY_WARNING = 1;
+  ISSUE_SEVERITY_BLOCKING = 2;
+}
+message ImportIssue {
+  string code = 1;
+  IssueSeverity severity = 2;
+  string message = 3;
+  optional uint64 row_number = 4;
+  optional string field = 5;
+  repeated string related_external_operation_ids = 6;
+}
+message BalanceObservation {
+  string date = 1;
+  Money balance = 2;
+  BalanceSource source = 3;
+}
+message ImportPreview {
+  string source_company_id = 1;
+  string source_system = 2;
+  string account_id = 3;
+  string currency = 4;
+  string period_start = 5;
+  string period_end = 6;
+  uint64 row_count = 7;
+  uint64 excluded_other_company_row_count = 8;
+  uint64 new_transaction_count = 9;
+  uint64 already_present_count = 10;
+  uint64 new_payment_count = 11;
+  uint64 blocking_issue_count = 12;
+  uint64 warning_count = 13;
+  repeated ImportIssue issues = 14;
+  bool issues_truncated = 15;
+  repeated BalanceObservation balance_observations = 16;
+  int64 base_data_version = 17;
+  bool can_commit = 18;
+  int64 preview_version = 19;
+  repeated ImportRecordKind record_kinds = 20;
+  FactualSourceBinding transaction_source = 21;
+  FactualSourceBinding would_bind_transaction_source = 22;
+}
+message Import {
+  string id = 1;
+  string account_id = 2;
+  RecordSourceKind source_kind = 3;
+  string adapter = 4;
+  string source_company_id = 5;
+  optional string connection_id = 6;
+  ImportStatus status = 7;
+  int64 version = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  ImportPreview preview = 11;
+  optional int64 applied_data_version = 12;
+  OperationError error = 13;
+  repeated ImportRecordKind record_kinds = 14;
+}
+// Original durable acknowledgement. Replay returns this same acceptance; GET
+// is authoritative for current state. API builds company-scoped status_url.
+message ImportAccepted {
+  string id = 1;
+  ImportStatus status = 2;
+  uint32 poll_after_ms = 3;
+}
+
+message ListImportsRequest {
+  auth.v1.BrowserContext context = 1;
+  AccountScope scope = 2;
+  PageRequest page = 3;
+}
+message ListImportsResponse {
+  repeated Import items = 1;
+  PageResponse pagination = 2;
+}
+// First frame must be metadata, exactly once; all later frames nonempty chunks
+// <=1 MiB, total <=100 MiB. Empty/truncated streams never enqueue a job.
+// Core computes SHA256 over received bytes; API cannot submit an arbitrary path
+// or a URL. Persist bytes, byte digest and job atomically before acceptance.
+message UploadImportRequest {
+  oneof frame {
+    UploadImportMetadata metadata = 1;
+    bytes chunk = 2;
+  }
+}
+message UploadImportMetadata {
+  auth.v1.WriteContext context = 1;
+  AccountScope scope = 2;
+  string idempotency_key = 3;
+  string adapter = 4;
+  string source_company_id = 5;
+  string currency = 6;
+  // API measures/hash-checks the bounded uploaded file before forwarding. Core
+  // recomputes both over chunks and rejects truncation/mismatch before enqueue.
+  uint64 byte_size = 7;
+  string file_sha256 = 8;
+}
+message UploadImportResponse {
+  ImportAccepted accepted = 1;
+}
+message GetImportRequest {
+  auth.v1.BrowserContext context = 1;
+  AccountScope scope = 2;
+  string import_id = 3;
+}
+message GetImportResponse {
+  Import import = 1;
+}
+message ListImportIssuesRequest {
+  auth.v1.BrowserContext context = 1;
+  AccountScope scope = 2;
+  string import_id = 3;
+  PageRequest page = 4;
+}
+message ListImportIssuesResponse {
+  repeated ImportIssue items = 1;
+  PageResponse pagination = 2;
+}
+// Re-authorize, check versions/source binding and warning acknowledgement in
+// commit Tx. Apply all normalized records and job state together, or none.
+message CommitImportRequest {
+  auth.v1.WriteContext context = 1;
+  AccountScope scope = 2;
+  string import_id = 3;
+  string idempotency_key = 4;
+  int64 expected_version = 5;
+  int64 expected_data_version = 6;
+  bool acknowledge_warnings = 7;
+}
+message CommitImportResponse {
+  Import import = 1;
+}

@@ -1,0 +1,124 @@
+{
+  "checked_at_utc": "2026-10-23T20:23:52Z",
+  "scope": "Public format research; no private customer data, authenticated business API requests or new vendor DTOs.",
+  "artifacts": [
+    {
+      "name": "EnterpriseData official archive",
+      "source_url": "https://its.1c.ru/db/files/1CITS/EXE/EnterpriseDataFiles/EnterpriseDataFiles.zip",
+      "sha256": "9de58ca6fdc4fd67b6ac8ea6c5459b159b778324b39182dc879ca57a5c2b6ceb",
+      "bytes": 4606377,
+      "inspected_version": "1.25",
+      "publisher": "1C"
+    },
+    {
+      "name": "EnterpriseData 1.25 XSD",
+      "source_url": "https://its.1c.ru/db/files/1CITS/EXE/EnterpriseDataFiles/EnterpriseDataFiles.zip",
+      "sha256": "3c11839e6c0f5d3df406313e8c36380ee770abf813412fff6ae7400a14ee84d6",
+      "bytes": 1261968,
+      "archive_member": "EnterpriseDataFiles/XSDschemeEntepriseData1_25.zip :: XSDschemeEntepriseData1_25.xsd",
+      "namespace": "http://v8.1c.ru/edi/edi_stnd/EnterpriseData/1.25",
+      "local_excerpt": "1c-enterprisedata-1.25.fragments.txt",
+      "publisher": "1C"
+    },
+    {
+      "name": "FNS notification schema public copy",
+      "source_url": "https://git.ruodoo.ru/ruodoo-public/public/raw/commit/dd10b7dde5935d4da35943e7ec9a26d169b9bee6/rsbu_fns_reporting/data/schemas/UT_UVISCHSUMNAL_1_263_00_05_03_01.xsd",
+      "sha256": "e4c9d8d188cdfa4f12a9c10c2e9567ff0ecb4a6c557e1377c0ee04298660c7c8",
+      "bytes": 17648,
+      "publisher": "RuOdoo public repository; schema describes FNS format, original FNS download unavailable",
+      "commit": "dd10b7dde5935d4da35943e7ec9a26d169b9bee6",
+      "format_version": "5.03",
+      "knd": "1110355",
+      "local_file": "UT_UVISCHSUMNAL_1_263_00_05_03_01.xsd",
+      "original_encoding": "windows-1251",
+      "official_byte_identity_verified": false
+    },
+    {
+      "name": "MoySklad md/documents/_invoice_out.md",
+      "source_url": "https://raw.githubusercontent.com/moysklad/api-remap-1.2-doc/1d769672f9b1d053805f4e4ee06034b0398bf251/md/documents/_invoice_out.md",
+      "sha256": "fdf814cc5e47bc85bb6ce53b1030008a05dcc2496210d43bffb3f67ecff4503f",
+      "bytes": 132043,
+      "publisher": "MoySklad official documentation repository",
+      "commit": "1d769672f9b1d053805f4e4ee06034b0398bf251",
+      "api_version": "1.2"
+    },
+    {
+      "name": "MoySklad md/documents/_invoice_in.md",
+      "source_url": "https://raw.githubusercontent.com/moysklad/api-remap-1.2-doc/1d769672f9b1d053805f4e4ee06034b0398bf251/md/documents/_invoice_in.md",
+      "sha256": "9c07b919105b20041b826a01753e48ca8ce4ca5966b0714e6cf2b468d85254f7",
+      "bytes": 139366,
+      "publisher": "MoySklad official documentation repository",
+      "commit": "1d769672f9b1d053805f4e4ee06034b0398bf251",
+      "api_version": "1.2"
+    },
+    {
+      "name": "MoySklad md/_general.md",
+      "source_url": "https://raw.githubusercontent.com/moysklad/api-remap-1.2-doc/1d769672f9b1d053805f4e4ee06034b0398bf251/md/_general.md",
+      "sha256": "5dc61a23b376b7b2ea46ece7ac6f33f56476d2c34fdf152d457cbeb8e0da0c16",
+      "bytes": 220353,
+      "publisher": "MoySklad official documentation repository",
+      "commit": "1d769672f9b1d053805f4e4ee06034b0398bf251",
+      "api_version": "1.2"
+    },
+    {
+      "name": "MoySklad md/documents/_common_info.md",
+      "source_url": "https://raw.githubusercontent.com/moysklad/api-remap-1.2-doc/1d769672f9b1d053805f4e4ee06034b0398bf251/md/documents/_common_info.md",
+      "sha256": "f06b8e2b4a634c1f105408710a583c185afa37a3cc59bed3f5a8d505ed5b76fc",
+      "bytes": 39773,
+      "publisher": "MoySklad official documentation repository",
+      "commit": "1d769672f9b1d053805f4e4ee06034b0398bf251",
+      "api_version": "1.2"
+    },
+    {
+      "name": "MoySklad vendor example projection",
+      "source_url": "https://github.com/moysklad/api-remap-1.2-doc/blob/1d769672f9b1d053805f4e4ee06034b0398bf251/md/documents/_invoice_out.md#L114",
+      "local_file": "moysklad-invoiceout.vendor-example.projection.json",
+      "extraction": "Subset of fields of the first matching invoice from a parseable vendor JSON example. Values unchanged. Not a live customer response or complete response.",
+      "source_block_line": 114
+    },
+    {
+      "name": "ENS format description, reproduction of FNS order",
+      "source_url": "https://legalacts.ru/doc/prikaz-fns-rossii-ot-05112024-n-ed-7-8987-ob-utverzhdenii/",
+      "sha256": "42b1abeb437afb2deac86278ccce91471abea416fb51a9732b5cede85942a99c",
+      "bytes": 240253,
+      "publisher": "Legalacts reproduction of the FNS order",
+      "format_version": "5.03",
+      "knd": "1160082",
+      "local_excerpt": "fns-ens-5.03.format-table-extract.txt",
+      "original_xsd_downloaded": false
+    },
+    {
+      "name": "1CClientBankExchange official specification",
+      "source_url": "https://v8.1c.ru/tekhnologii/obmen-dannymi-i-integratsiya/standarty-i-formaty/standart-obmena-s-sistemami-klient-banka/formaty-obmena/",
+      "sha256": "44de036be42d75f8e11cca42c4e7b7dad3d1a542f7250f7412afdca73401f296",
+      "bytes": 119413,
+      "publisher": "1C",
+      "format_version": "1.03"
+    },
+    {
+      "name": "EnterpriseData current versions and download reference",
+      "source_url": "https://its.1c.ru/db/content/metod8dev/src/developers/dataexchange/enterprisedata/i8105934.htm",
+      "sha256": "bff0d4e4dc2d143f091c6b89563eea9d6d3de81154c8daf1251c5ab940cddc03",
+      "bytes": 12283,
+      "publisher": "1C"
+    }
+  ],
+  "access_limits": [
+    {
+      "url": "https://www.nalog.gov.ru/rn77/about_fts/docs/15527368/",
+      "result": "HTTP 403 on direct download; search discovery is not treated as inspected XSD"
+    },
+    {
+      "url": "https://www.nalog.gov.ru/rn77/about_fts/docs/12964598/",
+      "result": "HTTP 403 on direct download; official attachment bytes not verified"
+    },
+    {
+      "capability": "Context7",
+      "result": "No Context7 tool available; primary web documents and original downloadable files used"
+    },
+    {
+      "capability": "GBrain",
+      "result": "Unavailable/disabled in project; no memory retrieval claimed"
+    }
+  ]
+}

@@ -17,9 +17,12 @@ type MatchCommand struct {
 	ID, PaymentID, TransactionID         uuid.UUID
 	Amount                               money.Money
 	ExpectedVersion, ExpectedDataVersion int64
-	ActorID                              string
-	IdempotencyKey                       string
-	At                                   time.Time
+	// Required by the public match contract. Zero is retained only for internal
+	// commands with a positive account CAS, including existing receipt replays.
+	ExpectedTransactionVersion int64
+	ActorID                    string
+	IdempotencyKey             string
+	At                         time.Time
 }
 
 type MatchPaymentResult struct {
@@ -87,7 +90,8 @@ func validateMatchPayment(cmd MatchCommand) error {
 	if err := cmd.Amount.Positive(); err != nil {
 		return err
 	}
-	if cmd.ExpectedVersion < 1 || cmd.ExpectedDataVersion < 1 || cmd.PaymentID == uuid.Nil || cmd.TransactionID == uuid.Nil {
+	if cmd.ExpectedVersion < 1 || cmd.ExpectedDataVersion < 0 || cmd.ExpectedTransactionVersion < 0 ||
+		(cmd.ExpectedDataVersion == 0 && cmd.ExpectedTransactionVersion == 0) || cmd.PaymentID == uuid.Nil || cmd.TransactionID == uuid.Nil {
 		return ErrInvalid
 	}
 	return nil
@@ -98,7 +102,7 @@ func matchPayment(ctx context.Context, store matchStore, cmd MatchCommand, id uu
 	if err != nil {
 		return MatchPaymentResult{}, err
 	}
-	if account.DataVersion() != cmd.ExpectedDataVersion {
+	if cmd.ExpectedDataVersion > 0 && account.DataVersion() != cmd.ExpectedDataVersion {
 		return MatchPaymentResult{}, ErrStaleVersion
 	}
 	payment, _, found, err := store.FindPayment(ctx, cmd.Scope, cmd.PaymentID, ledger.Source{})
@@ -117,6 +121,9 @@ func matchPayment(ctx context.Context, store matchStore, cmd MatchCommand, id uu
 	}
 	if !found {
 		return MatchPaymentResult{}, ErrNotFound
+	}
+	if cmd.ExpectedTransactionVersion > 0 && fact.Version() != cmd.ExpectedTransactionVersion {
+		return MatchPaymentResult{}, ErrStaleVersion
 	}
 	allocated, err := store.FactAllocated(ctx, cmd.Scope, cmd.TransactionID)
 	if err != nil {

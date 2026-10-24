@@ -1,0 +1,91 @@
+{
+  "schema_version": "0.1.0",
+  "source": {
+    "kind": "file",
+    "source_system": "dataset_v1",
+    "source_company_id": "C001",
+    "source_account_id": null,
+    "data_origin": "provided_synthetic_dataset",
+    "currency": "RUB",
+    "currency_basis": "adapter_assumption",
+    "retrieved_at": "2026-10-23T20:00:00Z",
+    "artifact_ref": "statements/C001.csv",
+    "artifact_sha256": "945fe67e8418882bf7bd5e9bdcda570c613fc7777113d55424ae34b052dfa92a"
+  },
+  "record_kinds": [
+    "transactions",
+    "balance_observations"
+  ],
+  "factual_period": {
+    "start_date": "2024-10-01",
+    "end_date": "2024-10-02"
+  },
+  "transactions": [
+    {
+      "external_operation_id": "C001-000001",
+      "operation_date": "2024-10-01",
+      "direction": "outflow",
+      "amount": {
+        "amount_minor": "99000",
+        "currency": "RUB"
+      },
+      "counterparty_inn": "0068275202",
+      "counterparty_name": "ПАО «Банк»",
+      "payment_purpose": "Комиссия за ведение счета за сентябрь 2024 г. Без НДС",
+      "source_category": null,
+      "source_row_number": 2
+    },
+    {
+      "external_operation_id": "C001-000002",
+      "operation_date": "2024-10-02",
+      "direction": "inflow",
+      "amount": {
+        "amount_minor": "17089206",
+        "currency": "RUB"
+      },
+      "counterparty_inn": "0048401219",
+      "counterparty_name": "ООО «Элеватор-242»",
+      "payment_purpose": "Оплата по УПД № 279 от 19.08.2024. НДС не облагается",
+      "source_category": null,
+      "source_row_number": 3
+    },
+    {
+      "external_operation_id": "C001-000003",
+      "operation_date": "2024-10-02",
+      "direction": "inflow",
+      "amount": {
+        "amount_minor": "11200000",
+        "currency": "RUB"
+      },
+      "counterparty_inn": "0053443398",
+      "counterparty_name": "ООО «Дистрибьютор-307»",
+      "payment_purpose": "Частичная оплата по УПД № 296 от 02.09.2024. НДС не облагается.",
+      "source_category": null,
+      "source_row_number": 4
+    }
+  ],
+  "balance_observations": [
+    {
+      "date": "2024-10-01",
+      "balance": {
+        "amount_minor": "124482198",
+        "currency": "RUB"
+      },
+      "source_row_numbers": [
+        2
+      ]
+    },
+    {
+      "date": "2024-10-02",
+      "balance": {
+        "amount_minor": "152771404",
+        "currency": "RUB"
+      },
+      "source_row_numbers": [
+        3,
+        4
+      ]
+    }
+  ],
+  "planned_payments": []
+}

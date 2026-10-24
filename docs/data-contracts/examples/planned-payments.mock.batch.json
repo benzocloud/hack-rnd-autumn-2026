@@ -1,0 +1,67 @@
+{
+  "schema_version": "0.1.0",
+  "source": {
+    "kind": "mock_external",
+    "source_system": "demo_planned_payments_v1",
+    "source_company_id": "C001",
+    "source_account_id": null,
+    "data_origin": "synthetic_mock",
+    "currency": "RUB",
+    "currency_basis": "adapter_assumption",
+    "retrieved_at": "2026-10-23T20:00:00Z",
+    "artifact_ref": "handwritten mock fixture; no authentic FNS/1C protocol",
+    "artifact_sha256": null
+  },
+  "record_kinds": [
+    "planned_payments"
+  ],
+  "factual_period": null,
+  "transactions": [],
+  "balance_observations": [],
+  "planned_payments": [
+    {
+      "external_payment_id": "DEMO-INVOICE-001",
+      "direction": "inflow",
+      "amount": {
+        "amount_minor": "10000000",
+        "currency": "RUB"
+      },
+      "remaining_amount": {
+        "amount_minor": "10000000",
+        "currency": "RUB"
+      },
+      "scheduled_date": "2024-10-07",
+      "counterparty_name": "Учебный покупатель",
+      "description": "Вымышленный будущий счёт, отсутствующий в датасете",
+      "source_category": null,
+      "status": "planned",
+      "availability": {
+        "known_as_of_date": "2024-10-02",
+        "basis": "demo_assumption",
+        "evidence_ref": "Manually authored demonstration; excluded from scored historical evaluation"
+      }
+    },
+    {
+      "external_payment_id": "DEMO-RENT-001",
+      "direction": "outflow",
+      "amount": {
+        "amount_minor": "8000000",
+        "currency": "RUB"
+      },
+      "remaining_amount": {
+        "amount_minor": "8000000",
+        "currency": "RUB"
+      },
+      "scheduled_date": "2024-10-10",
+      "counterparty_name": "Учебный арендодатель",
+      "description": "Вымышленный расход; не выведен из будущих операций датасета",
+      "source_category": null,
+      "status": "planned",
+      "availability": {
+        "known_as_of_date": "2024-10-02",
+        "basis": "demo_assumption",
+        "evidence_ref": "Manually authored demonstration; excluded from scored historical evaluation"
+      }
+    }
+  ]
+}

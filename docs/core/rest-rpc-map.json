@@ -1,0 +1,170 @@
+{
+  "getCsrfToken": [
+    "auth.v1.AuthService.GetSecurityContext"
+  ],
+  "getPersonalDataConsentDocument": [
+    "auth.v1.AuthService.GetPersonalDataConsent"
+  ],
+  "register": [
+    "auth.v1.AuthService.Register"
+  ],
+  "login": [
+    "auth.v1.AuthService.Login"
+  ],
+  "verifyEmail": [
+    "auth.v1.AuthService.VerifyEmail"
+  ],
+  "resendVerification": [
+    "auth.v1.AuthService.ResendVerification"
+  ],
+  "forgotPassword": [
+    "auth.v1.AuthService.ForgotPassword"
+  ],
+  "resetPassword": [
+    "auth.v1.AuthService.ResetPassword"
+  ],
+  "logout": [
+    "auth.v1.AuthService.Logout"
+  ],
+  "getMe": [
+    "auth.v1.AuthService.GetCurrentAccount"
+  ],
+  "listCompanies": [
+    "auth.v1.AuthService.ListMemberships",
+    "core.v1.CompanyService.ReadCompany"
+  ],
+  "createCompany": [
+    "auth.v1.AuthService.BeginCompanyCreation",
+    "core.v1.CompanyService.CreateCompanyBootstrap",
+    "auth.v1.AuthService.CompleteCompanyCreation",
+    "core.v1.CompanyService.ReadCompany"
+  ],
+  "getCompany": [
+    "core.v1.CompanyService.ReadCompany"
+  ],
+  "updateCompany": [
+    "core.v1.CompanyService.UpdateCompany"
+  ],
+  "listMembers": [
+    "auth.v1.AuthService.ListMembers"
+  ],
+  "removeMember": [
+    "auth.v1.AuthService.RemoveMember"
+  ],
+  "listCompanyInvitations": [
+    "auth.v1.AuthService.ListOutgoingInvitations"
+  ],
+  "createInvitation": [
+    "core.v1.CompanyService.ReadCompany",
+    "auth.v1.AuthService.CreateInvitation"
+  ],
+  "revokeInvitation": [
+    "auth.v1.AuthService.RevokeInvitation"
+  ],
+  "listMyInvitations": [
+    "auth.v1.AuthService.ListIncomingInvitations"
+  ],
+  "acceptInvitation": [
+    "auth.v1.AuthService.AcceptInvitation",
+    "core.v1.CompanyService.ReadCompany"
+  ],
+  "declineInvitation": [
+    "auth.v1.AuthService.DeclineInvitation"
+  ],
+  "getDefaultAccount": [
+    "core.v1.LedgerService.GetDefaultAccount"
+  ],
+  "setDatedBalance": [
+    "core.v1.LedgerService.RecordManualBalance"
+  ],
+  "listCategories": [
+    "core.v1.LedgerService.ListCategories"
+  ],
+  "listTransactions": [
+    "core.v1.LedgerService.ListTransactions"
+  ],
+  "createManualTransaction": [
+    "core.v1.LedgerService.CreateManualTransaction"
+  ],
+  "updateTransactionCategory": [
+    "core.v1.LedgerService.UpdateTransactionCategory"
+  ],
+  "listImports": [
+    "core.v1.ImportsService.ListImports"
+  ],
+  "uploadImport": [
+    "core.v1.ImportsService.UploadImport"
+  ],
+  "getImport": [
+    "core.v1.ImportsService.GetImport"
+  ],
+  "listImportIssues": [
+    "core.v1.ImportsService.ListImportIssues"
+  ],
+  "commitImport": [
+    "core.v1.ImportsService.CommitImport"
+  ],
+  "listExternalProviders": [
+    "core.v1.IntegrationsService.ListExternalProviders"
+  ],
+  "listConnections": [
+    "core.v1.IntegrationsService.ListConnections"
+  ],
+  "createConnection": [
+    "core.v1.IntegrationsService.CreateConnection"
+  ],
+  "disableConnection": [
+    "core.v1.IntegrationsService.DisableConnection"
+  ],
+  "syncConnection": [
+    "core.v1.IntegrationsService.SyncConnection"
+  ],
+  "listPayments": [
+    "core.v1.PaymentsService.ListPayments"
+  ],
+  "createPayment": [
+    "core.v1.PaymentsService.CreateManualPayment"
+  ],
+  "getPayment": [
+    "core.v1.PaymentsService.GetPayment"
+  ],
+  "updatePayment": [
+    "core.v1.PaymentsService.UpdatePayment"
+  ],
+  "cancelPayment": [
+    "core.v1.PaymentsService.CancelPayment"
+  ],
+  "listPaymentMatches": [
+    "core.v1.PaymentsService.ListPaymentMatches"
+  ],
+  "matchPayment": [
+    "core.v1.PaymentsService.MatchPayment"
+  ],
+  "removePaymentMatch": [
+    "core.v1.PaymentsService.RemovePaymentMatch"
+  ],
+  "listForecasts": [
+    "core.v1.ForecastingService.ListForecasts"
+  ],
+  "createForecast": [
+    "core.v1.ForecastingService.CreateForecast"
+  ],
+  "getForecast": [
+    "core.v1.ForecastingService.GetForecast"
+  ],
+  "compareForecasts": [
+    "core.v1.ForecastingService.CompareForecasts"
+  ],
+  "getPlanFact": [
+    "core.v1.ForecastingService.GetPlanFact"
+  ],
+  "listScenarios": [
+    "core.v1.ScenariosService.ListScenarios"
+  ],
+  "createScenario": [
+    "core.v1.ScenariosService.CreateScenario"
+  ],
+  "getScenario": [
+    "core.v1.ScenariosService.GetScenario"
+  ]
+}
