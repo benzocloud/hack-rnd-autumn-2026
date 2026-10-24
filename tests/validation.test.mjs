@@ -13,9 +13,25 @@ const form = ( values = {} ) => {
 };
 
 
-test("login has no client validation, including empty and malformed values", () => {
-    assert.equal(validateAuthForm("login", form()), null);
-    assert.equal(validateAuthForm("login", form({ email: "invalid", password: "1" })), null);
+test("login rejects empty or malformed email and blank passwords in every mode", () => {
+    for (const mockMode of [ true, false ]) {
+        assert.match(validateAuthForm("login", form(), mockMode), /почту/);
+        assert.match(validateAuthForm("login", form({ email: "   ", password: "password" }), mockMode), /почту/);
+        assert.match(validateAuthForm("login", form({ email: "not-an-email", password: " " }), mockMode), /адрес почты/);
+        assert.match(validateAuthForm("login", form({ email: "test@example.com", password: "" }), mockMode), /пароль/);
+        assert.match(validateAuthForm("login", form({ email: "test@example.com", password: " \t\n " }), mockMode), /пароль/);
+    }
+});
+
+
+test("login accepts filled credentials without applying new-password rules", () => {
+    const values = { email: " test@example.com ", password: "1" };
+    const data = form(values);
+
+    assert.equal(validateAuthForm("login", data), null);
+    assert.equal(data.get("email"), values.email);
+    assert.equal(data.get("password"), values.password);
+    assert.equal(validateAuthForm("login", form({ email: "test@example.com", password: "  existing-password  " })), null);
 });
 
 

@@ -15,10 +15,6 @@ const validatePassword = ( form: FormData ): string | null => {
 
 
 const validateAuthForm = ( mode: AuthMode, form: FormData, mockMode = process.env.developerMode === "mock" ): string | null => {
-    if (mode === "login") {
-        return null;
-    }
-
     if (mode === "verify-code") {
         const token = String(form.get("token") || "").trim();
 
@@ -58,6 +54,10 @@ const validateAuthForm = ( mode: AuthMode, form: FormData, mockMode = process.en
 
     if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         return "Введите корректный адрес почты.";
+    }
+
+    if (mode === "login" && !String(form.get("password") || "").trim()) {
+        return "Введите пароль.";
     }
 
     if (mode === "register") {
