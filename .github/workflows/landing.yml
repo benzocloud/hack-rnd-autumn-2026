@@ -2,10 +2,10 @@ name: Landing CI and deploy
 
 on:
   pull_request:
-    paths: ['landing/**', 'deploy/landing/**', '.github/workflows/landing.yml']
+    paths: ['landing/**', 'deploy/landing/**', 'deploy/frontend/nginx-https.conf', '.github/workflows/landing.yml']
   push:
     branches: [main]
-    paths: ['landing/**', 'deploy/landing/**', '.github/workflows/landing.yml']
+    paths: ['landing/**', 'deploy/landing/**', 'deploy/frontend/nginx-https.conf', '.github/workflows/landing.yml']
   workflow_dispatch:
 
 permissions:
@@ -104,12 +104,12 @@ jobs:
           docker run -d --name saldo-landing-check -p 127.0.0.1:3105:3005 "$IMAGE_TAG"
           trap 'docker logs saldo-landing-check; docker rm -f saldo-landing-check' EXIT
           for _ in {1..30}; do
-            if curl --fail --silent http://127.0.0.1:3105/ >/dev/null; then
+            if curl --fail --silent http://127.0.0.1:3105/landing >/dev/null; then
               break
             fi
             sleep 2
           done
-          curl --fail --silent --show-error http://127.0.0.1:3105/ >/dev/null
+          node landing/scripts/smoke.mjs http://127.0.0.1:3105
 
   deploy:
     needs: build
@@ -118,7 +118,7 @@ jobs:
     timeout-minutes: 10
     environment:
       name: frontend-mock
-      url: http://brokebyte.me:3005
+      url: https://saldo.brokebyte.me/landing
     permissions:
       packages: read
     steps:
@@ -146,5 +146,7 @@ jobs:
             -o UserKnownHostsFile="$credential_dir/known_hosts" \
             -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
             saldo-deploy@brokebyte.me "deploy-landing $IMAGE_DIGEST $REGISTRY_USER"
-      - name: Verify landing port
-        run: curl --fail --silent --show-error --retry 5 http://brokebyte.me:3005/ >/dev/null
+      - name: Verify landing and existing application over HTTPS
+        run: |
+          curl --fail --silent --show-error --max-time 15 --retry 5 https://saldo.brokebyte.me/landing >/dev/null
+          curl --fail --silent --show-error --max-time 15 --retry 5 https://saldo.brokebyte.me/login >/dev/null

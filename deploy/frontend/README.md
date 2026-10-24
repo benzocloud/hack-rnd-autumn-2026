@@ -8,6 +8,8 @@
 - `/opt/saldo-frontend`: отдельный Compose project `saldo-frontend`.
 - `frontend`: Next.js standalone, `developerMode=mock` **при сборке**.
   Порт 3000 доступен только внутри Docker network, наружу не публикуется.
+- `/landing` проксируется Nginx Saldo в отдельный `landing:3005` из той же сети;
+  настройка и deployment — [deploy/landing](../landing/README.md).
 - `nginx`: единственные опубликованные порты — 80/443. HTTP перенаправляется
   на HTTPS; `/.well-known/acme-challenge/` обслуживается локально.
 - Let's Encrypt: отдельные config/work/log директории только этого проекта.

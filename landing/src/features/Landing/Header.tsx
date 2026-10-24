@@ -42,7 +42,7 @@ const Header = () => {
         <header className={styles.header}>
             <div className={styles.headerInner}>
                 <a href="#" className={styles.brand} aria-label="Saldo Analytics — на главную">
-                    <Image src="/icons/saldo/saldo-analytics-black.svg" alt="Saldo Analytics" width={156} height={58} priority unoptimized />
+                    <Image src="/landing/icons/saldo/saldo-analytics-black.svg" alt="Saldo Analytics" width={156} height={58} priority unoptimized />
                 </a>
                 <nav className={styles.desktopNav} aria-label="Основная навигация">
                     { navigation.map(( item ) => <a href={item.href} key={item.href}>{ item.label }</a>) }

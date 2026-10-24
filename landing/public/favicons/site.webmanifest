@@ -22,6 +22,6 @@
     "background_color": "#EAEAEA",
     "display": "standalone",
     "short_name": "Saldo",
-    "start_url": "/",
+    "start_url": "/landing",
     "scope": "/"
 }
