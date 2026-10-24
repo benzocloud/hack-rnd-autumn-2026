@@ -6,8 +6,8 @@
 Новый приоритет владельца: сдача **25 октября, 12:00 МСК**,
 [план D1–D4](../.agent/plans/demo-integration.md) — объединить готовые части
 в настоящий финансовый сценарий. ADR-028 разрешает отдельный явно включённый
-mock подтверждения email в изолированном демо; его server-side реализация
-ещё не проверена. Существующий общий frontend-mock не является этой интеграцией.
+mock подтверждения email в изолированном демо; его server-side срез реализуется и проверяется отдельно в
+[отчёте D1/Auth](auth/demo-integration.md); это не готовность общей цепочки. Существующий общий frontend-mock не является этой интеграцией.
 
 ## Исходные PR
 
@@ -46,7 +46,7 @@ mock подтверждения email в изолированном демо; е
 | Компонент | Отсутствующий результат |
 | --- | --- |
 | Go API | Исполняемый сервис, HTTP handlers/middleware, cookie/CSRF/Origin, Auth/Core adapters и проверка полного browser flow |
-| Auth | Бизнес-RPC регистрации/входа/подтверждения/reset, consent/outbox/email delivery, компании/членства/приглашения; этапы 3.3–3.6 не начаты |
+| Auth | D1/Auth добавляет минимальные RPC регистрации/входа/сессии/доступа и изолированный demo-profile; результат на отдельном ревью. Core onboarding/receipt, email delivery/outbox, reset и приглашения остаются; полные этапы 3.3–3.6 не объявляются завершёнными |
 | Core | Transport, Auth access adapter, company bootstrap/read/update и durable onboarding receipt для Auth; forecast orchestration. FinancialSnapshot (2.4) реализован, проверен и принят владельцем для включения в эту поставку; это внутренний снимок, не готовый прогноз |
 | ML | Согласованный protobuf adapter/service над прогнозом; вход от Core snapshot, а не обращение Go API к CSV/CLI |
 | End-to-end | Реальная цепочка Frontend → API → Auth/Core → ML, provisioned TLS/credentials и согласованная проверка результата |

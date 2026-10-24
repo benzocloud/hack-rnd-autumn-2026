@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
+import { getEmailVerificationMode, type EmailVerificationMode } from "@/helpers/emailVerificationMode";
 import getErrorMessage from "@/helpers/getErrorMessage";
 import { showErrorSnackbar, showSuccessSnackbar } from "@/helpers/snackbar";
 import validateAuthForm from "@/helpers/validateAuthForm";
@@ -48,6 +49,7 @@ const AuthForm = ( { mode, verificationPurpose = "register", resetToken = "" }: 
     const [ resendBusy, setResendBusy ] = useState(false);
     const [ consentDocument, setConsentDocument ] = useState<IPersonalDataConsentDocument | null>(null);
     const [ consentFailed, setConsentFailed ] = useState(false);
+    const [ emailVerificationMode, setEmailVerificationMode ] = useState<EmailVerificationMode | "loading" | "unavailable">("loading");
     const { user, verificationEmail, verificationChallenge } = useSelector(( state: RootState ) => state.auth);
 
     const router = useRouter();
@@ -58,12 +60,39 @@ const AuthForm = ( { mode, verificationPurpose = "register", resetToken = "" }: 
     const requestRef = useRef<AbortController | null>(null);
     const resendRef = useRef<AbortController | null>(null);
     const consentRequestRef = useRef<AbortController | null>(null);
+    const verificationModeRequestRef = useRef<AbortController | null>(null);
     const isRegister = mode === "register";
     const isLogin = mode === "login";
     const isCode = mode === "verify-code";
     const isReset = mode === "reset-password";
+    const verifiesEmail = isCode && verificationPurpose === "register";
+    const verificationModeUnavailable = (isRegister || verifiesEmail) && (emailVerificationMode === "loading" || emailVerificationMode === "unavailable");
     const codeTitles: Record<VerificationPurpose, string> = { register: "Подтверждение регистрации", login: "Подтверждение входа", reset: "Подтверждение сброса пароля" };
     const codeBackUrl = verificationPurpose === "register" ? "/register" : verificationPurpose === "reset" ? "/forgot-password" : "/login";
+
+
+    const loadVerificationMode = useCallback(() => {
+        verificationModeRequestRef.current?.abort();
+        const controller = new AbortController();
+        verificationModeRequestRef.current = controller;
+        return authService.getCsrfToken(controller.signal).then(( response ) => {
+            if (!controller.signal.aborted) {
+                setEmailVerificationMode(getEmailVerificationMode(response) ?? "unavailable");
+            }
+        }, () => {
+            if (!controller.signal.aborted) {
+                setEmailVerificationMode("unavailable");
+            }
+        });
+    }, []);
+
+
+    useEffect(() => {
+        if (isRegister || verifiesEmail) {
+            void loadVerificationMode();
+        }
+        return () => verificationModeRequestRef.current?.abort();
+    }, [ isRegister, verifiesEmail, loadVerificationMode ]);
 
 
     const loadConsentDocument = useCallback(() => {
@@ -141,6 +170,11 @@ const AuthForm = ( { mode, verificationPurpose = "register", resetToken = "" }: 
 
         if (isRegister && !consentDocument) {
             showErrorSnackbar("Дождитесь загрузки актуального текста согласия.");
+            return;
+        }
+
+        if (verificationModeUnavailable) {
+            showErrorSnackbar("Сначала дождитесь загрузки режима подтверждения.");
             return;
         }
 
@@ -297,6 +331,10 @@ const AuthForm = ( { mode, verificationPurpose = "register", resetToken = "" }: 
 
                 { mode === "forgot-password" && <p className={styles.description}>Укажите почту, чтобы получить письмо для восстановления пароля.</p> }
 
+                { (isRegister || verifiesEmail) && emailVerificationMode === "demo" && <aside className={styles.demoNotice} role="status"><strong>Демо: подтверждение замокано</strong><p>Для разрешённых тестовых аккаунтов подойдут любые шесть цифр до истечения срока кода. Это не доказывает владение почтой.</p></aside> }
+                { (isRegister || verifiesEmail) && emailVerificationMode === "loading" && <p className={styles.description} role="status">Загружаем режим подтверждения…</p> }
+                { (isRegister || verifiesEmail) && emailVerificationMode === "unavailable" && <div className={styles.modeError} role="status"><p>Не удалось получить режим подтверждения.</p><button className={styles.link} type="button" onClick={() => { setEmailVerificationMode("loading"); void loadVerificationMode(); }}>Повторить загрузку</button></div> }
+
                 <form className={styles.form} onSubmit={submit} noValidate aria-busy={busy}>
                     <fieldset className={styles.fields} disabled={busy}>
                         <legend className={styles.hidden}>Данные аккаунта</legend>
@@ -337,7 +375,7 @@ const AuthForm = ( { mode, verificationPurpose = "register", resetToken = "" }: 
                         </div>
                     ) }
 
-                    <AuthButton type="submit" loading={busy} disabled={isRegister && !consentDocument}>{ buttons[mode] }</AuthButton>
+                    <AuthButton type="submit" loading={busy} disabled={(isRegister && !consentDocument) || verificationModeUnavailable}>{ buttons[mode] }</AuthButton>
                 </form>
 
                 { isLogin ? (

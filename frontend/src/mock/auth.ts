@@ -17,7 +17,7 @@ const issueVerificationChallenge = ( state: IMockState, email: string ): IEmailV
 
 const handleMockAuth = ( path: string, data: unknown, state: IMockState ): unknown => {
     if (path === "/auth/csrf") {
-        return { ...fixture<object>("CsrfToken"), expires_at: expiresAt() };
+        return { ...fixture<object>("CsrfToken"), expires_at: expiresAt(), email_verification_mode: "demo" };
     }
 
     if (path === "/auth/personal-data-consent") {
