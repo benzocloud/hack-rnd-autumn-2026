@@ -1,0 +1,215 @@
+# Самостоятельное создание компании
+
+## Поручение и режим работы
+
+Прямое поручение владельца от 2026-10-24: реализовать путь register/verify/login
+→ Workspace → создание компании → owner membership → чтение единственного
+пустого default account. Issue не назначен, номер не выдумываем.
+
+Разрешены последовательное выполнение A0–A5, проверки, независимые read-only
+ревью, исправления, небольшие scope-only commits, обычные push и один draft PR.
+Это явное исключение ADR-020: промежуточного согласования не требуется;
+после проверок этапы остаются «На ревью владельца», только владелец принимает их.
+Merge, ready-for-review, deployment и production provisioning запрещены.
+
+Название PR: `feat: implement durable company onboarding`.
+Владелец ветки: текущая Codex-сессия по поручению Prosteyshiyyy.
+Ветка: `prosteyshiyyy/feat/company_onboarding` (nickname подтверждён GitHub SSH).
+Исходная база: `fdee0ed`, свежий `origin/main` при старте.
+Продолжение и ограничения: [handoff](../handoffs/company-onboarding.md).
+
+## Проверенное исходное состояние
+
+На базе `fdee0ed`:
+
+- [Auth contract](../../docs/auth/contract.md) определяет durable command,
+  fingerprint v1, finalization и recovery; RPC уже объявлены в
+  [auth.proto](../../proto/auth/v1/auth.proto).
+- `services/auth/internal/service/account/company.go` реализует authorization
+  и membership listing, а `internal/handler/grpc/server.go` не реализует
+  Begin/AuthorizeBootstrap/Complete (унаследованный Unimplemented).
+- `services/core/internal/service/company/bootstrap.go` и `bootstrap_test.go`
+  уже содержат bootstrap/replay/receipt; переиспользовать, не копировать в Auth.
+- `services/api/internal/handler/http/financial.go` обслуживает GET companies,
+  POST companies сейчас отклоняется методом; typed boundaries — `router.go`.
+- `frontend/src/features/Workspace/Workspace.tsx` связывает companies/invitations
+  через Promise.all, форма вызывает существующий companiesService и ведёт settings.
+- GBrain recall выполнен; память вспомогательна, состояние подтверждается Git.
+- PR/Issue descriptions и полные discussions пока недоступны: нет API auth.
+  Нельзя считать проверенными отсутствие пересечений, CI или ревью.
+
+## Граница и неизменяемые условия
+
+Каноническая цепочка: POST /companies → Auth.BeginCompanyCreation →
+Core.CreateCompanyBootstrap → Auth.CompleteCompanyCreation → Core.ReadCompany → 201.
+
+Auth владеет initiator/session/command/membership, Core — company/account/receipt.
+Begin требует live session, verified email, CSRF; сохраняет UUIDv4 команды,
+UUIDv7 компании и `(initiator, create_company, key)` ровно один раз.
+Spec: trim name; INN null/absent → null либо 10/12 ASCII digits;
+RUB, Europe/Moscow. Fingerprint: SHA-256 UTF-8 Go JSON struct полей
+name,inn,currency,timezone, стандартный escaping, без LF. Общие fixtures с Core.
+Повтор идентичен; иное тело с тем же ключом — conflict. Owner только из сессии.
+
+Complete читает receipt по mTLS самостоятельно, проверяет command/company/spec/
+hash/account/committed result; membership и COMPLETED записываются атомарно.
+После сетевого вызова состояние перепроверяется под lock; SQL Tx/locks через
+RPC не удерживаются. Disabled/deleted initiator или mismatched receipt →
+QUARANTINED без membership. Finalization синхронизируется user lock.
+
+Reconciler восстанавливает PREPARED после restart/потери ответа, без browser
+cookie; сначала receipt, затем при отсутствии идемпотентный bootstrap и общий
+finalizer. Lease/fencing, bounded retries/backoff и shutdown по текущим patterns.
+Session expiry/reset не отменяет принятую команду. Unresolved keys/commands
+не удаляются по произвольному TTL; completed mapping живёт с компанией.
+
+Точные peers: Core-only AuthorizeCompanyBootstrap, Auth-only receipt read,
+bootstrap только существующие API/Auth identities. App владеет Core connection,
+Close и deadlines; недоступный/необязательный Core client не ломает login/verify.
+sqlx/app-owned Tx, SQL/embed, private implementations, consumer-side ports,
+feature-local DTO; никаких domain→service и repository→service зависимостей.
+
+Сохранить server-only demo allowlist/strict default, пароль/session/CSRF,
+consent version/digest/stale handling; регистрация содержит checkbox и ссылки,
+без полного consent text. Новый account пуст: без balance/transactions/source
+binding/coverage. Вне scope: imports, платежи, финансовые snapshots, категории/ML,
+invitations, reset/email delivery, новые роли и полный redesign Auth.
+
+Авторитетные источники также: [Core contract](../../docs/core/contract.md),
+[API adapter](../../docs/core/api-adapter.md),
+[REST/RPC map](../../docs/core/rest-rpc-map.json),
+[OpenAPI](../../docs/api/openapi.yaml),
+[company.proto](../../proto/core/v1/company.proto), актуальные код и тесты.
+Архитектуру и accepted contracts не менять ради удобства: конфликт документировать
+как blocker, продолжать только независимые согласованные части.
+
+## Этапы
+
+| Этап | Статус | Проверяемый результат |
+| --- | --- | --- |
+| A0 | В работе | Удалённые plan/handoff и один проверенный draft PR |
+| A1 | Не начат | Durable Auth command/repository и atomic owner finalization |
+| A2 | Не начат | RPC, Core client и recovery после restart |
+| A3 | Не начат | Настоящий POST /companies, HTTPS/mTLS conformance |
+| A4 | Не начат | Workspace без блокирующей зависимости от invitations |
+| A5 | Не начат | Реальный полный сценарий, два ревью, CI, итоговый handoff |
+
+### A0 — Контекст и публичный checkpoint
+
+Зависимости: доступ Git и авторизованный GitHub API.
+Компоненты: этот plan, handoff, один draft PR.
+
+- [x] Прочитать AGENTS, instructions, decisions, workflows, Go references;
+  GBrain recall; проверить исходный checkout, fetch origin и реальный nickname.
+- [x] Создать отдельный worktree от свежего main, не stash/reset исходный checkout.
+- [ ] Прочитать PR/Issue descriptions, все conversation/review/inline comments;
+  проверить существующий draft и исключить второго владельца ветки.
+- [ ] Проверить docs diff/links, docs commit, fetch/merge нового main, сразу push.
+- [ ] Создать/проверить единственный draft, таблицу этапов и ссылки plan/handoff;
+  проверить remote SHA, доступность PR, сообщить URL; attach_artifact при наличии.
+
+Gate: доступные remote документы и draft PR до реализации A1.
+Если публикация/PR недоступны — точная причина и handoff, без долгой реализации.
+
+### A1 — Durable command и repository
+
+Зависимость: A0 gate. Компоненты: Auth feature service/storage, новая миграция,
+repository SQL/embed/record, membership/user locks, общие fingerprint fixtures.
+Ориентир: принятый cosmohack sqlx layout из Go references; исходники референсов
+не копировать, наличие локального checkout перед адаптацией проверить отдельно.
+
+- [ ] Реализовать validation/spec/fingerprint и persistent scoped idempotency;
+  states PREPARED/COMPLETED/QUARANTINED, constraints/indexes/locks.
+- [ ] Atomic membership + completion; concurrency/replay и rollback без утечки result.
+- [ ] Проверить additive migration на отдельной marked Auth test DB;
+  совместимость/up/repeated-up/rollback по действующим правилам, старые SQL не менять.
+- [ ] Unit/real PostgreSQL/race, два read-only review; отдельный repository checkpoint.
+
+Критерий: одинаковый ключ даёт одну команду/company, конфликт без новой записи;
+финализация атомарна и безопасна при конкуренции/disabled initiator.
+
+### A2 — Auth RPC, Core client, recovery
+
+Зависимость: A1. Компоненты: Auth handler/service/app/config/client/lifecycle,
+canonical generated Core bindings только через generator; Core только совместимость.
+
+- [ ] Begin/Authorize/Complete и точные mTLS peer checks, typed errors.
+- [ ] Core client с app-owned connection/deadlines/Close и receipt validation.
+- [ ] Общий finalizer; сеть вне locks/Tx, перепроверка после сети.
+- [ ] Durable worker: receipt-first, bootstrap fallback, lease/fencing,
+  bounded backoff/retries/shutdown, quarantine, без cookie и произвольного TTL.
+- [ ] Missing/mismatched receipt, lost reply, restart в каждом переходе,
+  две реплики, disabled/deleted user, expired/reset session, quarantined command,
+  unavailable dependencies и сохранённый login/verify.
+- [ ] Отдельные RPC/client и recovery checkpoints; два read-only review.
+
+Критерий: восстановление принятой PREPARED без браузера выдаёт ровно одну
+membership, небезопасный receipt/инициатор не выдаёт доступ.
+
+### A3 — Тонкий API adapter
+
+Зависимость: A2. Компоненты: API handler/client/app, существующий Company mapping,
+REST conformance/security tests; минимальные config examples/deploy templates.
+
+- [ ] POST orchestration по canonical chain, Core получает сохранённый Auth spec.
+- [ ] Typed clients, safe Russian errors/request ID, key conflict и 503/in-progress;
+  201 только после COMPLETED и успешного read. Не дублировать Company domain.
+- [ ] Conformance, реальный HTTPS API → mTLS Auth/Core → PostgreSQL,
+  чужой command/peer/CSRF/revocation/timeouts/replay.
+- [ ] API check, review и отдельный checkpoint.
+
+### A4 — Workspace и пользовательский путь
+
+Зависимость: A3. Компоненты: Workspace, companiesService, existing auth/company
+context/request hooks; только блокирующая часть settings redirect.
+
+- [ ] Companies и invitations имеют независимые loading/error states;
+  P1 честно недоступен, без fake success или реализации invitations.
+- [ ] После create обновить company/membership context; стабильный retry key,
+  double click, lost response, refresh сохраняют ту же компанию.
+- [ ] Проверить фактический redirect/settings unsupported endpoints;
+  убрать только зависимость, блокирующую onboarding.
+- [ ] Изолированные UI tests, test/typecheck/lint/build, настоящий браузер
+  с financial mocks off; review и checkpoint.
+
+### A5 — Интеграция и итоговая передача
+
+Зависимость: A1–A4. Компоненты: воспроизводимая isolated test topology/fixtures,
+security/failure E2E, plan/handoff/PR.
+
+- [ ] Новая user через register/verify/login, без SQL membership;
+  create → owner → company/default account read → reload/logout/login.
+- [ ] Одна company/account/membership при double click, key replay,
+  Core commit/lost reply/restart; чужой command/peer/CSRF/revoked access отказаны.
+- [ ] Полные Go/contract/frontend gates, реальные marked Auth/Core test DB,
+  два независимых SHA-bound caveman-review и ponytail-review;
+  Go review с golang-how-to и нужными secondary skills; fixes и повторные checks.
+- [ ] Проверить актуальный CI, pending/queued не считать passing;
+  при доступном runner один /agent-review на финальный SHA.
+- [ ] Финальный remote checkpoint, draft URL/head SHA, остающиеся дефекты,
+  точные команды и следующий шаг владельца; всё остаётся на ревью владельца.
+
+## Проверки и публикация
+
+Команды/cwd, env и pinned tooling: [handoff](../handoffs/company-onboarding.md).
+Skipped integration, недоступный CGO/race, отсутствующее ревью не равны успеху.
+Для docs-only checkpoint runtime suite не нужен; проверяем diff/links/scope.
+
+Каждый небольшой законченный slice: targeted checks → diff review → обновить
+plan/handoff в том же commit → scope-only commit → fetch origin/main → обычный
+merge свежего main → проверки затронутой интеграции → push → remote SHA → PR status.
+Без force/rewrite; не переносить чужие незавершённые изменения.
+При затянувшемся исследовании публиковать docs/handoff checkpoint; ориентир
+20–30 минут активной работы. Честный WIP допустим с точными failures и next steps.
+Не ждать CI ради сохранения следующего slice. При takeover остановить edits/push;
+не создавать heartbeat/resume jobs. Секреты и приватные материалы не публиковать.
+
+## Текущие риски и вопросы
+
+- Нет GitHub API auth: нельзя прочитать полные discussions или создать draft.
+  SSH Git работает; это blocker A0, а не дефект продукта.
+- В доступном каталоге skills пока найден только caveman-review; ponytail-review
+  и golang-how-to нужно получить из закреплённых `.agent/infra/skills/skills.json`
+  перед соответствующим ревью. Непроведённое ревью остаётся pending.
+- Параллельные изменения Workspace/Core/API требуют проверки свежего main и PR;
+  не дублировать уже сделанное. Исторический `5c5797e` не является pin.
