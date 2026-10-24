@@ -1,7 +1,8 @@
 "use client";
 
+import useMediaQuery from "@mui/material/useMediaQuery";
 import axios from "axios";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 
 import { companyPath, formatDate } from "@/helpers/finance";
@@ -23,6 +24,10 @@ const dateFormatter = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: 
 
 
 const Dashboard = ( { companyId }: { companyId?: string } ) => {
+    const desktop = useMediaQuery("(min-width: 801px)");
+    const [ expanded, setExpanded ] = useState(false);
+    const summaryId = useId();
+    const isExpanded = desktop && expanded;
     const [ period, setPeriod ] = useState<ForecastPeriod>(30);
     const [ attempt, setAttempt ] = useState(0);
     const [ loading, setLoading ] = useState(true);
@@ -92,11 +97,11 @@ const Dashboard = ( { companyId }: { companyId?: string } ) => {
 
     return (
         <>
-        { !companyId && <nav className={styles.navigation} aria-label="Рабочее пространство"><LinkButton href="/workspace" secondary icon="building">Все компании</LinkButton>{ data?.company && <LinkButton href={companyPath(data.company.id)} secondary>Разделы компании</LinkButton> }</nav> }
-        <main className={styles.dashboard} aria-label="Финансовый дашборд">
+        { !companyId && <nav className={styles.navigation} aria-label="Рабочее пространство"><LinkButton href="/workspace" secondary icon="building">Мои компании</LinkButton>{ data?.company && <LinkButton href={companyPath(data.company.id)} secondary icon="layout-dashboard">Обзор компаний</LinkButton> }</nav> }
+        <main className={`${styles.dashboard} ${isExpanded ? styles.expanded : ""}`} aria-label="Финансовый дашборд">
             <h1 className={styles.hidden}>Финансовый дашборд</h1>
 
-            <div className={styles.summary} aria-live="polite">
+            <div id={summaryId} className={styles.summary} aria-live="polite" aria-hidden={isExpanded || undefined} inert={isExpanded}>
                 <section className={styles.card}>
                     <h2>{ data?.account?.balance_as_of ? `Остаток на ${formatDate(data.account.balance_as_of)}:` : "Остаток на счёте:" }</h2>
                     <p>{ data?.account?.balance ? formatMoney(data.account.balance.amount_minor) : loading ? <LoadingText>Загружаем</LoadingText> : "Не указан" }</p>
@@ -114,7 +119,24 @@ const Dashboard = ( { companyId }: { companyId?: string } ) => {
             </div>
 
             <section className={styles.chartCard} aria-label={`Прогноз на ${period} дней`} aria-busy={loading}>
-                <div className={styles.chartArea}>
+                <div
+                    className={styles.chartArea}
+                    role={desktop ? "button" : undefined}
+                    tabIndex={desktop ? 0 : undefined}
+                    aria-label={desktop ? isExpanded ? "Свернуть график" : "Развернуть график" : undefined}
+                    aria-expanded={desktop ? isExpanded : undefined}
+                    aria-controls={desktop ? summaryId : undefined}
+                    onClick={desktop ? () => setExpanded(( current ) => !current) : undefined}
+                    onKeyDown={desktop ? ( event ) => {
+                        if (event.key === "Escape" && isExpanded) {
+                            event.preventDefault();
+                            setExpanded(false);
+                        } else if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
+                            event.preventDefault();
+                            setExpanded(( current ) => !current);
+                        }
+                    } : undefined}
+                >
                     { ready && data?.forecast ? (
                         <BalanceChart key={data.forecast.id} points={data.forecast.result.daily_points} />
                     ) : (
@@ -122,6 +144,7 @@ const Dashboard = ( { companyId }: { companyId?: string } ) => {
                             { loading ? <Spinner label="Загружаем график" /> : <p>{ failed ? "Не удалось построить график" : "Данных для графика пока нет" }</p> }
                         </div>
                     ) }
+                    { desktop && <span className={styles.chartHint} aria-hidden="true">{ isExpanded ? "Нажмите, чтобы свернуть" : "Нажмите, чтобы развернуть" }</span> }
                 </div>
 
                 <div className={styles.periods} role="group" aria-label="Период прогноза" aria-busy={loading}>
