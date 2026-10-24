@@ -18,21 +18,20 @@ GitHub SSH подтвердил `Prosteyshiyyy`; исходный checkout на 
 Явного takeover нет. Другому агенту продолжать ту же ветку, не cherry-pick и не
 создавать второй PR/параллельного владельца без проверки.
 
-Draft PR URL: **пока не создан — GitHub API не авторизован**.
+Draft PR URL: https://github.com/benzocloud/hack-rnd-autumn-2026/pull/41 (draft, head `6bd70b2` проверен через GitHub API и ls-remote).
 Remote checkpoint SHA следует проверять через ls-remote; SHA текущего docs commit
 не вставляется внутрь него самого. PR/CI updates должны ссылаться на фактический SHA.
 
 Первый docs commit `9f90a80` опубликован после обычного merge нового main
 `ea433dd` (PR #40); push checkpoint `d9679eb` успешен. Ветка доступна:
 [GitHub branch](https://github.com/benzocloud/hack-rnd-autumn-2026/tree/prosteyshiyyy/feat/company_onboarding).
-Ссылка GitHub для создания PR (это **не существующий PR**):
-[create PR](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/new/prosteyshiyyy/feat/company_onboarding).
+Продолжать в существующем draft PR #41; новый PR не создавать.
 
 ## Состояние
 
 | Этап | Статус | Tests | Review | CI |
 | --- | --- | --- | --- | --- |
-| A0 | В работе | Docs diff/links/stage markers/fences и staged diff --check прошли | Self-check; независимые pending | Не проверен, API auth отсутствует |
+| A0 | На ревью владельца | Docs diff/links/stage markers/fences и staged diff --check прошли | Caveman/Ponytail A0: подтверждённых замечаний нет | Checks пусты для docs SHA `6bd70b2` |
 | A1 | Не начат | Не запускались | Pending | Не запускался |
 | A2 | Не начат | Не запускались | Pending | Не запускался |
 | A3 | Не начат | Не запускались | Pending | Не запускался |
@@ -62,26 +61,25 @@ fixtures не менялись. Runtime suite для docs-only slice не зап
 Не дублировать эту часть A4; UI tests/typecheck/browser для чужого изменения
 здесь не запускались и не считаются прошедшими.
 
-## Последние подтверждённые ограничения среды
+## Среда и восстановление доступа
 
-1. `gh api user --jq .login` → `command not found: gh`.
-   `gh` и GitHub token env отсутствуют, стандартный gh config не найден.
-2. Sandbox `git fetch origin` → read-only `.git/FETCH_HEAD`; повтор с разрешённым
-   escalated exec успешен, origin/main=fdee0ed. Git mutations могут требовать escalation.
-3. Sandbox curl не разрешает DNS; escalated запрос
-   `GET https://api.github.com/repos/benzocloud/hack-rnd-autumn-2026/pulls?state=open&per_page=100`
-   → HTTP 404 без авторизации. Приватный API недоступен этой сессии.
-4. `ssh -T -o BatchMode=yes git@github.com` → успешная GitHub identity
-   `Prosteyshiyyy` (exit 1 штатен для GitHub SSH без shell).
-5. Plugin discovery: GitHub connector доступен, но `installed=false`.
-   Уже предлагался пользователю; повторную suggestion не отправлять.
-   Нужен подключённый connector либо gh с авторизацией. Не извлекать browser cookies.
-6. Доступен caveman-review; ponytail-review/golang-how-to в проверенных каталогах
-   skills не найдены. Закреплённые источники — `.agent/infra/skills/skills.json`.
-   Требуемое review пока не запускалось и успешным не объявлялось.
+GitHub API auth восстановлен пользователем: `/usr/bin/gh`, `gh api user --jq .login`
+→ `Prosteyshiyyy`; список открытых PR до создания #41 пуст. PR #41 draft создан
+и проверен, SHA `6bd70b23e65fd924c6c2c5a76b26281972272496` совпал с remote.
+Все доступные descriptions/conversation/reviews/inline replies с пагинацией
+прочитаны для связанных PR #17/#25/#30/#34–#40; Issue не назначен.
+Исторические ошибки `gh not found` и API 404 устранены; не повторять диагностику
+без новой причины. Git mutations/network требуют sandbox escalation.
 
-Это ограничения среды, не доказанные продуктовые дефекты. Первый обязательный
-gate требует draft PR: A1 до него не начинать, часы неопубликованного кода не писать.
+Pinned review skills получены в изолированном каталоге из
+`.agent/infra/skills/skills.json`: caveman-review `bad48a0`, ponytail-review
+`09c434a`, cc-skills-golang `19a0626`. Чтение skill не равно проведённому review;
+A0 reviewed двумя независимыми read-only агентами: caveman-review и
+ponytail-review, подтверждённых замечаний нет (HEAD `6bd70b2` + A0 docs diff).
+Ревью кода последующих этапов ещё pending. Тот же pinned fetch можно повторить с другого
+компьютера; root-owned installer на developer машине запускать не нужно.
+Go `GOTOOLCHAIN=go1.27.3 go version` успешен; Docker server 29.9.1 доступен.
+Go lint/task/Buf ещё предстоит подготовить; runtime suites пока не запускались.
 
 ## Воспроизводимые команды
 
@@ -137,10 +135,9 @@ PKI/local topology и config env для нового Auth→Core client пока
 
 ## Следующие действия
 
-1. Восстановить авторизованный GitHub API (connector или gh); прочитать полные
-   существующие PR discussions, исключить дубль draft и takeover.
-2. Завершить A0: remote docs checkpoint, единственный draft, verify remote SHA/
-   isDraft/URL, обновить PR и этот handoff; только затем A1.
+1. A0 gate выполнен; продолжать в PR #41. Исторические descriptions/comments
+   PR #16/#31 прочитаны; единственный повтор после network timeout — inline #31.
+2. Подготовить pinned tools/отдельные test DB; runtime/product defects пока нет.
 3. A1: сопоставить account.checkContext/user locks и app-owned Tx с новым
    feature-local command store; общие fingerprint fixtures и additive migration,
    targeted real PostgreSQL concurrency/replay tests, ранний repository checkpoint.

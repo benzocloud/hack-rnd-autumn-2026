@@ -93,7 +93,7 @@ invitations, reset/email delivery, новые роли и полный redesign 
 
 | Этап | Статус | Проверяемый результат |
 | --- | --- | --- |
-| A0 | В работе | Удалённые plan/handoff и один проверенный draft PR |
+| A0 | На ревью владельца | Удалённые plan/handoff и один проверенный draft PR |
 | A1 | Не начат | Durable Auth command/repository и atomic owner finalization |
 | A2 | Не начат | RPC, Core client и recovery после restart |
 | A3 | Не начат | Настоящий POST /companies, HTTPS/mTLS conformance |
@@ -108,10 +108,10 @@ invitations, reset/email delivery, новые роли и полный redesign 
 - [x] Прочитать AGENTS, instructions, decisions, workflows, Go references;
   GBrain recall; проверить исходный checkout, fetch origin и реальный nickname.
 - [x] Создать отдельный worktree от свежего main, не stash/reset исходный checkout.
-- [ ] Прочитать PR/Issue descriptions, все conversation/review/inline comments;
+- [x] Прочитать PR/Issue descriptions, все conversation/review/inline comments;
   проверить существующий draft и исключить второго владельца ветки.
 - [x] Проверить docs diff/links, docs commit, fetch/merge нового main, сразу push.
-- [ ] Создать/проверить единственный draft, таблицу этапов и ссылки plan/handoff;
+- [x] Создать/проверить единственный draft, таблицу этапов и ссылки plan/handoff;
   проверить remote SHA, доступность PR, сообщить URL; attach_artifact при наличии.
 
 Gate: доступные remote документы и draft PR до реализации A1.
@@ -213,10 +213,7 @@ merge свежего main → проверки затронутой интегр
 
 ## Текущие риски и вопросы
 
-- Нет GitHub API auth: нельзя прочитать полные discussions или создать draft.
-  SSH Git работает; это blocker A0, а не дефект продукта.
-- В доступном каталоге skills пока найден только caveman-review; ponytail-review
-  и golang-how-to нужно получить из закреплённых `.agent/infra/skills/skills.json`
-  перед соответствующим ревью. Непроведённое ревью остаётся pending.
+- GitHub API auth восстановлен; draft [PR #41](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/41) и remote head `6bd70b2` проверены. A0 gate выполнен.
+- Pinned caveman-review/ponytail-review/golang-how-to получены из `.agent/infra/skills/skills.json`; A0 docs проверены двумя независимыми read-only reviewers без подтверждённых замечаний; code review A1–A5 ещё pending.
 - Параллельные изменения Workspace/Core/API требуют проверки свежего main и PR;
   не дублировать уже сделанное. Исторический `5c5797e` не является pin.
