@@ -9,14 +9,16 @@
 Из прогнозных потоков рассчитывается остаток от наблюдаемого EOD даты среза.
 В этих двух baseline обучения, вероятности риска, категоризации и платёжного
 календаря нет; дополнительные локальные эксперименты описаны ниже.
-Для mean_90 добавлен отдельный gRPC endpoint по снимку Core:
+Для mean_90 реализован единый gRPC `ForecastService/Predict` по снимку Core:
 [контракт, генерация, запуск и ограничения](GRPC_CONTRACT.md).
-Сам Core ещё не подключён; CLI evaluation остаётся исследовательским запуском.
+Go-клиент Core проверен для baseline; финансовый worker и сохранение результата
+ещё требуют подключения. CLI evaluation остаётся исследовательским запуском.
 
-Для worker внутри Go Core добавлен FinancialForecastService/PredictFinancial:
+Финансовый профиль того же Predict — mean_90_components_v1/calendar_replacement_v1:
 30 дней mean_90, явный календарь с заменой исторических компонент и объяснения.
 Worker общается с ML по gRPC; REST/BFF в этом стыке не участвует.
 [Подключение worker](CORE_CONNECTION.md), [проверка на C089](DATASET_RPC_RESULTS.md).
+[Сценарий ручных платежей и передача Core/API](DEMO_CORE_HANDOFF.md).
 
 ## Данные
 
