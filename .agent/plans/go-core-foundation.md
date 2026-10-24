@@ -2,14 +2,14 @@
 
 Дата: 2026-10-23.
 Статус плана: подэтап 2.1 принят разработчиком 2026-10-24;
-подэтап 2.2 принят разработчиком 2026-10-24, 2.3–2.4 не начаты.
+подэтап 2.2 принят разработчиком 2026-10-24, 2.3 в работе, 2.4 не начат.
 Основание: исходники `ed31678886f853117ce992ad2d2ddd37d9b3632e`,
 [общая архитектура](saldo-architecture.md),
 [REST](../../docs/api/openapi.yaml),
 [паспорт данных](../references/dataset-profile.md),
 [референсы](../references/go-services.md), решения владельца в текущем обсуждении.
 Это детализация **этапа 2 общего плана**, а не перенумерация этапов 1–8.
-Подэтапы 2.1–2.2 — «Приняты», 2.3–2.4 — «Не начат»;
+Подэтапы 2.1–2.2 — «Приняты», 2.3 — «В работе», 2.4 — «Не начат»;
 общий этап 2 — «В работе».
 Режим: после каждого подэтапа реализации — результат, проверки и остановка
 до ревью и явного апрува разработчика по ADR-020.
@@ -82,7 +82,8 @@ services/core/
     config/
       config.go, config_test.go
     app/
-      app.go, app_test.go              # сборка ресурсов появляется в 2.3
+      app.go, app_test.go              # верхняя сборка ресурсов в 2.3
+      postgres/                       # готово: pool.go, config.go, errors.go, pool_test.go
     domain/
       money/                          # точные суммы, валюта, переполнение
       ledger/                         # BankAccount, Transaction, BalanceObservation
@@ -93,7 +94,7 @@ services/core/
       payments/                       # календарь/сопоставления и их порты
       forecasting/                    # сборка снимка через узкий read-порт
     repository/postgres/
-      postgres.go                     # pool, Ping, границы времени и Close
+      queries.go                      # embed координирующих SQL при подключении write-path
       transaction.go                  # конкретная координация локальных транзакций
       ledger/                         # SQL, row mapping, факты/остатки/источник
       payments/                       # SQL и блокировки сопоставлений
@@ -126,7 +127,7 @@ flowchart TB
 ```
 
 Domain не импортирует SQL, protobuf, gRPC, logger и config. Service координирует
-операции, но не знает `pgx.Tx`. PostgreSQL-адаптер переводит строки БД в доменные
+операции, но не знает `sqlx.Tx`. PostgreSQL-адаптер переводит строки БД в доменные
 типы и ошибки. Forecasting не меняет таблицы Ledger/Payments; согласованное
 чтение проходит через их read-порты в одной локальной транзакции. Интерфейсы
 создаются для действительного потребителя, а не для каждого struct.
@@ -170,11 +171,11 @@ logger maxhack не изменён относительно HEAD. В maxhack MIT
 | Задача | Предложение | Зачем / граница |
 | --- | --- | --- |
 | Логи | stdlib [`log/slog`](https://pkg.go.dev/log/slog) | `NewJSONHandler` для сервера, `NewTextHandler` локально; без tint и цветного formatter; в конструкторы передаётся `*slog.Logger`, собственного Logger interface не нужно |
-| PostgreSQL | [`github.com/jackc/pgx/v5` + `pgxpool`](https://github.com/jackc/pgx) | Native PostgreSQL driver/pool, явные транзакции и SQL; предлагаем вместо автоматического наследования sqlx/libpq референсов |
+| PostgreSQL | [`sqlx`](https://github.com/jmoiron/sqlx) + [`pgx/stdlib`](https://github.com/jackc/pgx) | Выбор владельца (ADR-025): sqlx поверх database/sql, явные транзакции и SQL; pool создаёт отдельный app/postgres, не repository |
 | Миграции | [`github.com/pressly/goose/v3`](https://github.com/pressly/goose) как отдельный закреплённый CLI | Последовательные SQL Up/Down; отдельная команда, не запуск каждой репликой; приложению не нужна встроенная migration framework |
 | Config/ошибки/тесты | `os`, `strconv`, `time`, `errors`, `fmt`, `testing` | Достаточно env, `%w`/`errors.Is` и table-driven tests; Viper/cleanenv/TOML, error framework и mock generator пока не нужны |
 
-Точные Go/pgx/goose/linter версии закрепить перед кодом в 2.1 после проверки
+Точные Go/sqlx/driver/goose/linter версии закрепить перед кодом в 2.1 после проверки
 совместимости и поддерживаемого toolchain. Локально найден Go `1.27.0`;
 это наблюдение о машине, а не выбранная версия CI/runtime. `@latest` в сохранённых
 командах сборки/CI запрещён. Для goose явно проверить используемый PostgreSQL
@@ -418,8 +419,8 @@ validateBalanceObservation; порядок проверок и ошибки со
 
 ### 2.3 — PostgreSQL, прикладные операции и владение ресурсами
 
-Статус: Не начат.
-Зависимости: приняты 2.1–2.2, pgx/goose и семантика версий; есть выделенная
+Статус: В работе.
+Зависимости: приняты 2.1–2.2, sqlx/driver/goose и семантика версий; есть выделенная
 тестовая PostgreSQL, способ её локального запуска согласован без Fadwix.
 Результат: состояние Ledger/Payments сохраняется атомарно и изолированно.
 Файлы: `migrations/00001_core_ledger.sql` (включая `command_results`), `00002_payments.sql`,
@@ -437,8 +438,9 @@ validateBalanceObservation; порядок проверок и ошибки со
   его до stale-version guard. Внешние ID остаются отдельной защитой импорта.
 - [ ] Согласовать единый порядок блокировок; app собирает конкретные реализации.
 - [ ] Запускать миграции отдельной закреплённой командой; startup их не применяет.
-  В pgx отмена context сама не откатывает транзакцию: явно завершать rollback
-  с ограниченным контекстом очистки и возвращать connection/pool resources.
+  Использовать `BeginTxx` с ограниченным context; отмена context приводит к
+  rollback в database/sql. Явно завершать Commit/Rollback и проверять ошибки;
+  закрытие pool принадлежит приложению.
 
 Проверки: integration-тесты пустая БД → up → roundtrip → reconnect, повторный up;
 down/up только на одноразовой БД, rollback без частичной записи, межтенантный ID,
@@ -462,7 +464,7 @@ down/up только на одноразовой БД, rollback без част�
 Файлы: `internal/domain/forecasting/`, `service/forecasting/`,
 `repository/postgres/forecasting/`, `migrations/00003_financial_snapshots.sql`.
 
-- [ ] Ввести внутренний FinancialSnapshot и read-порт без pgx/protobuf в service.
+- [ ] Ввести внутренний FinancialSnapshot и read-порт без sqlx/protobuf в service.
 - [ ] Связать read-порты Ledger/Payments с одной транзакцией, захватить revision,
   dated opening balance, факты и remaining expectations с provenance/ограничениями.
 - [ ] Сохранять снимок без сетевых вызовов; после сохранения его содержимое не меняется.
@@ -489,9 +491,10 @@ R01/ModelContext и запуск job не объявлены реализова�
 а не коммитить исходный `dataset/`. Фактические проверки config/log подэтапа 2.1
 отражены выше; домен, PostgreSQL и снимок данных ещё не реализованы и не проверены.
 
-Перед реализацией нужно принять предложенные pgx/goose, диапазон Money/int64,
+Исходный gate до старта: согласовать библиотеки PostgreSQL, диапазон Money/int64,
 семантику input revision, схему межмодульного match и границы FinancialSnapshot.
-Полное согласование REST/протокола Auth не подменяется ответами о RUB/DI/logger.
+Владелец разрешил реализацию 2.3 и затем выбрал sqlx (ADR-025); полный подэтап
+пока не принят. Полное согласование REST/протокола Auth не подменяется ответами о RUB/DI/logger.
 Go API ↔ Core protobuf и проверяемая идентичность понадобятся до бизнес-RPC;
 составить их отдельной контрактной поставкой, не разрабатывать transport на догадках.
 
@@ -514,3 +517,124 @@ R01/T06 о закреплении ModelContext до inference также ост�
 После принятия этапа — отдельный план защищённого Core gRPC и онбординга с Auth.
 Deployment, коммит/пуш и публикация PR требуют собственных поручений;
 этот файл их не выполняет и не отмечает результаты принятыми.
+
+## Уточнение реализации 2026-10-24 (ADR-024/025)
+
+Владелец согласовал UUID для внутренних ID: `uuid.UUID` в домене, PostgreSQL
+`uuid`, REST `format: uuid`, генерация UUIDv7 в прикладных create/match-командах.
+Внешние source IDs и Auth-owned IDs сохраняют собственный формат. Новые ID
+не кодируют бизнес-дату; nullable category сохраняется без нулевого UUID.
+
+PostgreSQL: sqlx 1.4.0 + pgx/stdlib 5.11.0; создание/Ping в отдельном
+`services/core/internal/app/postgres`, pool закрывает вызывающий app. Вместо
+минимума pool используется `CORE_POSTGRES_MAX_IDLE_CONNS` — верхний лимит idle
+connections database/sql. Реализации сервисов и их storage ports приватные;
+интерфейсы определяет потребитель. Embed vars находятся в `queries.go`.
+Go-lint правила взяты из `references/cosmohack/backend/.golangci.yml`, дополнены
+проверкой импортов goimports; проверяется весь модуль, включая тесты.
+
+2.3 остаётся в работе: подготовлены pool, SQL Ledger, миграции и прикладные порты.
+Незавершённая неиспользуемая обвязка идемпотентных транзакций исключена из
+исходников; она не является работающей реализацией write-path. Координация
+write-транзакций, реализация портов Payments, lifecycle сборки и полный набор
+PostgreSQL integration tests должны быть закончены до передачи 2.3 на ревью.
+Принятие 2.2 сохраняется как история; новые UUID/layout/lint изменения требуют
+ревью разработчика и не означают принятия 2.3. Commit/push не выполнены.
+
+Проверки корректировки (2026-10-24): полный `task check` прошёл build,
+gofmt/goimports diff check, unit tests, race, vet и lint (0 issues), включая
+приватные service/storage boundaries и UUIDv7/сохранение переданного UUID.
+OpenAPI 0.2.0 прошёл schema validation и 462 проверки примеров с format checker.
+Реальный PostgreSQL roundtrip в этой корректировке не запускался; применение
+миграций и доказательство атомарности остаются критерием завершения 2.3.
+
+Дополнительная dependency-проверка: govulncheck 1.9.0 выявил GO-2026-6629 и
+GO-2026-5970 в транзитивном golang.org/x/text 0.29.0. Обновление до 0.41.0
+также подняло x/sync до 0.22.0; после tidy повторные `task check` и
+`govulncheck ./...` прошли, достижимых уязвимостей не найдено.
+
+## Исправления локального ревью 2026-10-24
+
+Статус этой корректировки: **Ожидает ревью разработчика**. Общий подэтап 2.3
+остаётся в работе; его критерии атомарности/idempotency/concurrency ещё не закрыты.
+
+- Восстановлены из HEAD Auth-согласие, регистрация и правила истории приглашений
+  в OpenAPI/передаче frontend; UUID-изменения Core сохранены.
+- Повторявшиеся UUID-ограничения заменены `ResourceID`/`NullableResourceID`;
+  два null-only условия оставлены `type: "null"`.
+- Account source CHECK требует истинного результата (`IS TRUE`), поэтому
+  NULL-authority с заполненным namespace больше не проходит.
+- SaveAccount проверяет RowsAffected и возвращает `sql.ErrNoRows` при отсутствии
+  строки. Default максимума idle connections — 2; явный 0 остаётся допустимым.
+
+Проверено: `task check` — build/format/unit/race/vet/lint, 0 issues; отдельный
+lint с integration build tag — 0 issues. На выделенной loopback PostgreSQL
+18.6 из согласованного Compose (tmpfs, test marker) goose 3.29.0 применил обе
+миграции; `task integration` с race detector прошёл проверки отсутствующей
+строки, недопустимых authority/namespace и валидных UUID Load/Save roundtrip.
+Тестовые данные откатились; созданные для проверки контейнер/сеть удалены.
+
+OpenAPI: 54 операции, 102 схемы, 466 проверок примеров — без ошибок;
+75 ограничений × 13 вариантов = 975 сравнений эквивалентности UUID/nullability.
+Регистрация из HEAD проходит; пять некорректных вариантов отклоняются.
+Это не проверка работающего Auth/API. Commit/push не выполнялись.
+
+## Локальные результаты прикладных операций (ADR-026, 2026-10-24)
+
+Статус корректировки: **Ожидает ревью разработчика**. Область согласована
+владельцем: оставить прикладные результаты рядом со сценариями в service,
+удалить универсальный `command.Result` и пересмотреть общий Request.
+
+`internal/service/ledger/{transaction,balance}.go` и
+`internal/service/payments/{payment,match}.go` содержат собственные command/result
+и методы операций. `service.go` сохраняет приватные store/service, конструктор
+и локальную проверку ActorID/IdempotencyKey. Общий `service/command` удалён;
+метаданные стали явными полями команд, локальный ErrInvalid заменил общий.
+Неиспользуемые общие not-found/stale/idempotency sentinels не копируются впрок.
+Баланс возвращает Date/DataVersion, match — MatchID/PaymentVersion/DataVersion;
+JSON/protobuf mapper и persistence codec не задаются прикладными DTO.
+
+Сохранить поведение: обязательность пары для ручных операций, допустимость
+пустой пары для импорта, запрет неполной пары, генерация UUIDv7/сохранение
+переданного UUID, resource/data version semantics. Тесты разделены по feature
+и операциям; проверить конкретные результаты, передачу метаданных и ранний
+отказ без обращения к store. SQL, REST и доменные инварианты не меняются;
+2.3 остаётся в работе. Commit/push требуют отдельного поручения.
+
+Проверки этой корректировки: baseline `go test ./...` был зелёным; после
+изменений полный `task check` прошёл build, gofmt/goimports, unit/race tests,
+vet и lint (0 issues). Отдельный lint с integration tag — 0 issues.
+В Go-исходниках не осталось импортов `service/command`, `command.Request`,
+`command.Result` и обращений `cmd.Request`. SQL/REST не менялись, повторный
+запуск PostgreSQL для этого изменения не требовался. Поставка ожидает ревью.
+
+## Вынесение валидации (2026-10-24)
+
+Статус корректировки: **Принята разработчиком 2026-10-24** (сообщение «апрув»). По запросу владельца
+MatchPayment разделён на метод операции и соседний приватный validateMatchPayment.
+Аналогично выделены validateCreatePayment, validateCreateTransaction,
+validateRecordBalance; конструкторы домена используют validateTransaction и
+validateExpectedPayment по уже принятому правилу. Helpers не меняют входные
+значения, не генерируют ID/время и не вызывают storage. Доменные проверки
+не дублируются на прикладном уровне.
+
+Перед извлечением расширен публичный TestMatchPaymentValidation: отсутствие
+actor/key, scope, сумма, версии и ID; при нескольких ошибках сохраняется
+приоритет metadata → scope → amount → versions/IDs и отсутствие вызова storage.
+Baseline service/domain tests прошли до структурного изменения. Публичные
+сигнатуры, возвращаемые ошибки и порядок defaults/конструирования сохранены;
+SQL/REST и обработка storage errors не меняются. 2.3 остаётся в работе,
+commit/push не выполнялись.
+
+После извлечения полный `task check` прошёл build, format, unit/race tests,
+vet и lint (0 issues); отдельный lint с integration tag — 0 issues.
+Дополнительно все шесть вынесенных guard-блоков сравнены с исходными: порядок
+условий и возвращаемые ошибки совпадают. Правило 13 в instructions расширено
+на прикладные операции. Корректировка принята; подэтап 2.3 остаётся в работе.
+Commit/push этим апрувом не запрошены.
+
+Публикация 2026-10-24: после апрува выделения валидации владелец отдельно
+поручил «коммит и пуш». Публикуется согласованный текущий фундамент Core,
+UUID-контракты и инструкции; завершение write-path/idempotency/concurrency
+подэтапа 2.3 этим не объявляется. Отдельная локальная работа Auth/GBrain
+не входит в состав этого коммита.

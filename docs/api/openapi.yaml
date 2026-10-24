@@ -1,8 +1,8 @@
 openapi: "3.1.0"
 info:
   title: "Saldo Frontend → Go API"
-  version: "0.1.1"
-  description: "Review baseline, 2026-10-23. A saved REST proposal, not implemented endpoints, accepted ADR, or evidence of a working integration. Browser calls Go API only; Core/ML protobuf boundaries remain separate. Paths are relative to /api/v1.\n\nScope: self-service small-business account, one default account per company, owner/financier company roles, file/manual input, explicitly mocked external adapters, forecasts, four what-if templates, plan-fact. RUB-only is a provisional adapter/MVP convention: dataset contains no currency. Email/password, cookie session, seven-day invitations, numerical input/upload caps and below_zero_eod proxy are proposed defaults requiring owner review. Actual FNS/1C DTO research immediately follows owner approval of this saved REST baseline; mock schemas are NOT claims about their official APIs.\n\nSecurity: same-origin deployment only in this baseline. Secure HttpOnly SameSite=Lax __Host- cookie, server session, synchronizer CSRF on ALL writes including public login/register/recovery. GET /auth/csrf establishes pre-auth context; send credentials and X-CSRF-Token thereafter. Exact trusted Origin/Referer validation; no wildcard credentialed CORS. Rotate session after login and obtain fresh CSRF token. API must not expose Auth/Core databases or trust role/company/source IDs sent by browser. Auth unavailable: fail closed. Company membership is checked live on every scoped read/write, including polling/downloads; financial operations owner/financier, administration owner only. Cross-tenant resources return 404. Email verification required for company operations. Auth tokens/passwords/financial contents never logged; errors include request_id, not stack traces.\n\nConsistency: IDs opaque, all money exact decimal integer strings in minor units. Positive movement plus direction differs from signed balance. Date-only business dates use Europe/Moscow, timestamp strings UTC Z. Do not use JS floating point for financial arithmetic. All lists cursor-based with stable sort (by resource date then ID unless documented); cursors bind filters and tenant. Financial data version increments on facts, dated balances, categories, known payments, matches and imported facts; connections/invitation cosmetics do not mutate prediction snapshots. Reads include dated provenance/freshness; no balance claims live bank access.\n\nJob semantics: HTTP 202 only after durable input/job saved. Retried idempotent create/job requests reuse resource; same key different semantic payload/file bytes is 409. Stored resource is truth; transport errors never mean job failure. Imports first preview, then explicit atomic commit with optimistic versions. No silent partial rows, inferred tenant access, duplicate economic counting or invented balancing transactions. Identical external IDs dedup only inside scoped source; content-similar different IDs warn. Historical forecasts filter all factual/features past cutoff and preserve point-in-time known obligations. A negative balance is an EOD indicator; overdraft limit and actual unpaid obligation are unknown.\n\nAll application responses, including errors, should use Cache-Control:no-store; JSON content type application/json. No merge/deploy or implemented behavior is implied by this file. Delivery infrastructure, provider DTO mapping and calibrated ML uncertainty remain separate reviewed work."
+  version: "0.2.0"
+  description: "Review baseline, 2026-10-23. A saved REST proposal, not implemented endpoints, accepted ADR, or evidence of a working integration. Browser calls Go API only; Core/ML protobuf boundaries remain separate. Paths are relative to /api/v1.\n\nScope: self-service small-business account, one default account per company, owner/financier company roles, file/manual input, explicitly mocked external adapters, forecasts, four what-if templates, plan-fact. RUB-only minor units and one connected account per company were approved by the owner for MVP (ADR-022); RUB is an adapter convention because the dataset contains no currency. Email/password, cookie session, seven-day invitations, numerical input/upload caps and below_zero_eod proxy are proposed defaults requiring owner review. Actual FNS/1C DTO research immediately follows owner approval of this saved REST baseline; mock schemas are NOT claims about their official APIs.\n\nSecurity: same-origin deployment only in this baseline. Secure HttpOnly SameSite=Lax __Host- cookie, server session, synchronizer CSRF on ALL writes including public login/register/recovery. GET /auth/csrf establishes pre-auth context; send credentials and X-CSRF-Token thereafter. Exact trusted Origin/Referer validation; no wildcard credentialed CORS. Rotate session after login and obtain fresh CSRF token. API must not expose Auth/Core databases or trust role/company/source IDs sent by browser. Auth unavailable: fail closed. Company membership is checked live on every scoped read/write, including polling/downloads; financial operations owner/financier, administration owner only. Cross-tenant resources return 404. Email verification required for company operations. Auth tokens/passwords/financial contents never logged; errors include request_id, not stack traces.\n\nConsistency: Core-owned resource IDs are nonzero UUID strings (new IDs use UUIDv7, ADR-024); clients treat them as opaque. Auth user/invitation IDs, external/source IDs, provider/configuration codes and model-local keys retain their own opaque formats. IDs never replace business dates. All IDs are opaque, all money exact decimal integer strings in minor units. Positive movement plus direction differs from signed balance. Date-only business dates use Europe/Moscow, timestamp strings UTC Z. Do not use JS floating point for financial arithmetic. All lists cursor-based with stable sort (by resource date then ID unless documented); cursors bind filters and tenant. Financial data version increments on facts, dated balances, categories, known payments, matches and imported facts; connections/invitation cosmetics do not mutate prediction snapshots. Reads include dated provenance/freshness; no balance claims live bank access.\n\nJob semantics: HTTP 202 only after durable input/job saved. Retried idempotent create/job requests reuse resource; same key different semantic payload/file bytes is 409. Stored resource is truth; transport errors never mean job failure. Imports first preview, then explicit atomic commit with optimistic versions. No silent partial rows, inferred tenant access, duplicate economic counting or invented balancing transactions. Identical external IDs dedup only inside scoped source; content-similar different IDs warn. Historical forecasts filter all factual/features past cutoff and preserve point-in-time known obligations. A negative balance is an EOD indicator; overdraft limit and actual unpaid obligation are unknown.\n\nAll application responses, including errors, should use Cache-Control:no-store; JSON content type application/json. No merge/deploy or implemented behavior is implied by this file. Delivery infrastructure, provider DTO mapping and calibrated ML uncertainty remain separate reviewed work."
 servers:
   -
     url: "/api/v1"
@@ -922,11 +922,9 @@ paths:
       - name: category_id
         in: query
         schema:
-          type: string
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-          - cat_rent
+          - 019a0c65-9800-7000-8000-000000000003
     post:
       operationId: createManualTransaction
       summary: Add one factual operation
@@ -1093,18 +1091,16 @@ paths:
                   examples:
                   - C001
                 account_id:
-                  type: string
-                  minLength: 1
-                  maxLength: 128
+                  $ref: "#/components/schemas/ResourceID"
                   examples:
-                  - acc_123
+                  - 019a0c65-9800-7000-8000-000000000002
                 currency:
                   type: string
                   enum:
                   - RUB
                   examples:
                   - RUB
-                  description: Provisional MVP convention, not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion.
+                  description: Owner-approved MVP convention (ADR-022), not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion.
               required:
               - file
               - adapter
@@ -1118,7 +1114,7 @@ paths:
               file: <CSV binary bytes>
               adapter: dataset_v1
               source_company_id: C001
-              account_id: acc_123
+              account_id: 019a0c65-9800-7000-8000-000000000002
               currency: RUB
   "/companies/{company_id}/imports/{import_id}":
     parameters:
@@ -1851,11 +1847,9 @@ paths:
         in: query
         required: true
         schema:
-          type: string
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-          - fc_123
+          - 019a0c65-9800-7000-8000-00000000000d
   /companies/{company_id}/forecasts/{forecast_id}/plan-fact:
     parameters:
     - $ref: '#/components/parameters/company_id'
@@ -1920,17 +1914,15 @@ paths:
       - name: base_forecast_id
         in: query
         schema:
-          type: string
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-          - fc_123
+          - 019a0c65-9800-7000-8000-00000000000d
     post:
       operationId: createScenario
       summary: Create immutable stress or stress-plus-action run
       tags:
       - Scenarios
-      description: Four typed stress transforms; explicit full conditions and optional one-level response-action. Parent stress is never lost. Versioned source economic occurrence checks prevent double count. Persist Scenario+snapshot reference+pinned context+new forecast+job coherently before 202. Facts/real calendar unchanged; missing advertised model capability 409 SCENARIO_UNAVAILABLE. Do not silently retrain/rebase. Named examples are alternative illustrative inputs, not real stored records or a claim that every example base has all capabilities. Obtain eligible component/occurrence IDs from the selected successful base and respect its scenario_capabilities; do not fabricate IDs in frontend. Parent sc_123 in stress_plus_response denotes the saved delay_receipt example with identical conditions. For a response request send only name, comparison_parent_scenario_id and response_action; server inherits base+all stress conditions and resolves effective_occurrence_id from the successful parent result.
+      description: Four typed stress transforms; explicit full conditions and optional one-level response-action. Parent stress is never lost. Versioned source economic occurrence checks prevent double count. Persist Scenario+snapshot reference+pinned context+new forecast+job coherently before 202. Facts/real calendar unchanged; missing advertised model capability 409 SCENARIO_UNAVAILABLE. Do not silently retrain/rebase. Named examples are alternative illustrative inputs, not real stored records or a claim that every example base has all capabilities. Obtain eligible component/occurrence IDs from the selected successful base and respect its scenario_capabilities; do not fabricate IDs in frontend. Parent 019a0c65-9800-7000-8000-00000000000f in stress_plus_response denotes the saved delay_receipt example with identical conditions. For a response request send only name, comparison_parent_scenario_id and response_action; server inherits base+all stress conditions and resolves effective_occurrence_id from the successful parent result.
       responses:
         '202':
           $ref: '#/components/responses/SuccessScenarioAccepted'
@@ -2012,11 +2004,9 @@ components:
       in: "path"
       required: true
       schema:
-        type: "string"
-        minLength: 1
-        maxLength: 128
+        $ref: "#/components/schemas/ResourceID"
         examples:
-          - "cmp_123"
+          - "019a0c65-9800-7000-8000-000000000001"
       description: "Internal tenant ID. Every company/resource relationship and live membership is checked server-side; unknown or inaccessible resource returns 404."
     limit:
       name: "limit"
@@ -2104,44 +2094,36 @@ components:
       in: "path"
       required: true
       schema:
-        type: "string"
-        minLength: 1
-        maxLength: 128
+        $ref: "#/components/schemas/ResourceID"
         examples:
-          - "txn_123"
+          - "019a0c65-9800-7000-8000-000000000006"
       description: "Opaque ID belonging to the path company; incoming invitation IDs instead belong to current verified recipient."
     import_id:
       name: "import_id"
       in: "path"
       required: true
       schema:
-        type: "string"
-        minLength: 1
-        maxLength: 128
+        $ref: "#/components/schemas/ResourceID"
         examples:
-          - "imp_123"
+          - "019a0c65-9800-7000-8000-00000000000b"
       description: "Opaque ID belonging to the path company; incoming invitation IDs instead belong to current verified recipient."
     connection_id:
       name: "connection_id"
       in: "path"
       required: true
       schema:
-        type: "string"
-        minLength: 1
-        maxLength: 128
+        $ref: "#/components/schemas/ResourceID"
         examples:
-          - "con_123"
+          - "019a0c65-9800-7000-8000-00000000000c"
       description: "Opaque ID belonging to the path company; incoming invitation IDs instead belong to current verified recipient."
     payment_id:
       name: "payment_id"
       in: "path"
       required: true
       schema:
-        type: "string"
-        minLength: 1
-        maxLength: 128
+        $ref: "#/components/schemas/ResourceID"
         examples:
-          - "pay_123"
+          - "019a0c65-9800-7000-8000-000000000007"
       description: "Opaque ID belonging to the path company; incoming invitation IDs instead belong to current verified recipient."
     match_id:
       name: "match_id"
@@ -2152,29 +2134,25 @@ components:
         minLength: 1
         maxLength: 128
         examples:
-          - "match_123"
+          - "019a0c65-9800-7000-8000-00000000000a"
       description: "Opaque ID belonging to the path company; incoming invitation IDs instead belong to current verified recipient."
     forecast_id:
       name: "forecast_id"
       in: "path"
       required: true
       schema:
-        type: "string"
-        minLength: 1
-        maxLength: 128
+        $ref: "#/components/schemas/ResourceID"
         examples:
-          - "fc_123"
+          - "019a0c65-9800-7000-8000-00000000000d"
       description: "Opaque ID belonging to the path company; incoming invitation IDs instead belong to current verified recipient."
     scenario_id:
       name: "scenario_id"
       in: "path"
       required: true
       schema:
-        type: "string"
-        minLength: 1
-        maxLength: 128
+        $ref: "#/components/schemas/ResourceID"
         examples:
-          - "sc_123"
+          - "019a0c65-9800-7000-8000-00000000000f"
       description: "Opaque ID belonging to the path company; incoming invitation IDs instead belong to current verified recipient."
   responses:
     Error400:
@@ -2673,14 +2651,14 @@ components:
       value:
         items:
           -
-            id: "cmp_123"
+            id: "019a0c65-9800-7000-8000-000000000001"
             name: "Кофейня"
             inn: "001234567890"
             currency: "RUB"
             timezone: "Europe/Moscow"
             membership:
               role: "owner"
-            default_account_id: "acc_123"
+            default_account_id: "019a0c65-9800-7000-8000-000000000002"
             version: "42"
             created_at: "2026-10-23T12:00:00Z"
         next_cursor: null
@@ -2691,14 +2669,14 @@ components:
         timezone: "Europe/Moscow"
     Company:
       value:
-        id: "cmp_123"
+        id: "019a0c65-9800-7000-8000-000000000001"
         name: "Кофейня"
         inn: "001234567890"
         currency: "RUB"
         timezone: "Europe/Moscow"
         membership:
           role: "owner"
-        default_account_id: "acc_123"
+        default_account_id: "019a0c65-9800-7000-8000-000000000002"
         version: "42"
         created_at: "2026-10-23T12:00:00Z"
     UpdateCompanyRequest:
@@ -2720,7 +2698,7 @@ components:
         items:
           -
             id: "inv_123"
-            company_id: "cmp_123"
+            company_id: "019a0c65-9800-7000-8000-000000000001"
             company_name: "Кофейня"
             email: "financier@example.com"
             role: "financier"
@@ -2735,7 +2713,7 @@ components:
     Invitation:
       value:
         id: "inv_123"
-        company_id: "cmp_123"
+        company_id: "019a0c65-9800-7000-8000-000000000001"
         company_name: "Кофейня"
         email: "financier@example.com"
         role: "financier"
@@ -2748,8 +2726,8 @@ components:
         version: "42"
     Account:
       value:
-        id: acc_123
-        company_id: cmp_123
+        id: 019a0c65-9800-7000-8000-000000000002
+        company_id: 019a0c65-9800-7000-8000-000000000001
         name: Основной счёт
         currency: RUB
         balance:
@@ -2774,7 +2752,7 @@ components:
       value:
         items:
           -
-            id: "cat_rent"
+            id: "019a0c65-9800-7000-8000-000000000003"
             name: "Аренда"
             direction: "inflow"
             semantic_kind: "operating_expense"
@@ -2783,8 +2761,8 @@ components:
       value:
         items:
           -
-            id: "txn_123"
-            account_id: "acc_123"
+            id: "019a0c65-9800-7000-8000-000000000006"
+            account_id: "019a0c65-9800-7000-8000-000000000002"
             operation_date: "2026-10-23"
             direction: "outflow"
             amount:
@@ -2793,14 +2771,14 @@ components:
             counterparty_inn: "0012345678"
             counterparty_name: "Контрагент"
             payment_purpose: "Оплата аренды"
-            category_id: "cat_rent"
+            category_id: "019a0c65-9800-7000-8000-000000000003"
             source:
               kind: "file"
               source_system: "dataset_v1"
               source_company_id: "C001"
               external_operation_id: "OP0000001"
               external_payment_id: null
-              import_id: "imp_123"
+              import_id: "019a0c65-9800-7000-8000-00000000000b"
               connection_id: null
             version: "42"
             created_at: "2026-10-23T12:00:00Z"
@@ -2817,8 +2795,8 @@ components:
         expected_data_version: "42"
     Transaction:
       value:
-        id: "txn_123"
-        account_id: "acc_123"
+        id: "019a0c65-9800-7000-8000-000000000006"
+        account_id: "019a0c65-9800-7000-8000-000000000002"
         operation_date: "2026-10-23"
         direction: "outflow"
         amount:
@@ -2827,26 +2805,26 @@ components:
         counterparty_inn: "0012345678"
         counterparty_name: "Контрагент"
         payment_purpose: "Оплата аренды"
-        category_id: "cat_rent"
+        category_id: "019a0c65-9800-7000-8000-000000000003"
         source:
           kind: "file"
           source_system: "dataset_v1"
           source_company_id: "C001"
           external_operation_id: "OP0000001"
           external_payment_id: null
-          import_id: "imp_123"
+          import_id: "019a0c65-9800-7000-8000-00000000000b"
           connection_id: null
         version: "42"
         created_at: "2026-10-23T12:00:00Z"
     UpdateCategoryRequest:
       value:
-        category_id: "cat_rent"
+        category_id: "019a0c65-9800-7000-8000-000000000003"
         version: "42"
     ImportList:
       value:
         items:
-        - id: imp_123
-          account_id: acc_123
+        - id: 019a0c65-9800-7000-8000-00000000000b
+          account_id: 019a0c65-9800-7000-8000-000000000002
           source_kind: file
           adapter: dataset_v1
           source_company_id: C001
@@ -2858,7 +2836,7 @@ components:
           preview:
             source_company_id: C001
             source_system: dataset_v1
-            account_id: acc_123
+            account_id: 019a0c65-9800-7000-8000-000000000002
             currency: RUB
             period_start: '2024-10-01'
             period_end: '2026-09-30'
@@ -2902,14 +2880,14 @@ components:
         next_cursor: null
     ImportAccepted:
       value:
-        id: "imp_123"
+        id: "019a0c65-9800-7000-8000-00000000000b"
         status: "queued"
-        status_url: "/api/v1/companies/cmp_123/imports/imp_123"
+        status_url: "/api/v1/companies/019a0c65-9800-7000-8000-000000000001/imports/019a0c65-9800-7000-8000-00000000000b"
         poll_after_ms: 1000
     Import:
       value:
-        id: imp_123
-        account_id: acc_123
+        id: 019a0c65-9800-7000-8000-00000000000b
+        account_id: 019a0c65-9800-7000-8000-000000000002
         source_kind: file
         adapter: dataset_v1
         source_company_id: C001
@@ -2921,7 +2899,7 @@ components:
         preview:
           source_company_id: C001
           source_system: dataset_v1
-          account_id: acc_123
+          account_id: 019a0c65-9800-7000-8000-000000000002
           currency: RUB
           period_start: '2024-10-01'
           period_end: '2026-09-30'
@@ -2980,8 +2958,8 @@ components:
         acknowledge_warnings: true
     ImportApplied:
       value:
-        id: imp_123
-        account_id: acc_123
+        id: 019a0c65-9800-7000-8000-00000000000b
+        account_id: 019a0c65-9800-7000-8000-000000000002
         source_kind: file
         adapter: dataset_v1
         source_company_id: C001
@@ -2993,7 +2971,7 @@ components:
         preview:
           source_company_id: C001
           source_system: dataset_v1
-          account_id: acc_123
+          account_id: 019a0c65-9800-7000-8000-000000000002
           currency: RUB
           period_start: '2024-10-01'
           period_end: '2026-09-30'
@@ -3058,9 +3036,9 @@ components:
       value:
         items:
           -
-            id: "con_123"
-            company_id: "cmp_123"
-            account_id: "acc_123"
+            id: "019a0c65-9800-7000-8000-00000000000c"
+            company_id: "019a0c65-9800-7000-8000-000000000001"
+            account_id: "019a0c65-9800-7000-8000-000000000002"
             provider_id: "demo_accounting"
             mode: "mock"
             display_name: "Демо 1С"
@@ -3076,9 +3054,9 @@ components:
         source_company_id: "C001"
     Connection:
       value:
-        id: "con_123"
-        company_id: "cmp_123"
-        account_id: "acc_123"
+        id: "019a0c65-9800-7000-8000-00000000000c"
+        company_id: "019a0c65-9800-7000-8000-000000000001"
+        account_id: "019a0c65-9800-7000-8000-000000000002"
         provider_id: "demo_accounting"
         mode: "mock"
         display_name: "Демо 1С"
@@ -3096,8 +3074,8 @@ components:
       value:
         items:
           -
-            id: "pay_123"
-            account_id: "acc_123"
+            id: "019a0c65-9800-7000-8000-000000000007"
+            account_id: "019a0c65-9800-7000-8000-000000000002"
             direction: "outflow"
             amount:
               amount_minor: "8000000"
@@ -3108,7 +3086,7 @@ components:
             scheduled_date: "2026-10-30"
             counterparty_name: "Арендодатель"
             description: "Аренда помещения"
-            category_id: "cat_rent"
+            category_id: "019a0c65-9800-7000-8000-000000000003"
             source:
               kind: "manual"
               source_system: "manual_v1"
@@ -3132,8 +3110,8 @@ components:
         description: "Аренда помещения"
     Payment:
       value:
-        id: "pay_123"
-        account_id: "acc_123"
+        id: "019a0c65-9800-7000-8000-000000000007"
+        account_id: "019a0c65-9800-7000-8000-000000000002"
         direction: "outflow"
         amount:
           amount_minor: "8000000"
@@ -3144,7 +3122,7 @@ components:
         scheduled_date: "2026-10-30"
         counterparty_name: "Арендодатель"
         description: "Аренда помещения"
-        category_id: "cat_rent"
+        category_id: "019a0c65-9800-7000-8000-000000000003"
         source:
           kind: "manual"
           source_system: "manual_v1"
@@ -3164,9 +3142,9 @@ components:
       value:
         items:
           -
-            id: "match_123"
-            payment_id: "pay_123"
-            transaction_id: "txn_123"
+            id: "019a0c65-9800-7000-8000-00000000000a"
+            payment_id: "019a0c65-9800-7000-8000-000000000007"
+            transaction_id: "019a0c65-9800-7000-8000-000000000006"
             amount:
               amount_minor: "1000000"
               currency: "RUB"
@@ -3174,7 +3152,7 @@ components:
         next_cursor: null
     CreateMatchRequest:
       value:
-        transaction_id: "txn_123"
+        transaction_id: "019a0c65-9800-7000-8000-000000000006"
         amount:
           amount_minor: "1000000"
           currency: "RUB"
@@ -3182,9 +3160,9 @@ components:
         transaction_version: "42"
     Match:
       value:
-        id: "match_123"
-        payment_id: "pay_123"
-        transaction_id: "txn_123"
+        id: "019a0c65-9800-7000-8000-00000000000a"
+        payment_id: "019a0c65-9800-7000-8000-000000000007"
+        transaction_id: "019a0c65-9800-7000-8000-000000000006"
         amount:
           amount_minor: "1000000"
           currency: "RUB"
@@ -3193,7 +3171,7 @@ components:
       value:
         items:
           -
-            id: "fc_123"
+            id: "019a0c65-9800-7000-8000-00000000000d"
             status: "queued"
             cutoff_date: "2026-09-30"
             start_date: "2026-10-01"
@@ -3208,20 +3186,20 @@ components:
         horizon_days: 30
     ForecastAccepted:
       value:
-        id: "fc_123"
+        id: "019a0c65-9800-7000-8000-00000000000d"
         status: "queued"
-        status_url: "/api/v1/companies/cmp_123/forecasts/fc_123"
+        status_url: "/api/v1/companies/019a0c65-9800-7000-8000-000000000001/forecasts/019a0c65-9800-7000-8000-00000000000d"
         poll_after_ms: 1000
     ForecastQueued:
       value:
-        id: "fc_123"
-        company_id: "cmp_123"
+        id: "019a0c65-9800-7000-8000-00000000000d"
+        company_id: "019a0c65-9800-7000-8000-000000000001"
         created_at: "2026-10-23T12:00:00Z"
         completed_at: null
         is_stale: false
         current_data_version: "42"
         input:
-          snapshot_id: "snap_123"
+          snapshot_id: "019a0c65-9800-7000-8000-000000000011"
           data_version: "42"
           cutoff_date: "2026-09-30"
           data_as_of: "2026-09-30"
@@ -3229,14 +3207,14 @@ components:
           end_date: "2026-10-30"
           horizon_days: 30
           currency: "RUB"
-          account_id: "acc_123"
+          account_id: "019a0c65-9800-7000-8000-000000000002"
           opening_balance:
             amount_minor: "5000000"
             currency: "RUB"
           balance_as_of: "2026-09-30"
           risk_definition: "below_zero_eod"
           model_context:
-            id: "ctx_123"
+            id: "019a0c65-9800-7000-8000-000000000012"
             model_name: "candidate_model"
             model_version: "model-build-1"
             preprocessing_version: "prep-1"
@@ -3255,14 +3233,14 @@ components:
         error: null
     ForecastSucceeded:
       value:
-        id: fc_123
-        company_id: cmp_123
+        id: 019a0c65-9800-7000-8000-00000000000d
+        company_id: 019a0c65-9800-7000-8000-000000000001
         created_at: '2026-10-23T12:00:00Z'
         completed_at: '2026-10-23T12:00:00Z'
         is_stale: false
         current_data_version: '42'
         input:
-          snapshot_id: snap_123
+          snapshot_id: 019a0c65-9800-7000-8000-000000000011
           data_version: '42'
           cutoff_date: '2026-09-30'
           data_as_of: '2026-09-30'
@@ -3270,14 +3248,14 @@ components:
           end_date: '2026-10-30'
           horizon_days: 30
           currency: RUB
-          account_id: acc_123
+          account_id: 019a0c65-9800-7000-8000-000000000002
           opening_balance:
             amount_minor: '5000000'
             currency: RUB
           balance_as_of: '2026-09-30'
           risk_definition: below_zero_eod
           model_context:
-            id: ctx_123
+            id: 019a0c65-9800-7000-8000-000000000012
             model_name: candidate_model
             model_version: model-build-1
             preprocessing_version: prep-1
@@ -3775,8 +3753,8 @@ components:
             remaining_amount:
               amount_minor: '9000000'
               currency: RUB
-            category_id: cat_rent
-            payment_id: pay_rent
+            category_id: 019a0c65-9800-7000-8000-000000000003
+            payment_id: 019a0c65-9800-7000-8000-000000000009
             recurrence_group_id: null
             source:
               kind: manual
@@ -3798,8 +3776,8 @@ components:
             remaining_amount:
               amount_minor: '5000000'
               currency: RUB
-            category_id: cat_sales
-            payment_id: pay_receipt
+            category_id: 019a0c65-9800-7000-8000-000000000005
+            payment_id: 019a0c65-9800-7000-8000-000000000008
             recurrence_group_id: null
             source:
               kind: manual
@@ -3822,7 +3800,7 @@ components:
           - effective_occurrence_id: eff_rent_original
             component_id: component_rent
             occurrence_id: occurrence_rent
-            payment_id: pay_rent
+            payment_id: 019a0c65-9800-7000-8000-000000000009
             direction: outflow
             date: '2026-10-07'
             remaining_amount:
@@ -3833,7 +3811,7 @@ components:
           - effective_occurrence_id: eff_receipt_original
             component_id: component_123
             occurrence_id: occurrence_123
-            payment_id: pay_receipt
+            payment_id: 019a0c65-9800-7000-8000-000000000008
             direction: inflow
             date: '2026-10-21'
             remaining_amount:
@@ -3844,14 +3822,14 @@ components:
         error: null
     ForecastFailed:
       value:
-        id: "fc_123"
-        company_id: "cmp_123"
+        id: "019a0c65-9800-7000-8000-00000000000d"
+        company_id: "019a0c65-9800-7000-8000-000000000001"
         created_at: "2026-10-23T12:00:00Z"
         completed_at: "2026-10-23T12:00:00Z"
         is_stale: false
         current_data_version: "42"
         input:
-          snapshot_id: "snap_123"
+          snapshot_id: "019a0c65-9800-7000-8000-000000000011"
           data_version: "42"
           cutoff_date: "2026-09-30"
           data_as_of: "2026-09-30"
@@ -3859,14 +3837,14 @@ components:
           end_date: "2026-10-30"
           horizon_days: 30
           currency: "RUB"
-          account_id: "acc_123"
+          account_id: "019a0c65-9800-7000-8000-000000000002"
           opening_balance:
             amount_minor: "5000000"
             currency: "RUB"
           balance_as_of: "2026-09-30"
           risk_definition: "below_zero_eod"
           model_context:
-            id: "ctx_123"
+            id: "019a0c65-9800-7000-8000-000000000012"
             model_name: "candidate_model"
             model_version: "model-build-1"
             preprocessing_version: "prep-1"
@@ -3889,10 +3867,10 @@ components:
           request_id: "req_123"
     Comparison:
       value:
-        reference_forecast_id: "fc_123"
-        candidate_forecast_id: "fc_124"
-        snapshot_id: "snap_123"
-        model_context_id: "ctx_123"
+        reference_forecast_id: "019a0c65-9800-7000-8000-00000000000d"
+        candidate_forecast_id: "019a0c65-9800-7000-8000-00000000000e"
+        snapshot_id: "019a0c65-9800-7000-8000-000000000011"
+        model_context_id: "019a0c65-9800-7000-8000-000000000012"
         is_stale: false
         reference_metrics:
           first_gap:
@@ -3943,7 +3921,7 @@ components:
         delta_first_gap_days: 0
     PlanFact:
       value:
-        forecast_id: "fc_123"
+        forecast_id: "019a0c65-9800-7000-8000-00000000000d"
         actual_data_version: "42"
         period_start: "2026-10-01"
         period_end: "2026-10-01"
@@ -3976,11 +3954,11 @@ components:
       value:
         items:
           -
-            id: "sc_123"
+            id: "019a0c65-9800-7000-8000-00000000000f"
             name: "Клиент задержит оплату"
-            base_forecast_id: "fc_123"
+            base_forecast_id: "019a0c65-9800-7000-8000-00000000000d"
             comparison_parent_scenario_id: null
-            forecast_id: "fc_124"
+            forecast_id: "019a0c65-9800-7000-8000-00000000000e"
             changes:
               -
                 id: "chg_delay"
@@ -3998,15 +3976,15 @@ components:
         next_cursor: null
     ScenarioAccepted:
       value:
-        id: "sc_123"
-        forecast_id: "fc_124"
+        id: "019a0c65-9800-7000-8000-00000000000f"
+        forecast_id: "019a0c65-9800-7000-8000-00000000000e"
         status: "queued"
-        status_url: "/api/v1/companies/cmp_123/forecasts/fc_124"
+        status_url: "/api/v1/companies/019a0c65-9800-7000-8000-000000000001/forecasts/019a0c65-9800-7000-8000-00000000000e"
         poll_after_ms: 1000
     ScenarioRequest_delay_receipt:
       value:
         name: "Клиент задержит оплату"
-        base_forecast_id: "fc_123"
+        base_forecast_id: "019a0c65-9800-7000-8000-00000000000d"
         changes:
           -
             id: "chg_delay"
@@ -4021,7 +3999,7 @@ components:
     ScenarioRequest_reduce_sales:
       value:
         name: "Выручка ниже на 20%"
-        base_forecast_id: "fc_123"
+        base_forecast_id: "019a0c65-9800-7000-8000-00000000000d"
         changes:
           -
             id: "chg_sales"
@@ -4036,7 +4014,7 @@ components:
     ScenarioRequest_one_off_expense:
       value:
         name: "Незапланированный ремонт"
-        base_forecast_id: "fc_123"
+        base_forecast_id: "019a0c65-9800-7000-8000-00000000000d"
         changes:
           -
             id: "chg_expense"
@@ -4046,11 +4024,11 @@ components:
               amount_minor: "500000"
               currency: "RUB"
             description: "Ремонт кофемашины"
-            category_id: "cat_repairs"
+            category_id: "019a0c65-9800-7000-8000-000000000004"
     ScenarioRequest_increase_recurring_expenses:
       value:
         name: "Постоянные расходы выше на 10%"
-        base_forecast_id: "fc_123"
+        base_forecast_id: "019a0c65-9800-7000-8000-00000000000d"
         changes:
           -
             id: "chg_recurring"
@@ -4066,7 +4044,7 @@ components:
     ScenarioRequest_stress_plus_response:
       value:
         name: Задержка оплаты и согласованный перенос части аренды
-        comparison_parent_scenario_id: sc_123
+        comparison_parent_scenario_id: 019a0c65-9800-7000-8000-00000000000f
         response_action:
           type: reschedule_payment_part
           target:
@@ -4078,11 +4056,11 @@ components:
           feasibility_condition: Контрагент согласовал перенос части аренды
     Scenario:
       value:
-        id: "sc_123"
+        id: "019a0c65-9800-7000-8000-00000000000f"
         name: "Клиент задержит оплату"
-        base_forecast_id: "fc_123"
+        base_forecast_id: "019a0c65-9800-7000-8000-00000000000d"
         comparison_parent_scenario_id: null
-        forecast_id: "fc_124"
+        forecast_id: "019a0c65-9800-7000-8000-00000000000e"
         changes:
           -
             id: "chg_delay"
@@ -4098,6 +4076,17 @@ components:
         out_of_horizon_occurrence_ids: []
         created_at: "2026-10-23T12:00:00Z"
   schemas:
+    ResourceID:
+      type: string
+      format: uuid
+      not:
+        const: "00000000-0000-0000-0000-000000000000"
+      minLength: 36
+      maxLength: 36
+    NullableResourceID:
+      anyOf:
+        - $ref: "#/components/schemas/ResourceID"
+        - type: "null"
     Money:
       type: "object"
       additionalProperties: false
@@ -4105,7 +4094,8 @@ components:
         amount_minor:
           type: "string"
           pattern: "^-?(?:0|[1-9][0-9]*)$"
-          description: "Exact signed integer minor units encoded as decimal text; no exponent or decimal point. RUB has 100 minor units."
+          maxLength: 20
+          description: "Exact signed integer minor units encoded as decimal text; no exponent or decimal point. RUB has 100 minor units. Range -9223372036854775808 through 9223372036854775807 inclusive, matching Core int64 and PostgreSQL BIGINT. Server must validate the numeric range before conversion; maxLength is not a numeric bound. Outside range returns 422 VALIDATION_ERROR with an amount_minor field error; never truncate or use floating point."
           examples:
             - "5000000"
         currency:
@@ -4114,7 +4104,7 @@ components:
             - "RUB"
           examples:
             - "RUB"
-          description: "Provisional MVP convention, not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
+          description: "Owner-approved MVP convention (ADR-022), not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
       required:
         - "amount_minor"
         - "currency"
@@ -4126,7 +4116,8 @@ components:
         amount_minor:
           type: "string"
           pattern: "^[1-9][0-9]*$"
-          description: "Strictly positive integer minor units encoded as decimal text."
+          maxLength: 19
+          description: "Strictly positive integer minor units encoded as decimal text. Range 1 through 9223372036854775807 inclusive. Server must validate the numeric range before conversion; maxLength is not a numeric bound. Outside range returns 422 VALIDATION_ERROR with an amount_minor field error; never truncate or use floating point."
           examples:
             - "1000000"
         currency:
@@ -4135,7 +4126,7 @@ components:
             - "RUB"
           examples:
             - "RUB"
-          description: "Provisional MVP convention, not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
+          description: "Owner-approved MVP convention (ADR-022), not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
       required:
         - "amount_minor"
         - "currency"
@@ -4147,6 +4138,8 @@ components:
         amount_minor:
           type: "string"
           pattern: "^(?:0|[1-9][0-9]*)$"
+          maxLength: 19
+          description: "Nonnegative integer minor units encoded as decimal text. Range 0 through 9223372036854775807 inclusive. Server must validate the numeric range before conversion; maxLength is not a numeric bound. Outside range returns 422 VALIDATION_ERROR with an amount_minor field error; never truncate or use floating point."
           examples:
             - "0"
         currency:
@@ -4155,7 +4148,7 @@ components:
             - "RUB"
           examples:
             - "RUB"
-          description: "Provisional MVP convention, not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
+          description: "Owner-approved MVP convention (ADR-022), not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
       required:
         - "amount_minor"
         - "currency"
@@ -4436,11 +4429,9 @@ components:
       additionalProperties: false
       properties:
         id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "cmp_123"
+            - "019a0c65-9800-7000-8000-000000000001"
         name:
           type: "string"
           minLength: 1
@@ -4460,7 +4451,7 @@ components:
             - "RUB"
           examples:
             - "RUB"
-          description: "Provisional MVP convention, not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
+          description: "Owner-approved MVP convention (ADR-022), not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
         timezone:
           type: "string"
           enum:
@@ -4482,11 +4473,9 @@ components:
           required:
             - "role"
         default_account_id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "acc_123"
+            - "019a0c65-9800-7000-8000-000000000002"
         version:
           type: "string"
           pattern: "^[1-9][0-9]*$"
@@ -4532,7 +4521,7 @@ components:
             - "RUB"
           examples:
             - "RUB"
-          description: "Provisional MVP convention, not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
+          description: "Owner-approved MVP convention (ADR-022), not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion."
         timezone:
           type: "string"
           enum:
@@ -4629,11 +4618,9 @@ components:
           examples:
             - "inv_123"
         company_id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "cmp_123"
+            - "019a0c65-9800-7000-8000-000000000001"
         company_name:
           type: "string"
           minLength: 1
@@ -4719,17 +4706,13 @@ components:
       additionalProperties: false
       properties:
         id:
-          type: string
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-          - acc_123
+          - 019a0c65-9800-7000-8000-000000000002
         company_id:
-          type: string
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-          - cmp_123
+          - 019a0c65-9800-7000-8000-000000000001
         name:
           type: string
           examples:
@@ -4740,7 +4723,7 @@ components:
           - RUB
           examples:
           - RUB
-          description: Provisional MVP convention, not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion.
+          description: Owner-approved MVP convention (ADR-022), not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion.
         balance:
           anyOf:
           - $ref: '#/components/schemas/Money'
@@ -4817,11 +4800,9 @@ components:
       additionalProperties: false
       properties:
         id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "cat_rent"
+            - "019a0c65-9800-7000-8000-000000000003"
         name:
           type: "string"
           examples:
@@ -4896,21 +4877,13 @@ components:
           - EXT_PAY_123
           description: External expected-payment ID, distinct from factual operation ID. Null for facts/manual records.
         import_id:
-          type:
-          - string
-          - 'null'
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/NullableResourceID"
           examples:
-          - imp_123
+          - 019a0c65-9800-7000-8000-00000000000b
         connection_id:
-          type:
-          - string
-          - 'null'
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/NullableResourceID"
           examples:
-          - con_123
+          - 019a0c65-9800-7000-8000-00000000000c
       required:
       - kind
       - source_system
@@ -4925,17 +4898,13 @@ components:
       additionalProperties: false
       properties:
         id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "txn_123"
+            - "019a0c65-9800-7000-8000-000000000006"
         account_id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "acc_123"
+            - "019a0c65-9800-7000-8000-000000000002"
         operation_date:
           type: "string"
           format: "date"
@@ -4968,13 +4937,9 @@ components:
           examples:
             - "Оплата аренды"
         category_id:
-          type:
-            - "string"
-            - "null"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/NullableResourceID"
           examples:
-            - "cat_rent"
+            - "019a0c65-9800-7000-8000-000000000003"
         source:
           "$ref": "#/components/schemas/Source"
         version:
@@ -5039,13 +5004,9 @@ components:
           examples:
           - Оплата аренды
         category_id:
-          type:
-          - string
-          - 'null'
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/NullableResourceID"
           examples:
-          - cat_rent
+          - 019a0c65-9800-7000-8000-000000000003
         expected_data_version:
           type: string
           pattern: ^[1-9][0-9]*$
@@ -5065,13 +5026,9 @@ components:
       additionalProperties: false
       properties:
         category_id:
-          type:
-            - "string"
-            - "null"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/NullableResourceID"
           examples:
-            - "cat_rent"
+            - "019a0c65-9800-7000-8000-000000000003"
         version:
           type: "string"
           pattern: "^[1-9][0-9]*$"
@@ -5197,18 +5154,16 @@ components:
           - dataset_v1
           description: Opaque adapter/source namespace returned by server catalogue. Dataset adapter is dataset_v1; external values are server-owned, not vendor protocol names.
         account_id:
-          type: string
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-          - acc_123
+          - 019a0c65-9800-7000-8000-000000000002
         currency:
           type: string
           enum:
           - RUB
           examples:
           - RUB
-          description: Provisional MVP convention, not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion.
+          description: Owner-approved MVP convention (ADR-022), not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion.
         period_start:
           type: string
           format: date
@@ -5321,17 +5276,13 @@ components:
       additionalProperties: false
       properties:
         id:
-          type: string
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-          - imp_123
+          - 019a0c65-9800-7000-8000-00000000000b
         account_id:
-          type: string
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-          - acc_123
+          - 019a0c65-9800-7000-8000-000000000002
         source_kind:
           type: string
           enum:
@@ -5353,13 +5304,9 @@ components:
           examples:
           - C001
         connection_id:
-          type:
-          - string
-          - 'null'
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/NullableResourceID"
           examples:
-          - con_123
+          - 019a0c65-9800-7000-8000-00000000000c
         status:
           type: string
           enum:
@@ -5434,7 +5381,7 @@ components:
             adapter:
               const: dataset_v1
             connection_id:
-              type: 'null'
+              type: "null"
             record_kinds:
               const:
               - transactions
@@ -5506,11 +5453,9 @@ components:
       additionalProperties: false
       properties:
         id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "imp_123"
+            - "019a0c65-9800-7000-8000-00000000000b"
         status:
           type: "string"
           enum:
@@ -5520,7 +5465,7 @@ components:
         status_url:
           type: "string"
           examples:
-            - "/api/v1/companies/cmp_123/imports/imp_123"
+            - "/api/v1/companies/019a0c65-9800-7000-8000-000000000001/imports/019a0c65-9800-7000-8000-00000000000b"
         poll_after_ms:
           type: "integer"
           examples:
@@ -5606,23 +5551,17 @@ components:
       additionalProperties: false
       properties:
         id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "con_123"
+            - "019a0c65-9800-7000-8000-00000000000c"
         company_id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "cmp_123"
+            - "019a0c65-9800-7000-8000-000000000001"
         account_id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "acc_123"
+            - "019a0c65-9800-7000-8000-000000000002"
         provider_id:
           type: "string"
           minLength: 1
@@ -5728,17 +5667,13 @@ components:
       additionalProperties: false
       properties:
         id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "pay_123"
+            - "019a0c65-9800-7000-8000-000000000007"
         account_id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "acc_123"
+            - "019a0c65-9800-7000-8000-000000000002"
         direction:
           type: "string"
           enum:
@@ -5766,13 +5701,9 @@ components:
           examples:
             - "Аренда помещения"
         category_id:
-          type:
-            - "string"
-            - "null"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/NullableResourceID"
           examples:
-            - "cat_rent"
+            - "019a0c65-9800-7000-8000-000000000003"
         source:
           "$ref": "#/components/schemas/Source"
         status:
@@ -5840,13 +5771,9 @@ components:
           examples:
             - "Аренда помещения"
         category_id:
-          type:
-            - "string"
-            - "null"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/NullableResourceID"
           examples:
-            - "cat_rent"
+            - "019a0c65-9800-7000-8000-000000000003"
       required:
         - "direction"
         - "amount"
@@ -5883,13 +5810,9 @@ components:
           examples:
             - "Аренда помещения"
         category_id:
-          type:
-            - "string"
-            - "null"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/NullableResourceID"
           examples:
-            - "cat_rent"
+            - "019a0c65-9800-7000-8000-000000000003"
         version:
           type: "string"
           pattern: "^[1-9][0-9]*$"
@@ -5923,23 +5846,17 @@ components:
       additionalProperties: false
       properties:
         id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "match_123"
+            - "019a0c65-9800-7000-8000-00000000000a"
         payment_id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "pay_123"
+            - "019a0c65-9800-7000-8000-000000000007"
         transaction_id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "txn_123"
+            - "019a0c65-9800-7000-8000-000000000006"
         amount:
           "$ref": "#/components/schemas/PositiveMoney"
         created_at:
@@ -5959,11 +5876,9 @@ components:
       additionalProperties: false
       properties:
         transaction_id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "txn_123"
+            - "019a0c65-9800-7000-8000-000000000006"
         amount:
           "$ref": "#/components/schemas/PositiveMoney"
         payment_version:
@@ -6028,11 +5943,9 @@ components:
       additionalProperties: false
       properties:
         id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "ctx_123"
+            - "019a0c65-9800-7000-8000-000000000012"
         model_name:
           type: "string"
           examples:
@@ -6079,11 +5992,9 @@ components:
       additionalProperties: false
       properties:
         snapshot_id:
-          type: string
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-          - snap_123
+          - 019a0c65-9800-7000-8000-000000000011
         data_version:
           type: string
           pattern: ^[1-9][0-9]*$
@@ -6122,13 +6033,11 @@ components:
           - RUB
           examples:
           - RUB
-          description: Provisional MVP convention, not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion.
+          description: Owner-approved MVP convention (ADR-022), not a fact established by dataset. All current requests must use RUB; another currency is rejected without conversion.
         account_id:
-          type: string
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-          - acc_123
+          - 019a0c65-9800-7000-8000-000000000002
         opening_balance:
           $ref: '#/components/schemas/Money'
         balance_as_of:
@@ -6183,11 +6092,9 @@ components:
       additionalProperties: false
       properties:
         id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "fc_123"
+            - "019a0c65-9800-7000-8000-00000000000d"
         status:
           type: "string"
           enum:
@@ -6197,7 +6104,7 @@ components:
         status_url:
           type: "string"
           examples:
-            - "/api/v1/companies/cmp_123/forecasts/fc_123"
+            - "/api/v1/companies/019a0c65-9800-7000-8000-000000000001/forecasts/019a0c65-9800-7000-8000-00000000000d"
         poll_after_ms:
           type: "integer"
           examples:
@@ -6339,7 +6246,7 @@ components:
           minLength: 1
           maxLength: 128
           examples:
-            - "pay_123"
+            - "019a0c65-9800-7000-8000-000000000007"
         source:
           anyOf:
             -
@@ -6442,21 +6349,13 @@ components:
         remaining_amount:
           $ref: '#/components/schemas/NonnegativeMoney'
         category_id:
-          type:
-          - string
-          - 'null'
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/NullableResourceID"
           examples:
-          - cat_rent
+          - 019a0c65-9800-7000-8000-000000000003
         payment_id:
-          type:
-          - string
-          - 'null'
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/NullableResourceID"
           examples:
-          - pay_123
+          - 019a0c65-9800-7000-8000-000000000007
         recurrence_group_id:
           type:
           - string
@@ -6567,17 +6466,13 @@ components:
       additionalProperties: false
       properties:
         id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "fc_123"
+            - "019a0c65-9800-7000-8000-00000000000d"
         company_id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "cmp_123"
+            - "019a0c65-9800-7000-8000-000000000001"
         created_at:
           type: "string"
           format: "date-time"
@@ -6601,13 +6496,9 @@ components:
         readiness:
           "$ref": "#/components/schemas/ForecastReadiness"
         scenario_id:
-          type:
-            - "string"
-            - "null"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/NullableResourceID"
           examples:
-            - "sc_123"
+            - "019a0c65-9800-7000-8000-00000000000f"
         status:
           type: "string"
           enum:
@@ -6638,17 +6529,13 @@ components:
       additionalProperties: false
       properties:
         id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "fc_123"
+            - "019a0c65-9800-7000-8000-00000000000d"
         company_id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "cmp_123"
+            - "019a0c65-9800-7000-8000-000000000001"
         created_at:
           type: "string"
           format: "date-time"
@@ -6676,13 +6563,9 @@ components:
         readiness:
           "$ref": "#/components/schemas/ForecastReadiness"
         scenario_id:
-          type:
-            - "string"
-            - "null"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/NullableResourceID"
           examples:
-            - "sc_123"
+            - "019a0c65-9800-7000-8000-00000000000f"
         status:
           type: "string"
           enum:
@@ -6711,17 +6594,13 @@ components:
       additionalProperties: false
       properties:
         id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "fc_123"
+            - "019a0c65-9800-7000-8000-00000000000d"
         company_id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "cmp_123"
+            - "019a0c65-9800-7000-8000-000000000001"
         created_at:
           type: "string"
           format: "date-time"
@@ -6749,13 +6628,9 @@ components:
         readiness:
           "$ref": "#/components/schemas/ForecastReadiness"
         scenario_id:
-          type:
-            - "string"
-            - "null"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/NullableResourceID"
           examples:
-            - "sc_123"
+            - "019a0c65-9800-7000-8000-00000000000f"
         status:
           type: "string"
           enum:
@@ -6800,11 +6675,9 @@ components:
       additionalProperties: false
       properties:
         id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "fc_123"
+            - "019a0c65-9800-7000-8000-00000000000d"
         status:
           type: "string"
           enum:
@@ -6840,13 +6713,9 @@ components:
           examples:
             - false
         scenario_id:
-          type:
-            - "string"
-            - "null"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/NullableResourceID"
           examples:
-            - "sc_123"
+            - "019a0c65-9800-7000-8000-00000000000f"
       required:
         - "id"
         - "status"
@@ -6984,13 +6853,9 @@ components:
           examples:
             - "Ремонт кофемашины"
         category_id:
-          type:
-            - "string"
-            - "null"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/NullableResourceID"
           examples:
-            - "cat_repairs"
+            - "019a0c65-9800-7000-8000-000000000004"
       required:
         - "id"
         - "type"
@@ -7138,35 +7003,25 @@ components:
       additionalProperties: false
       properties:
         id:
-          type: string
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-          - sc_123
+          - 019a0c65-9800-7000-8000-00000000000f
         name:
           type: string
           examples:
           - Клиент задержит оплату
         base_forecast_id:
-          type: string
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-          - fc_123
+          - 019a0c65-9800-7000-8000-00000000000d
         comparison_parent_scenario_id:
-          type:
-          - string
-          - 'null'
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/NullableResourceID"
           examples:
-          - sc_parent
+          - 019a0c65-9800-7000-8000-000000000010
         forecast_id:
-          type: string
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-          - fc_124
+          - 019a0c65-9800-7000-8000-00000000000e
         changes:
           type: array
           items:
@@ -7206,17 +7061,13 @@ components:
       additionalProperties: false
       properties:
         id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "sc_123"
+            - "019a0c65-9800-7000-8000-00000000000f"
         forecast_id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "fc_124"
+            - "019a0c65-9800-7000-8000-00000000000e"
         status:
           type: "string"
           enum:
@@ -7226,7 +7077,7 @@ components:
         status_url:
           type: "string"
           examples:
-            - "/api/v1/companies/cmp_123/forecasts/fc_124"
+            - "/api/v1/companies/019a0c65-9800-7000-8000-000000000001/forecasts/019a0c65-9800-7000-8000-00000000000e"
         poll_after_ms:
           type: "integer"
           examples:
@@ -7243,29 +7094,21 @@ components:
       additionalProperties: false
       properties:
         reference_forecast_id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "fc_123"
+            - "019a0c65-9800-7000-8000-00000000000d"
         candidate_forecast_id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "fc_124"
+            - "019a0c65-9800-7000-8000-00000000000e"
         snapshot_id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "snap_123"
+            - "019a0c65-9800-7000-8000-000000000011"
         model_context_id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "ctx_123"
+            - "019a0c65-9800-7000-8000-000000000012"
         is_stale:
           type: "boolean"
           examples:
@@ -7409,11 +7252,9 @@ components:
       additionalProperties: false
       properties:
         forecast_id:
-          type: "string"
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-            - "fc_123"
+            - "019a0c65-9800-7000-8000-00000000000d"
         actual_data_version:
           type: "string"
           pattern: "^[1-9][0-9]*$"
@@ -7774,11 +7615,7 @@ components:
           examples:
           - occurrence_123
         payment_id:
-          type:
-          - string
-          - 'null'
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/NullableResourceID"
         direction:
           type: string
           enum:
@@ -7822,7 +7659,7 @@ components:
       - if:
           properties:
             payment_id:
-              type: 'null'
+              type: "null"
           required:
           - payment_id
         then:
@@ -7833,7 +7670,7 @@ components:
       - effective_occurrence_id: eff_receipt_remainder
         component_id: component_123
         occurrence_id: occurrence_123
-        payment_id: pay_receipt
+        payment_id: 019a0c65-9800-7000-8000-000000000008
         direction: inflow
         date: '2026-10-21'
         remaining_amount:
@@ -7844,7 +7681,7 @@ components:
       - effective_occurrence_id: eff_receipt_delayed
         component_id: component_123
         occurrence_id: occurrence_123
-        payment_id: pay_receipt
+        payment_id: 019a0c65-9800-7000-8000-000000000008
         direction: inflow
         date: '2026-11-13'
         remaining_amount:
@@ -7874,11 +7711,9 @@ components:
           examples:
           - Клиент задержит оплату
         base_forecast_id:
-          type: string
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-          - fc_123
+          - 019a0c65-9800-7000-8000-00000000000d
         changes:
           type: array
           items:
@@ -7901,11 +7736,9 @@ components:
           examples:
           - Клиент задержит оплату
         comparison_parent_scenario_id:
-          type: string
-          minLength: 1
-          maxLength: 128
+          $ref: "#/components/schemas/ResourceID"
           examples:
-          - sc_123
+          - 019a0c65-9800-7000-8000-00000000000f
         response_action:
           $ref: '#/components/schemas/ResponseAction'
       required:

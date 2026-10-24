@@ -2,9 +2,10 @@ package money_test
 
 import (
 	"errors"
-	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/money"
 	"math"
 	"testing"
+
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/money"
 )
 
 func TestParse(t *testing.T) {

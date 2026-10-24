@@ -2,13 +2,16 @@ package ledger_test
 
 import (
 	"errors"
-	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
 	"testing"
+
+	"github.com/google/uuid"
+
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
 )
 
 func TestAccountSourceBindings(t *testing.T) {
 	t.Parallel()
-	scope := ledger.Scope{CompanyID: "company", AccountID: "account"}
+	scope := ledger.Scope{CompanyID: uuid.MustParse("019a0c65-9800-7000-8000-000000000001"), AccountID: uuid.MustParse("019a0c65-9800-7000-8000-000000000002")}
 	account, err := ledger.NewBankAccount(scope)
 	if err != nil {
 		t.Fatal(err)

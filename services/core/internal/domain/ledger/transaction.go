@@ -1,13 +1,16 @@
 package ledger
 
 import (
-	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/money"
 	"math"
 	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/money"
 )
 
 type TransactionData struct {
-	ID               string
+	ID               uuid.UUID
 	Scope            Scope
 	Date             Date
 	Direction        Direction
@@ -25,17 +28,24 @@ type Transaction struct {
 }
 
 func NewTransaction(data TransactionData) (Transaction, error) {
-	if data.ID == "" {
-		return Transaction{}, ErrInvalid
+	if err := validateTransaction(data); err != nil {
+		return Transaction{}, err
+	}
+	data.Source.ImportedAt = data.Source.ImportedAt.UTC()
+	return Transaction{data: data, version: 1}, nil
+}
+
+func validateTransaction(data TransactionData) error {
+	if data.ID == uuid.Nil {
+		return ErrInvalid
 	}
 	for _, err := range []error{data.Scope.Validate(), data.Date.Validate(), data.Direction.Validate(),
 		data.Amount.Positive(), data.Source.Validate(), data.Category.Validate(data.Scope.CompanyID)} {
 		if err != nil {
-			return Transaction{}, err
+			return err
 		}
 	}
-	data.Source.ImportedAt = data.Source.ImportedAt.UTC()
-	return Transaction{data: data, version: 1}, nil
+	return nil
 }
 
 func (t Transaction) Data() TransactionData { return t.data }
@@ -73,7 +83,7 @@ func (t Transaction) CheckReplay(stored Transaction) (bool, error) {
 		return false, nil
 	}
 	left, right := t.data, stored.data
-	left.ID, right.ID = "", ""
+	left.ID, right.ID = uuid.Nil, uuid.Nil
 	left.Source.ImportedAt, right.Source.ImportedAt = time.Time{}, time.Time{}
 	// Classification is editable independently of imported financial economics.
 	// Replay returns the stored record and must not overwrite its classification.

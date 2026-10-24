@@ -44,16 +44,15 @@ tasks:
   fmt:
     desc: Format Go source files
     cmds:
-      - GOTOOLCHAIN={{.GO_TOOLCHAIN}} go fmt ./...
+      - GOTOOLCHAIN={{.GO_TOOLCHAIN}} "{{.GOLANGCI_LINT}}" fmt ./...
 
   fmt-check:
     desc: Check formatting without changing files
     cmds:
       - |
         export GOTOOLCHAIN={{.GO_TOOLCHAIN}}
-        formatter="$(go env GOROOT)/bin/gofmt"
-        unformatted="$("$formatter" -l .)" || exit 1
-        test -z "$unformatted" || { echo "$unformatted"; exit 1; }
+        diff="$("{{.GOLANGCI_LINT}}" fmt --diff ./...)" || { printf '%s\n' "$diff"; exit 1; }
+        test -z "$diff" || { printf '%s\n' "$diff"; exit 1; }
 
   lint:
     desc: Run the pinned golangci-lint release
@@ -69,6 +68,6 @@ tasks:
       - GOTOOLCHAIN={{.GO_TOOLCHAIN}} "{{.GOLANGCI_LINT}}" run ./...
 
   integration:
-    desc: PostgreSQL tests are deferred until stage 2.3
+    desc: Run implemented PostgreSQL regressions against the dedicated marked test DB
     cmds:
-      - echo "PostgreSQL integration tests are not implemented until stage 2.3"; exit 1
+      - GOTOOLCHAIN={{.GO_TOOLCHAIN}} go test -tags=integration -race -count=1 ./...

@@ -44,7 +44,7 @@ type Postgres struct {
 	Database       string
 	SSLMode        string
 	MaxConns       int32
-	MinConns       int32
+	MaxIdleConns   int32
 	ConnectTimeout time.Duration
 	QueryTimeout   time.Duration
 }
@@ -59,6 +59,7 @@ func Load() (Config, error) {
 			User: os.Getenv("CORE_POSTGRES_USER"), Password: os.Getenv("CORE_POSTGRES_PASSWORD"),
 			Database: os.Getenv("CORE_POSTGRES_DATABASE"), SSLMode: os.Getenv("CORE_POSTGRES_SSL_MODE"),
 			MaxConns:       10,
+			MaxIdleConns:   2,
 			ConnectTimeout: 5 * time.Second, QueryTimeout: 5 * time.Second,
 		},
 		ShutdownTimeout: 10 * time.Second,
@@ -89,7 +90,7 @@ func Load() (Config, error) {
 		target *int32
 	}{
 		{"CORE_POSTGRES_MAX_CONNS", &cfg.Postgres.MaxConns},
-		{"CORE_POSTGRES_MIN_CONNS", &cfg.Postgres.MinConns},
+		{"CORE_POSTGRES_MAX_IDLE_CONNS", &cfg.Postgres.MaxIdleConns},
 	} {
 		if value, ok := os.LookupEnv(setting.name); ok {
 			n, err := strconv.ParseInt(value, 10, 32)
@@ -99,8 +100,8 @@ func Load() (Config, error) {
 			*setting.target = int32(n)
 		}
 	}
-	if cfg.Postgres.MaxConns == 0 || cfg.Postgres.MinConns > cfg.Postgres.MaxConns {
-		return Config{}, errors.New("CORE_POSTGRES_MAX_CONNS must be positive and at least CORE_POSTGRES_MIN_CONNS")
+	if cfg.Postgres.MaxConns == 0 || cfg.Postgres.MaxIdleConns > cfg.Postgres.MaxConns {
+		return Config{}, errors.New("CORE_POSTGRES_MAX_CONNS must be positive and at least CORE_POSTGRES_MAX_IDLE_CONNS")
 	}
 	for _, setting := range []struct {
 		name   string

@@ -1,10 +1,13 @@
 package payments
 
 import (
-	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
-	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/money"
 	"math"
 	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/money"
 )
 
 type Status string
@@ -17,7 +20,7 @@ const (
 )
 
 type PaymentData struct {
-	ID               string
+	ID               uuid.UUID
 	Scope            ledger.Scope
 	Direction        ledger.Direction
 	Amount           money.Money
@@ -37,18 +40,25 @@ type ExpectedPayment struct {
 }
 
 func NewExpectedPayment(data PaymentData) (ExpectedPayment, error) {
-	if data.ID == "" || data.CreatedAt.IsZero() {
-		return ExpectedPayment{}, ErrInvalid
-	}
-	for _, err := range []error{data.Scope.Validate(), data.Direction.Validate(), data.Amount.Positive(),
-		data.ScheduledDate.Validate(), data.Source.Validate(), data.Category.Validate(data.Scope.CompanyID)} {
-		if err != nil {
-			return ExpectedPayment{}, err
-		}
+	if err := validateExpectedPayment(data); err != nil {
+		return ExpectedPayment{}, err
 	}
 	data.CreatedAt = data.CreatedAt.UTC()
 	data.Source.ImportedAt = data.Source.ImportedAt.UTC()
 	return ExpectedPayment{data: data, remaining: data.Amount, status: Planned, version: 1}, nil
+}
+
+func validateExpectedPayment(data PaymentData) error {
+	if data.ID == uuid.Nil || data.CreatedAt.IsZero() {
+		return ErrInvalid
+	}
+	for _, err := range []error{data.Scope.Validate(), data.Direction.Validate(), data.Amount.Positive(),
+		data.ScheduledDate.Validate(), data.Source.Validate(), data.Category.Validate(data.Scope.CompanyID)} {
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (p ExpectedPayment) Data() PaymentData { return p.data }

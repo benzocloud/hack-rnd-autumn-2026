@@ -1,15 +1,104 @@
+# Rules adapted from references/cosmohack/backend/.golangci.yml (2026-10-24).
 version: "2"
 run:
   go: "1.27"
-  timeout: 2m
+  concurrency: 4
+  timeout: 5m
+  tests: true
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 50
+
 linters:
   default: none
   enable:
-    - errcheck
+    # корректность
     - govet
-    - ineffassign
     - staticcheck
     - unused
+    - errcheck
+    - errorlint
+    - nilerr
+    - copyloopvar
+    - durationcheck
+    - reassign
+    # стиль
+    - gocritic
+    - whitespace
+    - godot
+    - misspell
+    - dupword
+    - predeclared
+    - errname
+    - asciicheck
+    # сложность
+    - nestif
+    # производительность
+    - unconvert
+    - ineffassign
+    # безопасность и ресурсы
+    - bidichk
+    - bodyclose
+    - noctx
+    - fatcontext
+    # логирование
+    - sloglint
+    - loggercheck
+    # тесты
+    - testifylint
+    - thelper
+    - usetesting
+    - exptostd
+    - usestdlibvars
+    - exhaustive
+    - nolintlint
+
+  disable:
+    - lll              # фиксированный лимит длины строк не вводим
+    - prealloc         # много ложных срабатываний
+    - wrapcheck        # требует оборачивать все внешние ошибки — слишком шумно
+    - err113           # ломает идиоматичные паттерны ошибок
+    - mnd              # шумит на констант вроде HTTP 200
+    - gocognit         # дублирует gocyclo + nestif
+    - cyclop           # дублирует gocyclo
+    - unparam           # ложные срабатывания на интерфейсах
+    - exhaustruct      # ломает идиому нулевого значения
+    - gochecknoglobals # валидные глобальные переменные запрещены слишком широко
+    - gochecknoinits   # то же для init()
+
+  exclusions:
+    rules:
+      # В тестах не проверяют ошибки записи в httptest.ResponseWriter,
+      # а httptest.NewRequest без контекста — стандартная практика.
+      - path: _test\.go$
+        linters:
+          - errcheck
+          - noctx
+          - bodyclose
+    paths:
+      - vendor$
+      - third_party$
+      - testutils$
+      - examples$
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+    nolintlint:
+      require-explanation: true
+      require-specific: true
 formatters:
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/benzocloud/hack-rnd-autumn-2026/services/core
   enable:
     - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

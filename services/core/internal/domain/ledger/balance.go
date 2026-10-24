@@ -1,8 +1,9 @@
 package ledger
 
 import (
-	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/money"
 	"time"
+
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/money"
 )
 
 type BalanceKind string

@@ -2,7 +2,9 @@
 
 Основа модульного DDD-монолита. Подэтап 2.1 содержит env-конфигурацию и
 локальный `pkg/log`; подэтап 2.2 добавляет доменные модели денег, Ledger и Payments.
-Сервер и PostgreSQL repositories остаются в следующих подэтапах
+Подэтап 2.3 в работе: подготовлены sqlx pool в `internal/app/postgres`, SQL Ledger
+и миграции; write-path и полный PostgreSQL integration suite ещё не закончены.
+Сервер остаётся в следующих подэтапах
 [плана](../../.agent/plans/go-core-foundation.md).
 
 ## Доменные модели
@@ -19,7 +21,9 @@ payments/  payment.go, match.go, errors.go
 
 Конструкторы проверяют инварианты; состояние Transaction и ExpectedPayment
 закрыто, изменения возвращают новые значения. BankAccount владеет привязками
-источников и меняется через методы. Все модели используют только stdlib и
+источников и меняется через методы. Внутренние ID типизированы `uuid.UUID`; новые ID создаются через UUIDv7 в
+прикладном слое, SQL хранит их как `uuid`. Внешние ID и Auth actor ID остаются
+строками (ADR-024). Модели используют stdlib, google/uuid и
 доменные пакеты; в них нет транспорта, SQL или логирования.
 
 Money хранит точные `int64` копейки в RUB. `Parse`, `ParsePositive`,
@@ -41,13 +45,37 @@ Payments ограничивает match остатком ожидания и н�
 под блокировкой в будущей PostgreSQL-транзакции. Проверка модели не заменяет
 защиту от конкурентных записей, storage uniqueness и идемпотентность команды.
 
+
+## Прикладные команды и результаты
+
+В `internal/service/ledger` и `internal/service/payments` команды и результаты
+расположены рядом с операциями. Общего `service/command` больше нет (ADR-026).
+
+| Операция | Результат | Значимые поля |
+| --- | --- | --- |
+| `ledger.CreateTransaction` | `CreateTransactionResult` | `TransactionID`, `TransactionVersion`, `DataVersion` |
+| `ledger.RecordBalance` | `RecordBalanceResult` | `Date`, `DataVersion`; у наблюдения нет отдельного UUID |
+| `payments.CreatePayment` | `CreatePaymentResult` | `PaymentID`, `PaymentVersion`, `DataVersion` |
+| `payments.MatchPayment` | `MatchPaymentResult` | `MatchID`, `PaymentVersion`, `DataVersion` |
+
+Каждая команда явно содержит `ActorID` и `IdempotencyKey`. Сервис предполагает
+ActorID из доверенного входного адаптера; сам адаптер ещё не реализован.
+Ручные операции требуют оба поля, импорт допускает отсутствие обоих, но не
+одного из пары. Проверка данных/генерация UUID и приватные consumer-side ports
+сохранены. Это внутренние application DTO без JSON-тегов; HTTP/protobuf mapper
+и сериализация сохранённых результатов определяются на соответствующих границах.
+Домен и сохранённый REST-контракт этим изменением не меняются. Реализации
+транзакционных storage ports по-прежнему требуют завершения подэтапа 2.3.
+
 ## Проверки
 
 Go **1.27.3**, golangci-lint **2.15.0**, [Task](https://taskfile.dev/) **3.48+**
 (проверено на 3.48.0). `Taskfile.yml` задаёт точный `GOTOOLCHAIN` в Go-командах,
 включая случай другого значения в окружении. Go при необходимости скачивает
-этот toolchain. Runtime-зависимостей вне stdlib
-пока нет, поэтому `go.sum` ещё не требуется. pgx/goose подключаются в 2.3.
+этот toolchain. Закреплены google/uuid 1.6.0, sqlx 1.4.0 и pgx 5.11.0; `go.sum` отслеживается.
+pgx/stdlib используется как database/sql driver, без native pgxpool.
+Pool создаёт `internal/app/postgres`, закрывает вызывающий app; repository
+получает готовый DB/Tx. Goose — отдельный migration CLI в 2.3.
 
 ```sh
 cd services/core
@@ -58,12 +86,24 @@ task check
 `check` выполняет build, форматирование, unit/race tests, vet и lint.
 `task` или `task --list` показывает доступные команды и их описания.
 Из корня репозитория: `task -d services/core check`.
-`task fmt` форматирует; `task test`, `task race`, `task vet`, `task lint`
+`task fmt` применяет gofmt и goimports; `fmt-check` проверяет оба без записи; `task test`, `task race`, `task vet`, `task lint`
 доступны отдельно. База данных для этих проверок не нужна.
 Для нестандартного расположения линтера: `task lint GOLANGCI_LINT=/path/to/golangci-lint`.
-`task integration` пока завершается ошибкой с пояснением: реальных SQL-тестов
-до подэтапа 2.3 нет. Тогда команда будет запускать `go test -tags=integration`
-только с явно заданной выделенной тестовой PostgreSQL; реальные/dev БД не подходят.
+`task integration` запускает `go test -tags=integration -race -count=1 ./...`.
+Реализованы регрессии: сохранение отсутствующего счёта возвращает `sql.ErrNoRows`,
+CHECK отвергает несовместимые authority/namespace; валидные состояния проходят
+UUID roundtrip и SaveAccount. Полный набор проверок подэтапа 2.3 ещё не готов.
+
+Использовать только одноразовую БД из `compose.integration.yml`: запустить
+`docker compose -f compose.integration.yml up -d --wait postgres`, узнать
+случайный порт через `docker compose -f compose.integration.yml port postgres 5432`.
+Передать его и тестовые настройки из Compose через `CORE_POSTGRES_*` (host
+`127.0.0.1`, database `saldo_core_test`, SSL mode `disable`); отдельно применить
+миграции закреплённым goose CLI 3.29.0, затем выполнить `task integration`.
+Перед записью тесты требуют server marker `saldo.test_database=saldo-core-integration`;
+без него завершаются ошибкой. Данные каждого теста откатываются транзакцией.
+После проверки: `docker compose -f compose.integration.yml down`.
+Реальные/dev БД для этих тестов не подходят.
 
 ## CI и контейнер
 
@@ -124,7 +164,7 @@ docker build --target runtime -f services/core/Dockerfile -t core:local .
 | `CORE_POSTGRES_DATABASE` | Обязательное имя БД |
 | `CORE_POSTGRES_SSL_MODE` | Обязательный режим: disable, allow, prefer, require, verify-ca, verify-full |
 | `CORE_POSTGRES_MAX_CONNS` | `10`, положительное int32 |
-| `CORE_POSTGRES_MIN_CONNS` | `0`, от 0 до max |
+| `CORE_POSTGRES_MAX_IDLE_CONNS` | `2`, максимум idle connections, от 0 до MAX_CONNS; не минимальный размер pool; явный `0` отключает idle connections |
 | `CORE_POSTGRES_CONNECT_TIMEOUT` | `5s`, положительная duration |
 | `CORE_POSTGRES_QUERY_TIMEOUT` | `5s`, положительная duration |
 | `CORE_SHUTDOWN_TIMEOUT` | `10s`, положительная duration |
@@ -137,7 +177,8 @@ docker build --target runtime -f services/core/Dockerfile -t core:local .
 или результат `DSN()`: они содержат пароль. `sslmode=disable` в примере задаётся явно для локальной БД;
 для удалённой БД использовать проверку сертификата и имени `sslmode=verify-full`.
 Проверка настроек здесь не доказывает доступность БД; driver-specific validation
-и Ping появятся с pgx в 2.3.
+и Ping выполняются в `internal/app/postgres.Open` через sqlx/pgx driver.
+Прежняя переменная `CORE_POSTGRES_MIN_CONNS` больше не читается.
 
 ## Логирование
 
@@ -152,3 +193,14 @@ logger, err := corelog.New(os.Stdout, cfg.Log.Level, cfg.Log.Format)
 handlers. Референс: `references/maxhack/services/gateway/pkg/log/logger.go`,
 MIT, Copyright 2026 BenzoCloud; применим корневой LICENSE этого репозитория.
 Текущая сборка не зависит от наличия `references/`.
+
+## Правила Go и SQL
+
+`.golangci.yml` адаптирован из `references/cosmohack/backend/.golangci.yml`:
+корректность/ошибки, контексты и ресурсы, вложенность, стиль, тесты и logging.
+Дополнительно goimports разделяет stdlib, внешние и локальные imports.
+`task check` проверяет весь модуль (`./...`), включая тесты.
+Объявления embed живут в `internal/repository/postgres/ledger/queries.go`,
+SQL — в соседнем `sql/`; pool не создаётся внутри repository.
+`New` возвращает приватную реализацию сервиса; узкие интерфейсы определяются
+на стороне потребителей. Эти правила закреплены в `.agent/instructions.md`.

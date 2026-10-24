@@ -2,8 +2,9 @@ package money_test
 
 import (
 	"errors"
-	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/money"
 	"testing"
+
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/money"
 )
 
 func TestAmountConstraints(t *testing.T) {

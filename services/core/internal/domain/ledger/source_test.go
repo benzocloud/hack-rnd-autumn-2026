@@ -1,8 +1,9 @@
 package ledger_test
 
 import (
-	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
 	"time"
+
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
 )
 
 func importSource(system, company, id string) ledger.Source {

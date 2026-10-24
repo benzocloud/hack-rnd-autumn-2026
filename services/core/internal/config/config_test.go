@@ -19,7 +19,7 @@ func setup(t *testing.T) {
 		"CORE_POSTGRES_HOST": "unreachable.invalid", "CORE_POSTGRES_PORT": "5432",
 		"CORE_POSTGRES_USER": "core", "CORE_POSTGRES_PASSWORD": "private-secret",
 		"CORE_POSTGRES_DATABASE": "core", "CORE_POSTGRES_SSL_MODE": "verify-full",
-		"CORE_POSTGRES_MAX_CONNS": "10", "CORE_POSTGRES_MIN_CONNS": "0",
+		"CORE_POSTGRES_MAX_CONNS": "10", "CORE_POSTGRES_MAX_IDLE_CONNS": "0",
 		"CORE_POSTGRES_CONNECT_TIMEOUT": "5s", "CORE_POSTGRES_QUERY_TIMEOUT": "5s",
 		"CORE_SHUTDOWN_TIMEOUT": "10s",
 	} {
@@ -30,7 +30,7 @@ func setup(t *testing.T) {
 func TestLoadDefaults(t *testing.T) {
 	setup(t)
 	for _, name := range []string{
-		"CORE_LOG_LEVEL", "CORE_LOG_FORMAT", "CORE_POSTGRES_MAX_CONNS", "CORE_POSTGRES_MIN_CONNS",
+		"CORE_LOG_LEVEL", "CORE_LOG_FORMAT", "CORE_POSTGRES_MAX_CONNS", "CORE_POSTGRES_MAX_IDLE_CONNS",
 		"CORE_POSTGRES_CONNECT_TIMEOUT", "CORE_POSTGRES_QUERY_TIMEOUT", "CORE_SHUTDOWN_TIMEOUT",
 		"CORE_POSTGRES_PORT",
 	} {
@@ -43,7 +43,7 @@ func TestLoadDefaults(t *testing.T) {
 		t.Fatal(err)
 	}
 	if cfg.Log.Level != slog.LevelInfo || cfg.Log.Format != "json" ||
-		cfg.Postgres.Port != 5432 || cfg.Postgres.MaxConns != 10 || cfg.Postgres.MinConns != 0 ||
+		cfg.Postgres.Port != 5432 || cfg.Postgres.MaxConns != 10 || cfg.Postgres.MaxIdleConns != 2 ||
 		cfg.Postgres.ConnectTimeout != 5*time.Second || cfg.Postgres.QueryTimeout != 5*time.Second ||
 		cfg.ShutdownTimeout != 10*time.Second {
 		t.Fatal("defaults were not applied")
@@ -55,7 +55,7 @@ func TestLoadOverrides(t *testing.T) {
 	t.Setenv("CORE_LOG_LEVEL", "DEBUG")
 	t.Setenv("CORE_LOG_FORMAT", " TEXT ")
 	t.Setenv("CORE_POSTGRES_MAX_CONNS", "7")
-	t.Setenv("CORE_POSTGRES_MIN_CONNS", "2")
+	t.Setenv("CORE_POSTGRES_MAX_IDLE_CONNS", "3")
 	t.Setenv("CORE_POSTGRES_CONNECT_TIMEOUT", "800ms")
 	t.Setenv("CORE_POSTGRES_QUERY_TIMEOUT", "2s")
 	t.Setenv("CORE_SHUTDOWN_TIMEOUT", "3s")
@@ -73,10 +73,22 @@ func TestLoadOverrides(t *testing.T) {
 		cfg.Postgres.Host != "::1" || cfg.Postgres.Port != 5433 || cfg.Postgres.User != "custom-user" ||
 		cfg.Postgres.Password != " p@ss:/?#% + " || cfg.Postgres.Database != "custom-db" ||
 		cfg.Postgres.SSLMode != "require" ||
-		cfg.Postgres.MaxConns != 7 || cfg.Postgres.MinConns != 2 ||
+		cfg.Postgres.MaxConns != 7 || cfg.Postgres.MaxIdleConns != 3 ||
 		cfg.Postgres.ConnectTimeout != 800*time.Millisecond || cfg.Postgres.QueryTimeout != 2*time.Second ||
 		cfg.ShutdownTimeout != 3*time.Second {
 		t.Fatal("environment overrides were not applied")
+	}
+}
+
+func TestLoadZeroIdleLimit(t *testing.T) {
+	setup(t)
+	t.Setenv("CORE_POSTGRES_MAX_IDLE_CONNS", "0")
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Postgres.MaxIdleConns != 0 {
+		t.Fatal("explicit zero idle limit replaced with default")
 	}
 }
 
@@ -103,8 +115,8 @@ func TestLoadInvalid(t *testing.T) {
 		{"negative port", "CORE_POSTGRES_PORT", "-1"},
 		{"port overflow", "CORE_POSTGRES_PORT", "65536"},
 		{"zero pool", "CORE_POSTGRES_MAX_CONNS", "0"},
-		{"negative pool", "CORE_POSTGRES_MIN_CONNS", "-1"},
-		{"inverted pool", "CORE_POSTGRES_MIN_CONNS", "11"},
+		{"negative pool", "CORE_POSTGRES_MAX_IDLE_CONNS", "-1"},
+		{"inverted pool", "CORE_POSTGRES_MAX_IDLE_CONNS", "11"},
 		{"pool overflow", "CORE_POSTGRES_MAX_CONNS", "2147483648"},
 		{"invalid pool", "CORE_POSTGRES_MAX_CONNS", "private-secret"},
 		{"zero timeout", "CORE_POSTGRES_CONNECT_TIMEOUT", "0s"},

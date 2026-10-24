@@ -2,10 +2,13 @@ package ledger_test
 
 import (
 	"errors"
-	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
-	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/money"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/money"
 )
 
 func TestBalanceAndBusinessDate(t *testing.T) {
@@ -15,7 +18,7 @@ func TestBalanceAndBusinessDate(t *testing.T) {
 		t.Fatal(err)
 	}
 	at := time.Date(2026, 10, 24, 12, 0, 0, 0, time.FixedZone("business", 3*60*60))
-	balance, err := ledger.NewBalanceObservation(ledger.Scope{CompanyID: "company", AccountID: "account"},
+	balance, err := ledger.NewBalanceObservation(ledger.Scope{CompanyID: uuid.MustParse("019a0c65-9800-7000-8000-000000000001"), AccountID: uuid.MustParse("019a0c65-9800-7000-8000-000000000002")},
 		"2026-10-23", negative, ledger.BalanceSource{Kind: ledger.ManualEOD, RecordedAt: at})
 	if err != nil || balance.Amount() != negative || balance.Date() != "2026-10-23" || balance.Source().RecordedAt.Location() != time.UTC {
 		t.Fatalf("balance: %v, %v", balance, err)
