@@ -277,3 +277,30 @@ union/null/errors/job states/upload — в docs/core/api-adapter.md. Выбор 
 Модель mean_90 не закрывает известный календарь/вероятность и не подменяет их.
 Публикация/merge общего PR разрешены владельцем после этих проверок и agent review;
 deployment не разрешён и не выполняется.
+
+
+### Синхронизация свежего ML перед публикацией
+
+Финальный fetch обнаружил новый ML head `49a7862` поверх первоначального `994ed6e`:
+финансовый replacement уже реализован. Включена вся новая авторская история.
+Прежние заметки «финансовая модель пока не реализована» относятся к старому head.
+По решению владельца два RPC сведены к одному ForecastService/Predict, выбранная
+model_version определяет реализацию; financial response развёрнут без wrapper.
+Продуктовый профиль mean_90_components_v1/calendar_replacement_v1 поддерживает
+календарь/компоненты; mean_90_v1/daily_snapshot_v1 остаётся явным baseline.
+Никакого fallback. Calendar UNAVAILABLE даёт явно ограниченный результат той же
+финансовой версии, не подменяет version и не утверждает сертификацию календаря.
+Новый финансовый Go adapter/worker/API/E2E и вероятность ещё не завершены.
+
+Свежие проверки: 103 ML tests, 35 RPC/mTLS без skips — PASS. Старые 82/14 выше
+описывают предыдущую ревизию. Ранний CI build PR #29 обнаружил четыре уязвимости
+x/net0.57; обновлено до исправляющего v0.60.0, govulncheck — no vulnerabilities.
+Повторный final review проверяет эту свежую общую ревизию перед push/merge.
+
+После сведения fresh ML к одному Predict: 104 ML tests / 36 RPC/mTLS PASS.
+Отдельный тест проверяет сохранение финансовой версии при пустом календаре
+и явный отказ при missing calendar/unknown version без fallback.
+Ponytail-review: убран второй protobuf-module параметр из финансовых helper
+functions и consumers; данные/результат в одном каноническом module/message.
+Caveman-review: после flatten проверены сохранность components/provenance и
+модельный echo; response.MergeFrom сохраняет уже вычисленные финансовые поля.

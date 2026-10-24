@@ -226,15 +226,9 @@ class TransportTests(unittest.TestCase):
             lambda r: setattr(r.model, "configuration_id", "financial_v1"),
             lambda r: setattr(r.model, "random_seed", "0"),
             lambda r: setattr(r.model, "trajectory_count", 100),
-            lambda r: r.snapshot.facts.add(transaction_id="fact"),
-            lambda r: r.snapshot.reconciliation_groups.add(id="salary"),
-            lambda r: setattr(r.snapshot, "purpose", pb.FINANCIAL_PURPOSE_CURRENT_FORECAST),
-            lambda r: setattr(
-                r.snapshot, "calendar_availability", pb.CALENDAR_AVAILABILITY_VERIFIED_CURRENT
-            ),
-            lambda r: setattr(r.snapshot, "history_start", "2026-07-26"),
-            lambda r: setattr(r.snapshot, "balance_as_of", "2026-10-23"),
-            lambda r: r.snapshot.captured_at.GetCurrentTime(),
+            lambda r: r.operations.add(operation_id="fact"),
+            lambda r: r.calendar.groups.add(group_id="salary"),
+            lambda r: r.availability_limitations.append("unavailable"),
             lambda r: r.snapshot.history[0].quality_codes.append("INCOMPLETE_COVERAGE"),
         ]
         for change in variants:

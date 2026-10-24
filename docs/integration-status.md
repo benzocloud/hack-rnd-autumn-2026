@@ -83,8 +83,13 @@ Core GHCR runtime publish остаётся пропущен до появлен�
 ### Объединение Core и ML — 24.10.2026
 
 По поручению владельца PR #27 (`994ed6e`) включён обычным merge в ветку PR #29.
-ML Predict дополнен финансовыми DTO для будущей модели; отдельного ML RPC нет.
+ML Predict дополнен финансовой реализацией и DTO; отдельного ML RPC нет.
 Полный API → Core контракт сохраняет все 54 REST operationId.
 Конфликт документации разрешён с сохранением принятого FinancialSnapshot 2.4.
 Сеть/handlers/Auth/bootstrap и финансовый E2E этим объединением не объявляются
 готовыми. Runtime provisioning/deployment не выполнялись.
+
+Свежая финансовая модель ML из PR #27 `49a7862` включается в ту же поставку.
+Два исходных endpoint сведены к одному Predict с явной версией модели;
+calendar replacement/components и empirical bands проверяются отдельно.
+Вероятность не откалибрована, Core worker/HTTP orchestration ещё не подключены.

@@ -9,10 +9,7 @@ from ml.v1 import forecast_pb2 as pb
 from ml.v1 import forecast_pb2_grpc as rpc
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--port", type=int, default=50051)
-    args = parser.parse_args()
+def example_request():
     request = pb.PredictRequest(
         horizon_days=30,
         model=pb.ModelContext(
@@ -40,6 +37,14 @@ def main():
             closing_balance_minor=balance,
             source=pb.DAY_SOURCE_OBSERVED,
         )
+    return request
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--port", type=int, default=50051)
+    args = parser.parse_args()
+    request = example_request()
     with grpc.insecure_channel(f"127.0.0.1:{args.port}") as channel:
         result = rpc.ForecastServiceStub(channel).Predict(request, timeout=3)
     assert len(result.days) == 30

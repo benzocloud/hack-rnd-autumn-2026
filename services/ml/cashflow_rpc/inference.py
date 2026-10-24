@@ -40,8 +40,8 @@ def _date(value):
     return parsed
 
 
-def forecast(request, pb):
-    """No I/O, training, future truth or mutable model selection."""
+def validate_request(request, pb, allow_reconstructed=False):
+    """Validate covered history without forecasting an unrequested financial path."""
     if not request.HasField("snapshot") or not request.HasField("model"):
         raise InvalidSnapshot("Snapshot and explicit model context are required")
     context = request.model
@@ -59,16 +59,12 @@ def forecast(request, pb):
         raise UnsupportedContext("mean_90 does not support a financial model configuration")
     s = request.snapshot
     if (
-        s.facts
-        or s.reconciliation_groups
-        or s.history_start
-        or s.purpose
-        or s.calendar_availability
-        or s.HasField("captured_at")
-        or s.balance_as_of
+        request.operations
+        or request.HasField("calendar")
+        or request.availability_limitations
         or any(day.quality_codes for day in s.history)
     ):
-        raise UnsupportedContext("mean_90 cannot process the supplied financial context")
+        raise UnsupportedContext("mean_90 cannot process financial context")
     for value in (s.snapshot_id, s.company_id, s.account_id):
         _uuid(value)
     if s.data_version == 0 or s.currency != "RUB":
@@ -96,10 +92,15 @@ def forecast(request, pb):
             raise InvalidSnapshot("Every history amount must be explicitly present")
         if raw.inflow_minor < 0 or raw.outflow_minor < 0:
             raise InvalidSnapshot("History flows must be nonnegative")
-        if raw.source not in (pb.DAY_SOURCE_OBSERVED, pb.DAY_SOURCE_VERIFIED_NO_OPERATIONS):
+        sources = {pb.DAY_SOURCE_OBSERVED, pb.DAY_SOURCE_VERIFIED_NO_OPERATIONS}
+        if allow_reconstructed:
+            sources.add(pb.DAY_SOURCE_RECONSTRUCTED_COVERED)
+        if raw.source not in sources:
             raise InvalidSnapshot("Unknown history coverage cannot become a zero-flow day")
         observed = raw.source == pb.DAY_SOURCE_OBSERVED
-        if not observed and (raw.inflow_minor or raw.outflow_minor):
+        if raw.source == pb.DAY_SOURCE_VERIFIED_NO_OPERATIONS and (
+            raw.inflow_minor or raw.outflow_minor
+        ):
             raise InvalidSnapshot("Verified no-operations day must have zero flows")
         delta = 0
         if history:
@@ -123,6 +124,13 @@ def forecast(request, pb):
         )
     if not history[-1].observed_balance or history[-1].balance != s.initial_balance_minor:
         raise InvalidSnapshot("Cutoff EOD must be observed and equal the initial balance")
+    return history, rounding
+
+
+def forecast(request, pb):
+    """No I/O, training, future truth or mutable model selection."""
+    history, rounding = validate_request(request, pb)
+    s, context = request.snapshot, request.model
     predictions = predict(history, request.horizon_days, MODEL_NAME)
     if any(not MIN_INT64 <= p.balance <= MAX_INT64 for p in predictions):
         raise InvalidSnapshot("Forecast balance exceeds signed int64 capacity")

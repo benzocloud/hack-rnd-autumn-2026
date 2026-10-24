@@ -73,8 +73,9 @@ The GBrain runtime statements below describe the old runner on 2026-10-22. The d
   configuration/seed context. Remove the unpublished separate financial RPC.
   Core owns model selection and freezes it with the job; API/browser do not
   choose an ML method. Product forecasts require a financial-capable model;
-  an empty calendar does not relax that requirement. The existing mean_90
-  implementation is only a limited baseline, not a full financial model.
+  an empty calendar does not relax that requirement. The mean_90_v1
+  profile is a limited baseline; the explicit mean_90_components_v1 profile
+  uses calendar_replacement_v1 for financial forecasts.
   Unsupported financial inputs/model versions must fail explicitly; no implicit
   fallback to baseline and no relabeling history-only output as a financial
   forecast. Missing probability is explicit and never a fabricated zero.

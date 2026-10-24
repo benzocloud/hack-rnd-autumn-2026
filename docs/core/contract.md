@@ -174,7 +174,8 @@ unmatch, forecast jobs/results/chart, scenarios и connectors. Их runtime-ре
 5. mTLS/Auth adapters, status mapping, запросы с чужим company/account, revoked
    member/CSRF/failure и lifecycle. Сборка схем этого не доказывает.
 6. Дневная подтверждённая coverage для ML, jobs/persistence и календарь без двойного
-   учёта. PR #27 — history-only baseline; не способен закрыть эти требования один.
+   учёта. Финансовый inference PR #27 уже поддерживает replacement; нужно подключить
+   его в Core worker и проверить состояние/границы покрытия.
 
 ## Генерация и проверка
 
@@ -219,7 +220,8 @@ ExpectedDataVersion=0 и обеих resource versions. Совместимост�
 Пустой календарь не меняет требования к финансовой модели. Core фиксирует выбор
 в job, API/браузер не выбирают метод. Неподдерживаемые данные/модель дают явную
 ошибку; автоматический fallback и подмена финансового расчёта baseline запрещены.
-Текущий mean_90 — ограниченный baseline; продуктовая модель ещё не реализована.
+mean_90_v1 — ограниченный baseline; mean_90_components_v1 уже реализует
+финансовый календарь, но worker/API/persistence и калиброванная вероятность ещё не готовы.
 Полная финансовая семантика: [ML contract](financial-ml.md).
 
 ## Полная передача Go API

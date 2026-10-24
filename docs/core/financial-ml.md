@@ -1,133 +1,127 @@
-# Единый ML Predict и финансовая семантика
+# Единый Predict: финансовая модель и baseline
 
-24.10.2026, ADR-029. Канонический RPC: `ml.v1.ForecastService/Predict` в
-`proto/ml/v1/forecast.proto`. Отдельного финансового endpoint нет. API вызывает
-Core ForecastingService, не ML; Core выбирает модель из серверной конфигурации,
-фиксирует model/preprocessing/configuration/seed и не изменяет их после enqueue.
-Пустой календарь не разрешает автоматический выбор исторического baseline.
+24.10.2026, ADR-029. Единственный ML RPC — `ml.v1.ForecastService/Predict`,
+канонический `proto/ml/v1/forecast.proto`. Сервер выбирает реализацию только по
+явно указанным model_name/model_version/preprocessing_version. Не по наличию
+календаря, не после ошибки, без автоматического fallback.
 
-## Реализация и целевой контракт
+## Доступные версии
 
-Работает только mean_90 / mean_90_v1 / daily_snapshot_v1: 90 подтверждённых дней,
-1–30 дней горизонта, history-only, без финансового календаря и вероятности.
-Он не реализует продуктовый финансовый прогноз. Переданный финансовый контекст
-(facts, groups, purpose/calendar, configuration, seed/trajectory settings или
-coverage warnings) отклоняется с FailedPrecondition, а не игнорируется. Неизвестная
-версия модели также даёт FailedPrecondition. Новые финансовые поля описывают
-**целевую** реализацию той же границы Predict, не готовность модели.
+| Назначение | model_name | model_version | preprocessing_version |
+| --- | --- | --- | --- |
+| Продуктовый финансовый расчёт | mean_90 | mean_90_components_v1 | calendar_replacement_v1 |
+| Явный baseline для оценки/теста | mean_90 | mean_90_v1 | daily_snapshot_v1 |
 
-Продуктовый job требует финансовую модель; если она не реализована/недоступна,
-Core не вызывает mean_90 вместо неё. Ошибка задачи должна объяснять недоступность.
-Baseline сохраняется внутри ML для тестов/оценки; существующий Go ML adapter
-проверяет этот ограниченный профиль. Его успешный smoke не закрывает P0.
-На данном этапе нет подтверждённого production-потребителя старого KnownPayment;
-до общего merge его зарезервированный DTO заменён нормализованным календарём.
+Финансовая реализация пришла из ML PR #27 head `49a7862`. Два исходных RPC
+сведены к одному Predict; численная логика replacement/компонентов/empirical
+bands сохранена. Ответ плоский: `days`, `components`, `uncertainty`, calendar IDs,
+classified_operations, history_evidence находятся в одном PredictResponse.
+Отдельного финансового service/endpoint/request/response больше нет.
 
-## Вход PredictRequest
+Core выбирает финансовую версию для пользовательского прогноза даже с пустым
+календарём и фиксирует полный model context в job. API не выбирает ML RPC/модель.
+Baseline rejects operations/calendar/availability_limitations/неподдерживаемые
+configuration/seed; неизвестная версия модели — FailedPrecondition. Никакого
+retry baseline при отказе финансовой версии. Общая цепочка Core worker → SQL →
+Go API пока не реализована; успешный ML RPC сам по себе не закрывает P0.
 
-- Snapshot/company/account — ненулевые canonical lowercase UUID, data_version
-  положительный и <=MaxInt64 для совместимости Core. Все amounts signed int64
-  копейки, currency=RUB. Потоки/обязательства положительные, EOD может быть <0.
-- `history_start..cutoff_date`: непрерывный список `history`, по одному дню;
-  модель определяет необходимую длину. DaySource OBSERVED означает принятый
-  фактический EOD; VERIFIED_NO_OPERATIONS — подтверждённое отсутствие операций.
-  PARTIAL/UNAVAILABLE не превращаются в нулевые потоки. Optional amounts
-  отсутствуют там, где неизвестны. Модель обязана явно отказать либо выдать
-  честно ограниченный результат, если поддерживает такую обработку.
-- `initial_balance_minor` присутствует, `balance_as_of=cutoff_date`, последний
-  EOD подтверждён. Для baseline эти новые metadata поля не передаются; его
-  существующие invariants сохранены. Запрещено переносить старый остаток через
-  неизвестные дни и приписывать реконструированным остаткам observed provenance.
-- `facts`: уникальные Core transaction UUID/version, дата, направление, сумма,
-  category UUID/semantic_kind, source. Facts ограничены историей/cutoff; даты
-  после cutoff запрещены. Их агрегаты должны совпадать с известными inflow/outflow
-  дневного покрытия. При полноте фактов повторяющийся EOD не суммируется.
-- `known_payments`: только planned/partially_matched, оставшаяся сумма >0,
-  дата в горизонте, уникальные payment UUID/version, category/source. Matched/
-  cancelled и полностью распределённые суммы исключаются. Просроченные
-  обязательства не переносятся на cutoff+1 молча: их дата/правило переноса
-  требуют явного решения Core, иначе ошибка/limitation.
-- `purpose` различает CURRENT_FORECAST и HISTORICAL_EVALUATION.
-  VERIFIED_CURRENT допускается только для текущего прогноза. Исторический тест
-  принимает только VERIFIED_AS_OF_CUTOFF; нынешние обязательства нельзя подмешать
-  в прошлый срез. UNAVAILABLE не означает пустой подтверждённый календарь.
-- `captured_at` — реальное UTC-время фиксации согласованного снимка. Snapshot
-  immutable; Core хранит его и достаточные provenance для воспроизведения.
-- `horizon_days`: продуктовый REST 30–90; точное поддерживаемое значение
-  проверяется выбранной моделью. Нельзя обрезать 90 до 30 или выбрать другую
-  модель. `configuration_id`, decimal seed и trajectory_count фиксируются
-  сервером, относятся к конкретной модели; неизвестные настройки отклоняются.
+## Вход
 
-## Устранение двойного учёта
+`PredictRequest`: snapshot, horizon_days, model, operations, calendar,
+availability_limitations. Snapshot identity/data_version/RUB совпадают с Core
+immutable snapshot. Суммы int64 копейки, UUID ненулевые canonical lowercase.
+Core ограничивает uint64 version значением MaxInt64 для совместимости с БД.
+`model.configuration_id` у финансовой версии пустой либо mean_90_components_v1;
+если seed/trajectory_count присутствуют, они точно равны 20261024/512. Это текущие
+закреплённые настройки, не автоматически применяемая произвольная конфигурация.
 
-Core передаёт явные reconciliation_groups для одного экономического потока:
+Финансовая версия сейчас требует **ровно 30 дней** горизонта и 90 полных дней
+истории. REST допускает 30–90; для неподдерживаемого горизонта явный отказ, нельзя
+усекать 90 до 30. История заканчивается cutoff, initial_balance_minor явно
+присутствует и соответствует принятому observed EOD именно cutoff.
 
-1. Historical transaction IDs уникальны, принадлежат снимку, встречаются не более
-   чем в одной группе. Помеченные recurrence_group_id соответствуют этой группе.
-2. Все факты группы исключаются из обучаемого unknown baseline. Будущая часть
-   группы представлена полным списком future_occurrences на весь горизонт.
-   `full_horizon_verified=true` обязателен. Пустой список допустим только с
-   проверенным no_future_occurrences_reason, не как отсутствие данных.
-3. Каждое occurrence добавляется один раз. Если указан payment_id, он должен
-   принадлежать known_payments, иметь ту же дату/направление/remaining_minor и
-   ту же группу. В текущем контракте один payment не дробится между occurrences.
-4. Негрупповой known payment требует `additional=true`, добавляется один раз
-   сверх unknown baseline и означает явно новое обязательство. У grouped
-   `additional=false`. Эти варианты взаимоисключающие; сходство даты/суммы не
-   выбирает вариант автоматически.
-5. Известная часть группы плюс её исторический средний расход не складываются.
-   Unknown baseline вычисляется только по оставшимся историческим движениям;
-   его суммы и все явные occurrences вместе формируют итоговые дневные потоки.
+DaySource OBSERVED — принятый EOD; VERIFIED_NO_OPERATIONS — подтверждённое
+отсутствие операций; RECONSTRUCTED_COVERED — вычисленный остаток при подтверждённом
+покрытии фактов, **не банковское наблюдение**. Baseline не принимает reconstructed.
+PARTIAL/UNAVAILABLE не заполняются нулями и текущими моделями не поддерживаются.
+Reference mapper `services/ml/cashflow_rpc/core_input.py` строит историю назад
+от принятого EOD, требует Coverage.start/end/reference. Это shape/reference check,
+а не доказательство полноты: Core обязан установить и сохранить его основание.
+Неизвестные промежутки, будущие факты и нерешённые дубли не маскируются.
 
-Не найденная/неполная группа, неизвестный payment/fact, дубликаты или несовпадение
-экономики — InvalidArgument либо FailedPrecondition при отсутствии поддержки,
-без частичного результата. Этот механизм пока контракт, не реализованный inference.
+operations содержит unique operation_id/date/version, одно положительное
+inflow/outflow, category_code/category_source (явный unknown допустим), regularity,
+category UUID/company и factual provenance. Суммы operations строго совпадают
+с дневными inflow/outflow. Лимит 20000 операций, 1000 calendar groups/payments,
+2 MiB transport: oversize явно отвергается, данные не усекаются.
 
-## Выход и обязанности Core
+## Календарь без двойного учёта
 
-Echo snapshot/company/account/data_version/cutoff/model совпадает **полностью**,
-включая configuration/seed/trajectory_count. `days` строго cutoff+1..+horizon,
-без пропусков/дубликатов, потоки неотрицательны, reference_balance вычисляется от
-initial_balance по целочисленной формуле без переполнений. Core перепроверяет
-метаданные, денежную арифметику, count/dates и first_negative_balance_date.
-Неправильный ответ не сохраняется как succeeded.
+FinancialCalendar хранит snapshot_id/data_version, knowledge_mode, дату знания,
+groups и payments. Версия одна с фактами. Known payment содержит positive version,
+original_due_date/effective_date и remaining, не полную исходную сумму после
+частичного match. Просроченное обязательство не переносится молча: effective_date
+должна быть явно определена Core и лежать в горизонте. Matched/cancelled исключаются.
 
-`components` объясняют сумму дневных потоков: уникальные component/occurrence IDs,
-source facts и known payment references из снимка. Нельзя выдавать непрозрачный
-unknown baseline за обнаруженные продажи/регулярность. UNCLASSIFIED_BASELINE
-не становится scenario_eligible. При проекции в REST он остаётся частью daily
-points и явно объяснённым допущением; REST components содержит только доступные
-в его enum объяснимые компоненты. Отсутствие объяснимого компонента выключает
-соответствующую scenario capability, не выдумывает ID для действий пользователя.
+- CURRENT допустим на cutoff или cutoff+1. Для следующего дня обязательно
+  no_post_cutoff_movements=true: Core подтверждает, что remaining не успел
+  измениться из-за факта после принятого EOD. Иначе нужен новый cutoff/bridge,
+  которого текущая модель не выдумывает.
+- HISTORICAL_AS_OF_CERTIFIED требует дату cutoff и подтверждённую историческую
+  доступность; сегодняшний календарь в backtest не передаётся.
+- UNAVAILABLE явно хранит identity фактов, пустые groups/payments/date и
+  historical_calendar_unavailable в limitations. Это ограниченный финансовый
+  расчёт **той же явно выбранной версии**, не переключение на baseline и не
+  утверждение, что календарь подтверждённо пуст. UI обязан показать limitation.
 
-`history_only_includes_recurring_flows=true` маркирует ограниченный baseline.
-Финансовая модель должна возвращать false и подтверждённую группировку; Core не
-принимает true как полноценный финансовый результат. Warnings/assumptions
-сохраняются и доходят до пользователя, включая неполное покрытие/календарь.
+CalendarGroup перечисляет historical_operation_ids и complete_for_horizon=true.
+Исторические операции группы исключаются из среднего residual baseline; её
+future remaining добавляются один раз. Полная группа без платежей означает
+явно подтверждённое отсутствие будущего потока. Для нового обязательства без
+исторических операций additional_obligation_confirmed=true обязателен. Пересечения,
+неизвестные/повторные IDs, несовместимые суммы/даты отвергаются. Сходство суммы
+или даты не выбирает replacement. Все проверки выполняет ML повторно; Core
+отвечает за истинность входных утверждений и сохранённый снимок.
 
-Probability — oneof: calibrated estimate (finite [0,1] + calibration_version +
-evaluation_reference) либо unavailable_reason. Допустимые причины: not_estimated,
-not_calibrated, insufficient_history, incomplete_coverage. Ноль — только реальная
-оценка, confidence правила не вероятность. Core переводит в REST Probability
-{value, unavailable_reason} с явным null противоположной ветки. Для baseline
-вероятность всегда not_estimated. Интервалы обеими границами либо отсутствуют,
-finite integral lower<=upper; отсутствие интервала не подменяется balance.
+## Выход и Core → REST
 
-Сценарии применяет Core к неизменяемому базовому результату и его occurrences.
-Если вероятностная оценка после преобразования не пересчитана обоснованно,
-возвращать unavailable_reason, а не копировать вероятность исходной базы.
-Сравнение использует один snapshot/model/seed и те же условия. Stress + response
-наследует весь stress; суммы/occurrence IDs повторно не учитываются.
+Core проверяет весь echo snapshot/company/account/version/cutoff/model,
+30 последовательных дат cutoff+1..+30, nonnegative потоки, exact signed int64
+balance(t)=balance(t−1)+in−out и first_negative_balance_date. Переполнение/
+невалидный ответ не сохраняется как succeeded. Reference mapper verify_response
+показывает независимую проверку; не заменяет Go adapter/runtime тесты.
 
-## Транспорт и ошибки
+components содержит суммы по category/source/regularity, известные платежи и
+residual mean_90_uncovered. HistoryGroupEvidence позволяет проверить source_ids.
+Classified_operations сохраняет происхождение классификации и scope категорий;
+это не подтверждение прав пользователя. Calendar echo и список replaced IDs
+позволяют проверить отсутствие повторного учёта.
 
-В реализации baseline: mTLS с разрешённым DNS SAN Core, deadline <=30 секунд,
-2 MiB, 2 потока/4 concurrent RPC; негативные mTLS-тесты проверяют отказ чужому
-peer. Эти параметры не объявляют production PKI настроенной. Расширенные снимки
-должны укладываться в явно настроенный бюджет сообщений; oversized даёт
-ResourceExhausted, без усечения facts/history. API не имеет прямого ML-доступа.
+Residual mean_90_uncovered не выдаётся за обнаруженную регулярность/продажи и не
+становится eligible target сценария. Core проецирует в REST только объяснимые
+known_payment/ML sales/recurring components с обоснованной семантикой; остальное
+остаётся в дневных суммах и assumptions. Нельзя выдумывать REST kind/ID ради
+сценария. При отсутствии подходящих components capability=false. Полный wire
+component имеет category_code и source IDs, а не готовый REST enum/discriminator.
 
-InvalidArgument — неверные суммы/даты/coverage/дубликаты/ссылки/overflow;
-FailedPrecondition — модель/параметры/финансовая семантика не поддержаны;
-Unavailable — зависимость недоступна; ResourceExhausted — лимит; Canceled /
-DeadlineExceeded — прерывание. Автоматический retry другой моделью запрещён.
+uncertainty: paired moving-block bootstrap, 512 совместных 7-дневных блоков,
+seed=20261024, эмпирические 0.1/0.9 bands. Они **не откалиброваны** и не являются
+вероятностью разрыва. calibrated=false, unavailable reason обязателен.
+ForecastDay.balance_lower/upper остаются пустыми, пока Core не принимает
+интерпретацию empirical bands для публичного UI с явной маркировкой.
+Probability oneof: baseline not_estimated, финансовая версия not_calibrated;
+API выдаёт value:null и reason, а не 0%. Поддержка calibrated estimate в DTO —
+цель, не результат текущей модели. ТЗ по вероятности остаётся открытым.
+
+Исторический snapshot/модель/результат immutable; current_data_version только
+помечает stale. Сценарий не меняет Ledger/Payments. Stress + response наследует
+весь stress. Не пересчитанная вероятность сценария недоступна, не копируется
+из исходной базы. Сравнения требуют одинаковый snapshot/model/seed.
+
+## Транспорт
+
+mTLS с allowlist Core SAN, deadline <=30s, 2 MiB, 2 workers/4 concurrent RPC.
+Неверный peer — PermissionDenied; handshake — Unavailable. InvalidArgument —
+неверные даты/суммы/coverage/ссылки/overflow; FailedPrecondition — неизвестная
+версия/конфигурация или неподдерживаемая финансовая семантика. Отмена/timeout
+не создают успешный частичный прогноз. Рабочая PKI/deployment не проверены.
