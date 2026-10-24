@@ -39,14 +39,23 @@
 
 
 - **ADR-026 (Accepted, 2026-10-24):** Owner selected feature-local application results in `internal/service/ledger` and `internal/service/payments` instead of a universal `command.Result`. Each operation declares its own result with explicit ID/version semantics; balance observations return their date/data version without a synthetic UUID. Remove the shared `service/command` package: ActorID/IdempotencyKey are explicit command fields, validation/errors stay feature-local, unused speculative shared errors are removed. These are application DTOs, not domain entities or REST/protobuf response schemas. Input/output types live beside their operation; transport and persisted representations require their own mapping. This approves the design correction, not completion of stage 2.3 or publication.
+- **ADR-027 (Accepted by owner for stage 3.2, 2026-10-24):** [Приватный Auth и серверное управление доступом](adr/027-auth-contract.md).
+  After corrections/review of PR #17, the owner explicitly requested implementation
+  of stage 3.2. This approves the Auth contract/tooling baseline; it does not assert
+  completed Core/API integration or approve stages 3.3–3.6.
+  Renumbered from 026 after checking the parallel Core registry, where 026
+  already identifies feature-local application DTOs. The original acceptance
+  and stage gates remain unchanged; this is not an approval of a new stage.
 
 ## Pending verification (not accepted implementation facts)
-- GBrain runtime on compatible hardware, authenticated endpoint, persistence/restore and actual server-enforced reviewer write denial. Selected source documents scoped tokens and MCP; configuration remains untested.
+- Encrypted off-host GBrain backup retention and connection of the existing review runner remain open; dedicated-host runtime, HTTPS authentication, persistence/restore and server-enforced reviewer write denial passed on 2026-10-23 (see `.agent/infra/gbrain/README.md`).
 - Full Go/gopls and GBrain/PR compatibility of pinned review skills; trusted fixture invocation succeeded separately from end-to-end review.
 - Codex CLI ChatGPT Plus unattended session renewal, current terms and rate limits under this team's server/CI conditions. Owner selected a Plus pilot; API billing is not configured.
 - Proto generation configuration, CI triggers, deployment secrets and branch rules.
 
 ## Implementation observations (2026-10-22; not new ADRs)
+
+The GBrain runtime statements below describe the old runner on 2026-10-22. The dedicated host deployed on 2026-10-23 supersedes that rollout deferral under ADR-023; see `.agent/infra/gbrain/README.md` for current checks.
 
 - Owner identified `runner.brokebyte.me` as a test host and authorized installation while explicitly prohibiting changes to its Fadwix infrastructure. It is not an isolated untrusted-PR execution environment yet.
 - Codex CLI 0.163.0 authenticated as dedicated `hackrnd-review` through the owner's ChatGPT Plus subscription using Brave and an SSH callback forward. Login status and actual noninteractive inference succeeded. Read-only command sandbox allowed reads and denied writes.

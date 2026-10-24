@@ -1,0 +1,111 @@
+name: Auth CI
+
+on:
+  pull_request:
+    paths: ['services/auth/**', '.github/workflows/auth-ci.yml', 'LICENSE']
+  push:
+    branches: [main]
+    paths: ['services/auth/**', '.github/workflows/auth-ci.yml', 'LICENSE']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auth-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+    working-directory: services/auth
+
+jobs:
+  lint:
+    name: Auth lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: services/auth/go.mod
+          cache: false
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.15.0
+          working-directory: services/auth
+          install-only: true
+          skip-cache: true
+      - name: Check formatting and imports in every Go file
+        run: |
+          mapfile -d '' go_files < <(git ls-files -z -- '*.go')
+          test "${#go_files[@]}" -gt 0
+          golangci-lint fmt --diff "${go_files[@]}"
+      - name: Vet all packages including integration tests
+        run: go vet -tags=integration ./...
+      - name: Lint all packages including integration tests
+        run: golangci-lint run ./...
+
+  test:
+    name: Auth tests
+    needs: lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:18.6@sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6
+        env:
+          POSTGRES_USER: auth_test
+          POSTGRES_PASSWORD: auth_test
+          POSTGRES_DB: auth_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U auth_test -d auth_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: services/auth/go.mod
+          cache: false
+      - name: Run unit tests with the race detector
+        run: go test -race -shuffle=on -count=1 -timeout=90s ./...
+      - name: Run PostgreSQL integration tests with the race detector
+        env:
+          AUTH_TEST_DATABASE_URL: postgres://auth_test:auth_test@127.0.0.1:5432/auth_test?sslmode=disable
+        run: go test -race -tags=integration -shuffle=on -count=1 -timeout=90s ./...
+
+  build:
+    name: Auth build
+    needs: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: services/auth/go.mod
+          cache: false
+      - name: Verify module files
+        run: |
+          go mod tidy
+          changes="$(git status --porcelain -- go.mod go.sum)"
+          if [[ -n "$changes" ]]; then
+            printf '%s\n' "$changes"
+            echo 'Run go mod tidy and commit the module files.' >&2
+            exit 1
+          fi
+      - name: Build Auth packages
+        run: go build ./...
+      - name: Check reachable vulnerabilities
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
