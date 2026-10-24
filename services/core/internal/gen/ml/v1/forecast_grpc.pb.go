@@ -27,9 +27,8 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
 // Private Core -> ML interface. Core owns authorization, a consistent input
-// snapshot, persistence and authoritative balance/risk calculations. One RPC
-// serves explicitly versioned models (ADR-029); unsupported financial inputs
-// must fail, never silently select the history-only baseline.
+// snapshot, persistence and authoritative balance/risk calculations. Single
+// RPC, pinned model version; no implicit baseline fallback (ADR-029).
 type ForecastServiceClient interface {
 	Predict(ctx context.Context, in *PredictRequest, opts ...grpc.CallOption) (*PredictResponse, error)
 }
@@ -57,9 +56,8 @@ func (c *forecastServiceClient) Predict(ctx context.Context, in *PredictRequest,
 // for forward compatibility.
 //
 // Private Core -> ML interface. Core owns authorization, a consistent input
-// snapshot, persistence and authoritative balance/risk calculations. One RPC
-// serves explicitly versioned models (ADR-029); unsupported financial inputs
-// must fail, never silently select the history-only baseline.
+// snapshot, persistence and authoritative balance/risk calculations. Single
+// RPC, pinned model version; no implicit baseline fallback (ADR-029).
 type ForecastServiceServer interface {
 	Predict(context.Context, *PredictRequest) (*PredictResponse, error)
 	mustEmbedUnimplementedForecastServiceServer()

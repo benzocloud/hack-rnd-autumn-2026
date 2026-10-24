@@ -7,6 +7,7 @@ import grpc
 from ml.v1 import forecast_pb2 as pb
 from ml.v1 import forecast_pb2_grpc as rpc
 
+from .financial import FINANCIAL_VERSION, financial_forecast
 from .inference import InvalidSnapshot, UnsupportedContext, forecast
 
 
@@ -16,6 +17,14 @@ class ForecastService(rpc.ForecastServiceServicer):
         self.insecure_local = insecure_local
 
     def Predict(self, request, context):
+        compute = (
+            (lambda r: financial_forecast(r, pb))
+            if request.model.model_version == FINANCIAL_VERSION
+            else (lambda r: forecast(r, pb))
+        )
+        return self._compute(request, context, compute)
+
+    def _compute(self, request, context, compute):
         if not self.insecure_local:
             auth = context.auth_context()
             names = auth.get("x509_subject_alternative_name", ())
@@ -31,7 +40,7 @@ class ForecastService(rpc.ForecastServiceServicer):
         if not context.is_active():
             context.abort(grpc.StatusCode.CANCELLED, "Request cancelled")
         try:
-            result = forecast(request, pb)
+            result = compute(request)
         except InvalidSnapshot as exc:
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))
         except UnsupportedContext as exc:

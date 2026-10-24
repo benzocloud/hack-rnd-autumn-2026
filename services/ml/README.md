@@ -13,6 +13,11 @@
 [контракт, генерация, запуск и ограничения](GRPC_CONTRACT.md).
 Сам Core ещё не подключён; CLI evaluation остаётся исследовательским запуском.
 
+Для worker внутри Go Core добавлен FinancialForecastService/PredictFinancial:
+30 дней mean_90, явный календарь с заменой исторических компонент и объяснения.
+Worker общается с ML по gRPC; REST/BFF в этом стыке не участвует.
+[Подключение worker](CORE_CONNECTION.md), [проверка на C089](DATASET_RPC_RESULTS.md).
+
 ## Данные
 
 По умолчанию ожидаются `data/cashflow/raw/companies.csv` и `all_operations.csv`.
@@ -307,8 +312,12 @@ baseline и 1 232 среза проверяются перед сравнени�
 Canonical контракт — `proto/ml/v1/forecast.proto`, приватный
 `ml.v1.ForecastService/Predict`. Вход — согласованный Core snapshot за 90 дней,
 дневные суммы в копейках, observed EOD на cutoff и явные версии. Ответ —
-1..30 дневных прогнозов mean_90. Непустой known_payments отклоняется до
-согласования устранения двойного учёта. Вероятность разрыва не рассчитывается.
+Два явно версионированных профиля одного RPC: baseline mean_90_v1 (1..30 дней)
+и финансовый mean_90_components_v1/calendar_replacement_v1 (ровно 30 дней).
+Финансовый профиль принимает operations/calendar с remaining и replacement,
+возвращает компоненты и empirical bands; baseline финансовый контекст отклоняет.
+Вероятность не откалибрована и не превращается в ноль. Выбор по model_version,
+не по наличию календаря; автоматический fallback запрещён.
 
 ```powershell
 .venv/Scripts/python.exe -m pip install -r services/ml/requirements-rpc-dev.txt
