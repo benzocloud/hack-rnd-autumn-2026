@@ -9,6 +9,8 @@ import (
 type store interface {
 	transactionStore
 	balanceStore
+	readStore
+	manualTransactionStore
 }
 type commandStore interface {
 	Reserve(context.Context, domain.Scope, string, string, string, string, []byte) ([]byte, bool, error)

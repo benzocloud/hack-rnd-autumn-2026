@@ -15,6 +15,7 @@ import (
 	forecastSQL "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/repository/postgres/forecasting"
 	ledgerSQL "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/repository/postgres/ledger"
 	paymentsSQL "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/repository/postgres/payments"
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/company"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/forecasting"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/ledger"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/payments"
@@ -23,6 +24,9 @@ import (
 type ledgerOperations interface {
 	CreateTransaction(context.Context, ledger.TransactionCommand) (ledger.CreateTransactionResult, error)
 	RecordBalance(context.Context, ledger.BalanceCommand) (ledger.RecordBalanceResult, error)
+	ReadAccount(context.Context, ledgerDomain.Scope, ledgerDomain.Date) (ledger.ReadAccountResult, error)
+	RecordManualBalance(context.Context, ledger.ManualBalanceCommand) (ledger.RecordManualBalanceResult, error)
+	CreateManualTransaction(context.Context, ledger.ManualTransactionCommand) (ledger.CreateManualTransactionResult, error)
 }
 
 type paymentsOperations interface {
@@ -36,21 +40,35 @@ type forecastingOperations interface {
 }
 
 type application struct {
-	Ledger      ledgerOperations
-	Payments    paymentsOperations
-	Forecasting forecastingOperations
-	db          *sqlx.DB
+	Companies    companyOperations
+	Ledger       ledgerOperations
+	Payments     paymentsOperations
+	Forecasting  forecastingOperations
+	ForecastJobs forecastJobs
+	db           *sqlx.DB
 }
 
 // New owns the opened pool. Call Close after operations have finished.
 // Migrations and transports are intentionally separate from application construction.
 func New(ctx context.Context, cfg config.Config) (*application, error) {
+	return NewWithCompanyAuthorizer(ctx, cfg, nil)
+}
+
+// NewWithCompanyAuthorizer binds the trusted Auth adapter supplied by runtime.
+// The authorizer runs before opening a bootstrap transaction, including replay.
+func NewWithCompanyAuthorizer(ctx context.Context, cfg config.Config, authorize func(context.Context, uuid.UUID, uuid.UUID, string) (company.Authorization, error)) (*application, error) {
+	return NewWithForecastModel(ctx, cfg, authorize, nil)
+}
+
+func NewWithForecastModel(ctx context.Context, cfg config.Config, authorize func(context.Context, uuid.UUID, uuid.UUID, string) (company.Authorization, error), model financialPredictor) (*application, error) {
 	db, err := appPostgres.Open(ctx, cfg.Postgres)
 	if err != nil {
 		return nil, err
 	}
 	return &application{
-		db: db,
+		db:           db,
+		Companies:    newCompanies(db, cfg.Postgres, authorize),
+		ForecastJobs: newForecastJobs(db, cfg.Postgres, model),
 		Ledger: ledger.New(func(ctx context.Context, work ledger.Work) error {
 			err := appPostgres.WithinTx(ctx, db, cfg.Postgres.QueryTimeout, func(ctx context.Context, tx *sqlx.Tx) error {
 				return work(ctx, ledgerSQL.New(tx), commandsSQL.New(tx))

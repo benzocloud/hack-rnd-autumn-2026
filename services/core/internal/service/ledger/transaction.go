@@ -85,6 +85,13 @@ func createTransaction(ctx context.Context, store transactionStore, cmd Transact
 	if err != nil {
 		return CreateTransactionResult{}, err
 	}
+	return createTransactionOnAccount(ctx, store, account, cmd, record)
+}
+
+func createTransactionOnAccount(ctx context.Context, store transactionStore, account *domain.BankAccount, cmd TransactionCommand, record domain.Transaction) (CreateTransactionResult, error) {
+	if account == nil || account.Scope() != record.Data().Scope {
+		return CreateTransactionResult{}, ErrUnavailable
+	}
 	if record.Data().Source.Kind == domain.Imported {
 		stored, revision, found, err := store.FindTransaction(ctx, record.Data().Scope, uuid.Nil, record.Data().Source)
 		if err != nil {
