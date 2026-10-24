@@ -5,6 +5,7 @@ import random
 from collections import defaultdict
 from datetime import timedelta
 
+from . import trained_pool
 from .inference import (
     MAX_INT64,
     MIN_INT64,
@@ -68,7 +69,10 @@ def empirical_bands(history, known, initial, horizon):
 
 
 def financial_forecast(request, pb):
-    if not request.HasField("model") or (
+    learned = None
+    if request.model.model_version == trained_pool.MODEL_VERSION:
+        learned = trained_pool.validate_context(request)
+    elif not request.HasField("model") or (
         request.model.model_name,
         request.model.model_version,
         request.model.preprocessing_version,
@@ -76,7 +80,7 @@ def financial_forecast(request, pb):
         raise UnsupportedContext("Requested financial model context is unavailable")
     model = request.model
     if (
-        model.configuration_id not in ("", "mean_90_components_v1")
+        (learned is None and model.configuration_id not in ("", "mean_90_components_v1"))
         or (model.HasField("random_seed") and model.random_seed != str(SEED))
         or (model.HasField("trajectory_count") and model.trajectory_count != SCENARIOS)
     ):
@@ -224,6 +228,12 @@ def financial_forecast(request, pb):
             known_components[-1].category_company_id = payment.category_company_id
     # Non-covered history is the only source of baseline and bootstrap residuals.
     residual = {raw.date: [0, 0] for raw in s.history}
+    # At the fitted mean_90 corner the algebra is identical: reuse allocation,
+    # without 30 unnecessary per-category feature maps. This is not fallback.
+    uses_pool_features = learned is not None and any(
+        values != [4, 0, 0] for values in learned["weights"].values()
+    )
+    category_residual = {raw.date: {} for raw in s.history} if uses_pool_features else None
     totals = [defaultdict(int), defaultdict(int)]
     source_groups = defaultdict(list)
     for identifier, op in operations.items():
@@ -238,10 +248,22 @@ def financial_forecast(request, pb):
         )
         residual[op.date][0] += op.inflow_minor
         residual[op.date][1] += op.outflow_minor
+        if category_residual is not None:
+            pair = category_residual[op.date].setdefault(key, [0, 0])
+            pair[0] += op.inflow_minor
+            pair[1] += op.outflow_minor
         totals[0][key] += op.inflow_minor
         totals[1][key] += op.outflow_minor
         source_groups[key].append(identifier)
     allocated = [allocate(t) for t in totals]
+    daily_allocations = (
+        [allocated] * 30
+        if category_residual is None
+        else trained_pool.predict_allocations(
+            [(_date(raw.date), category_residual[raw.date]) for raw in s.history],
+            learned["weights"],
+        )
+    )
     result = pb.PredictResponse(
         calendar_snapshot_id=calendar.snapshot_id,
         calendar_data_version=calendar.data_version,
@@ -282,6 +304,7 @@ def financial_forecast(request, pb):
     )
     balance = s.initial_balance_minor
     for step in range(30):
+        allocated = daily_allocations[step]
         day = (cutoff + timedelta(days=step + 1)).isoformat()
         incoming = checked(sum(allocated[0].values()) + known[step][0])
         outgoing = checked(sum(allocated[1].values()) + known[step][1])
@@ -300,7 +323,7 @@ def financial_forecast(request, pb):
                     category_code=key[0],
                     inflow_minor=inc,
                     outflow_minor=out,
-                    kind="mean_90_uncovered",
+                    kind="mean_90_uncovered" if learned is None else "linear_pool_uncovered",
                     source_ids=[evidence_ids[key]],
                     regularity_key=key[2],
                     category_id=key[3] if key[3] else None,
@@ -325,6 +348,10 @@ def financial_forecast(request, pb):
             "Nominal empirical quantiles are not validated coverage or whole-horizon gap probability.",
         ]
     )
+    if learned is not None:
+        result.uncertainty.assumptions.append(
+            "Point flows use pinned learned convex weights; bands resample uncovered history, not calibrated model errors."
+        )
     bands = empirical_bands(
         [residual[r.date] for r in s.history], known, s.initial_balance_minor, 30
     )

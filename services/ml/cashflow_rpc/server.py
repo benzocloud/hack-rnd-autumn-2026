@@ -9,6 +9,7 @@ from ml.v1 import forecast_pb2_grpc as rpc
 
 from .financial import FINANCIAL_VERSION, financial_forecast
 from .inference import InvalidSnapshot, UnsupportedContext, forecast
+from .trained_pool import MODEL_VERSION as TRAINED_VERSION
 
 
 class ForecastService(rpc.ForecastServiceServicer):
@@ -19,7 +20,7 @@ class ForecastService(rpc.ForecastServiceServicer):
     def Predict(self, request, context):
         compute = (
             (lambda r: financial_forecast(r, pb))
-            if request.model.model_version == FINANCIAL_VERSION
+            if request.model.model_version in (FINANCIAL_VERSION, TRAINED_VERSION)
             else (lambda r: forecast(r, pb))
         )
         return self._compute(request, context, compute)

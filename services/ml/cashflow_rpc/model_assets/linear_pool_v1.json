@@ -1,0 +1,22 @@
+{
+  "algorithm": "convex_flow_pool_quarters_v1",
+  "schema_version": 1,
+  "seed": 20261024,
+  "source_sha256": {
+    "all_operations.csv": "28d7a2ebc6d4d65f31f93e59e24659a04c76990d20833337b9351316fd445472",
+    "companies.csv": "0669f211a241ce6e38bb0fd373ea1d84a5a17cfab3833741662382c0669c2cd6"
+  },
+  "trained_through": "2025-09-30",
+  "weights": {
+    "inflow": [
+      4,
+      0,
+      0
+    ],
+    "outflow": [
+      4,
+      0,
+      0
+    ]
+  }
+}
