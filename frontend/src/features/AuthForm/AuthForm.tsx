@@ -9,7 +9,9 @@ import { useDispatch, useSelector } from "react-redux";
 import { getEmailVerificationMode, type EmailVerificationMode } from "@/helpers/emailVerificationMode";
 import getErrorMessage from "@/helpers/getErrorMessage";
 import { showErrorSnackbar, showSuccessSnackbar } from "@/helpers/snackbar";
-import validateAuthForm from "@/helpers/validateAuthForm";
+import { getAuthFieldErrors } from "@/helpers/validateAuthForm";
+import { getFieldErrors, type FieldErrors } from "@/helpers/fieldErrors";
+import ValidatedForm from "@/widgets/ValidatedForm/ValidatedForm";
 import type { AuthMode, IPersonalDataConsentDocument, VerificationPurpose } from "@/interfaces";
 import { authService } from "@/service";
 import { clearAuthUser, setAuthUser, setVerificationChallenge, setVerificationEmail } from "@/store/authSlice";
@@ -46,6 +48,7 @@ const buttons: Record<AuthMode, string> = {
 
 const AuthForm = ( { mode, verificationPurpose = "register", resetToken = "" }: IProps ) => {
     const [ busy, setBusy ] = useState(false);
+    const [ fieldErrors, setFieldErrors ] = useState<FieldErrors>({});
     const [ resendBusy, setResendBusy ] = useState(false);
     const [ consentDocument, setConsentDocument ] = useState<IPersonalDataConsentDocument | null>(null);
     const [ consentFailed, setConsentFailed ] = useState(false);
@@ -160,14 +163,6 @@ const AuthForm = ( { mode, verificationPurpose = "register", resetToken = "" }: 
         const password = String(form.get("password") || "");
         const displayName = [ form.get("first_name"), form.get("last_name") ].map(( value ) => String(value || "").trim()).join(" ").trim();
 
-        const validationError = validateAuthForm(mode, form);
-
-        if (validationError) {
-            showErrorSnackbar(validationError);
-
-            return;
-        }
-
         if (isRegister && !consentDocument) {
             showErrorSnackbar("Дождитесь загрузки актуального текста согласия.");
             return;
@@ -277,6 +272,8 @@ const AuthForm = ( { mode, verificationPurpose = "register", resetToken = "" }: 
                 router.replace("/login");
             }
         } catch (error: unknown) {
+            setFieldErrors(getFieldErrors(error));
+
             if (isCode && verificationPurpose === "register" && axios.isAxiosError(error) && error.response?.status === 401) {
                 router.replace("/login");
             }
@@ -335,7 +332,7 @@ const AuthForm = ( { mode, verificationPurpose = "register", resetToken = "" }: 
                 { (isRegister || verifiesEmail) && emailVerificationMode === "loading" && <p className={styles.description} role="status">Загружаем режим подтверждения…</p> }
                 { (isRegister || verifiesEmail) && emailVerificationMode === "unavailable" && <div className={styles.modeError} role="status"><p>Не удалось получить режим подтверждения.</p><button className={styles.link} type="button" onClick={() => { setEmailVerificationMode("loading"); void loadVerificationMode(); }}>Повторить загрузку</button></div> }
 
-                <form className={styles.form} onSubmit={submit} noValidate aria-busy={busy}>
+                <ValidatedForm className={styles.form} onSubmit={submit} validate={( form ) => getAuthFieldErrors(mode, form)} request={{ fieldErrors, clearFieldError: ( name ) => setFieldErrors(( current ) => name ? Object.fromEntries(Object.entries(current).filter(( [ field ] ) => field !== name)) : {}) }} aria-busy={busy}>
                     <fieldset className={styles.fields} disabled={busy}>
                         <legend className={styles.hidden}>Данные аккаунта</legend>
 
@@ -375,7 +372,7 @@ const AuthForm = ( { mode, verificationPurpose = "register", resetToken = "" }: 
                     ) }
 
                     <AuthButton type="submit" loading={busy} disabled={(isRegister && !consentDocument) || verificationModeUnavailable}>{ buttons[mode] }</AuthButton>
-                </form>
+                </ValidatedForm>
 
                 { isLogin ? (
                     <div className={styles.links}>

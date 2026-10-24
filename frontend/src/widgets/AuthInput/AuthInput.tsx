@@ -2,6 +2,8 @@
 
 import { useState, type InputHTMLAttributes, type Ref } from "react";
 
+import { useFieldError } from "../ValidatedForm/ValidatedForm";
+
 import styles from "./style.module.scss";
 
 
@@ -15,6 +17,7 @@ interface IProps extends InputHTMLAttributes<HTMLInputElement> {
 
 const AuthInput = ( { label, name, id = `auth-${name}`, showLabel = false, type = "text", ...props }: IProps ) => {
     const [ visible, setVisible ] = useState(false);
+    const error = useFieldError(name);
     const isPassword = type === "password";
     const passwordLabel = name === "confirm_password" ? "подтверждение пароля" : "пароль";
 
@@ -23,7 +26,8 @@ const AuthInput = ( { label, name, id = `auth-${name}`, showLabel = false, type 
         <div className={styles.field}>
             <label className={showLabel ? styles.visibleLabel : styles.label} htmlFor={id}>{ label }</label>
             <div className={styles.control}>
-                <input {...props} className={`${styles.input} ${isPassword ? styles.password : ""}`} id={id} name={name} type={isPassword && visible ? "text" : type} placeholder={props.placeholder || label} />
+                <input {...props} aria-invalid={Boolean(error) || undefined} aria-describedby={error ? `${id}-error` : props["aria-describedby"]} className={`${styles.input} ${isPassword ? styles.password : ""}`} id={id} name={name} type={isPassword && visible ? "text" : type} placeholder={props.placeholder || label} />
+                { error && <span className={styles.label} id={`${id}-error`}>{ error }</span> }
 
                 { isPassword && (
                     <button
