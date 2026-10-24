@@ -1,0 +1,80 @@
+package ledger_test
+
+import (
+	"errors"
+	"testing"
+
+	"github.com/google/uuid"
+
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
+)
+
+func TestAccountSourceBindings(t *testing.T) {
+	t.Parallel()
+	scope := ledger.Scope{CompanyID: uuid.MustParse("019a0c65-9800-7000-8000-000000000001"), AccountID: uuid.MustParse("019a0c65-9800-7000-8000-000000000002")}
+	account, err := ledger.NewBankAccount(scope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := account.BindSupplemental(ledger.Namespace{System: "one_c", CompanyID: "C001"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := account.BindSupplemental(ledger.Namespace{System: "one_c", CompanyID: "C002"}); !errors.Is(err, ledger.ErrBinding) {
+		t.Fatalf("different external company accepted: %v", err)
+	}
+	manual := ledger.Source{Kind: ledger.Manual}
+	if err := account.BindFacts(manual); err != nil {
+		t.Fatalf("supplemental binding chose factual authority: %v", err)
+	}
+	if err := account.BindFacts(importSource("dataset_v1", "C001", "TX1")); !errors.Is(err, ledger.ErrSourceConflict) {
+		t.Fatalf("external history mixed with manual: %v", err)
+	}
+	if err := account.BindFacts(manual); err != nil {
+		t.Fatalf("repeated authority rejected: %v", err)
+	}
+	if account.DataVersion() != 1 {
+		t.Fatal("binding unexpectedly changed data version")
+	}
+	if err := account.AdvanceDataVersion(); err != nil || account.DataVersion() != 2 {
+		t.Fatalf("revision: %v", err)
+	}
+	other, err := ledger.NewBankAccount(scope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, source := range []ledger.Source{importSource("dataset_v1", "C001", "TX1"), importSource("dataset_v1", "C001", "TX2")} {
+		if err := other.BindFacts(source); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, source := range []ledger.Source{manual, importSource("dataset_v1", "C002", "TX3"), importSource("bank", "C001", "TX4")} {
+		if err := other.BindFacts(source); !errors.Is(err, ledger.ErrSourceConflict) {
+			t.Fatalf("source switch accepted: %v", err)
+		}
+	}
+}
+
+func TestStatementFactsBindingValidation(t *testing.T) {
+	t.Parallel()
+	scope := ledger.Scope{CompanyID: uuid.New(), AccountID: uuid.New()}
+	account, err := ledger.NewBankAccount(scope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := account.BindStatementFacts(ledger.Namespace{}); !errors.Is(err, ledger.ErrInvalid) {
+		t.Fatalf("invalid namespace: %v", err)
+	}
+	if err := account.BindSupplemental(ledger.Namespace{System: "bank", CompanyID: "C001"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := account.BindStatementFacts(ledger.Namespace{System: "bank", CompanyID: "C002"}); !errors.Is(err, ledger.ErrBinding) {
+		t.Fatalf("changed company: %v", err)
+	}
+	// Failed statement binding must not partially claim factual authority.
+	if err := account.BindFacts(ledger.Source{Kind: ledger.Manual}); err != nil {
+		t.Fatal(err)
+	}
+	if err := account.BindStatementFacts(ledger.Namespace{System: "bank", CompanyID: "C001"}); !errors.Is(err, ledger.ErrSourceConflict) {
+		t.Fatalf("manual history mixed with statement: %v", err)
+	}
+}

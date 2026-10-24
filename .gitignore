@@ -1,9 +1,22 @@
 # Local reference checkouts linked from this workspace.
 /references/
 
+# Participant data and generated ML results remain local.
+/data/cashflow/
+/dataset/
+/services/ml/artifacts/
+
 # Local agent skills.
 /.agent/skills/
+/.agents/skills/
 /skills-lock.json
+
+# Private local MCP configuration and credentials.
+/.codex/config.toml
+/.agent/local/
+
+# macOS directory metadata.
+.DS_Store
 
 # Local expert questions; keep outside published plans.
 /.agent/plans/case-expert-questions.md
@@ -14,6 +27,13 @@
 __pycache__/
 *.py[cod]
 
-# Private local MCP configuration and credentials.
-/.codex/config.toml
-/.agent/local/
+# Next.js and local environment.
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+.env*
+!.env.example
+npm-debug.log*

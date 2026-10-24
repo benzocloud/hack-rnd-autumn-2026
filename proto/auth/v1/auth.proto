@@ -1,0 +1,432 @@
+syntax = "proto3";
+
+package auth.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/gen/auth/v1;authv1";
+
+// AuthService is private. The authenticated mTLS peer determines the service's
+// permissions; a request field can never select a service identity or user role.
+// Stage 3.1 defines the contract, not a running server. See docs/auth/contract.md.
+service AuthService {
+  rpc GetPersonalDataConsent(GetPersonalDataConsentRequest) returns (GetPersonalDataConsentResponse);
+  rpc GetSecurityContext(GetSecurityContextRequest) returns (GetSecurityContextResponse);
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse);
+  rpc ResendVerification(ResendVerificationRequest) returns (ResendVerificationResponse);
+  rpc ForgotPassword(ForgotPasswordRequest) returns (ForgotPasswordResponse);
+  rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+  rpc GetCurrentAccount(GetCurrentAccountRequest) returns (GetCurrentAccountResponse);
+  rpc AuthorizeCompany(AuthorizeCompanyRequest) returns (AuthorizeCompanyResponse);
+  rpc ListMemberships(ListMembershipsRequest) returns (ListMembershipsResponse);
+  rpc BeginCompanyCreation(BeginCompanyCreationRequest) returns (BeginCompanyCreationResponse);
+  rpc AuthorizeCompanyBootstrap(AuthorizeCompanyBootstrapRequest) returns (AuthorizeCompanyBootstrapResponse);
+  rpc CompleteCompanyCreation(CompleteCompanyCreationRequest) returns (CompleteCompanyCreationResponse);
+  rpc ListMembers(ListMembersRequest) returns (ListMembersResponse);
+  rpc RemoveMember(RemoveMemberRequest) returns (RemoveMemberResponse);
+  rpc CreateInvitation(CreateInvitationRequest) returns (CreateInvitationResponse);
+  rpc ListOutgoingInvitations(ListOutgoingInvitationsRequest) returns (ListOutgoingInvitationsResponse);
+  rpc ListIncomingInvitations(ListIncomingInvitationsRequest) returns (ListIncomingInvitationsResponse);
+  rpc AcceptInvitation(AcceptInvitationRequest) returns (AcceptInvitationResponse);
+  rpc DeclineInvitation(DeclineInvitationRequest) returns (DeclineInvitationResponse);
+  rpc RevokeInvitation(RevokeInvitationRequest) returns (RevokeInvitationResponse);
+}
+
+// An opaque browser cookie, not a client-selected user ID. Auth alone decides
+// whether it identifies a pre-auth context, a live session, or an invalid token.
+message BrowserContext {
+  string cookie_token = 1;
+}
+
+// Only the trusted API may populate these fields, after proxy/IP validation.
+// They are rate-limit and diagnostic inputs, never proof of a user's identity.
+message ClientContext {
+  string client_ip = 1;
+  string request_id = 2;
+}
+
+// API checks Origin/Referer first. Auth validates the context-bound CSRF token
+// and authorization within the same transaction as every protected mutation.
+message WriteContext {
+  BrowserContext browser = 1;
+  string csrf_token = 2;
+  ClientContext client = 3;
+}
+
+// Raw cookie material is returned only to the private API caller. It must never
+// be serialized into a public JSON body or included in ordinary logs.
+message SecurityContext {
+  string cookie_token = 1;
+  string csrf_token = 2;
+  google.protobuf.Timestamp cookie_expires_at = 3;
+}
+
+message UserProfile {
+  string id = 1;
+  string email = 2;
+  string display_name = 3;
+  bool email_verified = 4;
+}
+
+message ConsentDocument {
+  string text = 1;
+  string document_version = 2;
+  string document_sha256 = 3;
+}
+
+// accepted must be true. The server owns the accepted_at, consent_id and text
+// snapshot; the API cannot provide evidence timestamps or choose another text.
+message ConsentAcceptance {
+  bool accepted = 1;
+  string document_version = 2;
+  string document_sha256 = 3;
+}
+
+// Public non-secret handle. Register/resend always return this shape, including
+// a fresh inert handle for ineligible addresses, to avoid account enumeration.
+message EmailVerificationChallenge {
+  string challenge_id = 1;
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+enum CompanyRole {
+  COMPANY_ROLE_UNSPECIFIED = 0;
+  COMPANY_ROLE_OWNER = 1;
+  COMPANY_ROLE_FINANCIER = 2;
+}
+
+// No implicit/default permission is accepted, including unknown enum values.
+enum CompanyPermission {
+  COMPANY_PERMISSION_UNSPECIFIED = 0;
+  COMPANY_PERMISSION_READ = 1;
+  COMPANY_PERMISSION_UPDATE = 2;
+  COMPANY_PERMISSION_FINANCIAL_READ = 3;
+  COMPANY_PERMISSION_FINANCIAL_WRITE = 4;
+  COMPANY_PERMISSION_MEMBERS_READ = 5;
+  COMPANY_PERMISSION_MEMBERS_MANAGE = 6;
+  COMPANY_PERMISSION_INVITATIONS_MANAGE = 7;
+}
+
+message Membership {
+  string company_id = 1;
+  CompanyRole role = 2;
+  google.protobuf.Timestamp created_at = 3;
+}
+
+message Member {
+  UserProfile user = 1;
+  CompanyRole role = 2;
+  // Original membership creation instant; required REST Membership.joined_at.
+  google.protobuf.Timestamp joined_at = 3;
+}
+
+enum InvitationStatus {
+  INVITATION_STATUS_UNSPECIFIED = 0;
+  INVITATION_STATUS_PENDING = 1;
+  INVITATION_STATUS_ACCEPTED = 2;
+  INVITATION_STATUS_DECLINED = 3;
+  INVITATION_STATUS_REVOKED = 4;
+  INVITATION_STATUS_EXPIRED = 5;
+}
+
+message Invitation {
+  string id = 1;
+  string company_id = 2;
+  string company_name_snapshot = 3;
+  string email = 4;
+  CompanyRole role = 5;
+  InvitationStatus status = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp expires_at = 8;
+  // Opaque positive decimal integer, exactly as in the REST contract.
+  string version = 9;
+}
+
+message PageRequest {
+  // Absent means 50; an explicitly supplied value must be in [1, 100].
+  optional uint32 limit = 1;
+  // Opaque ASCII, at most 1024 characters; invalid cursors map to HTTP 400.
+  string cursor = 2;
+}
+
+message PageResponse {
+  // Empty when no next page exists. Bound to actor, company, filters and sort.
+  string next_cursor = 1;
+}
+
+// inn absent and inn unset/null in REST are the same at creation, not at PATCH.
+message CompanyCreateSpec {
+  string name = 1;
+  optional string inn = 2;
+  string currency = 3;
+  string timezone = 4;
+}
+
+enum CompanyCreationState {
+  COMPANY_CREATION_STATE_UNSPECIFIED = 0;
+  COMPANY_CREATION_STATE_PREPARED = 1;
+  COMPANY_CREATION_STATE_COMPLETED = 2;
+  COMPANY_CREATION_STATE_QUARANTINED = 3;
+}
+
+message CompanyCreationCommand {
+  string id = 1;
+  // Nonzero UUIDv7, generated once by Auth when persisting the durable command.
+  // Core must reuse it unchanged for every retry and recovery.
+  string company_id = 2;
+  // Server-derived from the original live session, never accepted from browser.
+  string initiator_id = 3;
+  CompanyCreateSpec company = 4;
+  string request_sha256 = 5;
+  CompanyCreationState state = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+enum AuthErrorReason {
+  AUTH_ERROR_REASON_UNSPECIFIED = 0;
+  AUTH_ERROR_REASON_VALIDATION_ERROR = 1;
+  AUTH_ERROR_REASON_AUTH_REQUIRED = 2;
+  AUTH_ERROR_REASON_INVALID_CREDENTIALS = 3;
+  AUTH_ERROR_REASON_CSRF_INVALID = 4;
+  AUTH_ERROR_REASON_CONSENT_REQUIRED = 5;
+  AUTH_ERROR_REASON_CONSENT_DOCUMENT_CHANGED = 6;
+  AUTH_ERROR_REASON_EMAIL_UNVERIFIED = 7;
+  AUTH_ERROR_REASON_NOT_FOUND = 8;
+  AUTH_ERROR_REASON_FORBIDDEN = 9;
+  AUTH_ERROR_REASON_VERSION_CONFLICT = 10;
+  AUTH_ERROR_REASON_TOKEN_INVALID_OR_EXPIRED = 11;
+  AUTH_ERROR_REASON_RATE_LIMITED = 12;
+  AUTH_ERROR_REASON_INVITATION_NOT_AVAILABLE = 13;
+  AUTH_ERROR_REASON_INVITATION_STATE_CONFLICT = 14;
+  AUTH_ERROR_REASON_IDEMPOTENCY_CONFLICT = 15;
+  AUTH_ERROR_REASON_DEPENDENCY_UNAVAILABLE = 16;
+  AUTH_ERROR_REASON_INTERNAL_ERROR = 17;
+  AUTH_ERROR_REASON_MEMBERSHIP_REVOKED = 18;
+  AUTH_ERROR_REASON_COMPANY_CREATION_IN_PROGRESS = 19;
+  AUTH_ERROR_REASON_INVALID_CURSOR = 20;
+  AUTH_ERROR_REASON_CODE_INVALID_OR_EXPIRED = 21;
+}
+
+// Attached to a non-OK gRPC status. No request values, secrets or stack traces.
+// This message does not replace the gRPC status code; see the mapping document.
+message AuthErrorDetail {
+  AuthErrorReason reason = 1;
+  repeated FieldViolation field_violations = 2;
+  uint32 retry_after_seconds = 3;
+}
+
+message FieldViolation {
+  string field = 1;
+  string description = 2;
+}
+
+message GetPersonalDataConsentRequest {}
+message GetPersonalDataConsentResponse {
+  ConsentDocument document = 1;
+}
+
+message GetSecurityContextRequest {
+  BrowserContext context = 1;
+  ClientContext client = 2;
+}
+message GetSecurityContextResponse {
+  SecurityContext context = 1;
+}
+
+message RegisterRequest {
+  WriteContext context = 1;
+  string email = 2;
+  string password = 3;
+  string display_name = 4;
+  ConsentAcceptance personal_data_consent = 5;
+}
+message RegisterResponse {
+  EmailVerificationChallenge challenge = 1;
+}
+
+message LoginRequest {
+  WriteContext context = 1;
+  string email = 2;
+  string password = 3;
+}
+message LoginResponse {
+  UserProfile user = 1;
+  SecurityContext context = 2;
+}
+
+message VerifyEmailRequest {
+  WriteContext context = 1;
+  // Removed link token must never be reinterpreted as a challenge or code.
+  reserved 2;
+  reserved "token";
+  string challenge_id = 3;
+  // Exactly six ASCII digits, including leading zeros; never a numeric type.
+  string code = 4;
+}
+message VerifyEmailResponse {}
+
+message ResendVerificationRequest {
+  WriteContext context = 1;
+  string email = 2;
+}
+message ResendVerificationResponse {
+  EmailVerificationChallenge challenge = 1;
+}
+
+message ForgotPasswordRequest {
+  WriteContext context = 1;
+  string email = 2;
+}
+message ForgotPasswordResponse {}
+
+message ResetPasswordRequest {
+  WriteContext context = 1;
+  string token = 2;
+  string new_password = 3;
+}
+message ResetPasswordResponse {}
+
+message LogoutRequest {
+  WriteContext context = 1;
+}
+message LogoutResponse {}
+
+message GetCurrentAccountRequest {
+  BrowserContext context = 1;
+}
+message GetCurrentAccountResponse {
+  UserProfile user = 1;
+}
+
+message AuthorizeCompanyRequest {
+  // Mutating permissions require write; accepting browser would omit the
+  // Auth-owned CSRF validation on Core financial/company mutations.
+  oneof context {
+    BrowserContext browser = 1;
+    WriteContext write = 4;
+  }
+  string company_id = 2;
+  CompanyPermission permission = 3;
+}
+message AuthorizeCompanyResponse {
+  string actor_id = 1;
+  CompanyRole role = 2;
+}
+
+message ListMembershipsRequest {
+  BrowserContext context = 1;
+  PageRequest page = 2;
+}
+message ListMembershipsResponse {
+  repeated Membership items = 1;
+  PageResponse pagination = 2;
+}
+
+message BeginCompanyCreationRequest {
+  WriteContext context = 1;
+  string idempotency_key = 2;
+  CompanyCreateSpec company = 3;
+}
+message BeginCompanyCreationResponse {
+  CompanyCreationCommand command = 1;
+}
+
+// Core-only RPC. Every field must match a durable prepared/completed Auth command.
+message AuthorizeCompanyBootstrapRequest {
+  string command_id = 1;
+  string company_id = 2;
+  string request_sha256 = 3;
+}
+message AuthorizeCompanyBootstrapResponse {
+  CompanyCreationCommand command = 1;
+}
+
+// A client boolean saying "Core succeeded" is deliberately not a field. Auth
+// reads Core's durable result by command ID before committing owner membership.
+message CompleteCompanyCreationRequest {
+  WriteContext context = 1;
+  string command_id = 2;
+}
+message CompleteCompanyCreationResponse {
+  CompanyCreationCommand command = 1;
+}
+
+message ListMembersRequest {
+  BrowserContext context = 1;
+  string company_id = 2;
+  PageRequest page = 3;
+}
+message ListMembersResponse {
+  repeated Member items = 1;
+  PageResponse pagination = 2;
+}
+
+message RemoveMemberRequest {
+  WriteContext context = 1;
+  string company_id = 2;
+  string user_id = 3;
+}
+message RemoveMemberResponse {}
+
+message CreateInvitationRequest {
+  WriteContext context = 1;
+  string company_id = 2;
+  string email = 3;
+  // API obtains it from Core under the owner's live permission. Presentation
+  // snapshot only; no browser-supplied name and no independent company model.
+  string company_name_snapshot = 4;
+  // Original REST Idempotency-Key, scoped and persisted by Auth.
+  string idempotency_key = 5;
+}
+message CreateInvitationResponse {
+  Invitation invitation = 1;
+}
+
+message ListOutgoingInvitationsRequest {
+  BrowserContext context = 1;
+  string company_id = 2;
+  PageRequest page = 3;
+}
+message ListOutgoingInvitationsResponse {
+  repeated Invitation items = 1;
+  PageResponse pagination = 2;
+}
+
+message ListIncomingInvitationsRequest {
+  BrowserContext context = 1;
+  PageRequest page = 2;
+}
+message ListIncomingInvitationsResponse {
+  repeated Invitation items = 1;
+  PageResponse pagination = 2;
+}
+
+message AcceptInvitationRequest {
+  WriteContext context = 1;
+  string invitation_id = 2;
+  string version = 3;
+  // Original REST Idempotency-Key; replay must not recreate removed membership.
+  string idempotency_key = 4;
+}
+message AcceptInvitationResponse {
+  string company_id = 1;
+}
+
+message DeclineInvitationRequest {
+  WriteContext context = 1;
+  string invitation_id = 2;
+  string version = 3;
+}
+message DeclineInvitationResponse {
+  Invitation invitation = 1;
+}
+
+message RevokeInvitationRequest {
+  WriteContext context = 1;
+  string company_id = 2;
+  string invitation_id = 3;
+}
+message RevokeInvitationResponse {}

@@ -1,0 +1,14 @@
+[
+    {
+        "method": "POST",
+        "path": "/auth/mock/confirm-login",
+        "status": 200,
+        "body": "Session"
+    },
+    {
+        "method": "POST",
+        "path": "/auth/mock/confirm-password-reset",
+        "status": 200,
+        "body": "Acknowledgement"
+    }
+]

@@ -1,0 +1,123 @@
+@use "../../app/global" as global;
+
+.header {
+    height: 99px;
+    background-color: global.$green2;
+    color: global.$white;
+}
+
+.container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    width: calc(100% - 40px);
+    max-width: 1252px;
+    height: 100%;
+    margin-inline: auto;
+}
+
+.bank,
+.company {
+    border-radius: 4px;
+    cursor: pointer;
+    transition: opacity global.$transition-duration;
+
+    &:hover {
+        opacity: 0.4;
+    }
+
+    &:focus-visible {
+        outline: 2px solid global.$white;
+        outline-offset: 6px;
+    }
+}
+
+.bank {
+    flex-shrink: 0;
+}
+
+.bankLogo {
+    display: block;
+    width: clamp(180px, 20vw, 254px);
+    height: auto;
+}
+
+.company {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    min-width: 0;
+}
+
+.companyName {
+    overflow: hidden;
+    font-size: clamp(18px, 2.23vw, 32px);
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.avatar {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 55px;
+    height: 55px;
+    padding: 3px;
+    overflow: hidden;
+    border: 2px solid global.$gray2;
+    border-radius: 50%;
+}
+
+.avatarImage,
+.initial {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+}
+
+.avatarImage {
+    object-fit: cover;
+}
+
+.initial {
+    display: grid;
+    place-items: center;
+    background-color: global.$white;
+    color: global.$green2;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+@media (max-width: 480px) {
+    .header {
+        height: 60px;
+    }
+
+    .bankLogo {
+        width: 40px;
+        height: 40px;
+    }
+
+    .companyName {
+        display: none;
+    }
+
+    .avatar {
+        width: 45px;
+        height: 45px;
+    }
+
+    .initial {
+        font-size: 16px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bank,
+    .company {
+        transition: none;
+    }
+}

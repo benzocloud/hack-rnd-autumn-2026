@@ -1,0 +1,32 @@
+version: v2
+plugins:
+  - local: [go, run, google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.12]
+    out: services/auth/internal/gen
+    opt:
+      - paths=source_relative
+      - Mauth/v1/auth.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/gen/auth/v1
+  - local: [go, run, google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2]
+    out: services/auth/internal/gen
+    opt:
+      - paths=source_relative
+      - Mauth/v1/auth.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/gen/auth/v1
+  - local: [go, run, google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.12]
+    out: services/api/internal/gen
+    opt:
+      - paths=source_relative
+      - Mauth/v1/auth.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/auth/v1
+  - local: [go, run, google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2]
+    out: services/api/internal/gen
+    opt:
+      - paths=source_relative
+      - Mauth/v1/auth.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/auth/v1
+  - local: [go, run, google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.12]
+    out: services/core/internal/gen
+    opt:
+      - paths=source_relative
+      - Mauth/v1/auth.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/auth/v1
+  - local: [go, run, google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2]
+    out: services/core/internal/gen
+    opt:
+      - paths=source_relative
+      - Mauth/v1/auth.proto=github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/auth/v1
