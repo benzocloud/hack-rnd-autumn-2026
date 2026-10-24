@@ -3,7 +3,18 @@
 
 # Local agent skills.
 /.agent/skills/
+/.agents/skills/
 /skills-lock.json
+
+# Private local MCP configuration and credentials.
+/.codex/config.toml
+/.agent/local/
+
+# Local provided dataset; do not publish raw input files.
+/dataset/
+
+# macOS directory metadata.
+.DS_Store
 
 # Local expert questions; keep outside published plans.
 /.agent/plans/case-expert-questions.md
@@ -13,7 +24,3 @@
 .ruff_cache/
 __pycache__/
 *.py[cod]
-
-# Private local MCP configuration and credentials.
-/.codex/config.toml
-/.agent/local/
