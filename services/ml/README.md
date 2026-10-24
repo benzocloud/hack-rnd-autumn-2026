@@ -49,6 +49,9 @@ python -m venv .venv
 python services/ml/run_baseline.py --company C001 --no-plots --output-dir services/ml/artifacts/smoke
 ```
 
+Демо 25.10: [памятка запуска и восстановления](DEMO_RUNBOOK.md),
+[метрики для презентации](DEMO_METRICS.md).
+
 ## Проверка по времени и качество
 
 Настройки зафиксированы в `baseline_config.json`. Кандидаты дат расчёта идут
