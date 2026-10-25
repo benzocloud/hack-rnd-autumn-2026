@@ -21,6 +21,10 @@
 .inlineLink { color: global.$green2; text-decoration: none; transition: opacity global.$transition-duration; &:hover { opacity: 0.4; } }
 .chart { height: 360px; min-width: 0; padding: 10px; overflow: hidden; border-radius: 20px; background: global.$green2; }
 .stat { margin: 8px 0; font-size: 28px; font-weight: 700; }
+.sectionTitle { margin: 0 0 8px; font-size: 18px; }
+.evidence { flex-basis: 100%; margin-top: 8px; }
+.evidenceList { margin: 8px 0 0; padding-left: 18px; }
+.evidenceList li { margin: 4px 0; }
 @media (max-width: 600px) {
     .chart { height: 290px; padding: 0; }
     .table { min-width: 620px; }
