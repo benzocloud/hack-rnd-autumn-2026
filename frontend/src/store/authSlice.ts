@@ -1,9 +1,21 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
+import { readVerificationSession, writeVerificationSession } from "@/helpers/verificationSession";
 import type { IAuthState, IUser } from "@/interfaces";
 
 
-const initialState: IAuthState = { user: null, status: "idle", verificationEmail: "", verificationChallenge: null };
+const stored = readVerificationSession();
+const initialState: IAuthState = {
+    user: null,
+    status: "idle",
+    verificationEmail: stored.email,
+    verificationChallenge: stored.challenge,
+};
+
+
+const persistVerification = ( state: IAuthState ) => {
+    writeVerificationSession({ email: state.verificationEmail, challenge: state.verificationChallenge });
+};
 
 
 const authSlice = createSlice({
@@ -23,9 +35,11 @@ const authSlice = createSlice({
         },
         setVerificationEmail: ( state, action: PayloadAction<string> ) => {
             state.verificationEmail = action.payload;
+            persistVerification(state);
         },
         setVerificationChallenge: ( state, action: PayloadAction<IAuthState["verificationChallenge"]> ) => {
             state.verificationChallenge = action.payload;
+            persistVerification(state);
         },
     },
 });
