@@ -54,6 +54,16 @@
     }
 }
 
+.warnings {
+    display: grid;
+    gap: 5px;
+    padding-bottom: 10px;
+
+    h2 {
+        margin: 0;
+    }
+}
+
 .danger {
     color: global.$red;
 }
@@ -197,6 +207,18 @@
     align-items: center;
     justify-content: center;
     pointer-events: none;
+}
+
+.chartNotes {
+    display: grid;
+    gap: 5px;
+    padding: 0 10px 10px;
+    font-size: 14px;
+    line-height: 1.5;
+
+    p {
+        margin: 0;
+    }
 }
 
 .retry {

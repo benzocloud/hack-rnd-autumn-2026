@@ -111,7 +111,7 @@ const Dashboard = ( { companyId, forecastAction }: { companyId?: string; forecas
                     <p className={ready && !insufficient ? gap ? styles.danger : styles.success : undefined}>{ status }</p>
                 </section>
 
-                <section className={styles.card}>
+                <section className={`${styles.card} ${styles.warnings}`}>
                     <h2>Предупреждения:</h2>
                     <p className={gap ? styles.danger : undefined}>{ warning }</p>
                 </section>
@@ -152,7 +152,12 @@ const Dashboard = ( { companyId, forecastAction }: { companyId?: string; forecas
                     </div>
                     { loading && <span className={styles.periodSpinner}><Spinner label="Загружаем период прогноза" /></span> }
                 </div>
-                { ready && data?.forecast && (data.forecast.input.history_assessment || visibleLimitations.length > 0) && <div>{ data.forecast.input.history_assessment && <Notice tone="warning">Ограниченная оценка по CSV. Полнота банковской истории не подтверждена.</Notice> }{ visibleLimitations.map(( item, index ) => <p key={index}>{ forecastQualityDescription(item) }</p>) }</div> }
+                { ready && data?.forecast && (data.forecast.input.history_assessment || visibleLimitations.length > 0) && (
+                    <div className={styles.chartNotes}>
+                        { data.forecast.input.history_assessment && <Notice tone="warning">Ограниченная оценка по CSV. Полнота банковской истории не подтверждена.</Notice> }
+                        { visibleLimitations.map(( item, index ) => <p key={index}>{ forecastQualityDescription(item) }</p>) }
+                    </div>
+                ) }
 
                 { failed && <div className={styles.retry}><AuthButton type="button" loading={loading} onClick={retry}>Повторить загрузку</AuthButton></div> }
             </section>

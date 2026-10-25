@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { Provider } from "react-redux";
 
-import { ComplimentSnackbar, SnackbarHost } from "@/widgets";
+import { SnackbarHost } from "@/widgets";
 
 import makeStore from "./store";
 
@@ -21,7 +21,6 @@ const StoreProvider = ( { children }: IProps ) => {
         <Provider store={store}>
             { children }
             <SnackbarHost />
-            <ComplimentSnackbar />
         </Provider>
     );
 };
