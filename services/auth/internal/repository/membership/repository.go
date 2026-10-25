@@ -6,6 +6,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jmoiron/sqlx"
 
 	domain "github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/domain/account"
@@ -31,6 +32,10 @@ func storageError(err error) error {
 	}
 	if errors.Is(err, context.DeadlineExceeded) {
 		return context.DeadlineExceeded
+	}
+	var postgresError *pgconn.PgError
+	if errors.As(err, &postgresError) && postgresError.Code == "23505" {
+		return domain.ErrConflict
 	}
 	return domain.ErrUnavailable
 }

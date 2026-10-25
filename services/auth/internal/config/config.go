@@ -14,21 +14,23 @@ import (
 )
 
 type Config struct {
-	codeHMACKey           []byte
-	csrfHMACKey           []byte
-	GRPCAddress           string
-	GRPCCertFile          string
-	GRPCKeyFile           string
-	GRPCCAFile            string
-	DemoEmailVerification bool
-	DemoTestEmails        []string
-	databaseURL           string
-	Environment           string
-	HTTPAddress           string
-	StartupTimeout        time.Duration
-	QueryTimeout          time.Duration
-	ShutdownTimeout       time.Duration
-	MaxConnections        int
+	CoreAddress, CoreServerName string
+	CoreTimeout                 time.Duration
+	codeHMACKey                 []byte
+	csrfHMACKey                 []byte
+	GRPCAddress                 string
+	GRPCCertFile                string
+	GRPCKeyFile                 string
+	GRPCCAFile                  string
+	DemoEmailVerification       bool
+	DemoTestEmails              []string
+	databaseURL                 string
+	Environment                 string
+	HTTPAddress                 string
+	StartupTimeout              time.Duration
+	QueryTimeout                time.Duration
+	ShutdownTimeout             time.Duration
+	MaxConnections              int
 }
 
 func (c Config) Format(w fmt.State, _ rune) { _, _ = io.WriteString(w, "AuthConfig{secrets:redacted}") }
@@ -79,6 +81,9 @@ func Load(getenv func(string) string) (Config, error) {
 		c.MaxConnections = n
 	}
 	if err := c.loadRPC(getenv); err != nil {
+		return Config{}, err
+	}
+	if err := c.loadCore(getenv); err != nil {
 		return Config{}, err
 	}
 	if _, err := c.ConnectionConfig(); err != nil {

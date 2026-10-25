@@ -9,6 +9,12 @@ Core/API контрактом. Два исходных RPC сведены к о�
 | --- | --- | --- | --- |
 | Продуктовый финансовый | mean_90 | mean_90_components_v1 | calendar_replacement_v1 |
 | Явный history-only baseline | mean_90 | mean_90_v1 | daily_snapshot_v1 |
+| Экспериментальный обучаемый, Core пока блокирует | linear_pool_90 | linear_pool_components_v1 | calendar_replacement_v1 |
+
+Эксперимент требует configuration_id с SHA закреплённого артефакта и явные
+seed=20261024/trajectory_count=512; старые профили сохраняют прежнюю семантику.
+Обученные веса совпали с mean_90, улучшения нет; default не переключён.
+[Артефакт, оценка, ограничения подключения](TRAINED_MODEL_RESULTS.md).
 
 Оба вызываются через PredictRequest/PredictResponse. Финансовая версия получает
 operations, calendar и availability_limitations. Ответ плоский: days/components/

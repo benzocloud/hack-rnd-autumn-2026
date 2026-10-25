@@ -38,6 +38,11 @@ type fixture struct {
 
 func setup(t *testing.T) *fixture {
 	t.Helper()
+	return setupWithDeadlines(t, 150*time.Millisecond, 200*time.Millisecond)
+}
+
+func setupWithDeadlines(t *testing.T, normal, slow time.Duration) *fixture {
+	t.Helper()
 	pki, err := testauth.GeneratePKI(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
@@ -62,7 +67,7 @@ func setup(t *testing.T) *fixture {
 	authv1.RegisterAuthServiceServer(srv, f.auth)
 	go func() { _ = srv.Serve(lis) }()
 	t.Cleanup(func() { srv.Stop(); _ = lis.Close() })
-	client, conn, err := clientauth.Dial(lis.Addr().String(), pki.CA, pki.APICert, pki.APIKey, 150*time.Millisecond, 200*time.Millisecond)
+	client, conn, err := clientauth.Dial(lis.Addr().String(), pki.CA, pki.APICert, pki.APIKey, normal, slow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -306,42 +311,53 @@ func TestTimeoutCancellationAndOutage(t *testing.T) {
 	if code != 503 || time.Since(start) > time.Second {
 		t.Fatal("RPC deadline not propagated")
 	}
+	select {
+	case method := <-f.cancelled:
+		if method != authv1.AuthService_GetPersonalDataConsent_FullMethodName {
+			t.Fatal(method)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("deadline did not cancel gRPC server context")
+	}
+
+	// Cancellation must beat the Auth client deadline. A short 150ms deadline
+	// races on slow CI: the RPC can finish with 503 before cancel() runs.
+	cancelFixture := setupWithDeadlines(t, 2*time.Second, 2*time.Second)
+	cancelFixture.client.Timeout = 5 * time.Second
+	cancelFixture.auth.SetDelay("GetPersonalDataConsent", time.Minute)
 	ctx, cancel := context.WithCancel(t.Context())
-	r, err := http.NewRequestWithContext(ctx, http.MethodGet, f.http.URL+"/api/v1/auth/personal-data-consent", nil)
+	r, err := http.NewRequestWithContext(ctx, http.MethodGet, cancelFixture.http.URL+"/api/v1/auth/personal-data-consent", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	done := make(chan error, 1)
 	go func() {
-		response, requestErr := f.client.Do(r)
+		response, requestErr := cancelFixture.client.Do(r)
 		if response != nil {
 			response.Body.Close()
 		}
 		done <- requestErr
 	}()
 	deadline := time.Now().Add(time.Second)
-	for len(f.auth.Requests("GetPersonalDataConsent")) < 2 && time.Now().Before(deadline) {
+	for len(cancelFixture.auth.Requests("GetPersonalDataConsent")) < 1 && time.Now().Before(deadline) {
 		time.Sleep(time.Millisecond)
 	}
-	if len(f.auth.Requests("GetPersonalDataConsent")) < 2 {
+	if len(cancelFixture.auth.Requests("GetPersonalDataConsent")) < 1 {
 		t.Fatal("cancel test did not reach RPC")
 	}
 	cancel()
 	if <-done == nil {
 		t.Fatal("HTTP cancellation ignored")
 	}
-	// Both the RPC deadline above and the cancelled HTTP request must cancel
-	// the server-side gRPC context, not merely stop reading the HTTP response.
-	for range 2 {
-		select {
-		case method := <-f.cancelled:
-			if method != authv1.AuthService_GetPersonalDataConsent_FullMethodName {
-				t.Fatal(method)
-			}
-		case <-time.After(time.Second):
-			t.Fatal("gRPC server context was not cancelled")
+	select {
+	case method := <-cancelFixture.cancelled:
+		if method != authv1.AuthService_GetPersonalDataConsent_FullMethodName {
+			t.Fatal(method)
 		}
+	case <-time.After(time.Second):
+		t.Fatal("gRPC server context was not cancelled")
 	}
+
 	f.grpc.Stop()
 	code, _, _ = f.call(t, "GET", "/api/v1/auth/csrf", "", nil)
 	if code != 503 {

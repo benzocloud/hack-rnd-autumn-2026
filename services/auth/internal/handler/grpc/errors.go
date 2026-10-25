@@ -52,6 +52,12 @@ func rpcError(err error) error {
 	case errors.Is(err, account.ErrNotFound):
 		code = codes.NotFound
 		reason = pb.AuthErrorReason_AUTH_ERROR_REASON_NOT_FOUND
+	case errors.Is(err, account.ErrIdempotencyConflict):
+		code = codes.Aborted
+		reason = pb.AuthErrorReason_AUTH_ERROR_REASON_IDEMPOTENCY_CONFLICT
+	case errors.Is(err, account.ErrCreationInProgress):
+		code = codes.Unavailable
+		reason = pb.AuthErrorReason_AUTH_ERROR_REASON_COMPANY_CREATION_IN_PROGRESS
 	case errors.Is(err, account.ErrUnavailable):
 		code = codes.Unavailable
 		reason = pb.AuthErrorReason_AUTH_ERROR_REASON_DEPENDENCY_UNAVAILABLE

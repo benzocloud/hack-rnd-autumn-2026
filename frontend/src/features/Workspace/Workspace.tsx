@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, type FormEvent } from "react";
 
+import { clearCompanyCreateKey, companyCreateKey } from "@/helpers/companyCreate";
 import { companyPath, formatDate, formIdentity, invalid, textField } from "@/helpers/finance";
 import { collectPages } from "@/helpers/pagination";
 import useRequest from "@/hooks/useRequest";
@@ -31,7 +32,8 @@ const Workspace = () => {
     const createCompany = async ( event: FormEvent<HTMLFormElement> ) => {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
-        const result = await request.run(( signal, key ) => {
+        const identity = formIdentity(form);
+        const result = await request.run(( signal ) => {
             const name = textField(form, "name", "Название компании");
             const inn = textField(form, "inn", "ИНН", 12, true);
 
@@ -39,10 +41,11 @@ const Workspace = () => {
                 invalid("ИНН должен содержать 10 или 12 цифр.", "inn");
             }
 
-            return companiesService.createCompany({ idempotency_key: key, data: { name, inn: inn || null, currency: "RUB", timezone: "Europe/Moscow" } }, signal);
-        }, "Компания создана", formIdentity(form));
+            return companiesService.createCompany({ idempotency_key: companyCreateKey(identity), data: { name, inn: inn || null, currency: "RUB", timezone: "Europe/Moscow" } }, signal);
+        }, "Компания создана", identity);
 
         if (result.ok) {
+            clearCompanyCreateKey(identity);
             router.push(companyPath(result.data.id, "settings"));
         }
     };

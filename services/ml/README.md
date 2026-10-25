@@ -20,6 +20,12 @@ Worker общается с ML по gRPC; REST/BFF в этом стыке не у
 [Подключение worker](CORE_CONNECTION.md), [проверка на C089](DATASET_RPC_RESULTS.md).
 [Сценарий ручных платежей и передача Core/API](DEMO_CORE_HANDOFF.md).
 
+Экспериментальный обучаемый профиль `linear_pool_components_v1` использует тот
+же Predict без изменения wire-контракта. Обучение выбрало 100% mean_90:
+улучшения качества нет, переключение продукта не рекомендуется. Артефакт
+закреплён в ML-пакете; текущие consumer checks Core новую identity не принимают.
+[Результаты, команды обучения, checksum и blocker](TRAINED_MODEL_RESULTS.md).
+
 ## Данные
 
 По умолчанию ожидаются `data/cashflow/raw/companies.csv` и `all_operations.csv`.
@@ -48,6 +54,9 @@ python -m venv .venv
 ```powershell
 python services/ml/run_baseline.py --company C001 --no-plots --output-dir services/ml/artifacts/smoke
 ```
+
+Демо 25.10: [памятка запуска и восстановления](DEMO_RUNBOOK.md),
+[метрики для презентации](DEMO_METRICS.md).
 
 ## Проверка по времени и качество
 

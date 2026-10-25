@@ -94,6 +94,27 @@ func TestAccountRPCWireFlow(t *testing.T) {
 		t.Fatal(err)
 	}
 	live := &pb.BrowserContext{CookieToken: logged.GetContext().GetCookieToken()}
+	creationWrite := &pb.WriteContext{Browser: live, CsrfToken: logged.GetContext().GetCsrfToken()}
+	creationRequest := &pb.BeginCompanyCreationRequest{Context: creationWrite, IdempotencyKey: "rpc-company-creation-key", Company: &pb.CompanyCreateSpec{Name: " Кофейня ", Currency: "RUB", Timezone: "Europe/Moscow"}}
+	prepared, err := client.BeginCompanyCreation(ctx, creationRequest)
+	if err != nil || prepared.GetCommand().GetCompany().GetName() != "Кофейня" || prepared.GetCommand().GetInitiatorId() != logged.GetUser().GetId() {
+		t.Fatal(prepared, err)
+	}
+	replay, err := client.BeginCompanyCreation(ctx, creationRequest)
+	if err != nil || replay.GetCommand().GetId() != prepared.GetCommand().GetId() || replay.GetCommand().GetCompanyId() != prepared.GetCommand().GetCompanyId() {
+		t.Fatal(replay, err)
+	}
+	creationRequest.Company.Name = "Different"
+	if _, err := client.BeginCompanyCreation(ctx, creationRequest); status.Code(err) != codes.Aborted {
+		t.Fatal("body conflict not mapped", err)
+	}
+	if _, err := client.CompleteCompanyCreation(ctx, &pb.CompleteCompanyCreationRequest{Context: creationWrite, CommandId: prepared.GetCommand().GetId()}); status.Code(err) != codes.Unavailable {
+		t.Fatal("missing Core fabricated completion", err)
+	}
+	grant, err := client.AuthorizeCompanyBootstrap(ctx, &pb.AuthorizeCompanyBootstrapRequest{CommandId: prepared.GetCommand().GetId(), CompanyId: prepared.GetCommand().GetCompanyId(), RequestSha256: prepared.GetCommand().GetRequestSha256()})
+	if err != nil || grant.GetCommand().GetId() != prepared.GetCommand().GetId() {
+		t.Fatal(grant, err)
+	}
 	allowed, err := client.AuthorizeCompany(ctx, &pb.AuthorizeCompanyRequest{Context: &pb.AuthorizeCompanyRequest_Browser{Browser: live}, CompanyId: company.String(), Permission: pb.CompanyPermission_COMPANY_PERMISSION_FINANCIAL_READ})
 	if err != nil || allowed.GetActorId() != logged.GetUser().GetId() {
 		t.Fatalf("company read: %v", err)

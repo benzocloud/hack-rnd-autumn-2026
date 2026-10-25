@@ -1,0 +1,86 @@
+[
+  {
+    "name": "absent-inn",
+    "input": {
+      "name": "Кофейня",
+      "currency": "RUB",
+      "timezone": "Europe/Moscow"
+    },
+    "normalized": {
+      "name": "Кофейня",
+      "inn": null,
+      "currency": "RUB",
+      "timezone": "Europe/Moscow"
+    },
+    "canonical_json": "{\"name\":\"Кофейня\",\"inn\":null,\"currency\":\"RUB\",\"timezone\":\"Europe/Moscow\"}",
+    "sha256": "b1bb0ace9ea4972fd8ca6d20c8e9c48f28afafb616518c02df0fe193098041ea"
+  },
+  {
+    "name": "null-inn",
+    "input": {
+      "name": "Кофейня",
+      "inn": null,
+      "currency": "RUB",
+      "timezone": "Europe/Moscow"
+    },
+    "normalized": {
+      "name": "Кофейня",
+      "inn": null,
+      "currency": "RUB",
+      "timezone": "Europe/Moscow"
+    },
+    "canonical_json": "{\"name\":\"Кофейня\",\"inn\":null,\"currency\":\"RUB\",\"timezone\":\"Europe/Moscow\"}",
+    "sha256": "b1bb0ace9ea4972fd8ca6d20c8e9c48f28afafb616518c02df0fe193098041ea"
+  },
+  {
+    "name": "leading-zero-inn",
+    "input": {
+      "name": "ООО «Вектор»",
+      "inn": "001234567890",
+      "currency": "RUB",
+      "timezone": "Europe/Moscow"
+    },
+    "normalized": {
+      "name": "ООО «Вектор»",
+      "inn": "001234567890",
+      "currency": "RUB",
+      "timezone": "Europe/Moscow"
+    },
+    "canonical_json": "{\"name\":\"ООО «Вектор»\",\"inn\":\"001234567890\",\"currency\":\"RUB\",\"timezone\":\"Europe/Moscow\"}",
+    "sha256": "128de71bda4aa87a16e238693e529b39f6fd44f9528859f1ca2c27c65093680d"
+  },
+  {
+    "name": "escaping",
+    "input": {
+      "name": "\"Кофе\" \\ <&>\nСтрока ещё конец",
+      "inn": null,
+      "currency": "RUB",
+      "timezone": "Europe/Moscow"
+    },
+    "normalized": {
+      "name": "\"Кофе\" \\ <&>\nСтрока ещё конец",
+      "inn": null,
+      "currency": "RUB",
+      "timezone": "Europe/Moscow"
+    },
+    "canonical_json": "{\"name\":\"\\\"Кофе\\\" \\\\ \\u003c\\u0026\\u003e\\nСтрока\\u2028ещё\\u2029конец\",\"inn\":null,\"currency\":\"RUB\",\"timezone\":\"Europe/Moscow\"}",
+    "sha256": "faf234e2ae4ecb4b2009cbd83345d54b47db287c763932091ad6bd2d83b842bb"
+  },
+  {
+    "name": "trim-name",
+    "input": {
+      "name": " \tКофейня\n",
+      "inn": "0123456789",
+      "currency": "RUB",
+      "timezone": "Europe/Moscow"
+    },
+    "normalized": {
+      "name": "Кофейня",
+      "inn": "0123456789",
+      "currency": "RUB",
+      "timezone": "Europe/Moscow"
+    },
+    "canonical_json": "{\"name\":\"Кофейня\",\"inn\":\"0123456789\",\"currency\":\"RUB\",\"timezone\":\"Europe/Moscow\"}",
+    "sha256": "8b796f57511cf219a53bb350866be51cd4353ab64683f33e5f949a8eee268d6e"
+  }
+]

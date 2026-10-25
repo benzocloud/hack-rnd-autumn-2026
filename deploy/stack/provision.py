@@ -119,6 +119,9 @@ def main():
             "AUTH_GRPC_CERT_FILE": "/tls/server.pem",
             "AUTH_GRPC_KEY_FILE": "/tls/server.key",
             "AUTH_GRPC_CA_FILE": "/tls/ca.pem",
+            "AUTH_CORE_ADDRESS": "core:50052",
+            "AUTH_CORE_SERVER_NAME": "core",
+            "AUTH_CORE_TIMEOUT": "2s",
             "AUTH_CODE_HMAC_KEY": base64.urlsafe_b64encode(secrets.token_bytes(32))
             .decode()
             .rstrip("="),

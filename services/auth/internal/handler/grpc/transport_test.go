@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	grpcgo "google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -31,7 +32,13 @@ import (
 
 type modeAccounts struct {
 	accountOperations
-	calls atomic.Int32
+	calls          atomic.Int32
+	bootstrapCalls atomic.Int32
+}
+
+func (a *modeAccounts) AuthorizeCompanyBootstrap(_ context.Context, input account.AuthorizeCompanyBootstrapInput) (account.CreationCommand, error) {
+	a.bootstrapCalls.Add(1)
+	return account.CreationCommand{ID: input.CommandID, CompanyID: input.CompanyID, InitiatorID: uuid.New(), RequestSHA256: input.RequestSHA256, Spec: account.CompanySpec{Name: "Company", Currency: "RUB", Timezone: "Europe/Moscow"}, State: "PREPARED", CreatedAt: time.Now()}, nil
 }
 
 func (a *modeAccounts) GetSecurityContext(context.Context, string) (account.SecurityContext, error) {
@@ -92,6 +99,8 @@ func TestMTLSPeerCannotSelectServiceIdentity(t *testing.T) {
 		{"API identity", "spiffe://saldo.local/api", codes.OK},
 		{"Core cannot register browser context", "spiffe://saldo.local/core", codes.PermissionDenied},
 		{"Other service cannot impersonate API", "spiffe://saldo.local/frontend", codes.PermissionDenied},
+		{"Auth cannot impersonate API", "spiffe://saldo.local/auth", codes.PermissionDenied},
+		{"ML cannot impersonate API", "spiffe://saldo.local/ml", codes.PermissionDenied},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			cert, _, _ := testCertificate(t, folder, tc.name, int64(index+3), tc.uri, ca, caKey)
@@ -109,10 +118,25 @@ func TestMTLSPeerCannotSelectServiceIdentity(t *testing.T) {
 			if tc.want == codes.OK && (reply.GetEmailVerificationMode() != "demo" || reply.GetContext().GetCookieToken() != "private-cookie") {
 				t.Fatal("server-owned mode/context not returned")
 			}
+			commandID, companyID := uuid.New(), uuid.Must(uuid.NewV7())
+			grant, err := pb.NewAuthServiceClient(client).AuthorizeCompanyBootstrap(ctx, &pb.AuthorizeCompanyBootstrapRequest{CommandId: commandID.String(), CompanyId: companyID.String(), RequestSha256: strings.Repeat("a", 64)})
+			want := codes.PermissionDenied
+			if tc.uri == "spiffe://saldo.local/core" {
+				want = codes.OK
+			}
+			if status.Code(err) != want {
+				t.Fatalf("bootstrap peer: got %v, want %v", err, want)
+			}
+			if want == codes.OK && (grant.GetCommand().GetId() != commandID.String() || grant.GetCommand().GetCompanyId() != companyID.String()) {
+				t.Fatal("bootstrap grant changed IDs")
+			}
 		})
 	}
 	if accounts.calls.Load() != 1 {
 		t.Fatal("denied peers reached business state")
+	}
+	if accounts.bootstrapCalls.Load() != 1 {
+		t.Fatal("non-Core peer reached bootstrap business state")
 	}
 }
 

@@ -61,6 +61,9 @@ linters:
       # service descriptor comment. Regenerate this file; never hand-edit it.
       - path: ^internal/gen/auth/v1/auth_grpc\.pb\.go$
         linters: [errcheck, godot]
+      # Same protoc-go-grpc dispatch assertions/comment in the new Core binding.
+      - path: ^internal/gen/core/v1/company_grpc\.pb\.go$
+        linters: [errcheck, godot]
 
 formatters:
   settings:
