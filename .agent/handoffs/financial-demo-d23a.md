@@ -197,3 +197,19 @@ Diff-check прошёл. Этот прогон заменяет неуспешн
 Работа публикуется локальным кандидатом по прямому поручению commit/push.
 Независимого review и browser/Auth приёмки ещё не было; stage acceptance,
 merge/deploy и доказанное улучшение точности по-прежнему не заявляются.
+
+### Публикация подтверждена
+
+Кандидат закоммичен в `330555d3cc8891dc989237b16b5cb272cc41be4b` и pushed
+в `origin/globalarray/feat/import_source_preview`; remote SHA проверен.
+Создан **draft PR #47**:
+https://github.com/benzocloud/hack-rnd-autumn-2026/pull/47.
+Поручения агентам находятся в той же ветке (коммит `581ca13`), каждый получатель
+создаёт собственный implementation draft PR. Независимое review нашего #47
+ожидает переключения модели владельцем. CI после push ещё не проверен.
+
+Наш Docker project `saldo-csv-manual-checkpoint` после успешного прогона удалён:
+container и network teardown подтверждены. В checkout остались только чужие
+deploy/stack README.md/smoke.py/test_smoke.py, ML training prompt и frontend/AGENTS.md;
+они не включены в наш commit/PR. Следующий шаг — review #47, затем browser/Auth
+приёмка согласованного кандидата. Merge/deploy не выполнялись.
