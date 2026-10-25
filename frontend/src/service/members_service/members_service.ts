@@ -1,3 +1,5 @@
+import axios from "axios";
+
 import type { IAcceptInvitationParams, ICompany, ICreateInvitationParams, IDeclineInvitationParams, IInvitation, IInvitationList, IListCompanyInvitationsParams, IListMembersParams, IListMyInvitationsParams, IMembershipList, IRemoveMemberParams, IRevokeInvitationParams } from "@/interfaces";
 
 import api from "../api";
@@ -74,18 +76,26 @@ const revokeInvitation = async ( request: IRevokeInvitationParams, signal?: Abor
 
 
 const listMyInvitations = async ( request: IListMyInvitationsParams = {}, signal?: AbortSignal ): Promise<IInvitationList> => {
-    const response = await api.request<IInvitationList>({
-        method: "GET",
-        url: "/me/invitations",
-        signal,
-        params: {
-            limit: request.limit,
-            cursor: request.cursor,
-        },
-    });
+    try {
+        const response = await api.request<IInvitationList>({
+            method: "GET",
+            url: "/me/invitations",
+            signal,
+            params: {
+                limit: request.limit,
+                cursor: request.cursor,
+            },
+        });
 
+        return response.data;
+    } catch (error: unknown) {
+        // Invitations are still optional on some deployments; missing route must not block Workspace.
+        if (axios.isAxiosError(error) && error.response?.status === 404) {
+            return { items: [], next_cursor: null };
+        }
 
-    return response.data;
+        throw error;
+    }
 };
 
 
