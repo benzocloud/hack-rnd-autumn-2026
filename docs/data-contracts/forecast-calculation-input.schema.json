@@ -170,6 +170,18 @@
           "readOnly": true,
           "description": "Server-owned proof or null when unavailable/legacy. Preview is a proposal; only successful atomic commit establishes proof. Omission remains valid for legacy responses."
         },
+        "history_assessment": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HistoryAssessment"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "readOnly": true,
+          "description": "Frozen CSV model suitability; never certified bank coverage. Present only for mean_90_csv_v1."
+        },
         "calendar_mode": {
           "type": "string",
           "enum": [
@@ -417,9 +429,13 @@
           ]
         },
         "created_at": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "date-time",
           "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$",
+          "description": "Persisted creation time in UTC, or null when unknown for a legacy operation predating creation-time storage. Reads and category changes preserve that unknown value; never substitute the read/update time.",
           "examples": [
             "2026-10-23T12:00:00Z"
           ]
@@ -436,8 +452,7 @@
         "payment_purpose",
         "category_id",
         "source",
-        "version",
-        "created_at"
+        "version"
       ],
       "description": "A factual operation, not a planned payment. Blank dataset purpose/INN is represented as empty purpose/null INN with quality warning, not guessed data. Amount is positive; direction supplies sign. Raw balance_eod is a dated account observation, not added once per row."
     },
@@ -550,7 +565,7 @@
         "import_id",
         "connection_id"
       ],
-      "description": "External identity is scoped to target company+account+source_system+external company+record kind+external record ID. Facts use external_operation_id with external_payment_id=null; expectations use external_payment_id with external_operation_id=null; manual records have both null. Operation and expected-payment IDs remain separate namespaces. In addition to scoped deduplication, the account has ONE transaction_source in MVP: file/imported operations and external balance observations from another source namespace or manual history mixing return 409 FACTUAL_SOURCE_CONFLICT without writes. First accepted import also binds one source_company_id per source_system/account, including planned-payments-only sources; selecting another company in the same source gives 409 SOURCE_BINDING_CONFLICT. First manual transaction binds manual_v1; a manual dated balance is a separate explicit observation and does not bind/change history authority. Connections or previews alone do not bind. Same scoped ID with changed economic content blocks commit; suspected equal content under distinct IDs warns and is never deleted automatically. Supplemental integrations may supply planned_payments only when explicitly selected in record_kinds; no silently discarded factual records."
+      "description": "External identity is scoped to target company+account+source_system+external company+record kind+external record ID. Facts use external_operation_id with external_payment_id=null; expectations use external_payment_id with external_operation_id=null; manual records have both null. Operation and expected-payment IDs remain separate namespaces. In addition to scoped deduplication, the account has ONE transaction_source in MVP: file/imported operations and external balance observations from another external source namespace return 409 FACTUAL_SOURCE_CONFLICT without writes. Manual supplements after import are allowed, preserve the external binding and their manual provenance, and invalidate forecast freshness. An exact imported equivalent is rejected on manual creation with 409 TRANSACTION_DUPLICATE_SUSPECTED; subsequent imports warn about matches with manual records and require acknowledgement that preserves both records. Import into a manual-only account still requires an explicit future migration. First accepted import also binds one source_company_id per source_system/account, including planned-payments-only sources; selecting another company in the same source gives 409 SOURCE_BINDING_CONFLICT. First manual transaction binds manual_v1; a manual dated balance is a separate explicit observation and does not bind/change history authority. Connections or previews alone do not bind. Same scoped ID with changed economic content blocks commit; suspected equal content under distinct IDs warns and is never deleted automatically. Supplemental integrations may supply planned_payments only when explicitly selected in record_kinds; no silently discarded factual records."
     },
     "BalanceObservation": {
       "type": "object",
@@ -1127,6 +1142,57 @@
         "scenario_business_date"
       ],
       "description": "Core-owned immutable identity and actual recording time; scenario_business_date equals forecast cutoff. Requires synthetic_calendar_scenario_not_historical_fact in forecast limitations; never used for historical evaluation/calibration or claimed as current bank state."
+    },
+    "HistoryAssessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "readOnly": true,
+      "properties": {
+        "rule_version": {
+          "type": "string",
+          "const": "csv_history_quality_v1"
+        },
+        "from_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "through_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "data_version": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*$"
+        },
+        "operation_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 90
+        },
+        "balance_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 90
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 32
+        }
+      },
+      "required": [
+        "rule_version",
+        "from_date",
+        "through_date",
+        "data_version",
+        "operation_days",
+        "balance_days",
+        "limitations"
+      ],
+      "description": "Server-assessed suitability of imported operations for a limited 90-day CSV projection. Missing days remain unknown and history_coverage is null. No operator allowlist or browser attestation is required. The model requires a 90-day span and an exact cutoff EOD and rejects detected reconciliation gaps. Probability remains not_calibrated."
     }
   },
   "allOf": [

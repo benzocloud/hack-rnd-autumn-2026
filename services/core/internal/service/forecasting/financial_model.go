@@ -24,6 +24,7 @@ type FinancialModelInput struct {
 	Snapshot   ModelInput
 	Coverage   Coverage
 	Operations []ledger.Transaction
+	Assessment *HistoryAssessment
 }
 
 type FinancialComponent struct {

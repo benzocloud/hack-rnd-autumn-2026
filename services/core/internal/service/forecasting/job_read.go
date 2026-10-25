@@ -63,7 +63,10 @@ func readForecastView(ctx context.Context, snapshots jobSnapshots, job domain.Jo
 	if d.Scope != job.Scope || d.ID != input.SnapshotID || d.DataVersion != job.DataVersion || d.Cutoff != input.Cutoff {
 		return ForecastView{}, ErrUnavailable
 	}
-	view := ForecastView{ID: job.ID, Scope: job.Scope, Status: job.Status, CreatedAt: job.CreatedAt, CompletedAt: job.CompletedAt, CurrentDataVersion: revision, DataVersion: job.DataVersion, Cutoff: input.Cutoff, Snapshot: snapshot, ModelContextID: input.ModelContextID, Coverage: input.Coverage, ErrorCode: job.ErrorCode, RequestID: job.RequestID}
+	if _, err := prepareJob(snapshot, input); err != nil {
+		return ForecastView{}, ErrUnavailable
+	}
+	view := ForecastView{ID: job.ID, Scope: job.Scope, Status: job.Status, CreatedAt: job.CreatedAt, CompletedAt: job.CompletedAt, CurrentDataVersion: revision, DataVersion: job.DataVersion, Cutoff: input.Cutoff, Snapshot: snapshot, ModelContextID: input.ModelContextID, Coverage: input.Coverage, Assessment: input.Assessment, Model: input.Model, ErrorCode: job.ErrorCode, RequestID: job.RequestID}
 	switch job.Status {
 	case "queued", "running":
 		if job.CompletedAt != nil || len(job.Result) != 0 || job.ErrorCode != "" {

@@ -103,3 +103,26 @@ The GBrain runtime statements below describe the old runner on 2026-10-22. The d
   future runtime activation; v1 is not silently changed. Numerical quality gates
   in section 7 remain proposals. Approval of these decisions does not claim
   implementation, stage acceptance, publication, merge or deployment.
+
+- **ADR-031 (Product behavior accepted by owner, 2026-10-25):**
+  [Прогноз по CSV с автоматической оценкой качества](adr/031-csv-forecast-eligibility.md).
+  Ordinary CSV forecasts must not require an operator manifest per file/company.
+  Core evaluates input suitability and reports specific limitations or rejection
+  reasons; suitability does not certify complete bank history. Existing imports
+  need a supported reevaluation path without duplicate facts or manual SQL proof.
+  ADR-030 remains applicable to explicit dataset fixture/synthetic calendar modes.
+  The current v1 model contract is not silently relaxed; a compatible versioned
+  input/model profile and quality checks are required. Owner separately accepted
+  the initial limited CSV profile: 90-day span, cutoff EOD, unknown days and
+  rejection of detected reconciliation gaps. Accuracy/probability promotion
+  thresholds remain open. This accepts product behavior,
+  not runtime completion, publication, merge or deployment.
+
+- **ADR-032 (Accepted by owner, 2026-10-25):**
+  [Ручные дополнения после импорта](adr/032-manual-import-supplements.md).
+  Imported accounts accept manual supplements without changing their external
+  binding. Operation provenance, scoped replay/CAS and forecast reevaluation
+  remain explicit. Exact imported duplicates are rejected on manual creation;
+  later imports warn about matching manual facts and require acknowledgement.
+  Manual facts/EOD never acquire fixture completeness automatically. This
+  authorizes the scoped correction, not stage acceptance or publication/deploy.

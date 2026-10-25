@@ -30,12 +30,22 @@ func From(err error) error {
 	}
 	code, reason := codes.Internal, pb.CoreErrorReason_CORE_ERROR_REASON_INTERNAL_ERROR
 	switch {
+	case errors.Is(err, ledger.ErrSuspectedDuplicate):
+		code, reason = codes.FailedPrecondition, pb.CoreErrorReason_CORE_ERROR_REASON_TRANSACTION_DUPLICATE_SUSPECTED
 	case errors.Is(err, forecasting.ErrInvalid):
 		code, reason = codes.InvalidArgument, pb.CoreErrorReason_CORE_ERROR_REASON_VALIDATION_ERROR
 	case errors.Is(err, forecasting.ErrCursor):
 		code, reason = codes.InvalidArgument, pb.CoreErrorReason_CORE_ERROR_REASON_INVALID_CURSOR
 	case errors.Is(err, forecasting.ErrMissingBalance):
 		code, reason = codes.FailedPrecondition, pb.CoreErrorReason_CORE_ERROR_REASON_BALANCE_AS_OF_UNAVAILABLE
+	case errors.Is(err, forecasting.ErrHistoryTooShort):
+		code, reason = codes.FailedPrecondition, pb.CoreErrorReason_CORE_ERROR_REASON_HISTORY_WINDOW_TOO_SHORT
+	case errors.Is(err, forecasting.ErrHistoryReconciliation):
+		code, reason = codes.FailedPrecondition, pb.CoreErrorReason_CORE_ERROR_REASON_HISTORY_RECONCILIATION_FAILED
+	case errors.Is(err, forecasting.ErrHistorySource):
+		code, reason = codes.FailedPrecondition, pb.CoreErrorReason_CORE_ERROR_REASON_HISTORY_SOURCE_UNSUPPORTED
+	case errors.Is(err, forecasting.ErrHistoryOperationsLimit):
+		code, reason = codes.FailedPrecondition, pb.CoreErrorReason_CORE_ERROR_REASON_HISTORY_OPERATION_LIMIT_EXCEEDED
 	case errors.Is(err, forecasting.ErrHistory):
 		code, reason = codes.FailedPrecondition, pb.CoreErrorReason_CORE_ERROR_REASON_INSUFFICIENT_HISTORY
 	case errors.Is(err, forecasting.ErrHorizon):

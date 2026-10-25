@@ -93,9 +93,7 @@ func (s *jobs) Create(ctx context.Context, cmd CreateForecastCommand) (ForecastA
 		if err != nil {
 			return err
 		}
-		if !found {
-			return ErrHistory
-		}
+		hasCoverage := found
 		facts, err := snapshots.ReadFacts(ctx, cmd.Scope, cmd.Cutoff)
 		if err != nil {
 			return err
@@ -112,14 +110,28 @@ func (s *jobs) Create(ctx context.Context, cmd CreateForecastCommand) (ForecastA
 		if err != nil {
 			return ErrHistory
 		}
-		if _, err := prepareFinancial(snapshot, coverage); err != nil {
+		input, err := frozenInput(snapshot, coverage)
+		if err != nil {
+			return err
+		}
+		if !hasCoverage {
+			observations, err := snapshots.ReadBalanceHistory(ctx, cmd.Scope, cmd.Cutoff)
+			if err != nil {
+				return err
+			}
+			assessment, err := assessCSVHistory(snapshot, observations)
+			if err != nil {
+				return err
+			}
+			input.SchemaVersion = 2
+			input.Coverage = domain.JobCoverage{}
+			input.Assessment = assessment
+			input.Model = ModelContext{Name: "mean_90", Version: CSVModelVersion, PreprocessingVersion: CSVPreprocessing}
+		}
+		if _, err := prepareJob(snapshot, input); err != nil {
 			return err
 		}
 		if err := snapshots.InsertSnapshot(ctx, snapshot); err != nil {
-			return err
-		}
-		input, err := frozenInput(snapshot, coverage)
-		if err != nil {
 			return err
 		}
 		encoded, err := json.Marshal(input)

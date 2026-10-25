@@ -3,9 +3,11 @@ package forecasting
 import (
 	"context"
 	"errors"
+	"time"
 
 	domain "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/forecasting"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/money"
 	storage "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/repository/postgres"
 	ledgerSQL "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/repository/postgres/ledger"
 )
@@ -52,4 +54,32 @@ func (r *repository) ReadCalendar(ctx context.Context, scope ledger.Scope) (doma
 	calendar := domain.Calendar{Reason: domain.HistoricalCalendarUnavailable}
 	err := r.tx.QueryRowxContext(ctx, queryReadCalendar, scope.CompanyID, scope.AccountID).Scan(&calendar.ExcludedPayments)
 	return calendar, storage.StorageError(err)
+}
+
+func (r *repository) ReadBalanceHistory(ctx context.Context, scope ledger.Scope, cutoff ledger.Date) (result []domain.OpeningBalance, err error) {
+	rows, err := r.tx.QueryxContext(ctx, queryReadBalanceHistory, scope.CompanyID, scope.AccountID, string(cutoff))
+	if err != nil {
+		return nil, storage.StorageError(err)
+	}
+	defer func() { err = errors.Join(err, storage.StorageError(rows.Close())) }()
+	for rows.Next() {
+		var date string
+		var amount, version int64
+		var source ledger.BalanceSource
+		var recorded time.Time
+		if err := rows.Scan(&date, &amount, &source.Kind, &source.Namespace.System, &source.Namespace.CompanyID, &recorded, &version); err != nil {
+			return nil, storage.StorageError(err)
+		}
+		source.RecordedAt = recorded
+		value, err := money.New(amount, money.RUB)
+		if err != nil {
+			return nil, storage.WithCause(storage.ErrUnavailable, err)
+		}
+		observation, err := ledger.NewBalanceObservation(scope, ledger.Date(date), value, source)
+		if err != nil {
+			return nil, storage.WithCause(storage.ErrUnavailable, err)
+		}
+		result = append(result, domain.OpeningBalance{Observation: observation, DataVersion: version})
+	}
+	return result, storage.StorageError(rows.Err())
 }

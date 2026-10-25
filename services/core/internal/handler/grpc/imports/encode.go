@@ -99,6 +99,9 @@ func encodeIssue(issue domain.Issue) *pb.ImportIssue {
 		severity = pb.IssueSeverity_ISSUE_SEVERITY_BLOCKING
 	}
 	out := &pb.ImportIssue{Code: issue.Code, Severity: severity, Message: "Review the indicated input field or source binding", RelatedExternalOperationIds: issue.ExternalIDs}
+	if issue.Code == "SUSPECTED_CONTENT_DUPLICATE" && issue.Field == "manual_transaction" {
+		out.Message = "Строка совпадает с ручной операцией. Исключите её из файла, если это одно движение; подтверждение импорта сохранит обе записи."
+	}
 	if issue.Row > 0 {
 		n := uint64(issue.Row)
 		out.RowNumber = &n

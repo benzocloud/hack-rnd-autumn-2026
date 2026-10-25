@@ -47,7 +47,14 @@ func TestAccountSourceBindings(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for _, source := range []ledger.Source{manual, importSource("dataset_v1", "C002", "TX3"), importSource("bank", "C001", "TX4")} {
+	before := other.State()
+	if err := other.BindFacts(manual); err != nil {
+		t.Fatal("manual supplement rejected", err)
+	}
+	if other.State().Factual != before.Factual || other.State().Namespace != before.Namespace {
+		t.Fatal("manual supplement changed external binding")
+	}
+	for _, source := range []ledger.Source{importSource("dataset_v1", "C002", "TX3"), importSource("bank", "C001", "TX4")} {
 		if err := other.BindFacts(source); !errors.Is(err, ledger.ErrSourceConflict) {
 			t.Fatalf("source switch accepted: %v", err)
 		}
