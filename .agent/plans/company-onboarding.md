@@ -222,3 +222,6 @@ merge свежего main → проверки затронутой интегр
 - Pinned caveman-review/ponytail-review/golang-how-to получены из `.agent/infra/skills/skills.json`; A0 docs проверены двумя независимыми read-only reviewers без подтверждённых замечаний; code review A1–A5 ещё pending.
 - Параллельные изменения Workspace/Core/API требуют проверки свежего main и PR;
   не дублировать уже сделанное. Исторический `5c5797e` не является pin.
+
+
+По последнему запросу владельца выполняется только публикация законченного local runtime checkpointdfa89d4 вместе с remote0b35904; дальнейшая разработка остановлена. Дополнительные проверки/ограничения сохранены в handoff.

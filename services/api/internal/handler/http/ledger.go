@@ -83,11 +83,12 @@ func (h *handler) listCategories(w http.ResponseWriter, r *http.Request) {
 		}
 		var direction any
 		if category.Direction != corev1.Direction_DIRECTION_UNSPECIFIED {
-			direction = directionName(category.Direction)
-			if !contains(direction.(string), "inflow", "outflow") {
+			value := directionName(category.Direction)
+			if !contains(value, "inflow", "outflow") {
 				dependencyError(w, r)
 				return
 			}
+			direction = value
 		}
 		seen[category.Id] = true
 		items = append(items, object{"id": category.Id, "name": category.Name, "direction": direction, "semantic_kind": category.SemanticKind})

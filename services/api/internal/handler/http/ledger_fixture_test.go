@@ -2,10 +2,12 @@ package httpapi
 
 import (
 	"context"
-	corev1 "github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	corev1 "github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1"
 )
 
 func (f *financialFixture) ListCategories(context.Context, *corev1.ListCategoriesRequest, ...grpc.CallOption) (*corev1.ListCategoriesResponse, error) {

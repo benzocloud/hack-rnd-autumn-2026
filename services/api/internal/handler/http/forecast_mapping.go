@@ -29,7 +29,7 @@ func inputDTO(i *corev1.ForecastInput) object {
 	m := i.ModelContext
 	return object{"snapshot_id": i.SnapshotId, "data_version": strconv.FormatInt(i.DataVersion, 10), "cutoff_date": i.CutoffDate, "data_as_of": i.DataAsOf, "start_date": i.StartDate, "end_date": i.EndDate, "horizon_days": i.HorizonDays, "currency": i.Currency, "account_id": i.AccountId, "opening_balance": moneyDTO(i.OpeningBalance), "balance_as_of": i.BalanceAsOf, "risk_definition": i.RiskDefinition,
 		"history_coverage": historyCoverageDTO(i.HistoryCoverage),
-		"model_context": object{"id": m.Id, "model_name": m.ModelName, "model_version": m.ModelVersion, "preprocessing_version": m.PreprocessingVersion, "configuration_id": m.ConfigurationId, "random_seed": textPointer(m.RandomSeed), "trajectory_count": m.TrajectoryCount}}
+		"model_context":    object{"id": m.Id, "model_name": m.ModelName, "model_version": m.ModelVersion, "preprocessing_version": m.PreprocessingVersion, "configuration_id": m.ConfigurationId, "random_seed": textPointer(m.RandomSeed), "trajectory_count": m.TrajectoryCount}}
 }
 func historyCoverageDTO(c *corev1.HistoryCoverage) any {
 	if c == nil || c.Kind == corev1.HistoryCoverageKind_HISTORY_COVERAGE_KIND_UNSPECIFIED {

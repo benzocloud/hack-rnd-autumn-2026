@@ -48,7 +48,7 @@ func validHistoryCoverage(c *corev1.HistoryCoverage, revision int64, cutoff stri
 		return false
 	}
 	switch c.Kind {
-	case corev1.HistoryCoverageKind_HISTORY_COVERAGE_KIND_CERTIFIED:
+	case corev1.HistoryCoverageKind_HISTORY_COVERAGE_KIND_UNSPECIFIED, corev1.HistoryCoverageKind_HISTORY_COVERAGE_KIND_CERTIFIED:
 	case corev1.HistoryCoverageKind_HISTORY_COVERAGE_KIND_DATASET_FIXTURE_ASSUMPTION:
 		if !contains("dataset_coverage_assumed_not_bank_certified", c.Limitations...) {
 			return false

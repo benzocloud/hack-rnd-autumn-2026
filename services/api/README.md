@@ -249,4 +249,47 @@ ClientConn/health Auth. Liveness не зависит от Auth; readiness не �
 (`spiffe://saldo.local/api` клиент, `spiffe://saldo.local/auth` сервер), реализовать
 имеющиеся RPC/ошибки по контракту и проверить реальный flow с PostgreSQL/email.
 Auth handlers менять не требуется. Финансовые Core adapters описаны выше.
-Миграции чужих БД, frontend переделки и production deployment в этот срез не входят.
+Миграции чужих БД и production deployment не выполняются.
+
+## Создание компании: настоящие процессы и PostgreSQL
+
+`POST /companies` передаёт scoped Idempotency-Key в Auth Begin, пересылает
+сохранённый spec в Core bootstrap, вызывает Auth Complete (самостоятельная
+проверка Core receipt), затем Core ReadCompany. Только COMPLETED возвращает201.
+Повтор того же ключа/тела возвращает ту же компанию; другой spec даёт409.
+Недоступность/timeout возвращает503; сохранённый PREPARED восстанавливает Auth.
+Новый счёт не содержит остатка, операций или привязки источника.
+
+Из `services/api/`, нужны Docker Compose, psql, Go1.27.3, gcc и pinned goose3.29.0:
+
+```sh
+ONBOARDING_TOOLS=$(mktemp -d)
+GOTOOLCHAIN=go1.27.3 GOBIN="$ONBOARDING_TOOLS" go install github.com/pressly/goose/v3/cmd/goose@v3.29.0
+export GOOSE="$ONBOARDING_TOOLS/goose"
+docker compose -f compose.onboarding.yml up -d --wait
+ONBOARDING_AUTH_PORT=$(docker compose -f compose.onboarding.yml port authdb 5432)
+ONBOARDING_CORE_PORT=$(docker compose -f compose.onboarding.yml port coredb 5432)
+export API_ONBOARDING_AUTH_DATABASE_URL="postgres://onboarding_test:onboarding_test_only@${ONBOARDING_AUTH_PORT}/saldo_onboarding_auth_test?sslmode=disable"
+export API_ONBOARDING_CORE_DATABASE_URL="postgres://onboarding_test:onboarding_test_only@${ONBOARDING_CORE_PORT}/saldo_onboarding_core_test?sslmode=disable"
+GOTOOLCHAIN=go1.27.3 go test -tags=onboardingintegration -race -count=1 -timeout=4m -v -run '^TestRealCompanyOnboardingProcesses$' ./integration
+GOTOOLCHAIN=go1.27.3 golangci-lint run --build-tags=onboardingintegration ./...
+docker compose -f compose.onboarding.yml down
+```
+
+`GOOSE` задаёт нестандартный путь к pinned CLI. Harness проверяет loopback,
+точные имена обеих test DB и их server markers до миграций; отсутствующая
+конфигурация вызывает failure, а не skip. Использовать только disposable DB:
+тест коммитит свои синтетические записи, не очищает чужие данные. PKI, HMAC keys
+и process logs создаются приватно во временном каталоге и удаляются Go testing.
+Бинарники Auth/Core/API собираются из текущего checkout; чужие internal packages
+не импортируются. Регистрация/verify/login и owner создаются настоящими RPC;
+mock ограничен existing server-only email demo allowlist для новых `.test` users.
+Финансовые mocks выключены, новый account проверяется пустым.
+
+Тестовая mTLS-прослойка сохраняет API/Auth identity исходящего вызова и только
+вводит сетевые отказы: потеря ответа после реального Core commit или отсутствие
+bootstrap/receipt. Проверяются double click/replay/conflict, перезапуск всех трёх
+процессов, recovery после logout без cookie, foreign command, exact peer denials,
+CSRF и отозванный доступ. SQL только проверяет результат и удаляет membership
+для отрицательной проверки revocation; положительный owner не вставляется SQL.
+Этот gate не подменяет настоящий браузерный Workspace flow.

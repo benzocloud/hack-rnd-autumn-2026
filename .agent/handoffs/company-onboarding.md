@@ -276,3 +276,117 @@ plugins/task через GOBIN=<tools> go install с этими pinned верси
 зависимости/production данные не затрагивались. Новый company report генерируется
 API_COMPANY_REPORT при TestCompanyCreationContractResponses; check.sh добавляет
 его к прежним smoke/financial OpenAPI captures.
+
+
+## A3 actual runtime — проверенный diff поверх49938a6
+
+services/api/integration/onboarding_{process,proxy}_test.go, opt-in build tag
+`onboardingintegration`: harness собирает отдельные бинарники текущих Auth/Core/API,
+применяет текущие миграции и проверяет HTTPS API→mTLS Auth/Core→два real PostgreSQL18.6.
+Никаких cross-module internal imports. Оба DB URL обязаны явно выбирать loopback,
+точные имена saldo_onboarding_auth_test/saldo_onboarding_core_test, sslmode=disable
+и server markers saldo-auth-integration/saldo-core-integration до первой записи.
+Отсутствие env — failure, не skip. Ephemeral PKI/HMAC/process logs приватны и
+удаляются testing; сертификаты Auth/Core имеют serverAuth+clientAuth. Никакого
+использования live credentials/config/CA, контейнеров других разработчиков.
+
+Воспроизводимый setup из services/api/ — [README](../../services/api/README.md),
+compose.onboarding.yml с двумя disposable PG18.6/tmpfs и случайными loopback ports.
+Установить psql/Go1.27.3/gcc/goose3.29.0; env имена:
+API_ONBOARDING_AUTH_DATABASE_URL, API_ONBOARDING_CORE_DATABASE_URL; optional GOOSE.
+Команды: `go test -tags=onboardingintegration -race -count=1 -timeout=4m -v -run '^TestRealCompanyOnboardingProcesses$' ./integration`,
+`golangci-lint run --build-tags=onboardingintegration ./...` (v2.15.0).
+Harness сам собирает сервисы/мигрирует только проверенные test DB; финансовых
+fixtures не добавляет. PostgreSQL записи остаются только в disposable test DB.
+
+PASS -race, включая повтор после review fix: existing register/verify/login,
+пустой initial membership list, CSRF denial, два одновременных POST/один key,
+идентичный replay/409 другой body, normalized Cyrillic/escaping name, owner,
+единственный company/account/receipt/membership, unknown balance/source и version1,
+отсутствие transactions/balances/source bindings/coverage, restart всех3 процессов,
+logout/login и retained membership. Positive owner создаётся только HTTP/RPC.
+Actual Core commit с потерянным API reply возвращает503, unreadable receipt
+оставляет PREPARED без membership; после logout/restart worker завершает без
+cookie и повтор201 возвращает тот же ID. Отдельно: restart после Begin до
+bootstrap, foreign command, API→Core-only Auth RPC denied, API→Auth-only receipt
+denied, чужая компания404, SQL negative revocation fixture, completed replay
+не восстанавливает owner. Test proxy только управляет транспортом, forwards
+real Core с исходной API/Auth service identity.
+
+Оба independent reviews нашли одинаковый harness readiness race: API health
+проверял live proxy, а не actual Core. Исправлено direct Auth mTLS receipt read
+unknown command→NotFound до API readiness. Повторный actual runtime/race PASS;
+full API lint с integration tag0issues. Оба review closure подтверждены; доказанных открытых дефектов нет.
+
+Обязательные Core gates из services/core/ завершились exit0 на этом checkout:
+`PATH=<pinned-tools>:$PATH task check` и после pinned `task migrate-up`
+`task integration` с real отдельной marked saldo_core_test, PostgreSQL18.6, race.
+CORE_POSTGRES_HOST/PORT/USER/PASSWORD/DATABASE/SSL_MODE, GOOSE_DBSTRING — только
+disposable values. Go1.27.3/Task3.48.0/goose3.29.0/lint2.15.0. Не skipped.
+
+CI exact49938a6: Auth40139961768, Core40139961796, API40139961757,
+infra40139961764, integrated stack40139961753 workflows SUCCESS. Stack workflow
+сам по себе не доказывает deployment; deployment не разрешён. Новый runtime
+diff этим старым CI не покрыт. api-ci новый отдельный onboarding job проверит
+actual process/PG/race и tag lint; services Auth/Core paths добавлены в trigger.
+
+A3 checkpoint closure: independent Caveman/Ponytail reviews поверх49938a6
+завершены без открытых доказанных замечаний. Помимо readiness исправлен README
+Goose PATH: явные ONBOARDING_TOOLS/GOBIN/absolute GOOSE. Process SHA256
+a710b9ef8dcf7979aa6bc6778a1d690f6bb0f46448cf4c801b08d91bb9ab983e; proxy
+8205c678dec960677acbda741e136a10c6afc5278076b76a1c9ecc87de1545da.
+Полный literal API scripts/check.sh после PKI delta exit0, 41 responses, full
+unit/race/build/vet/fmt/lint/generation/import/smoke, own statements90.33%,
+executable block lines90.91%. Runtime -race после readiness fix PASS9.64s,
+full API tag lint0issues. CI/Compose YAML parsed; новый GH job ещё должен пройти.
+A3 остаётся на ревью владельца, браузерный A4/A5 не завершён.
+
+
+## Merge свежего main0abae4f перед A3 push
+
+A3 runtime checkpoint dfa89d48ca26008e1ae3283b05b7e46ebe638514 сохранён локально;
+перед push fetch обнаружил main0abae4fbfe2f1ba97a4f54c07a305010f1002203.
+PR44/45/46 descriptions, comments/reviews/inline прочитаны; main включает
+financial/imports/category contracts/runtime, отдельный ML PR45 не включён.
+Один conflict CoreClients в API router разрешён как union: Imports/ImportSpool
+и все Ledger methods main сохранены вместе с нашим CreateCompanyBootstrap.
+Два независимых narrow reviews конфликтного объединения без дефектов. Main
+bootstrap seed categories сохранён; это не финансовые операции/остаток/coverage.
+Никакой дополнительной реализации imports/ML этим merge не делаем.
+
+На объединённом tree actual onboarding -race PASS13.69s, Core task check и
+полный real markedPG task integration -race PASS, миграции Core применены к
+своей disposable DB. Старый full API PASS90.33% относится к pre-merge49938a6
++runtime diff, не к этому merge. Literal API check.sh после merge FAIL:
+own statements83.14%, executable lines83.71%, required85%. Отдельный
+неизменённый archive origin/main0abae4f + тот же go test -race -coverpkg./...
+и coverage.py также FAIL82.48%/83.08%. Это воспроизведённая унаследованная
+main-регрессия; threshold/exclusions/check.sh не менялись для её сокрытия.
+Не выдавать текущий полный API gate/CI за green. Нужно meaningful test coverage
+в incoming API imports/ledger code либо согласованное исправление владельца;
+это не повод останавливать независимый A4/browser.
+
+Дополнительно incoming main имел fmt2files/lint3. В merge минимально сохранено
+поведение: alignment forecast_mapping, imports ledger_fixture_test, http.MethodPost
+в commit_error_test; directionName проверяется как string до присвоенияany
+без typeassert; exhaustive HistoryCoverage switch явно включает UNSPECIFIED,
+уже обработанный начальным guard. Финансовые контракты/семантика не менялись.
+Остальные независимые API gates проверяются отдельно, full gate остаётся FAIL.
+
+## Остановка и публикация по запросу владельца
+
+Владелец остановил разработку и отдельно разрешил публикацию законченной
+работы. A4/browser здесь больше не выполняются. После latest merge unit/race,
+vet/full tag lint0, Ruff check/format PASS. Из12 Python schema tests один FAIL:
+CalculationContractTests.test_copied_rest_definitions_match_current_openapi,
+Transaction definition расходится с canonical OpenAPI. Полный gate не green;
+coverage85 threshold и schema test не обходились. Дополнительный smoke/conformance
+после остановки отклонён auto-review; повтор не выполнялся.
+
+Публикация объединяет remote0b35904 с локальным runtime checkpointdfa89d4. Remote UI/review fixes сохранены; их проверки выше принадлежат опубликованному handoff, здесь заново не заявляются. Дальнейшая разработка остановлена владельцем.
+
+Publication compatibility gate на tree dfa89d4 + main0abae4f + remote0b35904:
+API go test ./... PASS; onboardingintegration compile PASS; full API lint с
+build tag0issues; actual process/PG/race PASS11.47s. Remote dual-usage PKI
+сохранён, local Core/clientAuth assertions также сохранены. Полный coverage/schema
+suite здесь заново не объявляется passing. Продолжение разработки остановлено.
