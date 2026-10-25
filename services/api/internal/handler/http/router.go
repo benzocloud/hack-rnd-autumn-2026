@@ -55,6 +55,10 @@ func New(auth authClient, origin string, logger *slog.Logger, ready func(context
 
 // CoreClients is the composing application's typed transport boundary.
 type CoreClients struct {
+	Scenarios   corev1.ScenariosServiceClient
+	Comparisons interface {
+		CompareForecasts(context.Context, *corev1.CompareForecastsRequest, ...grpc.CallOption) (*corev1.CompareForecastsResponse, error)
+	}
 	Payments    corev1.PaymentsServiceClient
 	Imports     corev1.ImportsServiceClient
 	ImportSpool *ImportSpool
@@ -108,6 +112,10 @@ func NewWithCore(auth authClient, origin string, logger *slog.Logger, ready func
 				return
 			}
 			writeJSON(rw, 200, map[string]string{"status": "ok"})
+			return
+		}
+		if h.scenarioRoute(rw, r) {
+			route = "/api/v1/companies/{company_id}/scenarios"
 			return
 		}
 		if h.financialRoute(rw, r) {

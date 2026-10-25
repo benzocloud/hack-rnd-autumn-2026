@@ -52,6 +52,7 @@ type application struct {
 	Payments     paymentsOperations
 	Forecasting  forecastingOperations
 	ForecastJobs forecastJobs
+	Scenarios    scenarioOperations
 	Imports      importOperations
 	db           *sqlx.DB
 }
@@ -78,10 +79,12 @@ func NewWithForecastModel(ctx context.Context, cfg config.Config, authorize func
 		_ = db.Close()
 		return nil, err
 	}
+	jobs := newForecastJobs(db, cfg.Postgres, model)
 	return &application{
 		db:           db,
 		Companies:    newCompanies(db, cfg.Postgres, authorize),
-		ForecastJobs: newForecastJobs(db, cfg.Postgres, model),
+		ForecastJobs: jobs,
+		Scenarios:    newScenarios(db, cfg.Postgres, jobs),
 		Imports:      importService,
 		Ledger: ledger.New(func(ctx context.Context, work ledger.Work) error {
 			err := appPostgres.WithinTx(ctx, db, cfg.Postgres.QueryTimeout, func(ctx context.Context, tx *sqlx.Tx) error {

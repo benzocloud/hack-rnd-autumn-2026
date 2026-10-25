@@ -73,13 +73,16 @@ func sourceDTO(s *corev1.RecordSource) any {
 	}
 	return object{"kind": kind, "source_system": s.SourceSystem, "source_company_id": textPointer(s.SourceCompanyId), "external_operation_id": textPointer(s.ExternalOperationId), "external_payment_id": textPointer(s.ExternalPaymentId), "import_id": textPointer(s.ImportId), "connection_id": textPointer(s.ConnectionId)}
 }
-func forecastResultDTO(r *corev1.ForecastResult) object {
-	m := r.Metrics
+func metricsDTO(m *corev1.ForecastMetrics) object {
 	var gap any
 	if m.FirstGap != nil {
 		gap = object{"date": m.FirstGap.Date, "shortfall": moneyDTO(m.FirstGap.Shortfall)}
 	}
 	metrics := object{"first_gap": gap, "max_shortfall": moneyDTO(m.MaxShortfall), "minimum_balance": moneyDTO(m.MinimumBalance), "closing_balance": moneyDTO(m.ClosingBalance), "gap_probability": probabilityDTO(m.GapProbability)}
+	return metrics
+}
+func forecastResultDTO(r *corev1.ForecastResult) object {
+	metrics := metricsDTO(r.Metrics)
 	points := make([]object, 0, len(r.DailyPoints))
 	for _, p := range r.DailyPoints {
 		points = append(points, object{"date": p.Date, "inflow": moneyDTO(p.Inflow), "outflow": moneyDTO(p.Outflow), "balance": moneyDTO(p.Balance), "balance_lower": moneyDTO(p.BalanceLower), "balance_upper": moneyDTO(p.BalanceUpper), "negative_balance_probability": probabilityDTO(p.NegativeBalanceProbability)})
