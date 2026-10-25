@@ -85,6 +85,17 @@ func (h *handler) createScenario(w http.ResponseWriter, r *http.Request) {
 	}
 	changes := []*corev1.ScenarioChange{}
 	for _, f := range raw {
+		var discriminator string
+		if json.Unmarshal(f["type"], &discriminator) == nil && discriminator == "reduce_sales" {
+			change, valid := salesChangeBody(f)
+			if !valid {
+				writeError(w, r, 422, "VALIDATION_ERROR", nil)
+				return
+			}
+			changes = append(changes, change)
+			continue
+		}
+
 		for key := range f {
 			if !contains(key, "id", "type", "date", "amount", "description", "category_id") {
 				writeError(w, r, 422, "VALIDATION_ERROR", nil)
@@ -136,6 +147,21 @@ func scenarioDTO(s *corev1.Scenario) (object, bool) {
 	}
 	changes := []object{}
 	for _, c := range s.Changes {
+		if reduction := c.GetReduceSales(); reduction != nil {
+			if !resourceID(reduction.Id) || !businessDate(reduction.PeriodStart) || !businessDate(reduction.PeriodEnd) || reduction.PeriodStart > reduction.PeriodEnd || reduction.ReductionBasisPoints < 1 || reduction.ReductionBasisPoints > 10000 || len(reduction.Targets) < 1 || len(reduction.Targets) > 1000 {
+				return nil, false
+			}
+			targets := []object{}
+			for _, t := range reduction.Targets {
+				if t == nil || !nonempty(t.ComponentId, 128) || t.ComponentId != t.OccurrenceId {
+					return nil, false
+				}
+				targets = append(targets, object{"component_id": t.ComponentId, "occurrence_id": t.OccurrenceId})
+			}
+			changes = append(changes, object{"id": reduction.Id, "type": "reduce_sales", "targets": targets, "period_start": reduction.PeriodStart, "period_end": reduction.PeriodEnd, "reduction_basis_points": reduction.ReductionBasisPoints})
+			continue
+		}
+
 		v := c.GetOneOffExpense()
 		if v == nil || !resourceID(v.Id) || !businessDate(v.Date) || !positiveMoney(v.Amount) || !nonempty(v.Description, 1000) || v.CategoryId != nil {
 			return nil, false
@@ -236,4 +262,30 @@ func (h *handler) compareForecasts(w http.ResponseWriter, r *http.Request) {
 }
 func validComparisonMetrics(m *corev1.ForecastMetrics) bool {
 	return m != nil && nonnegativeMoney(m.MaxShortfall) && validMoney(m.MinimumBalance) && validMoney(m.ClosingBalance) && validProbability(m.GapProbability) && (m.FirstGap == nil || businessDate(m.FirstGap.Date) && positiveMoney(m.FirstGap.Shortfall))
+}
+
+func salesChangeBody(f map[string]json.RawMessage) (*corev1.ScenarioChange, bool) {
+	for key := range f {
+		if !contains(key, "id", "type", "targets", "period_start", "period_end", "reduction_basis_points") {
+			return nil, false
+		}
+	}
+	v := &corev1.ReduceSalesChange{}
+	if json.Unmarshal(f["id"], &v.Id) != nil || !resourceID(v.Id) || json.Unmarshal(f["period_start"], &v.PeriodStart) != nil || json.Unmarshal(f["period_end"], &v.PeriodEnd) != nil || !businessDate(v.PeriodStart) || !businessDate(v.PeriodEnd) || v.PeriodStart > v.PeriodEnd || json.Unmarshal(f["reduction_basis_points"], &v.ReductionBasisPoints) != nil || v.ReductionBasisPoints < 1 || v.ReductionBasisPoints > 10000 {
+		return nil, false
+	}
+	var targets []map[string]json.RawMessage
+	if json.Unmarshal(f["targets"], &targets) != nil || len(targets) < 1 || len(targets) > 1000 {
+		return nil, false
+	}
+	seen := map[string]bool{}
+	for _, t := range targets {
+		var component, occurrence string
+		if len(t) != 2 || json.Unmarshal(t["component_id"], &component) != nil || json.Unmarshal(t["occurrence_id"], &occurrence) != nil || !nonempty(component, 128) || component != occurrence || seen[component] {
+			return nil, false
+		}
+		seen[component] = true
+		v.Targets = append(v.Targets, &corev1.OccurrenceTarget{ComponentId: component, OccurrenceId: occurrence})
+	}
+	return &corev1.ScenarioChange{Change: &corev1.ScenarioChange_ReduceSales{ReduceSales: v}}, true
 }
