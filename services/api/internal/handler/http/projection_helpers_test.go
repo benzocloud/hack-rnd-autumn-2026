@@ -86,7 +86,7 @@ func TestImportPreviewAndTransactionProjectionRejects(t *testing.T) {
 	preview := &corev1.ImportPreview{
 		AccountId: account, SourceCompanyId: "SRC", SourceSystem: "dataset_v1", Currency: "RUB",
 		PeriodStart: "2026-01-01", PeriodEnd: "2026-01-31", BaseDataVersion: 1, PreviewVersion: 1, RowCount: 1,
-		RecordKinds: []corev1.ImportRecordKind{corev1.ImportRecordKind_IMPORT_RECORD_KIND_TRANSACTIONS, corev1.ImportRecordKind_IMPORT_RECORD_KIND_BALANCE_OBSERVATIONS},
+		RecordKinds:         []corev1.ImportRecordKind{corev1.ImportRecordKind_IMPORT_RECORD_KIND_TRANSACTIONS, corev1.ImportRecordKind_IMPORT_RECORD_KIND_BALANCE_OBSERVATIONS},
 		BalanceObservations: []*corev1.BalanceObservation{{Date: "2026-01-15", Balance: &corev1.Money{AmountMinor: 1, Currency: "RUB"}, Source: corev1.BalanceSource_BALANCE_SOURCE_MANUAL}},
 	}
 	if _, err := importPreviewDTO(preview, account); err == nil {
