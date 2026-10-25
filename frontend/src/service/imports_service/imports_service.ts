@@ -19,7 +19,7 @@ const listImports = async ( request: IListImportsParams, signal?: AbortSignal ):
 };
 
 
-const uploadImport = async ( request: IUploadImportParams, signal?: AbortSignal ): Promise<IImportAccepted> => {
+const uploadImport = async ( request: IUploadImportParams, signal?: AbortSignal, onProgress?: ( percent: number ) => void ): Promise<IImportAccepted> => {
     const data = new FormData();
 
     data.append("file", request.data.file);
@@ -34,6 +34,7 @@ const uploadImport = async ( request: IUploadImportParams, signal?: AbortSignal 
         url: `/companies/${encodeURIComponent(request.company_id)}/imports`,
         signal,
         data: data,
+        onUploadProgress: ( event ) => { if (event.total) { onProgress?.(Math.min(100, Math.round(event.loaded / event.total * 100))); } },
         headers: { "Idempotency-Key": request.idempotency_key },
     });
 

@@ -1,4 +1,4 @@
-import type { ICancelPaymentParams, ICreatePaymentParams, IGetPaymentParams, IListPaymentMatchesParams, IListPaymentsParams, IMatch, IMatchList, IMatchPaymentParams, IPayment, IPaymentList, IRemovePaymentMatchParams, IUpdatePaymentParams } from "@/interfaces";
+import type { ICreateReconciliationGroupRequest, IReconciliationGroup, ICancelPaymentParams, ICreatePaymentParams, IGetPaymentParams, IListPaymentMatchesParams, IListPaymentsParams, IMatch, IMatchList, IMatchPaymentParams, IPayment, IPaymentList, IRemovePaymentMatchParams, IUpdatePaymentParams } from "@/interfaces";
 
 import api from "../api";
 
@@ -121,7 +121,25 @@ const removePaymentMatch = async ( request: IRemovePaymentMatchParams, signal?: 
 };
 
 
-const paymentsService = { listPayments, createPayment, getPayment, updatePayment, cancelPayment, listPaymentMatches, matchPayment, removePaymentMatch };
+const listReconciliationGroups = async ( request: { company_id: string; cursor?: string; include_revoked?: boolean }, signal?: AbortSignal ): Promise<{ items: IReconciliationGroup[]; next_cursor: string | null }> => {
+    const response = await api.request<{ items: IReconciliationGroup[]; next_cursor: string | null }>({ method: "GET", url: `/companies/${encodeURIComponent(request.company_id)}/reconciliation-groups`, params: { limit: 100, cursor: request.cursor, include_revoked: request.include_revoked }, signal });
+    return response.data;
+};
+
+
+const createReconciliationGroup = async ( request: { company_id: string; idempotency_key: string; data: ICreateReconciliationGroupRequest }, signal?: AbortSignal ): Promise<IReconciliationGroup> => {
+    const response = await api.request<IReconciliationGroup>({ method: "POST", url: `/companies/${encodeURIComponent(request.company_id)}/reconciliation-groups`, data: request.data, headers: { "Idempotency-Key": request.idempotency_key }, signal });
+    return response.data;
+};
+
+
+const revokeReconciliationGroup = async ( request: { company_id: string; group_id: string; version: string; idempotency_key: string }, signal?: AbortSignal ): Promise<IReconciliationGroup> => {
+    const response = await api.request<IReconciliationGroup>({ method: "POST", url: `/companies/${encodeURIComponent(request.company_id)}/reconciliation-groups/${encodeURIComponent(request.group_id)}/revoke`, data: { version: request.version }, headers: { "Idempotency-Key": request.idempotency_key }, signal });
+    return response.data;
+};
+
+
+const paymentsService = { listReconciliationGroups, createReconciliationGroup, revokeReconciliationGroup, listPayments, createPayment, getPayment, updatePayment, cancelPayment, listPaymentMatches, matchPayment, removePaymentMatch };
 
 
 export default paymentsService;

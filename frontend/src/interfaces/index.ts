@@ -26,3 +26,6 @@ export type { AuthMode, VerificationPurpose, IAuthState } from "./auth/state";
 export type { IVerifyEmailRequest } from "./auth/request";
 export type { IEmailVerificationChallenge } from "./auth/response";
 export type { ForecastPeriod, IDashboardData } from "./dashboard";
+
+export type { ICreateReconciliationGroupRequest } from "./payments/request";
+export type { IReconciliationGroup } from "./payments/response";
