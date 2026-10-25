@@ -162,9 +162,9 @@ REST conformance/security tests; минимальные config examples/deploy t
 - [x] Typed clients, safe Russian errors/request ID, key conflict и 503/in-progress;
   201 только после COMPLETED и успешного read. Не дублировать Company domain.
 - [x] OpenAPI conformance и adapter boundary regressions (201/409/503, Origin/CSRF, owner injection, revoked/malformed dependencies).
-- [ ] Реальный HTTPS API → mTLS Auth/Core → PostgreSQL: чужой command/peer/CSRF/revocation/timeouts/replay. Прогнаны register/verify/login, owner и пустой счёт, replay, конфликт ключа, отказ без CSRF, чужой пользователь и чтение после перезапуска Auth. Peer, revocation, timeout и потерянный ответ bootstrap ещё не закрыты.
+- [ ] Реальный HTTPS API → mTLS Auth/Core → PostgreSQL: чужой command/peer/CSRF/revocation/timeouts/replay. Прогнаны register, проверка настоящего HMAC кода, login, owner и пустой счёт, replay, конфликт ключа, CSRF 403, чужой пользователь 403/404 и чтение после перезапуска Auth. Peer, revocation, timeout и потерянный ответ bootstrap ещё не закрыты.
 - [x] Полный API check и два reviews adapter slice пройдены, отдельный checkpoint готов к push.
-- [ ] Реальная интеграция A3 и её отдельное ревью/публикация. Цепочка есть в `go test -tags=onboarding`; ревью этого прогона ещё нет.
+- [ ] Реальная интеграция A3 и её отдельное ревью/публикация. Цепочка запускается отдельным шагом API CI с `-tags=onboarding`; ревью этого прогона ещё нет.
 
 ### A4 — Workspace и пользовательский путь
 
@@ -176,7 +176,7 @@ context/request hooks; только блокирующая часть settings r
   invitations. Повторную реализацию разделения не делать.
 - [ ] После create обновить company/membership context; стабильный retry key,
   double click, lost response, refresh сохраняют ту же компанию. Ключ создания
-  хранится в sessionStorage до подтверждённого ответа; переход идёт в настройки,
+  хранится в sessionStorage до подтверждённого ответа, а при недоступном хранилище остаётся одним значением на время страницы; переход идёт в настройки,
   где компания читается заново. Браузерный прогон ещё не сделан.
 - [ ] Проверить фактический redirect/settings unsupported endpoints;
   убрать только зависимость, блокирующую onboarding.

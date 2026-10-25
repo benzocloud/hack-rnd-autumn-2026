@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { rememberCompanyCreateKey } from "../src/helpers/companyCreate.ts";
+import { clearCompanyCreateKey, companyCreateKeyFrom, rememberCompanyCreateKey } from "../src/helpers/companyCreate.ts";
 
 
 const memory = () => {
@@ -25,4 +25,18 @@ test("a company creation retry keeps the key for the same form, including after 
     assert.equal(again, created);
     assert.equal(rememberCompanyCreateKey(restored, "name"), created);
     assert.notEqual(rememberCompanyCreateKey(first, "other"), created);
+});
+
+
+test("a blocked browser keeps one key for the form until creation is confirmed", () => {
+    const blocked = {
+        getItem: () => { throw new Error("blocked"); },
+        setItem: () => { throw new Error("blocked"); },
+    };
+    const first = companyCreateKeyFrom(blocked, "offline");
+
+    assert.equal(companyCreateKeyFrom(blocked, "offline"), first);
+    assert.notEqual(companyCreateKeyFrom(blocked, "offline-other"), first);
+    clearCompanyCreateKey("offline");
+    assert.notEqual(companyCreateKeyFrom(blocked, "offline"), first);
 });

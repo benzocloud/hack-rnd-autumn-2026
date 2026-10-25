@@ -4,9 +4,12 @@ package integration
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,12 +19,17 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/testauth"
 )
+
+var challengeIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 
 const postgresImage = "postgres:18.6@sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6"
 
@@ -41,24 +49,25 @@ func TestRealCompanyOnboardingChain(t *testing.T) {
 	buildBinary(t, filepath.Join(root, "services/api"), filepath.Join(bin, "api"), "./cmd/api")
 
 	port := dockerPostgres(t)
-	psql(t, port, "postgres", "CREATE DATABASE auth_onboarding_test")
-	psql(t, port, "postgres", "CREATE DATABASE core_onboarding_test")
-	psql(t, port, "auth_onboarding_test", "ALTER DATABASE auth_onboarding_test SET saldo.test_database = 'saldo-auth-integration'")
-	psql(t, port, "core_onboarding_test", "ALTER DATABASE core_onboarding_test SET saldo.test_database = 'saldo-core-integration'")
-	applyCoreSchema(t, root, port)
+	psql(t, "postgres", "CREATE DATABASE auth_onboarding_test")
+	psql(t, "postgres", "CREATE DATABASE core_onboarding_test")
+	psql(t, "auth_onboarding_test", "ALTER DATABASE auth_onboarding_test SET saldo.test_database = 'saldo-auth-integration'")
+	psql(t, "core_onboarding_test", "ALTER DATABASE core_onboarding_test SET saldo.test_database = 'saldo-core-integration'")
+	applyCoreSchema(t, root)
 	authURL := fmt.Sprintf("postgres://onboarding_test:onboarding-test@127.0.0.1:%s/auth_onboarding_test?sslmode=disable", port)
 	runChecked(t, filepath.Join(bin, "auth-migrate"), filepath.Join(root, "services/auth"), []string{"AUTH_ENV=local", "AUTH_DATABASE_URL=" + authURL, "AUTH_QUERY_TIMEOUT=5s", "AUTH_STARTUP_TIMEOUT=5s"})
 
-	authGRPC := freePort(t)
-	coreGRPC := freePort(t)
-	apiPort := freePort(t)
+	authHTTP := reservedPort(t)
+	authGRPC := reservedPort(t)
+	coreGRPC := reservedPort(t)
+	apiPort := reservedPort(t)
 	origin := "https://127.0.0.1:" + apiPort
-	hmac := base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{7}, 32))
+	codeKey := bytes.Repeat([]byte{7}, 32)
+	encodedKey := base64.RawURLEncoding.EncodeToString(codeKey)
 	authEnv := []string{
-		"AUTH_ENV=local", "AUTH_DATABASE_URL=" + authURL, "AUTH_HTTP_ADDRESS=127.0.0.1:" + freePort(t),
+		"AUTH_ENV=local", "AUTH_DATABASE_URL=" + authURL, "AUTH_HTTP_ADDRESS=127.0.0.1:" + authHTTP,
 		"AUTH_GRPC_ADDRESS=127.0.0.1:" + authGRPC, "AUTH_GRPC_CERT_FILE=" + pki.AuthCert, "AUTH_GRPC_KEY_FILE=" + pki.AuthKey, "AUTH_GRPC_CA_FILE=" + pki.CA,
-		"AUTH_CODE_HMAC_KEY=" + hmac, "AUTH_CSRF_HMAC_KEY=" + hmac,
-		"AUTH_DEMO_EMAIL_VERIFICATION=true", "AUTH_DEMO_TEST_EMAILS=owner@example.test,colleague@example.test",
+		"AUTH_CODE_HMAC_KEY=" + encodedKey, "AUTH_CSRF_HMAC_KEY=" + encodedKey,
 		"AUTH_CORE_ADDRESS=127.0.0.1:" + coreGRPC, "AUTH_CORE_SERVER_NAME=localhost", "AUTH_CORE_TIMEOUT=2s",
 		"AUTH_QUERY_TIMEOUT=5s", "AUTH_STARTUP_TIMEOUT=5s",
 	}
@@ -76,21 +85,21 @@ func TestRealCompanyOnboardingChain(t *testing.T) {
 		"API_CORE_CA=" + pki.CA, "API_CORE_CERT=" + pki.APICert, "API_CORE_KEY=" + pki.APIKey,
 		"API_RPC_TIMEOUT=3s", "API_SLOW_TIMEOUT=10s",
 	}
-	stopCore := startProcess(t, filepath.Join(bin, "core"), filepath.Join(root, "services/core"), coreEnv)
+	stopCore := startProcess(t, filepath.Join(bin, "core"), filepath.Join(root, "services/core"), coreEnv, "127.0.0.1:"+coreGRPC)
 	defer stopCore()
-	stopAuth := startProcess(t, filepath.Join(bin, "auth"), filepath.Join(root, "services/auth"), authEnv)
+	stopAuth := startProcess(t, filepath.Join(bin, "auth"), filepath.Join(root, "services/auth"), authEnv, "127.0.0.1:"+authHTTP, "127.0.0.1:"+authGRPC)
 	defer stopAuth()
-	stopAPI := startProcess(t, filepath.Join(bin, "api"), filepath.Join(root, "services/api"), apiEnv)
+	stopAPI := startProcess(t, filepath.Join(bin, "api"), filepath.Join(root, "services/api"), apiEnv, "127.0.0.1:"+apiPort)
 	defer stopAPI()
 
 	client := httpsClient(t, pki.CA)
 	waitReady(t, client, origin+"/health/ready")
-	session := loginUser(t, client, origin, "owner@example.test")
+	session := loginUser(t, client, origin, "owner@example.test", codeKey)
 	created := session.call(t, http.MethodPost, "/api/v1/companies", `{"name":"Кофейня Онбординг","inn":null,"currency":"RUB","timezone":"Europe/Moscow"}`, map[string]string{"Idempotency-Key": "onboarding-key-1"})
-	if created.code != 201 || created.body["id"] == "" || nested(created.body, "membership", "role") != "owner" {
+	companyID, idOK := created.body["id"].(string)
+	if created.code != 201 || !idOK || companyID == "" || nested(created.body, "membership", "role") != "owner" {
 		t.Fatalf("create: %d %v", created.code, created.body)
 	}
-	companyID := created.body["id"].(string)
 	replay := session.call(t, http.MethodPost, "/api/v1/companies", `{"name":"Кофейня Онбординг","inn":null,"currency":"RUB","timezone":"Europe/Moscow"}`, map[string]string{"Idempotency-Key": "onboarding-key-1"})
 	if replay.code != 201 || replay.body["id"] != companyID {
 		t.Fatalf("replay: %d %v", replay.code, replay.body)
@@ -100,30 +109,30 @@ func TestRealCompanyOnboardingChain(t *testing.T) {
 		t.Fatalf("conflict: %d %v", conflict.code, conflict.body)
 	}
 	noCSRF := session.call(t, http.MethodPost, "/api/v1/companies", `{"name":"Кофейня Онбординг","inn":null,"currency":"RUB","timezone":"Europe/Moscow"}`, map[string]string{"Idempotency-Key": "onboarding-key-2", "X-CSRF-Token": ""})
-	if noCSRF.code == 201 {
-		t.Fatalf("missing csrf created a company: %v", noCSRF.body)
+	if noCSRF.code != http.StatusForbidden {
+		t.Fatalf("missing csrf: %d %v", noCSRF.code, noCSRF.body)
 	}
 	account := session.call(t, http.MethodGet, "/api/v1/companies/"+companyID+"/account", "", nil)
 	if account.code != 200 || account.body["balance"] != nil || account.body["transaction_source"] != nil || account.body["data_version"] != "1" {
 		t.Fatalf("account: %d %v", account.code, account.body)
 	}
-	if got := psqlValue(t, port, "core_onboarding_test", "SELECT count(*) FROM core_transactions"); got != "0" {
+	if got := psqlValue(t, "core_onboarding_test", "SELECT count(*) FROM core_transactions"); got != "0" {
 		t.Fatalf("new account has transactions: %s", got)
 	}
-	if got := psqlValue(t, port, "core_onboarding_test", "SELECT count(*) FROM core_balances"); got != "0" {
+	if got := psqlValue(t, "core_onboarding_test", "SELECT count(*) FROM core_balances"); got != "0" {
 		t.Fatalf("new account has balances: %s", got)
 	}
 	stopAuth()
-	stopAuth = startProcess(t, filepath.Join(bin, "auth"), filepath.Join(root, "services/auth"), authEnv)
+	stopAuth = startProcess(t, filepath.Join(bin, "auth"), filepath.Join(root, "services/auth"), authEnv, "127.0.0.1:"+authHTTP, "127.0.0.1:"+authGRPC)
 	waitReady(t, client, origin+"/health/ready")
 	read := session.call(t, http.MethodGet, "/api/v1/companies/"+companyID, "", nil)
 	if read.code != 200 || nested(read.body, "membership", "role") != "owner" {
 		t.Fatalf("company after auth restart: %d %v", read.code, read.body)
 	}
-	colleague := loginUser(t, httpsClient(t, pki.CA), origin, "colleague@example.test")
+	colleague := loginUser(t, httpsClient(t, pki.CA), origin, "colleague@example.test", codeKey)
 	foreign := colleague.call(t, http.MethodGet, "/api/v1/companies/"+companyID, "", nil)
-	if foreign.code == 200 {
-		t.Fatalf("another user read the company: %v", foreign.body)
+	if foreign.code != http.StatusForbidden && foreign.code != http.StatusNotFound {
+		t.Fatalf("another user: %d %v", foreign.code, foreign.body)
 	}
 }
 
@@ -172,7 +181,7 @@ func (s browserSession) call(t *testing.T, method, path, body string, headers ma
 	return apiResult{code: response.StatusCode, body: decoded}
 }
 
-func loginUser(t *testing.T, client *http.Client, origin, email string) browserSession {
+func loginUser(t *testing.T, client *http.Client, origin, email string, codeKey []byte) browserSession {
 	t.Helper()
 	session := browserSession{client: client, origin: origin}
 	csrf := session.call(t, http.MethodGet, "/api/v1/auth/csrf", "", nil)
@@ -189,10 +198,20 @@ func loginUser(t *testing.T, client *http.Client, origin, email string) browserS
 		"personal_data_consent": map[string]any{"accepted": true, "document_version": consent.body["document_version"], "document_sha256": consent.body["document_sha256"]},
 	})
 	registered := session.call(t, http.MethodPost, "/api/v1/auth/register", string(registerBody), nil)
-	if registered.code != 202 {
+	challengeID, challengeOK := registered.body["challenge_id"].(string)
+	if registered.code != 202 || !challengeOK || !challengeIDPattern.MatchString(challengeID) {
 		t.Fatalf("register: %d %v", registered.code, registered.body)
 	}
-	verified := session.call(t, http.MethodPost, "/api/v1/auth/verify-email", fmt.Sprintf(`{"challenge_id":%q,"code":"000000"}`, registered.body["challenge_id"]), nil)
+	code := verificationCode(t, challengeID, codeKey)
+	wrong := "000000"
+	if wrong == code {
+		wrong = "000001"
+	}
+	rejected := session.call(t, http.MethodPost, "/api/v1/auth/verify-email", fmt.Sprintf(`{"challenge_id":%q,"code":%q}`, challengeID, wrong), nil)
+	if rejected.code < 400 || rejected.code >= 500 {
+		t.Fatalf("wrong verification code: %d %v", rejected.code, rejected.body)
+	}
+	verified := session.call(t, http.MethodPost, "/api/v1/auth/verify-email", fmt.Sprintf(`{"challenge_id":%q,"code":%q}`, challengeID, code), nil)
 	if verified.code != 200 {
 		t.Fatalf("verify: %d %v", verified.code, verified.body)
 	}
@@ -246,7 +265,48 @@ func waitReady(t *testing.T, client *http.Client, url string) {
 	t.Fatalf("service not ready: %v", last)
 }
 
-func startProcess(t *testing.T, binary, dir string, env []string) func() {
+func startProcess(t *testing.T, binary, dir string, env []string, addresses ...string) func() {
+	t.Helper()
+	var last error
+	for range 5 {
+		if err := claimAddresses(addresses...); err != nil {
+			last = err
+			time.Sleep(20 * time.Millisecond)
+			continue
+		}
+		stop, err := runProcess(t, binary, dir, env)
+		if err == nil {
+			return stop
+		}
+		last = err
+		if !bindConflict(err) {
+			t.Fatal(err)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatalf("could not bind %s: %v", binary, last)
+	return nil
+}
+
+func claimAddresses(addresses ...string) error {
+	listeners := make([]net.Listener, 0, len(addresses))
+	for _, address := range addresses {
+		listener, err := net.Listen("tcp", address)
+		if err != nil {
+			for _, open := range listeners {
+				_ = open.Close()
+			}
+			return err
+		}
+		listeners = append(listeners, listener)
+	}
+	for _, listener := range listeners {
+		_ = listener.Close()
+	}
+	return nil
+}
+
+func runProcess(t *testing.T, binary, dir string, env []string) (func(), error) {
 	t.Helper()
 	cmd := exec.Command(binary)
 	cmd.Dir = dir
@@ -255,23 +315,38 @@ func startProcess(t *testing.T, binary, dir string, env []string) func() {
 	cmd.Stdout = &output
 	cmd.Stderr = &output
 	if err := cmd.Start(); err != nil {
-		t.Fatal(err)
+		return nil, err
 	}
-	stopped := false
+	exited := make(chan struct{})
+	go func() {
+		_ = cmd.Wait()
+		close(exited)
+	}()
+	var once sync.Once
 	stop := func() {
-		if stopped || cmd.Process == nil {
-			return
-		}
-		stopped = true
-		_ = cmd.Process.Signal(os.Interrupt)
-		done := make(chan error, 1)
-		go func() { done <- cmd.Wait() }()
-		select {
-		case <-done:
-		case <-time.After(6 * time.Second):
-			_ = cmd.Process.Kill()
-			<-done
-		}
+		once.Do(func() {
+			select {
+			case <-exited:
+				return
+			default:
+			}
+			if cmd.Process != nil {
+				_ = cmd.Process.Signal(os.Interrupt)
+			}
+			select {
+			case <-exited:
+			case <-time.After(6 * time.Second):
+				if cmd.Process != nil {
+					_ = cmd.Process.Kill()
+				}
+				<-exited
+			}
+		})
+	}
+	select {
+	case <-exited:
+		return nil, fmt.Errorf("%s exited before its port was held: %s", binary, output.String())
+	case <-time.After(400 * time.Millisecond):
 	}
 	t.Cleanup(func() {
 		stop()
@@ -279,7 +354,12 @@ func startProcess(t *testing.T, binary, dir string, env []string) func() {
 			t.Log(output.String())
 		}
 	})
-	return stop
+	return stop, nil
+}
+
+func bindConflict(err error) bool {
+	text := strings.ToLower(err.Error())
+	return strings.Contains(text, "address already in use") || strings.Contains(text, "bind")
 }
 
 func buildBinary(t *testing.T, dir, output, pkg string) {
@@ -322,7 +402,7 @@ func dockerPostgres(t *testing.T) string {
 	return ""
 }
 
-func applyCoreSchema(t *testing.T, root, port string) {
+func applyCoreSchema(t *testing.T, root string) {
 	t.Helper()
 	entries, err := os.ReadDir(filepath.Join(root, "services/core/migrations"))
 	if err != nil {
@@ -335,18 +415,18 @@ func applyCoreSchema(t *testing.T, root, port string) {
 		}
 		text := string(raw)
 		up, _, _ := strings.Cut(strings.TrimPrefix(text, "-- +goose Up\n"), "\n-- +goose Down")
-		psql(t, port, "core_onboarding_test", up)
+		psql(t, "core_onboarding_test", up)
 	}
 }
 
-func psql(t *testing.T, port, database, sql string) {
+func psql(t *testing.T, database, sql string) {
 	t.Helper()
-	if strings.TrimSpace(psqlValue(t, port, database, sql)) == "" && strings.Contains(strings.ToLower(sql), "select") {
+	if strings.TrimSpace(psqlValue(t, database, sql)) == "" && strings.Contains(strings.ToLower(sql), "select") {
 		t.Fatalf("empty SQL result for %s", sql)
 	}
 }
 
-func psqlValue(t *testing.T, port, database, sql string) string {
+func psqlValue(t *testing.T, database, sql string) string {
 	t.Helper()
 	cmd := exec.Command("docker", "exec", "-i", "saldo-onboarding-chain-"+strings.ToLower(t.Name()), "psql", "-U", "onboarding_test", "-d", database, "-tA", "-v", "ON_ERROR_STOP=1")
 	cmd.Stdin = strings.NewReader(sql)
@@ -368,24 +448,50 @@ func runChecked(t *testing.T, binary, dir string, env []string) {
 	}
 }
 
-func freePort(t *testing.T) string {
+func reservedPort(t *testing.T) string {
 	t.Helper()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer listener.Close()
-	_, port, _ := net.SplitHostPort(listener.Addr().String())
+	_, port, err := net.SplitHostPort(listener.Addr().String())
+	if closeErr := listener.Close(); err != nil || closeErr != nil {
+		t.Fatal(err, closeErr)
+	}
 	return port
 }
 
 func repoRoot(t *testing.T) string {
 	t.Helper()
-	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("test file path unavailable")
 	}
-	return filepath.Clean(filepath.Join(dir, "../../.."))
+	return filepath.Clean(filepath.Join(filepath.Dir(file), "../../.."))
+}
+
+func verificationCode(t *testing.T, challengeID string, key []byte) string {
+	t.Helper()
+	row := psqlValue(t, "auth_onboarding_test", "SELECT user_id::text || ' ' || encode(code_hmac, 'hex') FROM verification_challenges WHERE id = '"+challengeID+"'")
+	userID, encoded, ok := strings.Cut(row, " ")
+	stored, err := hex.DecodeString(encoded)
+	if !ok || !challengeIDPattern.MatchString(userID) || err != nil || len(stored) != sha256.Size {
+		t.Fatalf("verification challenge %s has no recoverable code", challengeID)
+	}
+	for n := range 1000000 {
+		code := fmt.Sprintf("%06d", n)
+		if hmac.Equal(verificationMAC(key, challengeID, userID, code), stored) {
+			return code
+		}
+	}
+	t.Fatalf("stored verification HMAC does not match the test key")
+	return ""
+}
+
+func verificationMAC(key []byte, challengeID, userID, code string) []byte {
+	mac := hmac.New(sha256.New, key)
+	_, _ = mac.Write([]byte("email_verification\x00" + challengeID + "\x00" + userID + "\x00" + code))
+	return mac.Sum(nil)
 }
 
 func mustOutput(t *testing.T, name string, args ...string) []byte {
