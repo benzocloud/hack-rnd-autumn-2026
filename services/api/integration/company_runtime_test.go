@@ -4,6 +4,7 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/tls"
@@ -26,6 +27,13 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/status"
+
+	corev1 "github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/gen/core/v1"
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/securetls"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/api/internal/testauth"
 )
 
@@ -133,6 +141,63 @@ func TestRealCompanyOnboardingChain(t *testing.T) {
 	foreign := colleague.call(t, http.MethodGet, "/api/v1/companies/"+companyID, "", nil)
 	if foreign.code != http.StatusForbidden && foreign.code != http.StatusNotFound {
 		t.Fatalf("another user: %d %v", foreign.code, foreign.body)
+	}
+	stolen := colleague.call(t, http.MethodPost, "/api/v1/companies", `{"name":"Кофейня Онбординг","inn":null,"currency":"RUB","timezone":"Europe/Moscow"}`, map[string]string{"Idempotency-Key": "onboarding-key-1"})
+	stolenID, stolenOK := stolen.body["id"].(string)
+	if stolen.code != 201 || !stolenOK || stolenID == "" || stolenID == companyID || nested(stolen.body, "membership", "role") != "owner" {
+		t.Fatalf("foreign command: %d %v", stolen.code, stolen.body)
+	}
+	rejectForeignPeer(t, pki, "127.0.0.1:"+coreGRPC)
+	timeoutPort := reservedPort(t)
+	timeoutOrigin := "https://127.0.0.1:" + timeoutPort
+	timeoutEnv := []string{
+		"API_ADDRESS=127.0.0.1:" + timeoutPort, "API_ORIGIN=" + timeoutOrigin, "API_AUTH_ADDRESS=127.0.0.1:" + authGRPC,
+		"API_AUTH_CA=" + pki.CA, "API_AUTH_CERT=" + pki.APICert, "API_AUTH_KEY=" + pki.APIKey,
+		"API_HTTP_CERT=" + pki.HTTPCert, "API_HTTP_KEY=" + pki.HTTPKey,
+		"API_CORE_ADDRESS=" + blackhole(t), "API_CORE_SERVER_NAME=localhost",
+		"API_CORE_CA=" + pki.CA, "API_CORE_CERT=" + pki.APICert, "API_CORE_KEY=" + pki.APIKey,
+		"API_RPC_TIMEOUT=1s", "API_SLOW_TIMEOUT=10s",
+	}
+	stopTimeout := startProcess(t, filepath.Join(bin, "api"), filepath.Join(root, "services/api"), timeoutEnv, "127.0.0.1:"+timeoutPort)
+	defer stopTimeout()
+	timeoutClient := httpsClient(t, pki.CA)
+	waitReady(t, timeoutClient, timeoutOrigin+"/api/v1/auth/csrf")
+	timed := browserSession{client: session.client, origin: timeoutOrigin, csrf: session.csrf}.call(t, http.MethodPost, "/api/v1/companies", `{"name":"Таймаут","inn":null,"currency":"RUB","timezone":"Europe/Moscow"}`, map[string]string{"Idempotency-Key": "onboarding-timeout"})
+	if timed.code != http.StatusServiceUnavailable || errorCode(timed.body) != "DEPENDENCY_UNAVAILABLE" {
+		t.Fatalf("timeout: %d %v", timed.code, timed.body)
+	}
+	proxy := dropBootstrap(t, pki, "127.0.0.1:"+coreGRPC)
+	stopAPI()
+	lostEnv := append([]string{}, apiEnv...)
+	for i, item := range lostEnv {
+		if strings.HasPrefix(item, "API_CORE_ADDRESS=") {
+			lostEnv[i] = "API_CORE_ADDRESS=" + proxy
+		}
+	}
+	stopAPI = startProcess(t, filepath.Join(bin, "api"), filepath.Join(root, "services/api"), lostEnv, "127.0.0.1:"+apiPort)
+	waitReady(t, client, origin+"/health/ready")
+	lost := session.call(t, http.MethodPost, "/api/v1/companies", `{"name":"Потерянный ответ","inn":null,"currency":"RUB","timezone":"Europe/Moscow"}`, map[string]string{"Idempotency-Key": "onboarding-lost"})
+	if lost.code != http.StatusServiceUnavailable || errorCode(lost.body) != "DEPENDENCY_UNAVAILABLE" {
+		t.Fatalf("lost bootstrap reply: %d %v", lost.code, lost.body)
+	}
+	committed := psqlValue(t, "auth_onboarding_test", "SELECT state || ' ' || company_id::text FROM company_creation_commands WHERE idempotency_key='onboarding-lost'")
+	committedState, committedID, committedOK := strings.Cut(committed, " ")
+	if !committedOK || (committedState != "PREPARED" && committedState != "COMPLETED") || !challengeIDPattern.MatchString(committedID) || psqlValue(t, "core_onboarding_test", "SELECT count(*) FROM core_companies WHERE id='"+committedID+"'") != "1" {
+		t.Fatalf("bootstrap did not commit before the lost reply: %s", committed)
+	}
+	lostID := awaitRecoveredCompany(t)
+	restored := session.call(t, http.MethodPost, "/api/v1/companies", `{"name":"Потерянный ответ","inn":null,"currency":"RUB","timezone":"Europe/Moscow"}`, map[string]string{"Idempotency-Key": "onboarding-lost"})
+	if restored.code != 201 || restored.body["id"] != lostID {
+		t.Fatalf("lost reply replay: %d %v", restored.code, restored.body)
+	}
+	psql(t, "auth_onboarding_test", "DELETE FROM memberships WHERE company_id='"+sqlUUID(t, companyID)+"'")
+	revoked := session.call(t, http.MethodGet, "/api/v1/companies/"+companyID, "", nil)
+	if revoked.code != http.StatusNotFound {
+		t.Fatalf("revoked read: %d %v", revoked.code, revoked.body)
+	}
+	revokedReplay := session.call(t, http.MethodPost, "/api/v1/companies", `{"name":"Кофейня Онбординг","inn":null,"currency":"RUB","timezone":"Europe/Moscow"}`, map[string]string{"Idempotency-Key": "onboarding-key-1"})
+	if revokedReplay.code == 201 || psqlValue(t, "auth_onboarding_test", "SELECT count(*) FROM memberships WHERE company_id='"+sqlUUID(t, companyID)+"'") != "0" {
+		t.Fatalf("revoked replay restored access: %d %v", revokedReplay.code, revokedReplay.body)
 	}
 }
 
@@ -507,4 +572,127 @@ func nested(body map[string]any, key, child string) string {
 	value, _ := body[key].(map[string]any)
 	text, _ := value[child].(string)
 	return text
+}
+
+func errorCode(body map[string]any) string {
+	detail, _ := body["error"].(map[string]any)
+	code, _ := detail["code"].(string)
+	return code
+}
+
+func sqlUUID(t *testing.T, id string) string {
+	t.Helper()
+	if !challengeIDPattern.MatchString(id) {
+		t.Fatalf("unsafe id %q", id)
+	}
+	return id
+}
+
+func blackhole(t *testing.T) string {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	go func() {
+		for {
+			conn, acceptErr := listener.Accept()
+			if acceptErr != nil {
+				return
+			}
+			go func() { _, _ = io.Copy(io.Discard, conn) }()
+		}
+	}()
+	t.Cleanup(func() { _ = listener.Close() })
+	return listener.Addr().String()
+}
+
+func rejectForeignPeer(t *testing.T, pki testauth.PKI, address string) {
+	t.Helper()
+	authConn := dialCore(t, pki.CA, pki.AuthCert, pki.AuthKey, address)
+	defer authConn.Close()
+	_, err := corev1.NewCompanyServiceClient(authConn).ReadCompany(t.Context(), &corev1.ReadCompanyRequest{})
+	if status.Code(err) != codes.PermissionDenied {
+		t.Fatalf("auth peer read company: %v", err)
+	}
+	apiConn := dialCore(t, pki.CA, pki.APICert, pki.APIKey, address)
+	defer apiConn.Close()
+	_, err = corev1.NewCompanyServiceClient(apiConn).GetCompanyCreationResult(t.Context(), &corev1.GetCompanyCreationResultRequest{})
+	if status.Code(err) != codes.PermissionDenied {
+		t.Fatalf("api peer read receipt: %v", err)
+	}
+}
+
+func dialCore(t *testing.T, ca, cert, key, address string) *grpc.ClientConn {
+	t.Helper()
+	tlsConfig, err := securetls.Load(ca, cert, key, "spiffe://saldo.local/core", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tlsConfig.ServerName = "localhost"
+	conn, err := grpc.NewClient(address, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return conn
+}
+
+type droppingBootstrap struct {
+	corev1.UnimplementedCompanyServiceServer
+	next  corev1.CompanyServiceClient
+	once  sync.Once
+	first bool
+}
+
+func (s *droppingBootstrap) CreateCompanyBootstrap(ctx context.Context, request *corev1.CreateCompanyBootstrapRequest) (*corev1.CreateCompanyBootstrapResponse, error) {
+	response, err := s.next.CreateCompanyBootstrap(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	s.once.Do(func() { s.first = true })
+	if s.first {
+		s.first = false
+		return nil, status.Error(codes.DeadlineExceeded, "lost reply")
+	}
+	return response, nil
+}
+
+func (s *droppingBootstrap) ReadCompany(ctx context.Context, request *corev1.ReadCompanyRequest) (*corev1.ReadCompanyResponse, error) {
+	return s.next.ReadCompany(ctx, request)
+}
+
+func dropBootstrap(t *testing.T, pki testauth.PKI, coreAddress string) string {
+	t.Helper()
+	serverTLS, err := securetls.Load(pki.CA, pki.CoreCert, pki.CoreKey, "spiffe://saldo.local/api", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn := dialCore(t, pki.CA, pki.APICert, pki.APIKey, coreAddress)
+	server := grpc.NewServer(grpc.Creds(credentials.NewTLS(serverTLS)))
+	corev1.RegisterCompanyServiceServer(server, &droppingBootstrap{next: corev1.NewCompanyServiceClient(conn)})
+	go func() { _ = server.Serve(listener) }()
+	t.Cleanup(func() {
+		server.GracefulStop()
+		_ = conn.Close()
+	})
+	return listener.Addr().String()
+}
+
+func awaitRecoveredCompany(t *testing.T) string {
+	t.Helper()
+	deadline := time.Now().Add(20 * time.Second)
+	for time.Now().Before(deadline) {
+		row := psqlValue(t, "auth_onboarding_test", "SELECT state || ' ' || company_id::text FROM company_creation_commands WHERE idempotency_key='onboarding-lost'")
+		state, id, ok := strings.Cut(row, " ")
+		if ok && state == "COMPLETED" && challengeIDPattern.MatchString(id) && psqlValue(t, "auth_onboarding_test", "SELECT count(*) FROM memberships WHERE company_id='"+id+"'") == "1" && psqlValue(t, "core_onboarding_test", "SELECT count(*) FROM core_companies WHERE id='"+id+"'") == "1" {
+			return id
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	t.Fatal("lost bootstrap reply was not recovered")
+	return ""
 }

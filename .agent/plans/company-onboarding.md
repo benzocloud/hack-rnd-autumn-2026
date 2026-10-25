@@ -162,7 +162,7 @@ REST conformance/security tests; минимальные config examples/deploy t
 - [x] Typed clients, safe Russian errors/request ID, key conflict и 503/in-progress;
   201 только после COMPLETED и успешного read. Не дублировать Company domain.
 - [x] OpenAPI conformance и adapter boundary regressions (201/409/503, Origin/CSRF, owner injection, revoked/malformed dependencies).
-- [ ] Реальный HTTPS API → mTLS Auth/Core → PostgreSQL: чужой command/peer/CSRF/revocation/timeouts/replay. Прогнаны register, проверка настоящего HMAC кода, login, owner и пустой счёт, replay, конфликт ключа, CSRF 403, чужой пользователь 403/404 и чтение после перезапуска Auth. Peer, revocation, timeout и потерянный ответ bootstrap ещё не закрыты.
+- [x] Реальный HTTPS API → mTLS Auth/Core → PostgreSQL: чужой command/peer/CSRF/revocation/timeouts/replay. Прогнаны register, HMAC кода, login, owner и пустой счёт, replay, конфликт ключа, CSRF 403, чужой пользователь 403/404, чужой ключ не отдаёт чужую компанию, Auth не читает компанию и API не читает receipt, таймаут Core даёт 503, потерянный ответ bootstrap восстанавливается одной компанией, удалённое membership не возвращается повтором, чтение после перезапуска Auth.
 - [x] Полный API check и два reviews adapter slice пройдены, отдельный checkpoint готов к push.
 - [ ] Реальная интеграция A3 и её отдельное ревью/публикация. Цепочка запускается отдельным шагом API CI с `-tags=onboarding`; ревью этого прогона ещё нет.
 

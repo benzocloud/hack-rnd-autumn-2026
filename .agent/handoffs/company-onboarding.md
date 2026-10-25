@@ -26,7 +26,7 @@ Scope/invariants/checklist: [plan](../plans/company-onboarding.md). Issue не �
 | A0 | На ревью владельца | Docs links/diff/fences, draft/remote SHA | Caveman/Ponytail без дефектов | Docs-only, runtime не требовался |
 | A1 | На ревью владельца | Полный Auth unit/real PG integration/race/shuffle/vet/build/lint | Два independent reviews `9463e40`, дефектов нет | Auth/Core gates `7f62b72` SUCCESS |
 | A2 | На ревью владельца: recovery готов к push | Полный Auth gate, real PG recovery/race, TLS/Buf/drift | Два reviews RPC/client и recovery; clock-skew fix проверен | Новый recovery SHA требует CI |
-| A3 | В работе: живая цепочка прогнана локально | Binaries HTTPS/mTLS/Postgres: owner, empty account, replay, CSRF 403, foreign user 403/404, strict HMAC code, Auth restart. Peer/revocation/timeout/lost reply pending | Adapter reviews stand; this run is not reviewed | Шаг API CI с `-tags=onboarding`; новый SHA ещё не опубликован |
+| A3 | В работе: живая цепочка включает отказы | Binaries HTTPS/mTLS/Postgres: owner, empty account, replay, CSRF 403, foreign user and foreign key, wrong peer, timeout 503, lost bootstrap reply, revoked membership, Auth restart, strict HMAC | Adapter reviews stand; this run is not reviewed | Шаг API CI с `-tags=onboarding`; новый SHA ещё не опубликован |
 | A4 | Не начат | PR40/43 из main сохранены; onboarding UI ещё не проверен | Pending | Pending |
 | A5 | Не начат | Нет полного register→owner→account→reload browser E2E | Pending | Pending |
 
@@ -186,9 +186,9 @@ provision.py отказывается перезаписывать сущест�
 
 ## Следующие действия
 
-1. A3 живая цепочка прогнана локально и подключена отдельным шагом API CI: `cd services/api && GOTOOLCHAIN=go1.27.3 go test -tags=onboarding -count=1 -timeout=20m -run '^TestRealCompanyOnboardingChain$' ./integration`. Отдельные бинарники Auth/Core/API, HTTPS и mTLS, disposable Postgres с marker. Register, проверка HMAC кода, login, owner, пустой счёт, replay, конфликт ключа, CSRF 403, чужой пользователь 403/404, чтение после перезапуска Auth. Не закрыто: чужой peer, revocation, timeout, потерянный ответ bootstrap.
-2. A4: ключ создания компании сохраняется до подтверждённого ответа. Если sessionStorage недоступен, тот же ключ живёт в памяти страницы до успеха. `node --import ./tests/register.mjs --test tests/company-create-key.test.mjs` из frontend/. Браузер с выключенными financial mocks ещё не прогнан.
-3. Дальше: недостающие отказы A3, браузер A4/A5, два ревью и CI. Не принимать этапы за владельца. Merge, ready-for-review и deployment по-прежнему запрещены.
+1. A3 живая цепочка прогнана локально и подключена отдельным шагом API CI: `cd services/api && GOTOOLCHAIN=go1.27.3 go test -tags=onboarding -count=1 -timeout=20m -run '^TestRealCompanyOnboardingChain$' ./integration`. Отдельные бинарники Auth/Core/API, HTTPS и mTLS, disposable Postgres с marker. Register, HMAC кода, login, owner, пустой счёт, replay, конфликт ключа, CSRF 403, чужой пользователь и чужой ключ, чужой peer, таймаут 503, потерянный ответ bootstrap с восстановлением одной компании, удалённое membership не восстанавливается повтором, чтение после перезапуска Auth.
+2. A4: ключ создания компании сохраняется до подтверждённого ответа. Если sessionStorage недоступен, тот же ключ живёт в памяти страницы до успеха. `node --import ./tests/register.mjs --test tests/company-create-key.test.mjs` из frontend/. Браузер с выключенными financial mocks ещё не прогнан; его очередь после остальных проверок.
+3. Дальше: браузер A4/A5 в самом конце, два ревью и проверка CI нового SHA. Не принимать этапы за владельца. Merge, ready-for-review и deployment по-прежнему запрещены.
 
 Known blockers продукта не подтверждены; remaining work выше не выполнен.
 Не создавать heartbeat/resume jobs; при явном takeover прекратить изменения/push.
