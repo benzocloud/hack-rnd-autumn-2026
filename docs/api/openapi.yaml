@@ -6110,6 +6110,10 @@ components:
       type: "object"
       additionalProperties: false
       properties:
+        removed_at:
+          type: [string, 'null']
+          format: date-time
+          description: Reversal timestamp. Retained for audit and excluded from active allocated totals.
         id:
           $ref: "#/components/schemas/ResourceID"
           examples:
@@ -6330,7 +6334,7 @@ components:
           - $ref: '#/components/schemas/HistoryAssessment'
           - type: 'null'
           readOnly: true
-          description: Frozen CSV model suitability; never certified bank coverage. Present only for mean_90_csv_v1.
+          description: Frozen CSV model suitability; never certified bank coverage. Present for mean_90_csv_v1 or the explicit mean_90_csv_calendar_v1 CURRENT-calendar profile. The calendar profile retains CSV limitations, replaces historical_calendar_unavailable with current_calendar_only, and never claims calibrated probability or bands.
         calendar_mode:
           type: string
           enum:
@@ -6347,6 +6351,18 @@ components:
           readOnly: true
           description: Frozen server-owned context for synthetic_scenario; null/omitted for ordinary or legacy forecasts.
             Browser cannot provide identity, recorded_at or provenance.
+        calendar_knowledge_mode:
+          type: [string, 'null']
+          enum: [current, historical_as_of_certified, unavailable, synthetic_scenario, null]
+          readOnly: true
+          description: Frozen actual calendar knowledge, independent of request selection. Legacy absence is unknown.
+        calendar_as_of_date:
+          type: [string, 'null']
+          format: date
+          readOnly: true
+        no_post_cutoff_movements:
+          type: boolean
+          readOnly: true
       required:
       - snapshot_id
       - data_version

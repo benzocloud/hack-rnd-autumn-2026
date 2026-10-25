@@ -9,9 +9,10 @@ import (
 )
 
 type paymentResult struct {
-	ID          uuid.UUID `json:"id"`
-	Version     int64     `json:"version"`
-	DataVersion int64     `json:"data_version"`
+	Projection  *changeReceipt `json:"projection,omitempty"`
+	ID          uuid.UUID      `json:"id"`
+	Version     int64          `json:"version"`
+	DataVersion int64          `json:"data_version"`
 }
 
 func validatePaymentResult(result paymentResult) error {
@@ -33,12 +34,41 @@ type paymentBody struct {
 	CounterpartyName, Description string
 	CreatedAt                     time.Time
 	ExpectedDataVersion           int64
+	ReconciliationGroupID         *uuid.UUID `json:",omitempty"`
 }
 
 func paymentRequest(cmd CreateCommand) paymentBody {
 	d := cmd.Record
 	d.Source.ImportedAt = d.Source.ImportedAt.UTC()
+	var group *uuid.UUID
+	if d.ReconciliationGroupID != uuid.Nil {
+		group = &d.ReconciliationGroupID
+	}
 	return paymentBody{ID: d.ID, Scope: d.Scope, Date: d.ScheduledDate, Direction: d.Direction, Amount: d.Amount.Minor(),
 		Currency: d.Amount.Currency(), Source: d.Source, Category: d.Category, CounterpartyName: d.CounterpartyName,
-		Description: d.Description, CreatedAt: d.CreatedAt.UTC(), ExpectedDataVersion: cmd.ExpectedDataVersion}
+		Description: d.Description, CreatedAt: d.CreatedAt.UTC(), ExpectedDataVersion: cmd.ExpectedDataVersion, ReconciliationGroupID: group}
+}
+
+func paymentProjection(r CreatePaymentResult) *changeReceipt {
+	p := newChangeReceipt(ChangePaymentResult{Payment: r.Payment, DataVersion: r.DataVersion})
+	return &p
+}
+
+func restoreCreateResult(saved paymentResult, scope ledger.Scope) (CreatePaymentResult, error) {
+	if err := validatePaymentResult(saved); err != nil {
+		return CreatePaymentResult{}, err
+	}
+	result := CreatePaymentResult{PaymentID: saved.ID, PaymentVersion: saved.Version, DataVersion: saved.DataVersion}
+	if saved.Projection == nil {
+		return result, nil
+	}
+	restored, err := saved.Projection.result()
+	if err != nil {
+		return CreatePaymentResult{}, err
+	}
+	if restored.Payment.Data().ID != saved.ID || restored.Payment.Data().Scope != scope || restored.Payment.Version() != saved.Version || restored.DataVersion != saved.DataVersion {
+		return CreatePaymentResult{}, ErrUnavailable
+	}
+	result.Payment = restored.Payment
+	return result, nil
 }

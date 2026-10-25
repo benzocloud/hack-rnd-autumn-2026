@@ -17,6 +17,7 @@ import (
 	forecastHandler "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/handler/grpc/forecasting"
 	importsHandler "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/handler/grpc/imports"
 	ledgerHandler "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/handler/grpc/ledger"
+	paymentsHandler "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/handler/grpc/payments"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/forecasting"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/transport/grpcserver"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/transport/mtls"
@@ -76,6 +77,7 @@ func Run(ctx context.Context, cfg config.Config, rpc config.RPC) (err error) {
 		return err
 	}
 	companyHandler.Register(server, application.Companies, auth)
+	paymentsHandler.Register(server, application.Payments, application.Companies, auth)
 	if err := ledgerHandler.Register(server, application.Ledger, application.Companies, auth); err != nil {
 		server.Stop()
 		return err

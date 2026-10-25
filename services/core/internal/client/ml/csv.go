@@ -15,7 +15,7 @@ import (
 
 func encodeCSV(input forecasting.FinancialModelInput) (*pb.PredictRequest, error) {
 	i, a := input.Snapshot, input.Assessment
-	if a == nil || a.RuleVersion != forecasting.CSVQualityVersion || a.Scope != i.Scope || a.DataVersion != i.DataVersion || a.Through != i.Cutoff || i.Model != (forecasting.ModelContext{Name: "mean_90", Version: forecasting.CSVModelVersion, PreprocessingVersion: forecasting.CSVPreprocessing}) || i.HorizonDays != 30 || len(i.History) != 0 || len(i.KnownPayments) != 0 || len(input.Operations) == 0 || len(input.Operations) > 20000 || input.Coverage.Kind != "" {
+	if a == nil || a.RuleVersion != forecasting.CSVQualityVersion || a.Scope != i.Scope || a.DataVersion != i.DataVersion || a.Through != i.Cutoff || !validCSVModel(i.Model) || i.HorizonDays != 30 || len(i.History) != 0 || len(i.KnownPayments) != 0 || len(input.Operations) == 0 || len(input.Operations) > 20000 || input.Coverage.Kind != "" {
 		return nil, forecasting.ErrModelInput
 	}
 	cutoff, err := time.Parse(time.DateOnly, string(i.Cutoff))
@@ -74,6 +74,16 @@ func encodeCSV(input forecasting.FinancialModelInput) (*pb.PredictRequest, error
 		}
 		request.Snapshot.History = append(request.Snapshot.History, day)
 	}
+	if i.Model.Version == forecasting.CSVCalendarModelVersion {
+		if !input.Calendar.Captured || input.Calendar.KnowledgeMode != "current" {
+			return nil, forecasting.ErrModelInput
+		}
+		request.Calendar, err = encodeCurrentCalendar(input)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return request, nil
 }
 
@@ -122,4 +132,14 @@ func validateCSVResponse(input forecasting.FinancialModelInput, request *pb.Pred
 		return forecasting.ErrModelResponse
 	}
 	return nil
+}
+
+func validCSVModel(m forecasting.ModelContext) bool {
+	return m == (forecasting.ModelContext{Name: "mean_90", Version: forecasting.CSVModelVersion, PreprocessingVersion: forecasting.CSVPreprocessing}) || m == (forecasting.ModelContext{Name: "mean_90", Version: forecasting.CSVCalendarModelVersion, PreprocessingVersion: forecasting.CSVCalendarPreprocessing})
+}
+func validateCSVCalendarResponse(input forecasting.FinancialModelInput, request *pb.PredictRequest, r *pb.PredictResponse) error {
+	if r == nil || !proto.Equal(r.CsvHistory, request.CsvHistory) || r.Uncertainty == nil || r.Uncertainty.Method != "unavailable_incomplete_history" || r.Uncertainty.Calibrated || len(r.Uncertainty.Bands) != 0 || r.Uncertainty.Seed != 0 || r.Uncertainty.Scenarios != 0 || r.Uncertainty.GapProbabilityUnavailableReason != "not_calibrated" || len(r.Assumptions) == 0 || !slices.Contains(r.Warnings, "CSV_HISTORY_COMPLETENESS_UNVERIFIED") {
+		return forecasting.ErrModelResponse
+	}
+	return validateCurrentFinancialResponse(input, request, r)
 }

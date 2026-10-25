@@ -5,11 +5,15 @@ import (
 	"errors"
 	"time"
 
+	"github.com/google/uuid"
+
 	domain "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/forecasting"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/money"
+	paymentDomain "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/payments"
 	storage "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/repository/postgres"
 	ledgerSQL "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/repository/postgres/ledger"
+	paymentsSQL "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/repository/postgres/payments"
 )
 
 func (r *repository) ReadDataVersion(ctx context.Context, scope ledger.Scope) (int64, error) {
@@ -51,9 +55,36 @@ func (r *repository) ReadFacts(ctx context.Context, scope ledger.Scope, cutoff l
 }
 
 func (r *repository) ReadCalendar(ctx context.Context, scope ledger.Scope) (domain.Calendar, error) {
-	calendar := domain.Calendar{Reason: domain.HistoricalCalendarUnavailable}
-	err := r.tx.QueryRowxContext(ctx, queryReadCalendar, scope.CompanyID, scope.AccountID).Scan(&calendar.ExcludedPayments)
-	return calendar, storage.StorageError(err)
+	calendar := domain.Calendar{Reason: domain.HistoricalCalendarUnavailable, Captured: true, KnowledgeMode: "unavailable"}
+	payments := paymentsSQL.New(r.tx)
+	for _, status := range []paymentDomain.Status{paymentDomain.Planned, paymentDomain.PartiallyMatched, paymentDomain.Matched, paymentDomain.Cancelled} {
+		items, err := payments.ListPayments(ctx, scope, "", "", status, "", uuid.Nil, 1001)
+		if err != nil {
+			return domain.Calendar{}, err
+		}
+		calendar.Payments = append(calendar.Payments, items...)
+		if len(calendar.Payments) > 1000 {
+			return domain.Calendar{}, storage.ErrUnavailable
+		}
+	}
+	calendar.ExcludedPayments = int64(len(calendar.Payments))
+	groups, err := payments.ListReconciliationGroups(ctx, scope, false, uuid.Nil, 1001)
+	if err != nil {
+		return domain.Calendar{}, err
+	}
+	if len(groups) > 1000 {
+		return domain.Calendar{}, storage.ErrUnavailable
+	}
+	calendar.Groups = groups
+	var latest *string
+	err = r.tx.QueryRowxContext(ctx, queryLatestFactDate, scope.CompanyID, scope.AccountID).Scan(&latest)
+	if err != nil {
+		return domain.Calendar{}, storage.StorageError(err)
+	}
+	if latest != nil {
+		calendar.LatestFactDate = ledger.Date(*latest)
+	}
+	return calendar, nil
 }
 
 func (r *repository) ReadBalanceHistory(ctx context.Context, scope ledger.Scope, cutoff ledger.Date) (result []domain.OpeningBalance, err error) {

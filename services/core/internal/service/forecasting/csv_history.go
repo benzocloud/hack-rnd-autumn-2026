@@ -13,6 +13,8 @@ import (
 
 const CSVModelVersion = "mean_90_csv_v1"
 const CSVPreprocessing = "csv_observed_operations_v1"
+const CSVCalendarModelVersion = "mean_90_csv_calendar_v1"
+const CSVCalendarPreprocessing = "csv_observed_operations_calendar_v1"
 const CSVQualityVersion = "csv_history_quality_v1"
 
 var (
@@ -153,7 +155,7 @@ func assessCSVBalances(snapshot domain.FinancialSnapshot, from ledger.Date, bala
 	for start+1 < len(balances) && balances[start+1].Date < from {
 		start++
 	}
-	return &HistoryAssessment{RuleVersion: CSVQualityVersion, Scope: d.Scope, DataVersion: d.DataVersion, From: from, Through: d.Cutoff, FirstOperationDate: first, OperationDays: len(seenDates), Balances: slices.Clone(balances[start:]), Limitations: csvLimitations()}, nil
+	return &HistoryAssessment{RuleVersion: CSVQualityVersion, Scope: d.Scope, DataVersion: d.DataVersion, From: from, Through: d.Cutoff, FirstOperationDate: first, OperationDays: len(seenDates), Balances: slices.Clone(balances[start:]), Limitations: csvAssessmentLimitations(snapshot)}, nil
 }
 
 func csvLimitations() []string {
@@ -161,7 +163,7 @@ func csvLimitations() []string {
 }
 
 func validCSVAssessment(a *HistoryAssessment, snapshot domain.FinancialSnapshot) bool {
-	if a == nil || a.RuleVersion != CSVQualityVersion || a.Scope != snapshot.Data().Scope || a.DataVersion != snapshot.Data().DataVersion || a.Through != snapshot.Data().Cutoff || !slices.Equal(a.Limitations, csvLimitations()) {
+	if a == nil || a.RuleVersion != CSVQualityVersion || a.Scope != snapshot.Data().Scope || a.DataVersion != snapshot.Data().DataVersion || a.Through != snapshot.Data().Cutoff || !slices.Equal(a.Limitations, csvAssessmentLimitations(snapshot)) {
 		return false
 	}
 	cutoff, _ := time.Parse(time.DateOnly, string(a.Through))
@@ -170,4 +172,14 @@ func validCSVAssessment(a *HistoryAssessment, snapshot domain.FinancialSnapshot)
 	}
 	checked, err := assessCSVBalances(snapshot, a.From, a.Balances)
 	return err == nil && checked.FirstOperationDate == a.FirstOperationDate && checked.OperationDays == a.OperationDays && slices.Equal(checked.Balances, a.Balances)
+}
+
+func csvCalendarLimitations() []string {
+	return []string{"csv_history_completeness_unverified", "unobserved_days_unknown", "observed_operations_mean_per_calendar_day", "historical_availability_unverified", "not_calibrated", "current_calendar_only"}
+}
+func csvAssessmentLimitations(snapshot domain.FinancialSnapshot) []string {
+	if activeCalendar(snapshot.Data().Calendar) {
+		return csvCalendarLimitations()
+	}
+	return csvLimitations()
 }

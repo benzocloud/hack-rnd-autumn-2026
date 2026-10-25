@@ -41,10 +41,22 @@ func (c *client) PredictFinancial(ctx context.Context, input forecasting.Financi
 }
 
 func encodeFinancial(input forecasting.FinancialModelInput) (*pb.PredictRequest, error) {
+	if input.Snapshot.Model.Version == forecasting.CSVCalendarModelVersion {
+		return encodeCSV(input)
+	}
 	if input.Snapshot.Model.Version == forecasting.CSVModelVersion {
+		if input.Calendar.Captured && input.Calendar.KnowledgeMode == "current" {
+			return nil, forecasting.ErrModelContext
+		}
 		return encodeCSV(input)
 	}
 	i := input.Snapshot
+	if input.Calendar.Captured && input.Calendar.KnowledgeMode != "current" && input.Calendar.KnowledgeMode != "unavailable" {
+		return nil, forecasting.ErrModelInput
+	}
+	if input.Calendar.Captured && input.Calendar.KnowledgeMode != "current" && (len(input.Calendar.Payments) > 0 || len(input.Calendar.Groups) > 0) {
+		return nil, forecasting.ErrModelContext
+	}
 	if i.Model != (forecasting.ModelContext{Name: "mean_90", Version: financialVersion, PreprocessingVersion: financialPreprocessing}) {
 		return nil, forecasting.ErrModelContext
 	}
@@ -79,6 +91,15 @@ func encodeFinancial(input forecasting.FinancialModelInput) (*pb.PredictRequest,
 	request.AvailabilityLimitations = []string{"historical_calendar_unavailable", "historical_availability_unverified"}
 	request.AvailabilityLimitations = append(request.AvailabilityLimitations, "history_coverage_kind_"+input.Coverage.Kind)
 	request.AvailabilityLimitations = append(request.AvailabilityLimitations, input.Coverage.Limitations...)
+	if input.Calendar.Captured && input.Calendar.KnowledgeMode == "current" {
+		current, calendarErr := encodeCurrentCalendar(input)
+		request.Calendar = current
+		if calendarErr != nil {
+			return nil, calendarErr
+		}
+		request.AvailabilityLimitations = []string{"historical_availability_unverified", "history_coverage_kind_" + input.Coverage.Kind}
+		request.AvailabilityLimitations = append(request.AvailabilityLimitations, input.Coverage.Limitations...)
+	}
 	for n, day := range i.History {
 		if day.Source == forecasting.ReconstructedCovered {
 			request.Snapshot.History[n].Source = pb.DaySource_DAY_SOURCE_RECONSTRUCTED_COVERED
@@ -134,6 +155,12 @@ func unavailableFinancialProbability(p *pb.FinancialProbability) bool {
 }
 
 func validateFinancialResponse(input forecasting.FinancialModelInput, request *pb.PredictRequest, r *pb.PredictResponse) error {
+	if input.Snapshot.Model.Version == forecasting.CSVCalendarModelVersion {
+		return validateCSVCalendarResponse(input, request, r)
+	}
+	if request.Calendar.KnowledgeMode == pb.CalendarKnowledgeMode_CALENDAR_KNOWLEDGE_MODE_CURRENT {
+		return validateCurrentFinancialResponse(input, request, r)
+	}
 	if input.Snapshot.Model.Version == forecasting.CSVModelVersion {
 		return validateCSVResponse(input, request, r)
 	}

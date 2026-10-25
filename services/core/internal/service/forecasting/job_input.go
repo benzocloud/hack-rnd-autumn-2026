@@ -36,7 +36,11 @@ func frozenInput(snapshot domain.FinancialSnapshot, coverage domain.JobCoverage)
 	if err != nil {
 		return jobInput{}, ErrUnavailable
 	}
-	return jobInput{SchemaVersion: 1, SnapshotID: d.ID, ModelContextID: id, Scope: d.Scope, DataVersion: d.DataVersion, Cutoff: d.Cutoff, HorizonDays: 30, Coverage: coverage, Model: ModelContext{Name: "mean_90", Version: financialJobVersion, PreprocessingVersion: financialJobPreprocessing}}, nil
+	schema := 1
+	if d.Calendar.Captured {
+		schema = 2
+	}
+	return jobInput{SchemaVersion: schema, SnapshotID: d.ID, ModelContextID: id, Scope: d.Scope, DataVersion: d.DataVersion, Cutoff: d.Cutoff, HorizonDays: 30, Coverage: coverage, Model: ModelContext{Name: "mean_90", Version: financialJobVersion, PreprocessingVersion: financialJobPreprocessing}}, nil
 }
 
 func decodeJobInput(job domain.Job) (jobInput, error) {
@@ -46,7 +50,7 @@ func decodeJobInput(job domain.Job) (jobInput, error) {
 		return jobInput{}, ErrUnavailable
 	}
 	cutoff, _ := time.Parse(time.DateOnly, string(input.Cutoff))
-	if input.SchemaVersion == 1 && (input.Coverage.From > ledger.Date(cutoff.AddDate(0, 0, -89).Format(time.DateOnly)) || input.Coverage.Through < input.Cutoff) {
+	if input.Model.Version == financialJobVersion && (input.Coverage.From > ledger.Date(cutoff.AddDate(0, 0, -89).Format(time.DateOnly)) || input.Coverage.Through < input.Cutoff) {
 		return jobInput{}, ErrUnavailable
 	}
 	return input, nil
@@ -54,12 +58,15 @@ func decodeJobInput(job domain.Job) (jobInput, error) {
 
 func prepareFinancial(snapshot domain.FinancialSnapshot, proof domain.JobCoverage) (FinancialModelInput, error) {
 	d := snapshot.Data()
+	if d.Calendar.Captured && d.Calendar.KnowledgeMode != "current" && (len(d.Calendar.Payments) > 0 || len(d.Calendar.Groups) > 0) {
+		return FinancialModelInput{}, ErrHorizon
+	}
 	cutoff, _ := time.Parse(time.DateOnly, string(d.Cutoff))
 	start := cutoff.AddDate(0, 0, -89)
 	if start.Year() < 1 || cutoff.AddDate(0, 0, 30).Year() > 9999 || proof.From > ledger.Date(start.Format(time.DateOnly)) || proof.Through < d.Cutoff || !validCoverage(proof, d.DataVersion) {
 		return FinancialModelInput{}, ErrHistory
 	}
-	input := FinancialModelInput{Snapshot: ModelInput{SnapshotID: d.ID, Scope: d.Scope, DataVersion: d.DataVersion, Cutoff: d.Cutoff, OpeningBalance: d.Opening.Observation.Amount(), HorizonDays: 30, Model: ModelContext{Name: "mean_90", Version: financialJobVersion, PreprocessingVersion: financialJobPreprocessing}}, Coverage: Coverage{Kind: proof.Kind, From: ledger.Date(start.Format(time.DateOnly)), Through: d.Cutoff, Reference: proof.Reference, DataVersion: proof.DataVersion, Limitations: slices.Clone(proof.Limitations)}}
+	input := FinancialModelInput{Calendar: d.Calendar, Snapshot: ModelInput{SnapshotID: d.ID, Scope: d.Scope, DataVersion: d.DataVersion, Cutoff: d.Cutoff, OpeningBalance: d.Opening.Observation.Amount(), HorizonDays: 30, Model: ModelContext{Name: "mean_90", Version: financialJobVersion, PreprocessingVersion: financialJobPreprocessing}}, Coverage: Coverage{Kind: proof.Kind, From: ledger.Date(start.Format(time.DateOnly)), Through: d.Cutoff, Reference: proof.Reference, DataVersion: proof.DataVersion, Limitations: slices.Clone(proof.Limitations)}}
 	flows := make(map[ledger.Date][2]*big.Int)
 	for _, fact := range d.Facts {
 		op := fact.Transaction.Data()
@@ -121,22 +128,26 @@ func validCoverage(proof domain.JobCoverage, revision int64) bool {
 }
 
 func validFrozenProfile(input jobInput) bool {
-	if input.SchemaVersion == 1 {
+	if input.SchemaVersion == 1 || input.SchemaVersion == 2 && input.Assessment == nil {
 		return input.Assessment == nil && input.Model == (ModelContext{Name: "mean_90", Version: financialJobVersion, PreprocessingVersion: financialJobPreprocessing}) && validCoverage(input.Coverage, input.DataVersion)
 	}
 	a := input.Assessment
-	return input.SchemaVersion == 2 && a != nil && a.RuleVersion == CSVQualityVersion && a.Scope == input.Scope && a.DataVersion == input.DataVersion && a.Through == input.Cutoff && input.Coverage.Kind == "" && input.Coverage.Reference == "" && input.Coverage.DataVersion == 0 && input.Model == (ModelContext{Name: "mean_90", Version: CSVModelVersion, PreprocessingVersion: CSVPreprocessing})
+	return input.SchemaVersion == 2 && a != nil && a.RuleVersion == CSVQualityVersion && a.Scope == input.Scope && a.DataVersion == input.DataVersion && a.Through == input.Cutoff && input.Coverage.Kind == "" && input.Coverage.Reference == "" && input.Coverage.DataVersion == 0 && (input.Model == (ModelContext{Name: "mean_90", Version: CSVModelVersion, PreprocessingVersion: CSVPreprocessing}) || input.Model == (ModelContext{Name: "mean_90", Version: CSVCalendarModelVersion, PreprocessingVersion: CSVCalendarPreprocessing}))
 }
 
 func prepareJob(snapshot domain.FinancialSnapshot, input jobInput) (FinancialModelInput, error) {
-	if input.SchemaVersion == 1 {
+	if input.Model.Version == financialJobVersion {
 		return prepareFinancial(snapshot, input.Coverage)
+	}
+	current := activeCalendar(snapshot.Data().Calendar)
+	if input.Model.Version == CSVCalendarModelVersion && !current || input.Model.Version == CSVModelVersion && current {
+		return FinancialModelInput{}, ErrHorizon
 	}
 	if !validCSVAssessment(input.Assessment, snapshot) {
 		return FinancialModelInput{}, ErrUnavailable
 	}
 	d := snapshot.Data()
-	result := FinancialModelInput{Snapshot: ModelInput{SnapshotID: d.ID, Scope: d.Scope, DataVersion: d.DataVersion, Cutoff: d.Cutoff, OpeningBalance: d.Opening.Observation.Amount(), HorizonDays: 30, Model: input.Model}, Assessment: input.Assessment}
+	result := FinancialModelInput{Calendar: d.Calendar, Snapshot: ModelInput{SnapshotID: d.ID, Scope: d.Scope, DataVersion: d.DataVersion, Cutoff: d.Cutoff, OpeningBalance: d.Opening.Observation.Amount(), HorizonDays: 30, Model: input.Model}, Assessment: input.Assessment}
 	for _, fact := range d.Facts {
 		if fact.Transaction.Data().Date >= input.Assessment.From {
 			result.Operations = append(result.Operations, fact.Transaction)

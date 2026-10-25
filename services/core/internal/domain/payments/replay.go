@@ -22,6 +22,7 @@ func (p ExpectedPayment) CheckReplay(stored ExpectedPayment) (bool, error) {
 	left.CreatedAt, right.CreatedAt = time.Time{}, time.Time{}
 	left.Source.ImportedAt, right.Source.ImportedAt = time.Time{}, time.Time{}
 	left.Category, right.Category = ledger.Category{}, ledger.Category{}
+	left.ReconciliationGroupID, right.ReconciliationGroupID = uuid.Nil, uuid.Nil
 	if left != right {
 		return false, ledger.ErrExternalRecord
 	}

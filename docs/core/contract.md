@@ -253,3 +253,18 @@ Buf 1.75.0 и Go 1.27.3 нужны в окружении. Скрипт испо�
 компилирует API/Auth только во временных modules и проверяет Core generated drift.
 Обычный API adapter преобразует типы явно; protojson.Marshal не является
 готовым публичным REST-ответом из-за envelope/nulls/discriminators/status_url.
+
+## Payments runtime checkpoint
+
+Payment lifecycle adapters сохраняют точные RUB minor units, account scope,
+resource CAS и исходные projections для новых create/match receipts. Старые
+ID/version-only receipts остаются читаемыми внутренним сервисом; transport
+отказывается подменять отсутствующую исходную projection текущим состоянием.
+PATCH/DELETE используют resource version, без обязательного Idempotency-Key.
+
+Unmatch — reversal распределения, а не удаление банковского факта: active total
+исключает записи с `removed_at`, история возвращает их с timestamp.
+Partial cancel сохраняет remaining и все распределения. Unmatch после cancel
+явно запрещён `PAYMENT_STATE_CONFLICT`; чтение истории остаётся доступно.
+Новая миграция 00013 добавляет nullable timestamp; downgrade запрещён при
+существующих reversed allocations, чтобы не активировать их повторно.

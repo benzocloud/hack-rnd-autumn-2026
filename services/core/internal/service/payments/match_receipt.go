@@ -9,9 +9,10 @@ import (
 )
 
 type matchResult struct {
-	ID             uuid.UUID `json:"id"`
-	PaymentVersion int64     `json:"payment_version"`
-	DataVersion    int64     `json:"data_version"`
+	Projection     *matchProjection `json:"projection,omitempty"`
+	ID             uuid.UUID        `json:"id"`
+	PaymentVersion int64            `json:"payment_version"`
+	DataVersion    int64            `json:"data_version"`
 }
 
 func validateMatchResult(result matchResult) error {
@@ -35,4 +36,23 @@ func matchRequest(cmd MatchCommand) matchBody {
 	return matchBody{Scope: cmd.Scope, ID: cmd.ID, PaymentID: cmd.PaymentID, TransactionID: cmd.TransactionID,
 		Amount: cmd.Amount.Minor(), Currency: cmd.Amount.Currency(), ExpectedVersion: cmd.ExpectedVersion,
 		ExpectedDataVersion: cmd.ExpectedDataVersion, At: cmd.At.UTC(), ExpectedTransactionVersion: cmd.ExpectedTransactionVersion}
+}
+
+func restoreMatchResult(saved matchResult, cmd MatchCommand) (MatchPaymentResult, error) {
+	if err := validateMatchResult(saved); err != nil {
+		return MatchPaymentResult{}, err
+	}
+	result := MatchPaymentResult{MatchID: saved.ID, PaymentVersion: saved.PaymentVersion, DataVersion: saved.DataVersion}
+	if saved.Projection == nil {
+		return result, nil
+	}
+	m, err := saved.Projection.match()
+	if err != nil {
+		return MatchPaymentResult{}, err
+	}
+	if m.ID() != saved.ID || m.Scope() != cmd.Scope || m.PaymentID() != cmd.PaymentID || m.TransactionID() != cmd.TransactionID {
+		return MatchPaymentResult{}, ErrUnavailable
+	}
+	result.Match = m
+	return result, nil
 }

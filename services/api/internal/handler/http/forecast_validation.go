@@ -30,10 +30,13 @@ func validForecastInput(i *corev1.ForecastInput, account string) bool {
 	if i == nil || !resourceID(i.SnapshotId) || i.AccountId != account || i.DataVersion < 1 || i.Currency != "RUB" || !validMoney(i.OpeningBalance) || !dateSequence(i.CutoffDate, i.StartDate, i.EndDate, i.HorizonDays) || i.BalanceAsOf != i.CutoffDate || !businessDate(i.DataAsOf) || i.DataAsOf > i.CutoffDate || i.RiskDefinition != "below_zero_eod" || !validHistoryCoverage(i.HistoryCoverage, i.DataVersion, i.CutoffDate) {
 		return false
 	}
+	if !validCalendarKnowledge(i) {
+		return false
+	}
 	if i.HistoryAssessment != nil && !validCSVAssessment(i) {
 		return false
 	}
-	if i.ModelContext != nil && i.ModelContext.ModelVersion == "mean_90_csv_v1" && !validCSVAssessment(i) {
+	if i.ModelContext != nil && (i.ModelContext.ModelVersion == "mean_90_csv_v1" || i.ModelContext.ModelVersion == "mean_90_csv_calendar_v1") && !validCSVAssessment(i) {
 		return false
 	}
 	m := i.ModelContext
@@ -118,7 +121,7 @@ func validSource(s *corev1.RecordSource) bool {
 	return s.Kind == corev1.RecordSourceKind_RECORD_SOURCE_KIND_FILE || s.Kind == corev1.RecordSourceKind_RECORD_SOURCE_KIND_MANUAL || s.Kind == corev1.RecordSourceKind_RECORD_SOURCE_KIND_MOCK_EXTERNAL
 }
 func validForecastResult(r *corev1.ForecastResult, input *corev1.ForecastInput) bool {
-	if r == nil || r.Metrics == nil || r.ScenarioCapabilities == nil || len(r.DailyPoints) != int(input.HorizonDays) || len(r.Components) > 10000 || len(r.EffectiveOccurrences) > 10000 {
+	if r == nil || !validCSVCalendarUncertainty(r, input) || r.Metrics == nil || r.ScenarioCapabilities == nil || len(r.DailyPoints) != int(input.HorizonDays) || len(r.Components) > 10000 || len(r.EffectiveOccurrences) > 10000 {
 		return false
 	}
 	m := r.Metrics
@@ -191,7 +194,7 @@ func validForecastMetrics(m *corev1.ForecastMetrics, points []*corev1.ForecastPo
 
 func validCSVAssessment(i *corev1.ForecastInput) bool {
 	a, m := i.HistoryAssessment, i.ModelContext
-	if a == nil || m == nil || i.HistoryCoverage != nil || a.RuleVersion != "csv_history_quality_v1" || a.DataVersion != i.DataVersion || a.ThroughDate != i.CutoffDate || a.OperationDays < 1 || a.OperationDays > 90 || a.BalanceDays < 1 || a.BalanceDays > 90 || m.ModelName != "mean_90" || m.ModelVersion != "mean_90_csv_v1" || m.PreprocessingVersion != "csv_observed_operations_v1" || m.ConfigurationId != "mean_90_csv_v1" || m.RandomSeed != nil || m.TrajectoryCount != nil {
+	if a == nil || m == nil || i.HistoryCoverage != nil || a.RuleVersion != "csv_history_quality_v1" || a.DataVersion != i.DataVersion || a.ThroughDate != i.CutoffDate || a.OperationDays < 1 || a.OperationDays > 90 || a.BalanceDays < 1 || a.BalanceDays > 90 || m.ModelName != "mean_90" || m.RandomSeed != nil || m.TrajectoryCount != nil {
 		return false
 	}
 	cutoff, err := time.Parse(time.DateOnly, i.CutoffDate)
@@ -199,6 +202,19 @@ func validCSVAssessment(i *corev1.ForecastInput) bool {
 		return false
 	}
 	expected := []string{"csv_history_completeness_unverified", "unobserved_days_unknown", "observed_operations_mean_per_calendar_day", "historical_calendar_unavailable", "historical_availability_unverified", "not_calibrated"}
+	switch m.ModelVersion {
+	case "mean_90_csv_v1":
+		if !validCSVProfile(m, false) {
+			return false
+		}
+	case "mean_90_csv_calendar_v1":
+		if !validCSVProfile(m, true) || i.CalendarKnowledgeMode != corev1.ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_CURRENT || !validCalendarKnowledge(i) {
+			return false
+		}
+		expected = []string{"csv_history_completeness_unverified", "unobserved_days_unknown", "observed_operations_mean_per_calendar_day", "historical_availability_unverified", "not_calibrated", "current_calendar_only"}
+	default:
+		return false
+	}
 	if len(a.Limitations) != len(expected) {
 		return false
 	}
@@ -220,4 +236,43 @@ func csvReadiness(f *corev1.Forecast) bool {
 		}
 	}
 	return true
+}
+
+func validCalendarKnowledge(i *corev1.ForecastInput) bool {
+	switch i.CalendarKnowledgeMode {
+	case corev1.ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_UNSPECIFIED, corev1.ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_UNAVAILABLE:
+		return i.CalendarAsOfDate == "" && !i.NoPostCutoffMovements
+	case corev1.ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_CURRENT:
+		return (i.CalendarAsOfDate == i.CutoffDate || i.CalendarAsOfDate == i.StartDate && i.NoPostCutoffMovements) && i.ModelContext != nil && (i.ModelContext.ModelVersion == "mean_90_components_v1" || validCSVProfile(i.ModelContext, true))
+	case corev1.ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_HISTORICAL_AS_OF_CERTIFIED, corev1.ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_SYNTHETIC_SCENARIO:
+		return false
+	default:
+		return false
+	}
+}
+
+// CSV calendar is a separate deterministic profile. It cannot acquire calibrated
+// risk or interval claims from a structurally valid but incompatible ML result.
+func validCSVCalendarUncertainty(r *corev1.ForecastResult, input *corev1.ForecastInput) bool {
+	if input.ModelContext == nil || input.ModelContext.ModelVersion != "mean_90_csv_calendar_v1" {
+		return true
+	}
+	if r.Metrics == nil || r.Metrics.GapProbability.GetUnavailableReason() != "not_calibrated" {
+		return false
+	}
+	for _, point := range r.DailyPoints {
+		if point == nil || point.NegativeBalanceProbability.GetUnavailableReason() != "not_calibrated" || point.BalanceLower != nil || point.BalanceUpper != nil {
+			return false
+		}
+	}
+	return true
+}
+func validCSVProfile(m *corev1.ForecastModelContext, calendar bool) bool {
+	if m == nil || m.ModelName != "mean_90" || m.RandomSeed != nil || m.TrajectoryCount != nil {
+		return false
+	}
+	if calendar {
+		return m.ModelVersion == "mean_90_csv_calendar_v1" && m.PreprocessingVersion == "csv_observed_operations_calendar_v1" && m.ConfigurationId == "mean_90_csv_calendar_v1"
+	}
+	return m.ModelVersion == "mean_90_csv_v1" && m.PreprocessingVersion == "csv_observed_operations_v1" && m.ConfigurationId == "mean_90_csv_v1"
 }

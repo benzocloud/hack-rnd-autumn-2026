@@ -11,6 +11,7 @@ import (
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/config"
 	forecastDomain "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/forecasting"
 	ledgerDomain "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
+	paymentsDomain "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/payments"
 	commandsSQL "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/repository/postgres/commands"
 	forecastSQL "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/repository/postgres/forecasting"
 	ledgerSQL "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/repository/postgres/ledger"
@@ -30,6 +31,12 @@ type ledgerOperations interface {
 }
 
 type paymentsOperations interface {
+	ReadPayment(context.Context, ledgerDomain.Scope, uuid.UUID) (paymentsDomain.ExpectedPayment, error)
+	ListPayments(context.Context, payments.ListPaymentsCommand) (payments.ListPaymentsResult, error)
+	ListPaymentMatches(context.Context, payments.ListMatchesCommand) (payments.ListMatchesResult, error)
+	UpdatePayment(context.Context, payments.UpdatePaymentCommand) (payments.ChangePaymentResult, error)
+	CancelPayment(context.Context, payments.CancelPaymentCommand) (payments.ChangePaymentResult, error)
+	RemovePaymentMatch(context.Context, payments.RemoveMatchCommand) (payments.ChangePaymentResult, error)
 	CreatePayment(context.Context, payments.CreateCommand) (payments.CreatePaymentResult, error)
 	MatchPayment(context.Context, payments.MatchCommand) (payments.MatchPaymentResult, error)
 }

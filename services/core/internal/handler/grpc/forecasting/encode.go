@@ -4,6 +4,8 @@ import (
 	"math"
 	"time"
 
+	"github.com/google/uuid"
+
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	domain "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/forecasting"
@@ -48,7 +50,14 @@ func encodeForecast(view forecasting.ForecastView) *pb.Forecast {
 	}
 	historyCoverage := &pb.HistoryCoverage{Kind: kind, FromDate: string(coverage.From), ThroughDate: string(coverage.Through), Reference: coverage.Reference, DataVersion: coverage.DataVersion, Limitations: append([]string(nil), coverage.Limitations...)}
 	input := &pb.ForecastInput{SnapshotId: d.ID.String(), DataVersion: d.DataVersion, CutoffDate: string(d.Cutoff), DataAsOf: string(d.Cutoff), StartDate: cutoff.AddDate(0, 0, 1).Format(time.DateOnly), EndDate: cutoff.AddDate(0, 0, 30).Format(time.DateOnly), HorizonDays: 30, Currency: "RUB", AccountId: d.Scope.AccountID.String(), OpeningBalance: kopecks(d.Opening.Observation.Amount().Minor()), BalanceAsOf: string(d.Cutoff), RiskDefinition: "below_zero_eod", ModelContext: &pb.ForecastModelContext{Id: view.ModelContextID.String(), ModelName: "mean_90", ModelVersion: "mean_90_components_v1", PreprocessingVersion: "calendar_replacement_v1", ConfigurationId: "mean_90_components_v1"}, HistoryCoverage: historyCoverage}
-	limitations := []string{"historical_calendar_unavailable", "historical_availability_unverified", "history_reconstructed_from_covered_facts_and_cutoff_eod", "not_calibrated"}
+	input.CalendarMode = pb.ForecastCalendarMode_FORECAST_CALENDAR_MODE_AVAILABLE
+	input.CalendarKnowledgeMode = pb.ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_UNAVAILABLE
+	if d.Calendar.KnowledgeMode == "current" {
+		input.CalendarKnowledgeMode = pb.ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_CURRENT
+		input.CalendarAsOfDate = string(d.Calendar.AsOf)
+		input.NoPostCutoffMovements = d.Calendar.NoPostCutoffMovements
+	}
+	limitations := append(view.Snapshot.Limitations(), "history_reconstructed_from_covered_facts_and_cutoff_eod", "not_calibrated")
 	limitations = append(limitations, coverage.Limitations...)
 	out := &pb.Forecast{Id: view.ID.String(), CompanyId: view.Scope.CompanyID.String(), CreatedAt: timestamppb.New(view.CreatedAt), IsStale: view.CurrentDataVersion > d.DataVersion, CurrentDataVersion: view.CurrentDataVersion, Input: input, Readiness: &pb.ForecastReadiness{Status: "limited", HistoryDays: 90, ObservedDays: observedDays(d.Facts, coverage, cutoff), Limitations: limitations}}
 	if a := view.Assessment; a != nil {
@@ -75,7 +84,46 @@ func encodeForecast(view forecasting.ForecastView) *pb.Forecast {
 	case "succeeded":
 		out.State = &pb.Forecast_Succeeded{Succeeded: &pb.ForecastSucceeded{CompletedAt: timestamppb.New(*view.CompletedAt), Result: encodeResult(view.Result)}}
 	}
+	if view.Status == "succeeded" {
+		encodeKnownComponents(out.GetSucceeded().Result, view.Result, d.Calendar)
+	}
 	return out
+}
+
+func encodeKnownComponents(out *pb.ForecastResult, saved *forecasting.SavedForecast, calendar domain.Calendar) {
+	for _, c := range saved.Components {
+		if c.Kind != "known_remaining_payment" || len(c.SourceIDs) != 1 {
+			continue
+		}
+		for _, payment := range calendar.Payments {
+			d := payment.Data()
+			if d.ID.String() != c.SourceIDs[0] {
+				continue
+			}
+			direction := pb.Direction_DIRECTION_INFLOW
+			if d.Direction == ledger.Outflow {
+				direction = pb.Direction_DIRECTION_OUTFLOW
+			}
+			id := d.ID.String()
+			source := &pb.RecordSource{Kind: pb.RecordSourceKind_RECORD_SOURCE_KIND_MANUAL, SourceSystem: "manual_v1"}
+			if d.Source.Kind == ledger.Imported {
+				source.Kind = pb.RecordSourceKind_RECORD_SOURCE_KIND_FILE
+				source.SourceSystem = d.Source.Namespace.System
+				source.SourceCompanyId = new(d.Source.Namespace.CompanyID)
+				source.ExternalPaymentId = new(d.Source.ExternalID)
+			}
+			component := &pb.ForecastComponent{Id: c.ID, OccurrenceId: c.ID, Kind: "known_payment", Direction: direction, Date: string(c.Date), Amount: kopecks(d.Amount.Minor()), RemainingAmount: kopecks(payment.Remaining().Minor()), PaymentId: &id, Source: source}
+			if d.Category.ID != uuid.Nil {
+				component.CategoryId = new(d.Category.ID.String())
+			}
+			if d.ReconciliationGroupID != uuid.Nil {
+				component.RecurrenceGroupId = new(d.ReconciliationGroupID.String())
+			}
+			out.Components = append(out.Components, component)
+			out.EffectiveOccurrences = append(out.EffectiveOccurrences, &pb.EffectiveOccurrence{EffectiveOccurrenceId: c.ID, ComponentId: c.ID, OccurrenceId: c.ID, PaymentId: &id, Direction: direction, Date: string(c.Date), RemainingAmount: kopecks(payment.Remaining().Minor()), InHorizon: true})
+			out.Recommendations = append(out.Recommendations, &pb.Recommendation{Id: c.ID, Title: "Проверьте дату и остаток ожидаемого платежа", Explanation: "В прогнозе учтена только оставшаяся сумма ожидаемого платежа на указанную дату.", Evidence: []*pb.Evidence{{Type: "payment", ResourceId: id, Source: source}}})
+		}
+	}
 }
 
 func encodeResult(saved *forecasting.SavedForecast) *pb.ForecastResult {

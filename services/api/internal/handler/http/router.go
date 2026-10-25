@@ -47,6 +47,7 @@ func New(auth authClient, origin string, logger *slog.Logger, ready func(context
 
 // CoreClients is the composing application's typed transport boundary.
 type CoreClients struct {
+	Payments    corev1.PaymentsServiceClient
 	Imports     corev1.ImportsServiceClient
 	ImportSpool *ImportSpool
 	Companies   interface {

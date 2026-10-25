@@ -29,6 +29,58 @@ def csv_forecast(request, pb):
         raise UnsupportedContext("Requested CSV model context is unavailable")
     if model.HasField("random_seed") or model.HasField("trajectory_count"):
         raise UnsupportedContext("CSV profile does not estimate trajectories")
+    s, quality, calendar, cutoff, totals = validate_csv_history(request, pb, LIMITATIONS)
+    validate_unavailable_calendar(s, calendar, pb)
+    # This is an estimate from available operations divided by calendar span.
+    # No unknown historical day or balance is stored as a known zero.
+    incoming = checked((sum(v[0] for v in totals.values()) + 45) // 90)
+    outgoing = checked((sum(v[1] for v in totals.values()) + 45) // 90)
+    result = pb.PredictResponse(
+        snapshot_id=s.snapshot_id,
+        company_id=s.company_id,
+        account_id=s.account_id,
+        data_version=s.data_version,
+        model=model,
+        currency=s.currency,
+        cutoff_date=s.cutoff_date,
+        start_date=(cutoff + timedelta(days=1)).isoformat(),
+        history_only_includes_recurring_flows=True,
+        calendar_snapshot_id=calendar.snapshot_id,
+        calendar_data_version=calendar.data_version,
+        classified_operations=request.operations,
+        availability_limitations=LIMITATIONS,
+        csv_history=quality,
+        warnings=[
+            "CSV_HISTORY_COMPLETENESS_UNVERIFIED",
+            "HISTORY_ONLY_NO_CALENDAR",
+            "UNCALIBRATED_NO_PROBABILITY",
+        ],
+        assumptions=[
+            "Forecast uses available imported inflows/outflows divided by 90 calendar days.",
+            "Missing operations can understate either flow; unknown dates are not verified zero-activity days.",
+            "The projection excludes unknown future obligations and has no calibrated probability or interval.",
+        ],
+    )
+    result.uncertainty.method = "unavailable_incomplete_history"
+    result.uncertainty.gap_probability_unavailable_reason = "not_calibrated"
+    result.gap_probability.unavailable_reason = "not_calibrated"
+    balance = s.initial_balance_minor
+    for n in range(30):
+        balance = checked(balance + incoming - outgoing)
+        point = result.days.add(
+            date=(cutoff + timedelta(days=n + 1)).isoformat(),
+            inflow_minor=incoming,
+            outflow_minor=outgoing,
+            reference_balance_minor=balance,
+        )
+        point.negative_balance_probability.unavailable_reason = "not_calibrated"
+        if balance < 0 and not result.HasField("first_negative_balance_date"):
+            result.first_negative_balance_date = point.date
+    return result
+
+
+def validate_csv_history(request, pb, limitations):
+    """Validate original supplied CSV facts/EOD without filling unknown days."""
     if not all(request.HasField(field) for field in ("snapshot", "calendar", "csv_history")):
         raise InvalidSnapshot("CSV snapshot, calendar exclusion and quality context are required")
     s, quality, calendar = request.snapshot, request.csv_history, request.calendar
@@ -52,21 +104,10 @@ def csv_forecast(request, pb):
         or quality.through_date != s.cutoff_date
         or quality.data_version != s.data_version
         or _date(quality.first_operation_date) > start
-        or tuple(request.availability_limitations) != LIMITATIONS
+        or tuple(request.availability_limitations) != limitations
     ):
         raise InvalidSnapshot("CSV input does not match the limited 90-day quality profile")
     checked(s.initial_balance_minor)
-    if (
-        calendar.snapshot_id != s.snapshot_id
-        or calendar.data_version != s.data_version
-        or calendar.knowledge_mode != pb.CALENDAR_KNOWLEDGE_MODE_UNAVAILABLE
-        or calendar.as_of_business_date
-        or calendar.groups
-        or calendar.payments
-        or calendar.HasField("scenario_context")
-        or calendar.no_post_cutoff_movements
-    ):
-        raise InvalidSnapshot("CSV profile requires an explicitly unavailable calendar")
     if not 1 <= len(request.operations) <= 20000:
         raise InvalidSnapshot("CSV operation count is outside the supported limit")
     totals, seen = {}, set()
@@ -133,49 +174,18 @@ def csv_forecast(request, pb):
         or s.history[-1].closing_balance_minor != s.initial_balance_minor
     ):
         raise InvalidSnapshot("CSV cutoff requires an accepted EOD observation")
-    # This is an estimate from available operations divided by calendar span.
-    # No unknown historical day or balance is stored as a known zero.
-    incoming = checked((sum(v[0] for v in totals.values()) + 45) // 90)
-    outgoing = checked((sum(v[1] for v in totals.values()) + 45) // 90)
-    result = pb.PredictResponse(
-        snapshot_id=s.snapshot_id,
-        company_id=s.company_id,
-        account_id=s.account_id,
-        data_version=s.data_version,
-        model=model,
-        currency=s.currency,
-        cutoff_date=s.cutoff_date,
-        start_date=(cutoff + timedelta(days=1)).isoformat(),
-        history_only_includes_recurring_flows=True,
-        calendar_snapshot_id=calendar.snapshot_id,
-        calendar_data_version=calendar.data_version,
-        classified_operations=request.operations,
-        availability_limitations=LIMITATIONS,
-        csv_history=quality,
-        warnings=[
-            "CSV_HISTORY_COMPLETENESS_UNVERIFIED",
-            "HISTORY_ONLY_NO_CALENDAR",
-            "UNCALIBRATED_NO_PROBABILITY",
-        ],
-        assumptions=[
-            "Forecast uses available imported inflows/outflows divided by 90 calendar days.",
-            "Missing operations can understate either flow; unknown dates are not verified zero-activity days.",
-            "The projection excludes unknown future obligations and has no calibrated probability or interval.",
-        ],
-    )
-    result.uncertainty.method = "unavailable_incomplete_history"
-    result.uncertainty.gap_probability_unavailable_reason = "not_calibrated"
-    result.gap_probability.unavailable_reason = "not_calibrated"
-    balance = s.initial_balance_minor
-    for n in range(30):
-        balance = checked(balance + incoming - outgoing)
-        point = result.days.add(
-            date=(cutoff + timedelta(days=n + 1)).isoformat(),
-            inflow_minor=incoming,
-            outflow_minor=outgoing,
-            reference_balance_minor=balance,
-        )
-        point.negative_balance_probability.unavailable_reason = "not_calibrated"
-        if balance < 0 and not result.HasField("first_negative_balance_date"):
-            result.first_negative_balance_date = point.date
-    return result
+    return s, quality, calendar, cutoff, totals
+
+
+def validate_unavailable_calendar(s, calendar, pb):
+    if (
+        calendar.snapshot_id != s.snapshot_id
+        or calendar.data_version != s.data_version
+        or calendar.knowledge_mode != pb.CALENDAR_KNOWLEDGE_MODE_UNAVAILABLE
+        or calendar.as_of_business_date
+        or calendar.groups
+        or calendar.payments
+        or calendar.HasField("scenario_context")
+        or calendar.no_post_cutoff_movements
+    ):
+        raise InvalidSnapshot("CSV profile requires an explicitly unavailable calendar")

@@ -28,9 +28,10 @@ func forecastDTO(f *corev1.Forecast) object {
 func inputDTO(i *corev1.ForecastInput) object {
 	m := i.ModelContext
 	return object{"snapshot_id": i.SnapshotId, "data_version": strconv.FormatInt(i.DataVersion, 10), "cutoff_date": i.CutoffDate, "data_as_of": i.DataAsOf, "start_date": i.StartDate, "end_date": i.EndDate, "horizon_days": i.HorizonDays, "currency": i.Currency, "account_id": i.AccountId, "opening_balance": moneyDTO(i.OpeningBalance), "balance_as_of": i.BalanceAsOf, "risk_definition": i.RiskDefinition,
-		"history_coverage":   historyCoverageDTO(i.HistoryCoverage),
-		"history_assessment": historyAssessmentDTO(i.HistoryAssessment),
-		"model_context":      object{"id": m.Id, "model_name": m.ModelName, "model_version": m.ModelVersion, "preprocessing_version": m.PreprocessingVersion, "configuration_id": m.ConfigurationId, "random_seed": textPointer(m.RandomSeed), "trajectory_count": m.TrajectoryCount}}
+		"history_coverage":        historyCoverageDTO(i.HistoryCoverage),
+		"history_assessment":      historyAssessmentDTO(i.HistoryAssessment),
+		"calendar_knowledge_mode": calendarKnowledgeName(i.CalendarKnowledgeMode), "calendar_as_of_date": optionalString(i.CalendarAsOfDate), "no_post_cutoff_movements": i.NoPostCutoffMovements,
+		"model_context": object{"id": m.Id, "model_name": m.ModelName, "model_version": m.ModelVersion, "preprocessing_version": m.PreprocessingVersion, "configuration_id": m.ConfigurationId, "random_seed": textPointer(m.RandomSeed), "trajectory_count": m.TrajectoryCount}}
 }
 func historyCoverageDTO(c *corev1.HistoryCoverage) any {
 	if c == nil || c.Kind == corev1.HistoryCoverageKind_HISTORY_COVERAGE_KIND_UNSPECIFIED {
@@ -108,4 +109,27 @@ func historyAssessmentDTO(a *corev1.HistoryAssessment) any {
 		return nil
 	}
 	return object{"rule_version": a.RuleVersion, "from_date": a.FromDate, "through_date": a.ThroughDate, "data_version": strconv.FormatInt(a.DataVersion, 10), "operation_days": a.OperationDays, "balance_days": a.BalanceDays, "limitations": stringsDTO(a.Limitations)}
+}
+
+func optionalString(raw string) any {
+	if raw == "" {
+		return nil
+	}
+	return raw
+}
+func calendarKnowledgeName(mode corev1.ForecastCalendarKnowledgeMode) any {
+	switch mode {
+	case corev1.ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_CURRENT:
+		return "current"
+	case corev1.ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_UNAVAILABLE:
+		return "unavailable"
+	case corev1.ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_UNSPECIFIED:
+		return nil
+	case corev1.ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_HISTORICAL_AS_OF_CERTIFIED:
+		return "historical_as_of_certified"
+	case corev1.ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_SYNTHETIC_SCENARIO:
+		return "synthetic_scenario"
+	default:
+		return nil
+	}
 }

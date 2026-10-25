@@ -13,11 +13,18 @@ import (
 )
 
 type createForecastRequest struct {
-	Cutoff  string `json:"cutoff_date"`
-	Horizon uint32 `json:"horizon_days"`
+	Cutoff       string  `json:"cutoff_date"`
+	Horizon      uint32  `json:"horizon_days"`
+	CalendarMode *string `json:"calendar_mode"`
 }
 
 func (h *handler) financialRoute(w http.ResponseWriter, r *http.Request) bool {
+	if h.paymentGroupRoute(w, r) {
+		return true
+	}
+	if h.paymentRoute(w, r) {
+		return true
+	}
 	if h.ledgerRoute(w, r) {
 		return true
 	}
@@ -230,6 +237,17 @@ func (h *handler) createForecast(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, 422, "VALIDATION_ERROR", nil)
 		return
 	}
+	mode := corev1.ForecastCalendarMode_FORECAST_CALENDAR_MODE_AVAILABLE
+	if body.CalendarMode != nil {
+		switch *body.CalendarMode {
+		case "available":
+		case "synthetic_scenario":
+			mode = corev1.ForecastCalendarMode_FORECAST_CALENDAR_MODE_SYNTHETIC_SCENARIO
+		default:
+			writeError(w, r, 422, "VALIDATION_ERROR", nil)
+			return
+		}
+	}
 	keys := r.Header.Values("Idempotency-Key")
 	if len(keys) != 1 || !validIdempotencyKey(keys[0]) {
 		writeError(w, r, 422, "VALIDATION_ERROR", nil)
@@ -240,7 +258,7 @@ func (h *handler) createForecast(w http.ResponseWriter, r *http.Request) {
 		coreRPCError(w, r, err)
 		return
 	}
-	result, err := h.core.Forecasts.CreateForecast(r.Context(), &corev1.CreateForecastRequest{Context: writeContext(r), Scope: scopeFor(account), IdempotencyKey: keys[0], CutoffDate: body.Cutoff, HorizonDays: body.Horizon})
+	result, err := h.core.Forecasts.CreateForecast(r.Context(), &corev1.CreateForecastRequest{Context: writeContext(r), Scope: scopeFor(account), IdempotencyKey: keys[0], CutoffDate: body.Cutoff, HorizonDays: body.Horizon, CalendarMode: mode})
 	if err != nil {
 		coreRPCError(w, r, err)
 		return

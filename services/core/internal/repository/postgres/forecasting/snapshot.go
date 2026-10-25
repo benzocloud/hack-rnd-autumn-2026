@@ -20,7 +20,7 @@ func (r *repository) InsertSnapshot(ctx context.Context, snapshot domain.Financi
 		return storage.WithCause(storage.ErrUnavailable, err)
 	}
 	_, err = r.tx.ExecContext(ctx, queryInsertSnapshot, d.Scope.CompanyID, d.Scope.AccountID,
-		d.ID, d.DataVersion, string(d.Cutoff), d.CreatedAt, payload)
+		d.ID, d.DataVersion, string(d.Cutoff), d.CreatedAt, payload, snapshotPayloadVersion(d.Calendar))
 	return storage.StorageError(err)
 }
 
@@ -40,4 +40,11 @@ func (r *repository) ReadSnapshot(ctx context.Context, scope ledger.Scope, id uu
 		return domain.FinancialSnapshot{}, storage.WithCause(storage.ErrUnavailable, err)
 	}
 	return snapshot, nil
+}
+
+func snapshotPayloadVersion(c domain.Calendar) int {
+	if c.Captured {
+		return 2
+	}
+	return 1
 }

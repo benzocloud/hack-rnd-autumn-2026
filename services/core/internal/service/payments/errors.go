@@ -11,3 +11,5 @@ var (
 	ErrIdempotencyConflict = errors.New("idempotency key body conflict")
 	ErrUnavailable         = errors.New("financial storage unavailable")
 )
+
+var ErrCursor = errors.New("invalid payments cursor")

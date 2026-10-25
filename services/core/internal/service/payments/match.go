@@ -29,6 +29,7 @@ type MatchPaymentResult struct {
 	MatchID        uuid.UUID
 	PaymentVersion int64
 	DataVersion    int64
+	Match          domain.PaymentMatch
 }
 
 type matchStore interface {
@@ -63,17 +64,15 @@ func (s *service) MatchPayment(ctx context.Context, cmd MatchCommand) (MatchPaym
 			return err
 		}
 		if replay {
-			if err := validateMatchResult(saved); err != nil {
-				return err
-			}
-			result = MatchPaymentResult{MatchID: saved.ID, PaymentVersion: saved.PaymentVersion, DataVersion: saved.DataVersion}
-			return nil
+			result, err = restoreMatchResult(saved, cmd)
+			return err
 		}
+
 		result, err = matchPayment(ctx, store, cmd, id, at)
 		if err != nil {
 			return err
 		}
-		return completeCommand(ctx, commands, cmd.Scope, cmd.ActorID, "match_payment", cmd.PaymentID.String(), cmd.IdempotencyKey, matchResult{ID: result.MatchID, PaymentVersion: result.PaymentVersion, DataVersion: result.DataVersion})
+		return completeCommand(ctx, commands, cmd.Scope, cmd.ActorID, "match_payment", cmd.PaymentID.String(), cmd.IdempotencyKey, matchResult{ID: result.MatchID, PaymentVersion: result.PaymentVersion, DataVersion: result.DataVersion, Projection: newMatchProjection(result.Match)})
 	})
 	if txErr != nil {
 		return MatchPaymentResult{}, txErr
@@ -147,5 +146,5 @@ func matchPayment(ctx context.Context, store matchStore, cmd MatchCommand, id uu
 	if err := store.CarryHistoryCoverage(ctx, cmd.Scope, previousRevision, account.DataVersion()); err != nil {
 		return MatchPaymentResult{}, err
 	}
-	return MatchPaymentResult{MatchID: allocation.ID(), PaymentVersion: updated.Version(), DataVersion: account.DataVersion()}, nil
+	return MatchPaymentResult{MatchID: allocation.ID(), PaymentVersion: updated.Version(), DataVersion: account.DataVersion(), Match: allocation}, nil
 }

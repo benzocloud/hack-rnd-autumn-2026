@@ -5,6 +5,7 @@ import (
 
 	domain "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/forecasting"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/payments"
 )
 
 // Version 1 is private storage, not a transport contract. Typed int64 fields avoid
@@ -12,7 +13,7 @@ import (
 type snapshotPayload struct {
 	Opening  balancePayload  `json:"opening"`
 	Facts    []factPayload   `json:"facts"`
-	Calendar domain.Calendar `json:"calendar"`
+	Calendar calendarPayload `json:"calendar"`
 }
 
 type balancePayload struct {
@@ -35,4 +36,23 @@ type factPayload struct {
 	Purpose          string           `json:"purpose"`
 	Version          int64            `json:"version"`
 	DataVersion      int64            `json:"data_version"`
+}
+
+type calendarPayload struct {
+	ExcludedPayments      int64
+	Reason                string
+	Captured              bool                         `json:",omitempty"`
+	Payments              []paymentPayload             `json:",omitempty"`
+	Groups                []domain.ReconciliationGroup `json:",omitempty"`
+	KnowledgeMode         string                       `json:",omitempty"`
+	AsOf                  ledger.Date                  `json:",omitempty"`
+	LatestFactDate        ledger.Date                  `json:",omitempty"`
+	NoPostCutoffMovements bool                         `json:",omitempty"`
+}
+type paymentPayload struct {
+	Data                        payments.PaymentData
+	AmountMinor, RemainingMinor *int64
+	Currency                    string
+	Status                      payments.Status
+	Version                     int64
 }

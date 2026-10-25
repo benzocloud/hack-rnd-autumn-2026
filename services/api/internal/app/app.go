@@ -54,7 +54,7 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 		defer func() { _ = coreConn.Close() }()
 		coreConn.Connect()
 		coreReady = func() bool { return coreConn.GetState() == connectivity.Ready }
-		financial = httpapi.CoreClients{Companies: corev1.NewCompanyServiceClient(coreConn), Ledger: corev1.NewLedgerServiceClient(coreConn), Forecasts: corev1.NewForecastingServiceClient(coreConn)}
+		financial = httpapi.CoreClients{Payments: corev1.NewPaymentsServiceClient(coreConn), Companies: corev1.NewCompanyServiceClient(coreConn), Ledger: corev1.NewLedgerServiceClient(coreConn), Forecasts: corev1.NewForecastingServiceClient(coreConn)}
 		financial.Imports = corev1.NewImportsServiceClient(coreConn)
 		if cfg.ImportSpoolDir != "" {
 			financial.ImportSpool, err = httpapi.NewImportSpool(cfg.ImportSpoolDir)

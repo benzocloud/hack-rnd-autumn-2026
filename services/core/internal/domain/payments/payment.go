@@ -20,16 +20,17 @@ const (
 )
 
 type PaymentData struct {
-	ID               uuid.UUID
-	Scope            ledger.Scope
-	Direction        ledger.Direction
-	Amount           money.Money
-	ScheduledDate    ledger.Date
-	Source           ledger.Source
-	Category         ledger.Category
-	CounterpartyName string
-	Description      string
-	CreatedAt        time.Time
+	ID                    uuid.UUID
+	ReconciliationGroupID uuid.UUID
+	Scope                 ledger.Scope
+	Direction             ledger.Direction
+	Amount                money.Money
+	ScheduledDate         ledger.Date
+	Source                ledger.Source
+	Category              ledger.Category
+	CounterpartyName      string
+	Description           string
+	CreatedAt             time.Time
 }
 
 type ExpectedPayment struct {

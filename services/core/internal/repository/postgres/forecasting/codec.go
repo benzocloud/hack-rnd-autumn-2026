@@ -8,6 +8,7 @@ import (
 	domain "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/forecasting"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/money"
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/payments"
 )
 
 func encodeSnapshot(snapshot domain.FinancialSnapshot) ([]byte, error) {
@@ -15,7 +16,7 @@ func encodeSnapshot(snapshot domain.FinancialSnapshot) ([]byte, error) {
 	openingAmount := d.Opening.Observation.Amount().Minor()
 	p := snapshotPayload{Opening: balancePayload{AmountMinor: &openingAmount,
 		Currency: d.Opening.Observation.Amount().Currency(), Source: d.Opening.Observation.Source(), DataVersion: d.Opening.DataVersion},
-		Calendar: d.Calendar, Facts: make([]factPayload, 0, len(d.Facts))}
+		Calendar: encodeCalendar(d.Calendar), Facts: make([]factPayload, 0, len(d.Facts))}
 	for _, fact := range d.Facts {
 		t := fact.Transaction.Data()
 		amount := t.Amount.Minor()
@@ -28,7 +29,7 @@ func encodeSnapshot(snapshot domain.FinancialSnapshot) ([]byte, error) {
 }
 
 func decodeSnapshot(data domain.SnapshotData, version int, payload []byte) (domain.FinancialSnapshot, error) {
-	if version != 1 {
+	if version != 1 && version != 2 {
 		return domain.FinancialSnapshot{}, domain.ErrInvalid
 	}
 	var p snapshotPayload
@@ -47,7 +48,13 @@ func decodeSnapshot(data domain.SnapshotData, version int, payload []byte) (doma
 		return domain.FinancialSnapshot{}, err
 	}
 	data.Opening = domain.OpeningBalance{Observation: observation, DataVersion: p.Opening.DataVersion}
-	data.Calendar = p.Calendar
+	data.Calendar, err = decodeCalendar(p.Calendar)
+	if err != nil {
+		return domain.FinancialSnapshot{}, err
+	}
+	if version == 1 && data.Calendar.Captured || version == 2 && !data.Calendar.Captured {
+		return domain.FinancialSnapshot{}, domain.ErrInvalid
+	}
 	data.Facts = make([]domain.Fact, 0, len(p.Facts))
 	for _, f := range p.Facts {
 		fact, err := f.restore(data.Scope)
@@ -75,4 +82,37 @@ func (f factPayload) restore(scope ledger.Scope) (domain.Fact, error) {
 		Amount: amount, Source: f.Source, Category: category, CounterpartyINN: f.CounterpartyINN,
 		CounterpartyName: f.CounterpartyName, Purpose: f.Purpose}, f.Version)
 	return domain.Fact{Transaction: record, DataVersion: f.DataVersion}, err
+}
+
+func encodeCalendar(c domain.Calendar) calendarPayload {
+	p := calendarPayload{ExcludedPayments: c.ExcludedPayments, Reason: c.Reason, Captured: c.Captured, Groups: c.Groups, KnowledgeMode: c.KnowledgeMode, AsOf: c.AsOf, LatestFactDate: c.LatestFactDate, NoPostCutoffMovements: c.NoPostCutoffMovements}
+	for _, payment := range c.Payments {
+		d := payment.Data()
+		amount, remaining := d.Amount.Minor(), payment.Remaining().Minor()
+		p.Payments = append(p.Payments, paymentPayload{Data: d, AmountMinor: &amount, RemainingMinor: &remaining, Currency: d.Amount.Currency(), Status: payment.Status(), Version: payment.Version()})
+	}
+	return p
+}
+func decodeCalendar(p calendarPayload) (domain.Calendar, error) {
+	c := domain.Calendar{ExcludedPayments: p.ExcludedPayments, Reason: p.Reason, Captured: p.Captured, Groups: p.Groups, KnowledgeMode: p.KnowledgeMode, AsOf: p.AsOf, LatestFactDate: p.LatestFactDate, NoPostCutoffMovements: p.NoPostCutoffMovements}
+	for _, record := range p.Payments {
+		if record.AmountMinor == nil || record.RemainingMinor == nil {
+			return domain.Calendar{}, domain.ErrInvalid
+		}
+		amount, err := money.New(*record.AmountMinor, record.Currency)
+		if err != nil {
+			return domain.Calendar{}, err
+		}
+		remaining, err := money.New(*record.RemainingMinor, record.Currency)
+		if err != nil {
+			return domain.Calendar{}, err
+		}
+		record.Data.Amount = amount
+		payment, err := payments.RestoreExpectedPayment(record.Data, remaining, record.Status, record.Version)
+		if err != nil {
+			return domain.Calendar{}, err
+		}
+		c.Payments = append(c.Payments, payment)
+	}
+	return c, nil
 }

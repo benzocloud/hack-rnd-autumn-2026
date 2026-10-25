@@ -1,0 +1,1 @@
+INSERT INTO core_payment_reconciliation_groups(company_id,account_id,id,version,status,cutoff,horizon_start,horizon_end,confirmed_by,confirmed_at,additional,operation_refs) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12);

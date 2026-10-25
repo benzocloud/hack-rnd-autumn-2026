@@ -58,6 +58,13 @@ message ForecastModelContext {
   optional string random_seed = 6;
   optional uint32 trajectory_count = 7;
 }
+enum ForecastCalendarKnowledgeMode {
+  FORECAST_CALENDAR_KNOWLEDGE_MODE_UNSPECIFIED = 0;
+  FORECAST_CALENDAR_KNOWLEDGE_MODE_CURRENT = 1;
+  FORECAST_CALENDAR_KNOWLEDGE_MODE_HISTORICAL_AS_OF_CERTIFIED = 2;
+  FORECAST_CALENDAR_KNOWLEDGE_MODE_UNAVAILABLE = 3;
+  FORECAST_CALENDAR_KNOWLEDGE_MODE_SYNTHETIC_SCENARIO = 4;
+}
 message ForecastInput {
   string snapshot_id = 1;
   int64 data_version = 2;
@@ -78,6 +85,10 @@ message ForecastInput {
   SyntheticScenarioContext scenario_context = 16;
   // CSV suitability is not an assertion of complete bank history.
   HistoryAssessment history_assessment = 17;
+  // Frozen knowledge, independent of request calendar_mode and live calendar.
+  ForecastCalendarKnowledgeMode calendar_knowledge_mode = 18;
+  string calendar_as_of_date = 19;
+  bool no_post_cutoff_movements = 20;
 }
 message HistoryAssessment {
   string rule_version = 1;
