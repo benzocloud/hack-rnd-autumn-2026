@@ -31,6 +31,7 @@ const setup = () => {
         useResource: (loader) => { loader(new AbortController().signal); return { data: page, loading: false, error: null, reload() {} }; },
         importsService: { listImportIssues: (request) => { requests.push(request); page = pages[request.cursor || "first"]; return Promise.resolve(page); } },
         styles: {},
+        getErrorDetailMessage: (value) => value.message,
         formatDate: (value) => value,
         formatMoney: (value) => value,
         ...Object.fromEntries([ "Panel", "DataState", "JobState", "Notice", "Badge", "ActionButton", "FormError" ].map((name) => [ name, name ])),
