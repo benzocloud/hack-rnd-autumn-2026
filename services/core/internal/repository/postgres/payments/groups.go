@@ -3,6 +3,7 @@ package payments
 import (
 	"context"
 	"encoding/json"
+	"errors"
 
 	"github.com/google/uuid"
 
@@ -21,7 +22,7 @@ func scanGroup(row interface{ Scan(...any) error }, scope ledger.Scope) (forecas
 		return g, storage.StorageError(err)
 	}
 	g.Cutoff, g.HorizonStart, g.HorizonEnd = ledger.Date(cutoff), ledger.Date(start), ledger.Date(end)
-	if json.Unmarshal(refs, &g.Operations) != nil {
+	if json.Unmarshal(refs, &g.Operations) != nil || g.Validate() != nil {
 		return forecast.ReconciliationGroup{}, storage.ErrUnavailable
 	}
 	return g, nil
@@ -29,13 +30,18 @@ func scanGroup(row interface{ Scan(...any) error }, scope ledger.Scope) (forecas
 func (r *repository) FindReconciliationGroup(ctx context.Context, scope ledger.Scope, id uuid.UUID) (forecast.ReconciliationGroup, error) {
 	return scanGroup(r.tx.QueryRowxContext(ctx, queryFindReconciliationGroup, scope.CompanyID, scope.AccountID, id), scope)
 }
-func (r *repository) ListReconciliationGroups(ctx context.Context, scope ledger.Scope, includeRevoked bool, after uuid.UUID, limit int) ([]forecast.ReconciliationGroup, error) {
+func (r *repository) ListReconciliationGroups(ctx context.Context, scope ledger.Scope, includeRevoked bool, after uuid.UUID, limit int) (result []forecast.ReconciliationGroup, err error) {
 	rows, err := r.tx.QueryxContext(ctx, queryListReconciliationGroups, scope.CompanyID, scope.AccountID, includeRevoked, after, limit)
 	if err != nil {
 		return nil, storage.StorageError(err)
 	}
-	defer rows.Close()
-	result := make([]forecast.ReconciliationGroup, 0)
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			result = nil
+			err = errors.Join(err, storage.StorageError(closeErr))
+		}
+	}()
+	result = make([]forecast.ReconciliationGroup, 0)
 	for rows.Next() {
 		g, err := scanGroup(rows, scope)
 		if err != nil {

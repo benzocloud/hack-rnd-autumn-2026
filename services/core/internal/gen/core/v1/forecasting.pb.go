@@ -130,6 +130,61 @@ func (ForecastCalendarMode) EnumDescriptor() ([]byte, []int) {
 	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{1}
 }
 
+type ForecastCalendarKnowledgeMode int32
+
+const (
+	ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_UNSPECIFIED                ForecastCalendarKnowledgeMode = 0
+	ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_CURRENT                    ForecastCalendarKnowledgeMode = 1
+	ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_HISTORICAL_AS_OF_CERTIFIED ForecastCalendarKnowledgeMode = 2
+	ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_UNAVAILABLE                ForecastCalendarKnowledgeMode = 3
+	ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_SYNTHETIC_SCENARIO         ForecastCalendarKnowledgeMode = 4
+)
+
+// Enum value maps for ForecastCalendarKnowledgeMode.
+var (
+	ForecastCalendarKnowledgeMode_name = map[int32]string{
+		0: "FORECAST_CALENDAR_KNOWLEDGE_MODE_UNSPECIFIED",
+		1: "FORECAST_CALENDAR_KNOWLEDGE_MODE_CURRENT",
+		2: "FORECAST_CALENDAR_KNOWLEDGE_MODE_HISTORICAL_AS_OF_CERTIFIED",
+		3: "FORECAST_CALENDAR_KNOWLEDGE_MODE_UNAVAILABLE",
+		4: "FORECAST_CALENDAR_KNOWLEDGE_MODE_SYNTHETIC_SCENARIO",
+	}
+	ForecastCalendarKnowledgeMode_value = map[string]int32{
+		"FORECAST_CALENDAR_KNOWLEDGE_MODE_UNSPECIFIED":                0,
+		"FORECAST_CALENDAR_KNOWLEDGE_MODE_CURRENT":                    1,
+		"FORECAST_CALENDAR_KNOWLEDGE_MODE_HISTORICAL_AS_OF_CERTIFIED": 2,
+		"FORECAST_CALENDAR_KNOWLEDGE_MODE_UNAVAILABLE":                3,
+		"FORECAST_CALENDAR_KNOWLEDGE_MODE_SYNTHETIC_SCENARIO":         4,
+	}
+)
+
+func (x ForecastCalendarKnowledgeMode) Enum() *ForecastCalendarKnowledgeMode {
+	p := new(ForecastCalendarKnowledgeMode)
+	*p = x
+	return p
+}
+
+func (x ForecastCalendarKnowledgeMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ForecastCalendarKnowledgeMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_core_v1_forecasting_proto_enumTypes[2].Descriptor()
+}
+
+func (ForecastCalendarKnowledgeMode) Type() protoreflect.EnumType {
+	return &file_core_v1_forecasting_proto_enumTypes[2]
+}
+
+func (x ForecastCalendarKnowledgeMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ForecastCalendarKnowledgeMode.Descriptor instead.
+func (ForecastCalendarKnowledgeMode) EnumDescriptor() ([]byte, []int) {
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{2}
+}
+
 type RecurringWeekendShift int32
 
 const (
@@ -166,11 +221,11 @@ func (x RecurringWeekendShift) String() string {
 }
 
 func (RecurringWeekendShift) Descriptor() protoreflect.EnumDescriptor {
-	return file_core_v1_forecasting_proto_enumTypes[2].Descriptor()
+	return file_core_v1_forecasting_proto_enumTypes[3].Descriptor()
 }
 
 func (RecurringWeekendShift) Type() protoreflect.EnumType {
-	return &file_core_v1_forecasting_proto_enumTypes[2]
+	return &file_core_v1_forecasting_proto_enumTypes[3]
 }
 
 func (x RecurringWeekendShift) Number() protoreflect.EnumNumber {
@@ -179,7 +234,7 @@ func (x RecurringWeekendShift) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use RecurringWeekendShift.Descriptor instead.
 func (RecurringWeekendShift) EnumDescriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{2}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{3}
 }
 
 type RecurringHypothesisStatus int32
@@ -212,11 +267,11 @@ func (x RecurringHypothesisStatus) String() string {
 }
 
 func (RecurringHypothesisStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_core_v1_forecasting_proto_enumTypes[3].Descriptor()
+	return file_core_v1_forecasting_proto_enumTypes[4].Descriptor()
 }
 
 func (RecurringHypothesisStatus) Type() protoreflect.EnumType {
-	return &file_core_v1_forecasting_proto_enumTypes[3]
+	return &file_core_v1_forecasting_proto_enumTypes[4]
 }
 
 func (x RecurringHypothesisStatus) Number() protoreflect.EnumNumber {
@@ -225,7 +280,7 @@ func (x RecurringHypothesisStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use RecurringHypothesisStatus.Descriptor instead.
 func (RecurringHypothesisStatus) EnumDescriptor() ([]byte, []int) {
-	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{3}
+	return file_core_v1_forecasting_proto_rawDescGZIP(), []int{4}
 }
 
 // Core-owned identity and real recording time for a historical demonstration.
@@ -405,8 +460,12 @@ type ForecastInput struct {
 	ScenarioContext *SyntheticScenarioContext `protobuf:"bytes,16,opt,name=scenario_context,json=scenarioContext,proto3" json:"scenario_context,omitempty"`
 	// CSV suitability is not an assertion of complete bank history.
 	HistoryAssessment *HistoryAssessment `protobuf:"bytes,17,opt,name=history_assessment,json=historyAssessment,proto3" json:"history_assessment,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Frozen knowledge, independent of request calendar_mode and live calendar.
+	CalendarKnowledgeMode ForecastCalendarKnowledgeMode `protobuf:"varint,18,opt,name=calendar_knowledge_mode,json=calendarKnowledgeMode,proto3,enum=core.v1.ForecastCalendarKnowledgeMode" json:"calendar_knowledge_mode,omitempty"`
+	CalendarAsOfDate      string                        `protobuf:"bytes,19,opt,name=calendar_as_of_date,json=calendarAsOfDate,proto3" json:"calendar_as_of_date,omitempty"`
+	NoPostCutoffMovements bool                          `protobuf:"varint,20,opt,name=no_post_cutoff_movements,json=noPostCutoffMovements,proto3" json:"no_post_cutoff_movements,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *ForecastInput) Reset() {
@@ -556,6 +615,27 @@ func (x *ForecastInput) GetHistoryAssessment() *HistoryAssessment {
 		return x.HistoryAssessment
 	}
 	return nil
+}
+
+func (x *ForecastInput) GetCalendarKnowledgeMode() ForecastCalendarKnowledgeMode {
+	if x != nil {
+		return x.CalendarKnowledgeMode
+	}
+	return ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_UNSPECIFIED
+}
+
+func (x *ForecastInput) GetCalendarAsOfDate() string {
+	if x != nil {
+		return x.CalendarAsOfDate
+	}
+	return ""
+}
+
+func (x *ForecastInput) GetNoPostCutoffMovements() bool {
+	if x != nil {
+		return x.NoPostCutoffMovements
+	}
+	return false
 }
 
 type HistoryAssessment struct {
@@ -3443,7 +3523,7 @@ const file_core_v1_forecasting_proto_rawDesc = "" +
 	"randomSeed\x88\x01\x01\x12.\n" +
 	"\x10trajectory_count\x18\a \x01(\rH\x01R\x0ftrajectoryCount\x88\x01\x01B\x0e\n" +
 	"\f_random_seedB\x13\n" +
-	"\x11_trajectory_count\"\x96\x06\n" +
+	"\x11_trajectory_count\"\xde\a\n" +
 	"\rForecastInput\x12\x1f\n" +
 	"\vsnapshot_id\x18\x01 \x01(\tR\n" +
 	"snapshotId\x12!\n" +
@@ -3467,7 +3547,10 @@ const file_core_v1_forecasting_proto_rawDesc = "" +
 	"\x10history_coverage\x18\x0e \x01(\v2\x18.core.v1.HistoryCoverageR\x0fhistoryCoverage\x12B\n" +
 	"\rcalendar_mode\x18\x0f \x01(\x0e2\x1d.core.v1.ForecastCalendarModeR\fcalendarMode\x12L\n" +
 	"\x10scenario_context\x18\x10 \x01(\v2!.core.v1.SyntheticScenarioContextR\x0fscenarioContext\x12I\n" +
-	"\x12history_assessment\x18\x11 \x01(\v2\x1a.core.v1.HistoryAssessmentR\x11historyAssessment\"\x85\x02\n" +
+	"\x12history_assessment\x18\x11 \x01(\v2\x1a.core.v1.HistoryAssessmentR\x11historyAssessment\x12^\n" +
+	"\x17calendar_knowledge_mode\x18\x12 \x01(\x0e2&.core.v1.ForecastCalendarKnowledgeModeR\x15calendarKnowledgeMode\x12-\n" +
+	"\x13calendar_as_of_date\x18\x13 \x01(\tR\x10calendarAsOfDate\x127\n" +
+	"\x18no_post_cutoff_movements\x18\x14 \x01(\bR\x15noPostCutoffMovements\"\x85\x02\n" +
 	"\x11HistoryAssessment\x12!\n" +
 	"\frule_version\x18\x01 \x01(\tR\vruleVersion\x12\x1b\n" +
 	"\tfrom_date\x18\x02 \x01(\tR\bfromDate\x12!\n" +
@@ -3748,7 +3831,13 @@ const file_core_v1_forecasting_proto_rawDesc = "" +
 	"\x14ForecastCalendarMode\x12&\n" +
 	"\"FORECAST_CALENDAR_MODE_UNSPECIFIED\x10\x00\x12$\n" +
 	" FORECAST_CALENDAR_MODE_AVAILABLE\x10\x01\x12-\n" +
-	")FORECAST_CALENDAR_MODE_SYNTHETIC_SCENARIO\x10\x02*\xaa\x01\n" +
+	")FORECAST_CALENDAR_MODE_SYNTHETIC_SCENARIO\x10\x02*\xab\x02\n" +
+	"\x1dForecastCalendarKnowledgeMode\x120\n" +
+	",FORECAST_CALENDAR_KNOWLEDGE_MODE_UNSPECIFIED\x10\x00\x12,\n" +
+	"(FORECAST_CALENDAR_KNOWLEDGE_MODE_CURRENT\x10\x01\x12?\n" +
+	";FORECAST_CALENDAR_KNOWLEDGE_MODE_HISTORICAL_AS_OF_CERTIFIED\x10\x02\x120\n" +
+	",FORECAST_CALENDAR_KNOWLEDGE_MODE_UNAVAILABLE\x10\x03\x127\n" +
+	"3FORECAST_CALENDAR_KNOWLEDGE_MODE_SYNTHETIC_SCENARIO\x10\x04*\xaa\x01\n" +
 	"\x15RecurringWeekendShift\x12'\n" +
 	"#RECURRING_WEEKEND_SHIFT_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cRECURRING_WEEKEND_SHIFT_NONE\x10\x01\x12$\n" +
@@ -3776,175 +3865,177 @@ func file_core_v1_forecasting_proto_rawDescGZIP() []byte {
 	return file_core_v1_forecasting_proto_rawDescData
 }
 
-var file_core_v1_forecasting_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_core_v1_forecasting_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
 var file_core_v1_forecasting_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
 var file_core_v1_forecasting_proto_goTypes = []any{
 	(ForecastStatus)(0),                 // 0: core.v1.ForecastStatus
 	(ForecastCalendarMode)(0),           // 1: core.v1.ForecastCalendarMode
-	(RecurringWeekendShift)(0),          // 2: core.v1.RecurringWeekendShift
-	(RecurringHypothesisStatus)(0),      // 3: core.v1.RecurringHypothesisStatus
-	(*SyntheticScenarioContext)(nil),    // 4: core.v1.SyntheticScenarioContext
-	(*ForecastModelContext)(nil),        // 5: core.v1.ForecastModelContext
-	(*ForecastInput)(nil),               // 6: core.v1.ForecastInput
-	(*HistoryAssessment)(nil),           // 7: core.v1.HistoryAssessment
-	(*ForecastReadiness)(nil),           // 8: core.v1.ForecastReadiness
-	(*Probability)(nil),                 // 9: core.v1.Probability
-	(*CashGap)(nil),                     // 10: core.v1.CashGap
-	(*ForecastMetrics)(nil),             // 11: core.v1.ForecastMetrics
-	(*ForecastPoint)(nil),               // 12: core.v1.ForecastPoint
-	(*Evidence)(nil),                    // 13: core.v1.Evidence
-	(*Recommendation)(nil),              // 14: core.v1.Recommendation
-	(*ForecastComponent)(nil),           // 15: core.v1.ForecastComponent
-	(*ScenarioCapabilities)(nil),        // 16: core.v1.ScenarioCapabilities
-	(*EffectiveOccurrence)(nil),         // 17: core.v1.EffectiveOccurrence
-	(*ForecastResult)(nil),              // 18: core.v1.ForecastResult
-	(*ClassifiedOperationAnalysis)(nil), // 19: core.v1.ClassifiedOperationAnalysis
-	(*RecurringHypothesis)(nil),         // 20: core.v1.RecurringHypothesis
-	(*ForecastAnalysis)(nil),            // 21: core.v1.ForecastAnalysis
-	(*ForecastPending)(nil),             // 22: core.v1.ForecastPending
-	(*ForecastSucceeded)(nil),           // 23: core.v1.ForecastSucceeded
-	(*ForecastFailed)(nil),              // 24: core.v1.ForecastFailed
-	(*Forecast)(nil),                    // 25: core.v1.Forecast
-	(*ForecastSummary)(nil),             // 26: core.v1.ForecastSummary
-	(*ForecastAccepted)(nil),            // 27: core.v1.ForecastAccepted
-	(*CreateForecastRequest)(nil),       // 28: core.v1.CreateForecastRequest
-	(*CreateForecastResponse)(nil),      // 29: core.v1.CreateForecastResponse
-	(*GetForecastRequest)(nil),          // 30: core.v1.GetForecastRequest
-	(*GetForecastResponse)(nil),         // 31: core.v1.GetForecastResponse
-	(*ListForecastsRequest)(nil),        // 32: core.v1.ListForecastsRequest
-	(*ListForecastsResponse)(nil),       // 33: core.v1.ListForecastsResponse
-	(*Comparison)(nil),                  // 34: core.v1.Comparison
-	(*CompareForecastsRequest)(nil),     // 35: core.v1.CompareForecastsRequest
-	(*CompareForecastsResponse)(nil),    // 36: core.v1.CompareForecastsResponse
-	(*ActualCoverage)(nil),              // 37: core.v1.ActualCoverage
-	(*PlanFactPoint)(nil),               // 38: core.v1.PlanFactPoint
-	(*PlanFact)(nil),                    // 39: core.v1.PlanFact
-	(*GetPlanFactRequest)(nil),          // 40: core.v1.GetPlanFactRequest
-	(*GetPlanFactResponse)(nil),         // 41: core.v1.GetPlanFactResponse
-	(*timestamppb.Timestamp)(nil),       // 42: google.protobuf.Timestamp
-	(*Money)(nil),                       // 43: core.v1.Money
-	(*HistoryCoverage)(nil),             // 44: core.v1.HistoryCoverage
-	(*ImportIssue)(nil),                 // 45: core.v1.ImportIssue
-	(*RecordSource)(nil),                // 46: core.v1.RecordSource
-	(Direction)(0),                      // 47: core.v1.Direction
-	(*HistoricalOperationRef)(nil),      // 48: core.v1.HistoricalOperationRef
-	(*emptypb.Empty)(nil),               // 49: google.protobuf.Empty
-	(*OperationError)(nil),              // 50: core.v1.OperationError
-	(*v1.WriteContext)(nil),             // 51: auth.v1.WriteContext
-	(*AccountScope)(nil),                // 52: core.v1.AccountScope
-	(*v1.BrowserContext)(nil),           // 53: auth.v1.BrowserContext
-	(*PageRequest)(nil),                 // 54: core.v1.PageRequest
-	(*PageResponse)(nil),                // 55: core.v1.PageResponse
-	(*DateRange)(nil),                   // 56: core.v1.DateRange
+	(ForecastCalendarKnowledgeMode)(0),  // 2: core.v1.ForecastCalendarKnowledgeMode
+	(RecurringWeekendShift)(0),          // 3: core.v1.RecurringWeekendShift
+	(RecurringHypothesisStatus)(0),      // 4: core.v1.RecurringHypothesisStatus
+	(*SyntheticScenarioContext)(nil),    // 5: core.v1.SyntheticScenarioContext
+	(*ForecastModelContext)(nil),        // 6: core.v1.ForecastModelContext
+	(*ForecastInput)(nil),               // 7: core.v1.ForecastInput
+	(*HistoryAssessment)(nil),           // 8: core.v1.HistoryAssessment
+	(*ForecastReadiness)(nil),           // 9: core.v1.ForecastReadiness
+	(*Probability)(nil),                 // 10: core.v1.Probability
+	(*CashGap)(nil),                     // 11: core.v1.CashGap
+	(*ForecastMetrics)(nil),             // 12: core.v1.ForecastMetrics
+	(*ForecastPoint)(nil),               // 13: core.v1.ForecastPoint
+	(*Evidence)(nil),                    // 14: core.v1.Evidence
+	(*Recommendation)(nil),              // 15: core.v1.Recommendation
+	(*ForecastComponent)(nil),           // 16: core.v1.ForecastComponent
+	(*ScenarioCapabilities)(nil),        // 17: core.v1.ScenarioCapabilities
+	(*EffectiveOccurrence)(nil),         // 18: core.v1.EffectiveOccurrence
+	(*ForecastResult)(nil),              // 19: core.v1.ForecastResult
+	(*ClassifiedOperationAnalysis)(nil), // 20: core.v1.ClassifiedOperationAnalysis
+	(*RecurringHypothesis)(nil),         // 21: core.v1.RecurringHypothesis
+	(*ForecastAnalysis)(nil),            // 22: core.v1.ForecastAnalysis
+	(*ForecastPending)(nil),             // 23: core.v1.ForecastPending
+	(*ForecastSucceeded)(nil),           // 24: core.v1.ForecastSucceeded
+	(*ForecastFailed)(nil),              // 25: core.v1.ForecastFailed
+	(*Forecast)(nil),                    // 26: core.v1.Forecast
+	(*ForecastSummary)(nil),             // 27: core.v1.ForecastSummary
+	(*ForecastAccepted)(nil),            // 28: core.v1.ForecastAccepted
+	(*CreateForecastRequest)(nil),       // 29: core.v1.CreateForecastRequest
+	(*CreateForecastResponse)(nil),      // 30: core.v1.CreateForecastResponse
+	(*GetForecastRequest)(nil),          // 31: core.v1.GetForecastRequest
+	(*GetForecastResponse)(nil),         // 32: core.v1.GetForecastResponse
+	(*ListForecastsRequest)(nil),        // 33: core.v1.ListForecastsRequest
+	(*ListForecastsResponse)(nil),       // 34: core.v1.ListForecastsResponse
+	(*Comparison)(nil),                  // 35: core.v1.Comparison
+	(*CompareForecastsRequest)(nil),     // 36: core.v1.CompareForecastsRequest
+	(*CompareForecastsResponse)(nil),    // 37: core.v1.CompareForecastsResponse
+	(*ActualCoverage)(nil),              // 38: core.v1.ActualCoverage
+	(*PlanFactPoint)(nil),               // 39: core.v1.PlanFactPoint
+	(*PlanFact)(nil),                    // 40: core.v1.PlanFact
+	(*GetPlanFactRequest)(nil),          // 41: core.v1.GetPlanFactRequest
+	(*GetPlanFactResponse)(nil),         // 42: core.v1.GetPlanFactResponse
+	(*timestamppb.Timestamp)(nil),       // 43: google.protobuf.Timestamp
+	(*Money)(nil),                       // 44: core.v1.Money
+	(*HistoryCoverage)(nil),             // 45: core.v1.HistoryCoverage
+	(*ImportIssue)(nil),                 // 46: core.v1.ImportIssue
+	(*RecordSource)(nil),                // 47: core.v1.RecordSource
+	(Direction)(0),                      // 48: core.v1.Direction
+	(*HistoricalOperationRef)(nil),      // 49: core.v1.HistoricalOperationRef
+	(*emptypb.Empty)(nil),               // 50: google.protobuf.Empty
+	(*OperationError)(nil),              // 51: core.v1.OperationError
+	(*v1.WriteContext)(nil),             // 52: auth.v1.WriteContext
+	(*AccountScope)(nil),                // 53: core.v1.AccountScope
+	(*v1.BrowserContext)(nil),           // 54: auth.v1.BrowserContext
+	(*PageRequest)(nil),                 // 55: core.v1.PageRequest
+	(*PageResponse)(nil),                // 56: core.v1.PageResponse
+	(*DateRange)(nil),                   // 57: core.v1.DateRange
 }
 var file_core_v1_forecasting_proto_depIdxs = []int32{
-	42, // 0: core.v1.SyntheticScenarioContext.recorded_at:type_name -> google.protobuf.Timestamp
-	43, // 1: core.v1.ForecastInput.opening_balance:type_name -> core.v1.Money
-	5,  // 2: core.v1.ForecastInput.model_context:type_name -> core.v1.ForecastModelContext
-	44, // 3: core.v1.ForecastInput.history_coverage:type_name -> core.v1.HistoryCoverage
+	43, // 0: core.v1.SyntheticScenarioContext.recorded_at:type_name -> google.protobuf.Timestamp
+	44, // 1: core.v1.ForecastInput.opening_balance:type_name -> core.v1.Money
+	6,  // 2: core.v1.ForecastInput.model_context:type_name -> core.v1.ForecastModelContext
+	45, // 3: core.v1.ForecastInput.history_coverage:type_name -> core.v1.HistoryCoverage
 	1,  // 4: core.v1.ForecastInput.calendar_mode:type_name -> core.v1.ForecastCalendarMode
-	4,  // 5: core.v1.ForecastInput.scenario_context:type_name -> core.v1.SyntheticScenarioContext
-	7,  // 6: core.v1.ForecastInput.history_assessment:type_name -> core.v1.HistoryAssessment
-	45, // 7: core.v1.ForecastReadiness.quality_issues:type_name -> core.v1.ImportIssue
-	43, // 8: core.v1.CashGap.shortfall:type_name -> core.v1.Money
-	10, // 9: core.v1.ForecastMetrics.first_gap:type_name -> core.v1.CashGap
-	43, // 10: core.v1.ForecastMetrics.max_shortfall:type_name -> core.v1.Money
-	43, // 11: core.v1.ForecastMetrics.minimum_balance:type_name -> core.v1.Money
-	43, // 12: core.v1.ForecastMetrics.closing_balance:type_name -> core.v1.Money
-	9,  // 13: core.v1.ForecastMetrics.gap_probability:type_name -> core.v1.Probability
-	43, // 14: core.v1.ForecastPoint.inflow:type_name -> core.v1.Money
-	43, // 15: core.v1.ForecastPoint.outflow:type_name -> core.v1.Money
-	43, // 16: core.v1.ForecastPoint.balance:type_name -> core.v1.Money
-	43, // 17: core.v1.ForecastPoint.balance_lower:type_name -> core.v1.Money
-	43, // 18: core.v1.ForecastPoint.balance_upper:type_name -> core.v1.Money
-	9,  // 19: core.v1.ForecastPoint.negative_balance_probability:type_name -> core.v1.Probability
-	46, // 20: core.v1.Evidence.source:type_name -> core.v1.RecordSource
-	13, // 21: core.v1.Recommendation.evidence:type_name -> core.v1.Evidence
-	47, // 22: core.v1.ForecastComponent.direction:type_name -> core.v1.Direction
-	43, // 23: core.v1.ForecastComponent.amount:type_name -> core.v1.Money
-	43, // 24: core.v1.ForecastComponent.remaining_amount:type_name -> core.v1.Money
-	46, // 25: core.v1.ForecastComponent.source:type_name -> core.v1.RecordSource
-	47, // 26: core.v1.EffectiveOccurrence.direction:type_name -> core.v1.Direction
-	43, // 27: core.v1.EffectiveOccurrence.remaining_amount:type_name -> core.v1.Money
-	11, // 28: core.v1.ForecastResult.metrics:type_name -> core.v1.ForecastMetrics
-	12, // 29: core.v1.ForecastResult.daily_points:type_name -> core.v1.ForecastPoint
-	15, // 30: core.v1.ForecastResult.components:type_name -> core.v1.ForecastComponent
-	16, // 31: core.v1.ForecastResult.scenario_capabilities:type_name -> core.v1.ScenarioCapabilities
-	14, // 32: core.v1.ForecastResult.recommendations:type_name -> core.v1.Recommendation
-	17, // 33: core.v1.ForecastResult.effective_occurrences:type_name -> core.v1.EffectiveOccurrence
-	21, // 34: core.v1.ForecastResult.analysis:type_name -> core.v1.ForecastAnalysis
-	47, // 35: core.v1.RecurringHypothesis.direction:type_name -> core.v1.Direction
-	48, // 36: core.v1.RecurringHypothesis.historical_operations:type_name -> core.v1.HistoricalOperationRef
-	49, // 37: core.v1.RecurringHypothesis.month_end:type_name -> google.protobuf.Empty
-	2,  // 38: core.v1.RecurringHypothesis.weekend_shift:type_name -> core.v1.RecurringWeekendShift
-	3,  // 39: core.v1.RecurringHypothesis.status:type_name -> core.v1.RecurringHypothesisStatus
-	19, // 40: core.v1.ForecastAnalysis.classified_operations:type_name -> core.v1.ClassifiedOperationAnalysis
-	20, // 41: core.v1.ForecastAnalysis.recurring_hypotheses:type_name -> core.v1.RecurringHypothesis
-	0,  // 42: core.v1.ForecastPending.status:type_name -> core.v1.ForecastStatus
-	42, // 43: core.v1.ForecastSucceeded.completed_at:type_name -> google.protobuf.Timestamp
-	18, // 44: core.v1.ForecastSucceeded.result:type_name -> core.v1.ForecastResult
-	42, // 45: core.v1.ForecastFailed.completed_at:type_name -> google.protobuf.Timestamp
-	50, // 46: core.v1.ForecastFailed.error:type_name -> core.v1.OperationError
-	42, // 47: core.v1.Forecast.created_at:type_name -> google.protobuf.Timestamp
-	6,  // 48: core.v1.Forecast.input:type_name -> core.v1.ForecastInput
-	8,  // 49: core.v1.Forecast.readiness:type_name -> core.v1.ForecastReadiness
-	22, // 50: core.v1.Forecast.pending:type_name -> core.v1.ForecastPending
-	23, // 51: core.v1.Forecast.succeeded:type_name -> core.v1.ForecastSucceeded
-	24, // 52: core.v1.Forecast.failed:type_name -> core.v1.ForecastFailed
-	0,  // 53: core.v1.ForecastSummary.status:type_name -> core.v1.ForecastStatus
-	42, // 54: core.v1.ForecastSummary.created_at:type_name -> google.protobuf.Timestamp
-	1,  // 55: core.v1.ForecastSummary.calendar_mode:type_name -> core.v1.ForecastCalendarMode
-	4,  // 56: core.v1.ForecastSummary.scenario_context:type_name -> core.v1.SyntheticScenarioContext
-	0,  // 57: core.v1.ForecastAccepted.status:type_name -> core.v1.ForecastStatus
-	51, // 58: core.v1.CreateForecastRequest.context:type_name -> auth.v1.WriteContext
-	52, // 59: core.v1.CreateForecastRequest.scope:type_name -> core.v1.AccountScope
-	1,  // 60: core.v1.CreateForecastRequest.calendar_mode:type_name -> core.v1.ForecastCalendarMode
-	27, // 61: core.v1.CreateForecastResponse.accepted:type_name -> core.v1.ForecastAccepted
-	53, // 62: core.v1.GetForecastRequest.context:type_name -> auth.v1.BrowserContext
-	52, // 63: core.v1.GetForecastRequest.scope:type_name -> core.v1.AccountScope
-	25, // 64: core.v1.GetForecastResponse.forecast:type_name -> core.v1.Forecast
-	53, // 65: core.v1.ListForecastsRequest.context:type_name -> auth.v1.BrowserContext
-	52, // 66: core.v1.ListForecastsRequest.scope:type_name -> core.v1.AccountScope
-	54, // 67: core.v1.ListForecastsRequest.page:type_name -> core.v1.PageRequest
-	26, // 68: core.v1.ListForecastsResponse.items:type_name -> core.v1.ForecastSummary
-	55, // 69: core.v1.ListForecastsResponse.pagination:type_name -> core.v1.PageResponse
-	11, // 70: core.v1.Comparison.reference_metrics:type_name -> core.v1.ForecastMetrics
-	11, // 71: core.v1.Comparison.candidate_metrics:type_name -> core.v1.ForecastMetrics
-	43, // 72: core.v1.Comparison.delta_max_shortfall:type_name -> core.v1.Money
-	43, // 73: core.v1.Comparison.delta_minimum_balance:type_name -> core.v1.Money
-	43, // 74: core.v1.Comparison.delta_closing_balance:type_name -> core.v1.Money
-	53, // 75: core.v1.CompareForecastsRequest.context:type_name -> auth.v1.BrowserContext
-	52, // 76: core.v1.CompareForecastsRequest.scope:type_name -> core.v1.AccountScope
-	34, // 77: core.v1.CompareForecastsResponse.comparison:type_name -> core.v1.Comparison
-	43, // 78: core.v1.PlanFactPoint.planned_inflow:type_name -> core.v1.Money
-	43, // 79: core.v1.PlanFactPoint.planned_outflow:type_name -> core.v1.Money
-	43, // 80: core.v1.PlanFactPoint.planned_balance:type_name -> core.v1.Money
-	43, // 81: core.v1.PlanFactPoint.actual_inflow:type_name -> core.v1.Money
-	43, // 82: core.v1.PlanFactPoint.actual_outflow:type_name -> core.v1.Money
-	43, // 83: core.v1.PlanFactPoint.actual_balance:type_name -> core.v1.Money
-	43, // 84: core.v1.PlanFactPoint.balance_delta:type_name -> core.v1.Money
-	37, // 85: core.v1.PlanFact.coverage:type_name -> core.v1.ActualCoverage
-	38, // 86: core.v1.PlanFact.daily_points:type_name -> core.v1.PlanFactPoint
-	43, // 87: core.v1.PlanFact.mean_absolute_balance_error:type_name -> core.v1.Money
-	53, // 88: core.v1.GetPlanFactRequest.context:type_name -> auth.v1.BrowserContext
-	52, // 89: core.v1.GetPlanFactRequest.scope:type_name -> core.v1.AccountScope
-	56, // 90: core.v1.GetPlanFactRequest.dates:type_name -> core.v1.DateRange
-	39, // 91: core.v1.GetPlanFactResponse.plan_fact:type_name -> core.v1.PlanFact
-	28, // 92: core.v1.ForecastingService.CreateForecast:input_type -> core.v1.CreateForecastRequest
-	30, // 93: core.v1.ForecastingService.GetForecast:input_type -> core.v1.GetForecastRequest
-	32, // 94: core.v1.ForecastingService.ListForecasts:input_type -> core.v1.ListForecastsRequest
-	35, // 95: core.v1.ForecastingService.CompareForecasts:input_type -> core.v1.CompareForecastsRequest
-	40, // 96: core.v1.ForecastingService.GetPlanFact:input_type -> core.v1.GetPlanFactRequest
-	29, // 97: core.v1.ForecastingService.CreateForecast:output_type -> core.v1.CreateForecastResponse
-	31, // 98: core.v1.ForecastingService.GetForecast:output_type -> core.v1.GetForecastResponse
-	33, // 99: core.v1.ForecastingService.ListForecasts:output_type -> core.v1.ListForecastsResponse
-	36, // 100: core.v1.ForecastingService.CompareForecasts:output_type -> core.v1.CompareForecastsResponse
-	41, // 101: core.v1.ForecastingService.GetPlanFact:output_type -> core.v1.GetPlanFactResponse
-	97, // [97:102] is the sub-list for method output_type
-	92, // [92:97] is the sub-list for method input_type
-	92, // [92:92] is the sub-list for extension type_name
-	92, // [92:92] is the sub-list for extension extendee
-	0,  // [0:92] is the sub-list for field type_name
+	5,  // 5: core.v1.ForecastInput.scenario_context:type_name -> core.v1.SyntheticScenarioContext
+	8,  // 6: core.v1.ForecastInput.history_assessment:type_name -> core.v1.HistoryAssessment
+	2,  // 7: core.v1.ForecastInput.calendar_knowledge_mode:type_name -> core.v1.ForecastCalendarKnowledgeMode
+	46, // 8: core.v1.ForecastReadiness.quality_issues:type_name -> core.v1.ImportIssue
+	44, // 9: core.v1.CashGap.shortfall:type_name -> core.v1.Money
+	11, // 10: core.v1.ForecastMetrics.first_gap:type_name -> core.v1.CashGap
+	44, // 11: core.v1.ForecastMetrics.max_shortfall:type_name -> core.v1.Money
+	44, // 12: core.v1.ForecastMetrics.minimum_balance:type_name -> core.v1.Money
+	44, // 13: core.v1.ForecastMetrics.closing_balance:type_name -> core.v1.Money
+	10, // 14: core.v1.ForecastMetrics.gap_probability:type_name -> core.v1.Probability
+	44, // 15: core.v1.ForecastPoint.inflow:type_name -> core.v1.Money
+	44, // 16: core.v1.ForecastPoint.outflow:type_name -> core.v1.Money
+	44, // 17: core.v1.ForecastPoint.balance:type_name -> core.v1.Money
+	44, // 18: core.v1.ForecastPoint.balance_lower:type_name -> core.v1.Money
+	44, // 19: core.v1.ForecastPoint.balance_upper:type_name -> core.v1.Money
+	10, // 20: core.v1.ForecastPoint.negative_balance_probability:type_name -> core.v1.Probability
+	47, // 21: core.v1.Evidence.source:type_name -> core.v1.RecordSource
+	14, // 22: core.v1.Recommendation.evidence:type_name -> core.v1.Evidence
+	48, // 23: core.v1.ForecastComponent.direction:type_name -> core.v1.Direction
+	44, // 24: core.v1.ForecastComponent.amount:type_name -> core.v1.Money
+	44, // 25: core.v1.ForecastComponent.remaining_amount:type_name -> core.v1.Money
+	47, // 26: core.v1.ForecastComponent.source:type_name -> core.v1.RecordSource
+	48, // 27: core.v1.EffectiveOccurrence.direction:type_name -> core.v1.Direction
+	44, // 28: core.v1.EffectiveOccurrence.remaining_amount:type_name -> core.v1.Money
+	12, // 29: core.v1.ForecastResult.metrics:type_name -> core.v1.ForecastMetrics
+	13, // 30: core.v1.ForecastResult.daily_points:type_name -> core.v1.ForecastPoint
+	16, // 31: core.v1.ForecastResult.components:type_name -> core.v1.ForecastComponent
+	17, // 32: core.v1.ForecastResult.scenario_capabilities:type_name -> core.v1.ScenarioCapabilities
+	15, // 33: core.v1.ForecastResult.recommendations:type_name -> core.v1.Recommendation
+	18, // 34: core.v1.ForecastResult.effective_occurrences:type_name -> core.v1.EffectiveOccurrence
+	22, // 35: core.v1.ForecastResult.analysis:type_name -> core.v1.ForecastAnalysis
+	48, // 36: core.v1.RecurringHypothesis.direction:type_name -> core.v1.Direction
+	49, // 37: core.v1.RecurringHypothesis.historical_operations:type_name -> core.v1.HistoricalOperationRef
+	50, // 38: core.v1.RecurringHypothesis.month_end:type_name -> google.protobuf.Empty
+	3,  // 39: core.v1.RecurringHypothesis.weekend_shift:type_name -> core.v1.RecurringWeekendShift
+	4,  // 40: core.v1.RecurringHypothesis.status:type_name -> core.v1.RecurringHypothesisStatus
+	20, // 41: core.v1.ForecastAnalysis.classified_operations:type_name -> core.v1.ClassifiedOperationAnalysis
+	21, // 42: core.v1.ForecastAnalysis.recurring_hypotheses:type_name -> core.v1.RecurringHypothesis
+	0,  // 43: core.v1.ForecastPending.status:type_name -> core.v1.ForecastStatus
+	43, // 44: core.v1.ForecastSucceeded.completed_at:type_name -> google.protobuf.Timestamp
+	19, // 45: core.v1.ForecastSucceeded.result:type_name -> core.v1.ForecastResult
+	43, // 46: core.v1.ForecastFailed.completed_at:type_name -> google.protobuf.Timestamp
+	51, // 47: core.v1.ForecastFailed.error:type_name -> core.v1.OperationError
+	43, // 48: core.v1.Forecast.created_at:type_name -> google.protobuf.Timestamp
+	7,  // 49: core.v1.Forecast.input:type_name -> core.v1.ForecastInput
+	9,  // 50: core.v1.Forecast.readiness:type_name -> core.v1.ForecastReadiness
+	23, // 51: core.v1.Forecast.pending:type_name -> core.v1.ForecastPending
+	24, // 52: core.v1.Forecast.succeeded:type_name -> core.v1.ForecastSucceeded
+	25, // 53: core.v1.Forecast.failed:type_name -> core.v1.ForecastFailed
+	0,  // 54: core.v1.ForecastSummary.status:type_name -> core.v1.ForecastStatus
+	43, // 55: core.v1.ForecastSummary.created_at:type_name -> google.protobuf.Timestamp
+	1,  // 56: core.v1.ForecastSummary.calendar_mode:type_name -> core.v1.ForecastCalendarMode
+	5,  // 57: core.v1.ForecastSummary.scenario_context:type_name -> core.v1.SyntheticScenarioContext
+	0,  // 58: core.v1.ForecastAccepted.status:type_name -> core.v1.ForecastStatus
+	52, // 59: core.v1.CreateForecastRequest.context:type_name -> auth.v1.WriteContext
+	53, // 60: core.v1.CreateForecastRequest.scope:type_name -> core.v1.AccountScope
+	1,  // 61: core.v1.CreateForecastRequest.calendar_mode:type_name -> core.v1.ForecastCalendarMode
+	28, // 62: core.v1.CreateForecastResponse.accepted:type_name -> core.v1.ForecastAccepted
+	54, // 63: core.v1.GetForecastRequest.context:type_name -> auth.v1.BrowserContext
+	53, // 64: core.v1.GetForecastRequest.scope:type_name -> core.v1.AccountScope
+	26, // 65: core.v1.GetForecastResponse.forecast:type_name -> core.v1.Forecast
+	54, // 66: core.v1.ListForecastsRequest.context:type_name -> auth.v1.BrowserContext
+	53, // 67: core.v1.ListForecastsRequest.scope:type_name -> core.v1.AccountScope
+	55, // 68: core.v1.ListForecastsRequest.page:type_name -> core.v1.PageRequest
+	27, // 69: core.v1.ListForecastsResponse.items:type_name -> core.v1.ForecastSummary
+	56, // 70: core.v1.ListForecastsResponse.pagination:type_name -> core.v1.PageResponse
+	12, // 71: core.v1.Comparison.reference_metrics:type_name -> core.v1.ForecastMetrics
+	12, // 72: core.v1.Comparison.candidate_metrics:type_name -> core.v1.ForecastMetrics
+	44, // 73: core.v1.Comparison.delta_max_shortfall:type_name -> core.v1.Money
+	44, // 74: core.v1.Comparison.delta_minimum_balance:type_name -> core.v1.Money
+	44, // 75: core.v1.Comparison.delta_closing_balance:type_name -> core.v1.Money
+	54, // 76: core.v1.CompareForecastsRequest.context:type_name -> auth.v1.BrowserContext
+	53, // 77: core.v1.CompareForecastsRequest.scope:type_name -> core.v1.AccountScope
+	35, // 78: core.v1.CompareForecastsResponse.comparison:type_name -> core.v1.Comparison
+	44, // 79: core.v1.PlanFactPoint.planned_inflow:type_name -> core.v1.Money
+	44, // 80: core.v1.PlanFactPoint.planned_outflow:type_name -> core.v1.Money
+	44, // 81: core.v1.PlanFactPoint.planned_balance:type_name -> core.v1.Money
+	44, // 82: core.v1.PlanFactPoint.actual_inflow:type_name -> core.v1.Money
+	44, // 83: core.v1.PlanFactPoint.actual_outflow:type_name -> core.v1.Money
+	44, // 84: core.v1.PlanFactPoint.actual_balance:type_name -> core.v1.Money
+	44, // 85: core.v1.PlanFactPoint.balance_delta:type_name -> core.v1.Money
+	38, // 86: core.v1.PlanFact.coverage:type_name -> core.v1.ActualCoverage
+	39, // 87: core.v1.PlanFact.daily_points:type_name -> core.v1.PlanFactPoint
+	44, // 88: core.v1.PlanFact.mean_absolute_balance_error:type_name -> core.v1.Money
+	54, // 89: core.v1.GetPlanFactRequest.context:type_name -> auth.v1.BrowserContext
+	53, // 90: core.v1.GetPlanFactRequest.scope:type_name -> core.v1.AccountScope
+	57, // 91: core.v1.GetPlanFactRequest.dates:type_name -> core.v1.DateRange
+	40, // 92: core.v1.GetPlanFactResponse.plan_fact:type_name -> core.v1.PlanFact
+	29, // 93: core.v1.ForecastingService.CreateForecast:input_type -> core.v1.CreateForecastRequest
+	31, // 94: core.v1.ForecastingService.GetForecast:input_type -> core.v1.GetForecastRequest
+	33, // 95: core.v1.ForecastingService.ListForecasts:input_type -> core.v1.ListForecastsRequest
+	36, // 96: core.v1.ForecastingService.CompareForecasts:input_type -> core.v1.CompareForecastsRequest
+	41, // 97: core.v1.ForecastingService.GetPlanFact:input_type -> core.v1.GetPlanFactRequest
+	30, // 98: core.v1.ForecastingService.CreateForecast:output_type -> core.v1.CreateForecastResponse
+	32, // 99: core.v1.ForecastingService.GetForecast:output_type -> core.v1.GetForecastResponse
+	34, // 100: core.v1.ForecastingService.ListForecasts:output_type -> core.v1.ListForecastsResponse
+	37, // 101: core.v1.ForecastingService.CompareForecasts:output_type -> core.v1.CompareForecastsResponse
+	42, // 102: core.v1.ForecastingService.GetPlanFact:output_type -> core.v1.GetPlanFactResponse
+	98, // [98:103] is the sub-list for method output_type
+	93, // [93:98] is the sub-list for method input_type
+	93, // [93:93] is the sub-list for extension type_name
+	93, // [93:93] is the sub-list for extension extendee
+	0,  // [0:93] is the sub-list for field type_name
 }
 
 func init() { file_core_v1_forecasting_proto_init() }
@@ -3984,7 +4075,7 @@ func file_core_v1_forecasting_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_v1_forecasting_proto_rawDesc), len(file_core_v1_forecasting_proto_rawDesc)),
-			NumEnums:      4,
+			NumEnums:      5,
 			NumMessages:   38,
 			NumExtensions: 0,
 			NumServices:   1,

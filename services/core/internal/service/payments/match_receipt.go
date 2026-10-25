@@ -37,3 +37,22 @@ func matchRequest(cmd MatchCommand) matchBody {
 		Amount: cmd.Amount.Minor(), Currency: cmd.Amount.Currency(), ExpectedVersion: cmd.ExpectedVersion,
 		ExpectedDataVersion: cmd.ExpectedDataVersion, At: cmd.At.UTC(), ExpectedTransactionVersion: cmd.ExpectedTransactionVersion}
 }
+
+func restoreMatchResult(saved matchResult, cmd MatchCommand) (MatchPaymentResult, error) {
+	if err := validateMatchResult(saved); err != nil {
+		return MatchPaymentResult{}, err
+	}
+	result := MatchPaymentResult{MatchID: saved.ID, PaymentVersion: saved.PaymentVersion, DataVersion: saved.DataVersion}
+	if saved.Projection == nil {
+		return result, nil
+	}
+	m, err := saved.Projection.match()
+	if err != nil {
+		return MatchPaymentResult{}, err
+	}
+	if m.ID() != saved.ID || m.Scope() != cmd.Scope || m.PaymentID() != cmd.PaymentID || m.TransactionID() != cmd.TransactionID {
+		return MatchPaymentResult{}, ErrUnavailable
+	}
+	result.Match = m
+	return result, nil
+}

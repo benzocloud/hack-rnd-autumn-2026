@@ -135,10 +135,10 @@ func saveForecast(result FinancialModelResult) SavedForecast {
 }
 
 func validateSavedForecast(frozen jobInput, snapshot domain.FinancialSnapshot, result *SavedForecast) error {
-	if frozen.SchemaVersion == 2 && (result == nil || !slices.Equal(result.Limitations, csvLimitations()) || len(result.Components) != 0 || len(result.Evidence) != 0) {
+	if frozen.Model.Version == CSVModelVersion && (result == nil || !slices.Equal(result.Limitations, csvLimitations()) || len(result.Components) != 0 || len(result.Evidence) != 0) {
 		return ErrModelResponse
 	}
-	if result == nil || result.SchemaVersion != 1 || len(result.Days) != 30 || result.ProbabilityReason != "not_calibrated" || !slices.Contains(result.Limitations, "historical_calendar_unavailable") {
+	if result == nil || result.SchemaVersion != 1 || len(result.Days) != 30 || result.ProbabilityReason != "not_calibrated" || (!activeCalendar(snapshot.Data().Calendar) && !slices.Contains(result.Limitations, "historical_calendar_unavailable")) {
 		return ErrModelResponse
 	}
 	cutoff, _ := time.Parse(time.DateOnly, string(frozen.Cutoff))

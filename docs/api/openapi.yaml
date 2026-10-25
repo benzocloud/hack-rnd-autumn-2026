@@ -6351,6 +6351,18 @@ components:
           readOnly: true
           description: Frozen server-owned context for synthetic_scenario; null/omitted for ordinary or legacy forecasts.
             Browser cannot provide identity, recorded_at or provenance.
+        calendar_knowledge_mode:
+          type: [string, 'null']
+          enum: [current, historical_as_of_certified, unavailable, synthetic_scenario, null]
+          readOnly: true
+          description: Frozen actual calendar knowledge, independent of request selection. Legacy absence is unknown.
+        calendar_as_of_date:
+          type: [string, 'null']
+          format: date
+          readOnly: true
+        no_post_cutoff_movements:
+          type: boolean
+          readOnly: true
       required:
       - snapshot_id
       - data_version

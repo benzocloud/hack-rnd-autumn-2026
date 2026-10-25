@@ -52,3 +52,16 @@ Wire diff перед следующим блоком: для явного раз
 Independent caveman review f344200 обнаружил пропущенный untracked API `payment_groups.go`: опубликованный API checkpoint не собирался. Исправление включается отдельным fix commit немедленно; этот неуспешный checkpoint не объявляется passing. Review также обнаружил external reimport/linkage comparison — исключение изменяемого reconciliation_group_id из external identity исправлено с regression.
 
 Real HTTP tests текущего дерева с race: `TestPaymentForecastHTTPWithPostgresPythonAndRestart` и `TestPaymentHTTPAPILifecyclePersistsAudit` — PASS, package4.577s; весь API→Core→PG→Python mTLS путь, семь прогнозов, 30 exact points, audit/stale/immutable bytes/restart. Auth double и covered CURRENT fixture обозначены в тестах, обычный CSV и настоящий Auth не заявляются.
+
+## Frozen calendar / Predict checkpoint 10:38 МСК — На ревью
+
+Lifecycle publication fix pushed `f4627f1cfcca5fa2ad01ec7e52a618f8e608d4ea`, remote совпал. CURRENT block публикуется следующим commit; Git/PR head — точный current SHA (self-referential SHA не встраивается в собственный commit).
+
+Работает: frozen snapshot payload2 содержит payment remaining/status/version/provenance/group и независимые groups; legacy payload1 читается. Covered current jobs schema2 сохраняют прежний model context mean_90_components_v1/calendar_replacement_v1. Один Predict и independent Go residual/replacement/remaining/components/sourceIDs/overlap/overflow validation. Current пустой календарь отличается от unavailable; public read fields18–20 и known components/effective occurrences объясняют remaining.
+
+Проверки: real Go→Python mTLS current lifecycle; `TestCurrentCalendarForecastFreezesLifecycleAndReplacement` (фактическое имя см. source) real PG/job/worker/reopen, PASS7.083s; combined real HTTP tests PASS4.577s (семь новых forecasts, все30points). Codec current clone/remaining/group regression и mode/overdue/unknown tests прошли узко. Existing ML45 без skips; API schema13 — первый новый запуск нашёл устаревшую copied ForecastInput definition, она синхронизирована и rerun в работе. Full Core serial integration+mlintegration race, full tagged lint/vet запущены; не объявлены passing до завершения.
+
+Ограничения: mean_90_csv_v1 не принимает calendar — любой persisted payment/group даёт UNSUPPORTED_MODEL_CONTEXT (conservative explicit blocker). Historical nonempty calendar/synthetic mode не активируются; synthetic selection явно unsupported, не CURRENT. Недоказанный replacement/overdue/incompatible horizon отклоняются, даты не сдвигаются. Covered CURRENT тесты не доказывают ordinary CSV/calendar поддержку. Probability not_calibrated; training/default не менялись.
+
+Schema/rollback: 00013 tombstones, 00014 groups/link, 00015 разрешает snapshot payload2. Downgrade15 не пройдёт при существующих payload2; rollback обязан сохранять decoder. Старый Core остановить до запуска schema2 producer; работающий сервер не менялся. Старый бинарник нельзя смешивать с новыми jobs. Все миграции выполнялись только в собственном marked PG18.
+Следующая команда: проверить `.agent/local/core-full.json`/`core-full.err`, `core-final-lint.log` и `core-final-vet.log`; независимое review следующего опубликованного SHA, затем исправления и финальные CI/main checks.

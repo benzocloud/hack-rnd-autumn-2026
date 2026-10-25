@@ -66,7 +66,7 @@ func newScope(t *testing.T, application *application) ledger.Scope {
 			"DELETE FROM core_history_coverage WHERE company_id=$1",
 			"DELETE FROM core_payment_matches WHERE company_id=$1",
 			"DELETE FROM core_expected_payments WHERE company_id=$1",
- "DELETE FROM core_payment_reconciliation_groups WHERE company_id=$1",
+			"DELETE FROM core_payment_reconciliation_groups WHERE company_id=$1",
 			"DELETE FROM core_transactions WHERE company_id=$1",
 			"DELETE FROM core_imports WHERE company_id=$1",
 			"DELETE FROM core_financial_snapshots WHERE company_id=$1",

@@ -102,6 +102,14 @@ func (s *jobs) Create(ctx context.Context, cmd CreateForecastCommand) (ForecastA
 		if err != nil {
 			return err
 		}
+		if hasCoverage {
+			calendar, err = activateCalendar(calendar, cmd.Cutoff, cmd.Today, facts)
+		} else if len(calendar.Payments) > 0 || len(calendar.Groups) > 0 {
+			return ErrHorizon
+		}
+		if err != nil {
+			return err
+		}
 		id, err := uuid.NewV7()
 		if err != nil {
 			return ErrUnavailable

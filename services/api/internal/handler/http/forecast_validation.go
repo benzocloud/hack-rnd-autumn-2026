@@ -30,6 +30,9 @@ func validForecastInput(i *corev1.ForecastInput, account string) bool {
 	if i == nil || !resourceID(i.SnapshotId) || i.AccountId != account || i.DataVersion < 1 || i.Currency != "RUB" || !validMoney(i.OpeningBalance) || !dateSequence(i.CutoffDate, i.StartDate, i.EndDate, i.HorizonDays) || i.BalanceAsOf != i.CutoffDate || !businessDate(i.DataAsOf) || i.DataAsOf > i.CutoffDate || i.RiskDefinition != "below_zero_eod" || !validHistoryCoverage(i.HistoryCoverage, i.DataVersion, i.CutoffDate) {
 		return false
 	}
+	if !validCalendarKnowledge(i) {
+		return false
+	}
 	if i.HistoryAssessment != nil && !validCSVAssessment(i) {
 		return false
 	}
@@ -220,4 +223,17 @@ func csvReadiness(f *corev1.Forecast) bool {
 		}
 	}
 	return true
+}
+
+func validCalendarKnowledge(i *corev1.ForecastInput) bool {
+	switch i.CalendarKnowledgeMode {
+	case corev1.ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_UNSPECIFIED, corev1.ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_UNAVAILABLE:
+		return i.CalendarAsOfDate == "" && !i.NoPostCutoffMovements
+	case corev1.ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_CURRENT:
+		return (i.CalendarAsOfDate == i.CutoffDate || i.CalendarAsOfDate == i.StartDate && i.NoPostCutoffMovements) && i.ModelContext != nil && i.ModelContext.ModelVersion == "mean_90_components_v1"
+	case corev1.ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_HISTORICAL_AS_OF_CERTIFIED, corev1.ForecastCalendarKnowledgeMode_FORECAST_CALENDAR_KNOWLEDGE_MODE_SYNTHETIC_SCENARIO:
+		return false
+	default:
+		return false
+	}
 }

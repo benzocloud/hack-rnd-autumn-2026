@@ -78,7 +78,7 @@ func (s *service) CreateReconciliationGroup(ctx context.Context, c CreateGroupCo
 			return err
 		}
 		if replay {
-			if result.Group.Scope != c.Scope || result.Group.ID == uuid.Nil || result.Group.Version < 1 || result.DataVersion < 1 {
+			if result.Group.Scope != c.Scope || result.Group.ID == uuid.Nil || result.Group.Validate() != nil || result.DataVersion < 1 {
 				return ErrUnavailable
 			}
 			return nil
@@ -95,7 +95,7 @@ func (s *service) CreateReconciliationGroup(ctx context.Context, c CreateGroupCo
 		if err != nil {
 			return err
 		}
-		if len(active) > 1000 {
+		if len(active) >= 1000 {
 			return ErrInvalid
 		}
 		covered := map[uuid.UUID]bool{}
@@ -235,7 +235,7 @@ func (s *service) RevokeReconciliationGroup(ctx context.Context, c RevokeGroupCo
 			return err
 		}
 		if replay {
-			if result.Group.Scope != c.Scope || result.Group.ID == uuid.Nil || result.Group.Version < 1 || result.DataVersion < 1 {
+			if result.Group.Scope != c.Scope || result.Group.ID == uuid.Nil || result.Group.Validate() != nil || result.DataVersion < 1 {
 				return ErrUnavailable
 			}
 			return nil

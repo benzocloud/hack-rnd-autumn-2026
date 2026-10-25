@@ -84,7 +84,7 @@ func validateFinancialEvidence(request *pb.PredictRequest, r *pb.PredictResponse
 
 func decodeFinancial(input forecasting.FinancialModelInput, r *pb.PredictResponse) forecasting.FinancialModelResult {
 	i := input.Snapshot
-	projection := forecasting.ModelResult{SnapshotID: i.SnapshotID, Scope: i.Scope, DataVersion: i.DataVersion, Cutoff: i.Cutoff, Model: i.Model, HistoryOnlyIncludesRecurringFlows: true, Warnings: slices.Clone(r.Warnings)}
+	projection := forecasting.ModelResult{SnapshotID: i.SnapshotID, Scope: i.Scope, DataVersion: i.DataVersion, Cutoff: i.Cutoff, Model: i.Model, HistoryOnlyIncludesRecurringFlows: r.HistoryOnlyIncludesRecurringFlows, Warnings: slices.Clone(r.Warnings)}
 	for _, day := range r.Days {
 		incoming, _ := money.New(day.InflowMinor, money.RUB)
 		outgoing, _ := money.New(day.OutflowMinor, money.RUB)

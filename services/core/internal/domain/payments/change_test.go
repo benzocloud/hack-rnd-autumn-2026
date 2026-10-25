@@ -48,3 +48,22 @@ func TestChangePreservesAllocationsAndCancellation(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestReimportPreservesEditableReconciliationLink(t *testing.T) {
+	p, _ := fixtures(t)
+	d := p.Data()
+	d.Source = ledger.Source{Kind: ledger.Imported, Namespace: ledger.Namespace{System: "dataset_v1", CompanyID: "C001"}, ExternalID: "PAY1", ImportedAt: time.Now()}
+	imported, err := payments.NewExpectedPayment(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	group := uuid.New()
+	linked, err := imported.Update(payments.PaymentChange{ReconciliationGroupID: &group})
+	if err != nil {
+		t.Fatal(err)
+	}
+	replay, err := imported.CheckReplay(linked)
+	if err != nil || !replay || linked.Data().ReconciliationGroupID != group {
+		t.Fatal(replay, err)
+	}
+}

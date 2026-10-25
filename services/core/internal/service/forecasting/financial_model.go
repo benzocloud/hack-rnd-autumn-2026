@@ -3,6 +3,7 @@ package forecasting
 import (
 	"github.com/google/uuid"
 
+	domain "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/forecasting"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
 )
 
@@ -21,6 +22,7 @@ type Coverage struct {
 // FinancialModelInput currently represents an explicitly unavailable historical
 // calendar. An unavailable calendar never selects the history-only model.
 type FinancialModelInput struct {
+	Calendar   domain.Calendar
 	Snapshot   ModelInput
 	Coverage   Coverage
 	Operations []ledger.Transaction

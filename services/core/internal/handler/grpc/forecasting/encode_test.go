@@ -6,6 +6,9 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/payments"
+	pb "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1"
+
 	domain "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/forecasting"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/money"
@@ -47,5 +50,29 @@ func TestObservedDaysCountDistinctCoveredFacts(t *testing.T) {
 	view.Coverage.Kind = "legacy"
 	if got := encodeForecast(view).Readiness.ObservedDays; got != 0 {
 		t.Fatal(got)
+	}
+}
+
+func TestKnownComponentsExposeOnlyFrozenRemaining(t *testing.T) {
+	scope := ledger.Scope{CompanyID: uuid.New(), AccountID: uuid.New()}
+	amount, _ := money.New(100, money.RUB)
+	remaining, _ := money.New(40, money.RUB)
+	id := uuid.New()
+	payment, err := payments.RestoreExpectedPayment(payments.PaymentData{ID: id, Scope: scope, Direction: ledger.Outflow, Amount: amount, ScheduledDate: "2026-10-30", Source: ledger.Source{Kind: ledger.Manual}, CreatedAt: time.Now()}, remaining, payments.PartiallyMatched, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := &pb.ForecastResult{}
+	saved := &service.SavedForecast{Components: []service.FinancialComponent{{ID: "known:" + id.String(), Kind: "known_remaining_payment", Date: "2026-10-30", OutflowMinor: 40, SourceIDs: []string{id.String()}}}}
+	encodeKnownComponents(out, saved, domain.Calendar{Payments: []payments.ExpectedPayment{payment}})
+	if len(out.Components) != 1 || len(out.EffectiveOccurrences) != 1 || len(out.Recommendations) != 1 {
+		t.Fatal(out)
+	}
+	c := out.Components[0]
+	if c.Amount.AmountMinor != 100 || c.RemainingAmount.AmountMinor != 40 || c.GetPaymentId() != id.String() || c.ScenarioEligible || c.Source.SourceSystem != "manual_v1" {
+		t.Fatal(c)
+	}
+	if out.EffectiveOccurrences[0].RemainingAmount.AmountMinor != 40 || !out.EffectiveOccurrences[0].InHorizon || out.EffectiveOccurrences[0].ResponseActionEligible {
+		t.Fatal(out.EffectiveOccurrences)
 	}
 }

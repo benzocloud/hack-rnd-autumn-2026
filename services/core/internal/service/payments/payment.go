@@ -60,22 +60,10 @@ func (s *service) CreatePayment(ctx context.Context, cmd CreateCommand) (CreateP
 			return err
 		}
 		if replay {
-			if err := validatePaymentResult(saved); err != nil {
-				return err
-			}
-			result = CreatePaymentResult{PaymentID: saved.ID, PaymentVersion: saved.Version, DataVersion: saved.DataVersion}
-			if saved.Projection != nil {
-				restored, err := saved.Projection.result()
-				if err != nil {
-					return err
-				}
-				if restored.Payment.Data().ID != saved.ID || restored.Payment.Data().Scope != cmd.Record.Scope || restored.Payment.Version() != saved.Version || restored.DataVersion != saved.DataVersion {
-					return ErrUnavailable
-				}
-				result.Payment = restored.Payment
-			}
-			return nil
+			result, err = restoreCreateResult(saved, cmd.Record.Scope)
+			return err
 		}
+
 		result, err = createPayment(ctx, store, cmd, record)
 		if err != nil {
 			return err

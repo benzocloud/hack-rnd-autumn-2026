@@ -11,11 +11,11 @@ var queryReadFacts string
 //go:embed sql/read_balance_history.sql
 var queryReadBalanceHistory string
 
-//go:embed sql/read_calendar.sql
-var queryReadCalendar string
-
 //go:embed sql/insert_snapshot.sql
 var queryInsertSnapshot string
 
 //go:embed sql/read_snapshot.sql
 var queryReadSnapshot string
+
+//go:embed sql/latest_fact_date.sql
+var queryLatestFactDate string

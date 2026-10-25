@@ -93,6 +93,13 @@ func (h *handler) CreateForecast(ctx context.Context, r *pb.CreateForecastReques
 	if r == nil || r.Context == nil {
 		return nil, rpcerror.From(forecasting.ErrInvalid)
 	}
+	switch r.CalendarMode {
+	case pb.ForecastCalendarMode_FORECAST_CALENDAR_MODE_UNSPECIFIED, pb.ForecastCalendarMode_FORECAST_CALENDAR_MODE_AVAILABLE:
+	case pb.ForecastCalendarMode_FORECAST_CALENDAR_MODE_SYNTHETIC_SCENARIO:
+		return nil, rpcerror.From(forecasting.ErrHorizon)
+	default:
+		return nil, rpcerror.From(forecasting.ErrInvalid)
+	}
 	scope, err := parseScope(r.Scope)
 	if err != nil {
 		return nil, rpcerror.From(err)

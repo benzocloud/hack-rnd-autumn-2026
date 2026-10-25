@@ -64,22 +64,10 @@ func (s *service) MatchPayment(ctx context.Context, cmd MatchCommand) (MatchPaym
 			return err
 		}
 		if replay {
-			if err := validateMatchResult(saved); err != nil {
-				return err
-			}
-			result = MatchPaymentResult{MatchID: saved.ID, PaymentVersion: saved.PaymentVersion, DataVersion: saved.DataVersion}
-			if saved.Projection != nil {
-				m, err := saved.Projection.match()
-				if err != nil {
-					return err
-				}
-				if m.ID() != saved.ID || m.Scope() != cmd.Scope || m.PaymentID() != cmd.PaymentID || m.TransactionID() != cmd.TransactionID {
-					return ErrUnavailable
-				}
-				result.Match = m
-			}
-			return nil
+			result, err = restoreMatchResult(saved, cmd)
+			return err
 		}
+
 		result, err = matchPayment(ctx, store, cmd, id, at)
 		if err != nil {
 			return err
