@@ -73,6 +73,9 @@ message ImportPreview {
   repeated ImportRecordKind record_kinds = 20;
   FactualSourceBinding transaction_source = 21;
   FactualSourceBinding would_bind_transaction_source = 22;
+  // Proposed proof at base_data_version, not an applied certification. Fixture
+  // bounds/scope/hash come from the server manifest, never from upload metadata.
+  HistoryCoverage history_coverage = 23;
 }
 message Import {
   string id = 1;
@@ -89,6 +92,10 @@ message Import {
   optional int64 applied_data_version = 12;
   OperationError error = 13;
   repeated ImportRecordKind record_kinds = 14;
+  // Applied proof only; absent before successful atomic commit.
+  HistoryCoverage history_coverage = 15;
+  // Uncommitted preview deadline. Raw cleanup does not remove metadata/receipts.
+  google.protobuf.Timestamp expires_at = 16;
 }
 // Original durable acknowledgement. Replay returns this same acceptance; GET
 // is authoritative for current state. API builds company-scoped status_url.

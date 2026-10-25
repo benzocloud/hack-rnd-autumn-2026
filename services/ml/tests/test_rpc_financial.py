@@ -23,6 +23,12 @@ if RPC_READY:
 def financial_request():
     base = make_request(incoming=0, outgoing=100, initial=1000)
     request = pb.PredictRequest(snapshot=base.snapshot, horizon_days=30, model=base.model)
+    request.availability_limitations.extend(
+        (
+            "history_coverage_kind_dataset_fixture_assumption",
+            "dataset_coverage_assumed_not_bank_certified",
+        )
+    )
     request.model.model_version = FINANCIAL_VERSION
     request.model.preprocessing_version = FINANCIAL_PREPROCESSING
     ids = []

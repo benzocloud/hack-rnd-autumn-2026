@@ -25,7 +25,10 @@ def core_request(with_calendar=False):
     snapshot.ClearField("history")
     cutoff = date.fromisoformat(snapshot.cutoff_date)
     coverage = Coverage(
-        (cutoff - timedelta(days=89)).isoformat(), cutoff.isoformat(), "test-import-receipt"
+        (cutoff - timedelta(days=89)).isoformat(),
+        cutoff.isoformat(),
+        "test-import-receipt",
+        "dataset_fixture_assumption",
     )
     return prepare_financial_request(
         snapshot,
@@ -65,7 +68,10 @@ class CoreInputTests(unittest.TestCase):
         source.snapshot.ClearField("history")
         cutoff = date.fromisoformat(source.snapshot.cutoff_date)
         coverage = Coverage(
-            (cutoff - timedelta(days=89)).isoformat(), cutoff.isoformat(), "import-v1"
+            (cutoff - timedelta(days=89)).isoformat(),
+            cutoff.isoformat(),
+            "import-v1",
+            "dataset_fixture_assumption",
         )
         for invalid in (
             None,

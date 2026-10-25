@@ -1,0 +1,1 @@
+SELECT payload FROM core_import_rows s WHERE import_id=$1 AND row_number>$2 AND row_number=(SELECT min(d.row_number) FROM core_import_rows d WHERE d.import_id=s.import_id AND d.external_id=s.external_id) ORDER BY row_number LIMIT $3;

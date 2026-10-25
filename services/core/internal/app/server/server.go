@@ -15,6 +15,7 @@ import (
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/config"
 	companyHandler "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/handler/grpc/company"
 	forecastHandler "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/handler/grpc/forecasting"
+	importsHandler "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/handler/grpc/imports"
 	ledgerHandler "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/handler/grpc/ledger"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/forecasting"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/transport/grpcserver"
@@ -83,22 +84,30 @@ func Run(ctx context.Context, cfg config.Config, rpc config.RPC) (err error) {
 		server.Stop()
 		return err
 	}
+	if err := importsHandler.Register(server, application.Imports, application.Companies, auth); err != nil {
+		server.Stop()
+		return err
+	}
 	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp", rpc.Address)
 	if err != nil {
 		server.Stop()
 		return errRuntime
 	}
-	if model == nil {
-		return serve(ctx, server, listener, cfg.ShutdownTimeout)
-	}
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	worker := make(chan error, 1)
-	go func() { worker <- application.ForecastJobs.Run(runCtx); cancel() }()
+	worker := make(chan error, 2)
+	workers := 1
+	go func() { worker <- application.Imports.Run(runCtx); cancel() }()
+	if model != nil {
+		workers++
+		go func() { worker <- application.ForecastJobs.Run(runCtx); cancel() }()
+	}
 	serveErr := serve(runCtx, server, listener, cfg.ShutdownTimeout)
 	cancel()
-	workerErr := <-worker
-	return errors.Join(serveErr, workerErr)
+	for range workers {
+		serveErr = errors.Join(serveErr, <-worker)
+	}
+	return serveErr
 }
 
 func serve(ctx context.Context, server *grpc.Server, listener net.Listener, timeout time.Duration) error {

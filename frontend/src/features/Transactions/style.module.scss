@@ -6,6 +6,11 @@
 .form { @include finance.form; }
 .row { @include finance.row; }
 .table { @include finance.table; }
+.operations {
+    th:nth-child(2), td:nth-child(2) { width: 99%; }
+    th:not(:nth-child(2)), td:not(:nth-child(2)) { width: 1%; white-space: nowrap; }
+    td:not(:nth-child(2)) span { min-width: max-content; overflow-wrap: normal; white-space: nowrap; }
+}
 .scroll { overflow-x: auto; }
 .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); align-items: end; gap: 16px; }
 .actions { @include finance.row; justify-content: flex-end; margin-top: 20px; }

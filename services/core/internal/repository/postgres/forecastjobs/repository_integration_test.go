@@ -78,12 +78,18 @@ func TestForecastJobCoverageAndTenantScope(t *testing.T) {
 	if err != nil || revision != 1 {
 		t.Fatal(revision, err)
 	}
-	if _, err := tx.ExecContext(ctx, "INSERT INTO core_history_coverage(company_id,account_id,data_version,from_date,through_date,reference) VALUES($1,$2,1,'2026-01-01','2026-12-31','verified test source')", scope.CompanyID, scope.AccountID); err != nil {
+	if _, err := tx.ExecContext(ctx, "INSERT INTO core_history_coverage(company_id,account_id,data_version,from_date,through_date,reference,kind) VALUES($1,$2,1,'2026-01-01','2026-12-31','verified test source','certified')", scope.CompanyID, scope.AccountID); err != nil {
 		t.Fatal(err)
 	}
 	coverage, found, err := r.ReadCoverage(ctx, scope, 1, "2026-07-26", "2026-10-23")
 	if err != nil || !found || coverage.From != "2026-01-01" || coverage.Through != "2026-12-31" || coverage.Reference != "verified test source" {
 		t.Fatal(coverage, found, err)
+	}
+	if _, err := tx.ExecContext(ctx, "INSERT INTO core_history_coverage(company_id,account_id,data_version,from_date,through_date,reference) VALUES($1,$2,3,'2026-01-01','2026-12-31','legacy source')", scope.CompanyID, scope.AccountID); err != nil {
+		t.Fatal(err)
+	}
+	if _, found, err := r.ReadCoverage(ctx, scope, 3, "2026-07-26", "2026-10-23"); err != nil || found {
+		t.Fatal("legacy coverage without kind must stay unread, not fail the read", found, err)
 	}
 	for _, test := range []struct {
 		scope    ledger.Scope

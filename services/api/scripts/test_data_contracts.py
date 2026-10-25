@@ -32,6 +32,19 @@ class CalculationContractTests(unittest.TestCase):
     def test_calculation_example_is_valid_with_uuid_formats(self):
         self.validator.validate(self.example)
 
+    def test_historical_backtest_rejects_synthetic_calendar(self):
+        example = copy.deepcopy(self.example)
+        example["mode"] = "history_backtest"
+        example["known_payments"] = []
+        example["input"]["calendar_mode"] = "synthetic_scenario"
+        example["input"]["scenario_context"] = {
+            "scenario_reference": "demo-1",
+            "recorded_at": "2026-10-24T20:00:00Z",
+            "scenario_business_date": example["input"]["cutoff_date"],
+        }
+        with self.assertRaises(ValidationError):
+            self.validator.validate(example)
+
     def test_internal_ids_reject_opaque_or_nil_values(self):
         for path in [("company_id",), ("input", "snapshot_id"), ("input", "account_id")]:
             for invalid in ["snap_123", "00000000-0000-0000-0000-000000000000"]:

@@ -1,4 +1,9 @@
     location /api/v1/ {
+        # Bounded by API's file/envelope/slot policy. Stream directly to private
+        # API spool instead of nginx temporary files on the read-only frontend.
+        client_max_body_size 101m;
+        client_body_timeout 120s;
+        proxy_request_buffering off;
         resolver 127.0.0.11 valid=10s ipv6=off;
         set $api_upstream saldo-api:8080;
         proxy_pass https://$api_upstream$request_uri;
@@ -13,6 +18,7 @@
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_connect_timeout 5s;
-        proxy_read_timeout 30s;
+        proxy_read_timeout 180s;
+        proxy_send_timeout 120s;
         proxy_buffering off;
     }

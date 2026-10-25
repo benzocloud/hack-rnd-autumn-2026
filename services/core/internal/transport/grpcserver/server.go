@@ -19,7 +19,7 @@ func New(tlsCredentials credentials.TransportCredentials) (*grpc.Server, error) 
 	if tlsCredentials == nil || tlsCredentials.Info().SecurityProtocol != "tls" {
 		return nil, mtls.ErrConfiguration
 	}
-	return grpc.NewServer(grpc.Creds(tlsCredentials), grpc.MaxRecvMsgSize(1<<20), grpc.MaxSendMsgSize(2<<20), grpc.UnaryInterceptor(authorizePeer)), nil
+	return grpc.NewServer(grpc.Creds(tlsCredentials), grpc.MaxRecvMsgSize(2<<20), grpc.MaxSendMsgSize(2<<20), grpc.UnaryInterceptor(authorizePeer), grpc.StreamInterceptor(authorizeStreamPeer)), nil
 }
 
 func authorizePeer(ctx context.Context, request any, info *grpc.UnaryServerInfo, next grpc.UnaryHandler) (any, error) {
@@ -34,11 +34,48 @@ func authorizePeer(ctx context.Context, request any, info *grpc.UnaryServerInfo,
 		allowed = identity == mtls.API
 	case pb.ForecastingService_CreateForecast_FullMethodName, pb.ForecastingService_GetForecast_FullMethodName, pb.ForecastingService_ListForecasts_FullMethodName:
 		allowed = identity == mtls.API
+	case pb.ImportsService_ListImports_FullMethodName, pb.ImportsService_GetImport_FullMethodName, pb.ImportsService_ListImportIssues_FullMethodName:
+		allowed = identity == mtls.API
+	case pb.ImportsService_CommitImport_FullMethodName, pb.LedgerService_ListTransactions_FullMethodName, pb.LedgerService_ListCategories_FullMethodName, pb.LedgerService_UpdateTransactionCategory_FullMethodName:
+		allowed = identity == mtls.API
 	}
 	if !allowed {
 		return nil, status.Error(codes.PermissionDenied, "service peer is not permitted")
 	}
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	deadline := 10 * time.Second
+	if info.FullMethod == pb.ImportsService_CommitImport_FullMethodName {
+		deadline = 100 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(ctx, deadline)
 	defer cancel()
 	return next(ctx, request)
+}
+
+type boundedStream struct {
+	grpc.ServerStream
+	ctx context.Context
+}
+
+func (s boundedStream) Context() context.Context { return s.ctx }
+
+func (s boundedStream) RecvMsg(message any) error {
+	// Returning from the handler cancels the transport receive. The buffered
+	// result lets that one in-flight receive finish after our deadline fires.
+	result := make(chan error, 1)
+	go func() { result <- s.ServerStream.RecvMsg(message) }()
+	select {
+	case err := <-result:
+		return err
+	case <-s.ctx.Done():
+		return status.FromContextError(s.ctx.Err()).Err()
+	}
+}
+
+func authorizeStreamPeer(service any, stream grpc.ServerStream, info *grpc.StreamServerInfo, next grpc.StreamHandler) error {
+	if info.FullMethod != pb.ImportsService_UploadImport_FullMethodName || mtls.Identity(stream.Context()) != mtls.API {
+		return status.Error(codes.PermissionDenied, "service peer is not permitted")
+	}
+	ctx, cancel := context.WithTimeout(stream.Context(), 2*time.Minute)
+	defer cancel()
+	return next(service, boundedStream{ServerStream: stream, ctx: ctx})
 }

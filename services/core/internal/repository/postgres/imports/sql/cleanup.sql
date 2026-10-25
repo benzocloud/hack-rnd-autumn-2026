@@ -1,0 +1,1 @@
+SELECT payload FROM core_imports WHERE (status='receiving' AND lease_until<$1) OR(status='preview_ready' AND expires_at<$1) OR(status IN('applied','failed') AND terminal_at<$1-interval '24 hours' AND NOT raw_deleted) ORDER BY created_at,id LIMIT 20 FOR UPDATE SKIP LOCKED;

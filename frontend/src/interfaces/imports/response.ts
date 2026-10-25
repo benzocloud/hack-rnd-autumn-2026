@@ -9,6 +9,7 @@ interface IBalanceObservation {
 
 
 interface IImportPreview {
+    history_coverage?: IHistoryCoverage | null;
     source_company_id: string;
     source_system: string;
     account_id: string;
@@ -35,12 +36,23 @@ interface IImportPreview {
 
 
 interface IImportBase {
+    expires_at?: string | null;
+    history_coverage?: IHistoryCoverage | null;
     id: string;
     account_id: string;
     source_company_id: string;
     version: string;
     created_at: string;
     updated_at: string;
+}
+
+interface IHistoryCoverage {
+    kind: "certified" | "dataset_fixture_assumption";
+    from_date: string;
+    through_date: string;
+    reference: string;
+    data_version: string;
+    limitations: string[];
 }
 
 

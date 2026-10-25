@@ -26,6 +26,7 @@ type Config struct {
 	Log             Log
 	Postgres        Postgres
 	ShutdownTimeout time.Duration
+	FixtureCoverage []FixtureCoverage
 }
 
 // Log configures a caller-owned slog logger.
@@ -119,6 +120,15 @@ func Load() (Config, error) {
 			*setting.target = duration
 		}
 	}
+	enabledRaw := os.Getenv("CORE_DATASET_FIXTURE_COVERAGE_ENABLED")
+	if enabledRaw != "" && enabledRaw != "true" && enabledRaw != "false" {
+		return Config{}, errors.New("invalid fixture coverage enablement")
+	}
+	entries, err := LoadFixtureCoverage(os.Getenv("CORE_DATASET_FIXTURE_MANIFEST"), enabledRaw == "true")
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.FixtureCoverage = entries
 	return cfg, nil
 }
 

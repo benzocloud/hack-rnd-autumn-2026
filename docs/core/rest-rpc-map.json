@@ -166,5 +166,17 @@
   ],
   "getScenario": [
     "core.v1.ScenariosService.GetScenario"
+  ],
+  "listReconciliationGroups": [
+    "core.v1.PaymentsService.ListReconciliationGroups"
+  ],
+  "createReconciliationGroup": [
+    "core.v1.PaymentsService.CreateReconciliationGroup"
+  ],
+  "getReconciliationGroup": [
+    "core.v1.PaymentsService.GetReconciliationGroup"
+  ],
+  "revokeReconciliationGroup": [
+    "core.v1.PaymentsService.RevokeReconciliationGroup"
   ]
 }

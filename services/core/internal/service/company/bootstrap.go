@@ -52,6 +52,10 @@ func (s *service) Bootstrap(ctx context.Context, cmd BootstrapCommand) (Bootstra
 		return BootstrapResult{}, err
 	}
 	record := domain.BootstrapRecord{CommandID: cmd.CommandID, CompanyID: cmd.CompanyID, AccountID: accountID, RequestSHA256: cmd.RequestSHA256, Spec: cmd.Spec, CommittedAt: profile.CreatedAt}
+	definitions, err := ledger.DefaultCategories(cmd.CompanyID)
+	if err != nil {
+		return BootstrapResult{}, ErrUnavailable
+	}
 	var result BootstrapResult
 	err = s.withinTx(ctx, func(ctx context.Context, storage store) error {
 		stored, created, err := storage.ReserveBootstrap(ctx, record)
@@ -64,19 +68,8 @@ func (s *service) Bootstrap(ctx context.Context, cmd BootstrapCommand) (Bootstra
 		if stored.CommandID != cmd.CommandID || stored.CompanyID != cmd.CompanyID || stored.Spec != cmd.Spec || stored.RequestSHA256 != cmd.RequestSHA256 {
 			return ErrConflict
 		}
-		if created {
-			if stored != record {
-				return ErrUnavailable
-			}
-			if err = storage.InsertCompany(ctx, profile.ID); err != nil {
-				return err
-			}
-			if err = storage.InsertAccount(ctx, account); err != nil {
-				return err
-			}
-			if err = storage.InsertProfile(ctx, profile); err != nil {
-				return err
-			}
+		if err := persistBootstrap(ctx, storage, created, stored, record, profile, account, definitions); err != nil {
+			return err
 		}
 		result = bootstrapResult(stored)
 		return nil
@@ -95,6 +88,24 @@ func validateBootstrap(cmd BootstrapCommand) error {
 		return ErrInvalid
 	}
 	return nil
+}
+func persistBootstrap(ctx context.Context, storage store, created bool, stored, record domain.BootstrapRecord, profile domain.Profile, account *ledger.BankAccount, definitions []ledger.CategoryDefinition) error {
+	if !created {
+		return nil
+	}
+	if stored != record {
+		return ErrUnavailable
+	}
+	if err := storage.InsertCompany(ctx, profile.ID); err != nil {
+		return err
+	}
+	if err := storage.InsertAccount(ctx, account); err != nil {
+		return err
+	}
+	if err := storage.InsertProfile(ctx, profile); err != nil {
+		return err
+	}
+	return storage.SeedCategories(ctx, definitions)
 }
 func bootstrapResult(record domain.BootstrapRecord) BootstrapResult {
 	return BootstrapResult{CommandID: record.CommandID, CompanyID: record.CompanyID, AccountID: record.AccountID, RequestSHA256: record.RequestSHA256, Spec: record.Spec, CommittedAt: record.CommittedAt}

@@ -27,6 +27,9 @@ type Job struct {
 // JobCoverage records the origin of a complete factual interval at one revision.
 // Missing coverage must never be interpreted as verified zero activity.
 type JobCoverage struct {
+	Kind          string
 	From, Through ledger.Date
 	Reference     string
+	DataVersion   int64
+	Limitations   []string
 }

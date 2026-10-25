@@ -18,6 +18,12 @@ type createForecastRequest struct {
 }
 
 func (h *handler) financialRoute(w http.ResponseWriter, r *http.Request) bool {
+	if h.ledgerRoute(w, r) {
+		return true
+	}
+	if h.importRoute(w, r) {
+		return true
+	}
 	if !strings.HasPrefix(r.URL.Path, "/api/v1/") {
 		return false
 	}

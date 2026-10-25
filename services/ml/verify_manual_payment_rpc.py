@@ -72,6 +72,7 @@ def build(company, history, version, payments=(), groups=(), extra=(), paid=0):
             (CUTOFF - timedelta(days=89)).isoformat(),
             CUTOFF.isoformat(),
             "dataset_coverage_assumed_not_bank_certified",
+            "dataset_fixture_assumption",
         ),
         pb,
         calendar=calendar,

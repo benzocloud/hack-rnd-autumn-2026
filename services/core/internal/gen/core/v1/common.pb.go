@@ -70,6 +70,55 @@ func (Direction) EnumDescriptor() ([]byte, []int) {
 	return file_core_v1_common_proto_rawDescGZIP(), []int{0}
 }
 
+type HistoryCoverageKind int32
+
+const (
+	HistoryCoverageKind_HISTORY_COVERAGE_KIND_UNSPECIFIED                HistoryCoverageKind = 0
+	HistoryCoverageKind_HISTORY_COVERAGE_KIND_CERTIFIED                  HistoryCoverageKind = 1
+	HistoryCoverageKind_HISTORY_COVERAGE_KIND_DATASET_FIXTURE_ASSUMPTION HistoryCoverageKind = 2
+)
+
+// Enum value maps for HistoryCoverageKind.
+var (
+	HistoryCoverageKind_name = map[int32]string{
+		0: "HISTORY_COVERAGE_KIND_UNSPECIFIED",
+		1: "HISTORY_COVERAGE_KIND_CERTIFIED",
+		2: "HISTORY_COVERAGE_KIND_DATASET_FIXTURE_ASSUMPTION",
+	}
+	HistoryCoverageKind_value = map[string]int32{
+		"HISTORY_COVERAGE_KIND_UNSPECIFIED":                0,
+		"HISTORY_COVERAGE_KIND_CERTIFIED":                  1,
+		"HISTORY_COVERAGE_KIND_DATASET_FIXTURE_ASSUMPTION": 2,
+	}
+)
+
+func (x HistoryCoverageKind) Enum() *HistoryCoverageKind {
+	p := new(HistoryCoverageKind)
+	*p = x
+	return p
+}
+
+func (x HistoryCoverageKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (HistoryCoverageKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_core_v1_common_proto_enumTypes[1].Descriptor()
+}
+
+func (HistoryCoverageKind) Type() protoreflect.EnumType {
+	return &file_core_v1_common_proto_enumTypes[1]
+}
+
+func (x HistoryCoverageKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use HistoryCoverageKind.Descriptor instead.
+func (HistoryCoverageKind) EnumDescriptor() ([]byte, []int) {
+	return file_core_v1_common_proto_rawDescGZIP(), []int{1}
+}
+
 // UUID strings are canonical, lowercase and nonzero; new Core IDs are UUIDv7.
 // A matching account/company pair is checked in storage after Auth permission.
 type AccountScope struct {
@@ -332,6 +381,93 @@ func (x *DateRange) GetTo() string {
 	return ""
 }
 
+// Server-owned proof, never accepted from a public write request. Bounds are
+// inclusive; data_version binds the proof to exactly one account revision.
+// Absence/UNSPECIFIED preserves legacy unknown provenance, never fixture access.
+type HistoryCoverage struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Kind          HistoryCoverageKind    `protobuf:"varint,1,opt,name=kind,proto3,enum=core.v1.HistoryCoverageKind" json:"kind,omitempty"`
+	FromDate      string                 `protobuf:"bytes,2,opt,name=from_date,json=fromDate,proto3" json:"from_date,omitempty"`
+	ThroughDate   string                 `protobuf:"bytes,3,opt,name=through_date,json=throughDate,proto3" json:"through_date,omitempty"`
+	Reference     string                 `protobuf:"bytes,4,opt,name=reference,proto3" json:"reference,omitempty"`
+	DataVersion   int64                  `protobuf:"varint,5,opt,name=data_version,json=dataVersion,proto3" json:"data_version,omitempty"`
+	Limitations   []string               `protobuf:"bytes,6,rep,name=limitations,proto3" json:"limitations,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HistoryCoverage) Reset() {
+	*x = HistoryCoverage{}
+	mi := &file_core_v1_common_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HistoryCoverage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HistoryCoverage) ProtoMessage() {}
+
+func (x *HistoryCoverage) ProtoReflect() protoreflect.Message {
+	mi := &file_core_v1_common_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HistoryCoverage.ProtoReflect.Descriptor instead.
+func (*HistoryCoverage) Descriptor() ([]byte, []int) {
+	return file_core_v1_common_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *HistoryCoverage) GetKind() HistoryCoverageKind {
+	if x != nil {
+		return x.Kind
+	}
+	return HistoryCoverageKind_HISTORY_COVERAGE_KIND_UNSPECIFIED
+}
+
+func (x *HistoryCoverage) GetFromDate() string {
+	if x != nil {
+		return x.FromDate
+	}
+	return ""
+}
+
+func (x *HistoryCoverage) GetThroughDate() string {
+	if x != nil {
+		return x.ThroughDate
+	}
+	return ""
+}
+
+func (x *HistoryCoverage) GetReference() string {
+	if x != nil {
+		return x.Reference
+	}
+	return ""
+}
+
+func (x *HistoryCoverage) GetDataVersion() int64 {
+	if x != nil {
+		return x.DataVersion
+	}
+	return 0
+}
+
+func (x *HistoryCoverage) GetLimitations() []string {
+	if x != nil {
+		return x.Limitations
+	}
+	return nil
+}
+
 var File_core_v1_common_proto protoreflect.FileDescriptor
 
 const file_core_v1_common_proto_rawDesc = "" +
@@ -356,11 +492,22 @@ const file_core_v1_common_proto_rawDesc = "" +
 	"\x04from\x18\x01 \x01(\tH\x00R\x04from\x88\x01\x01\x12\x13\n" +
 	"\x02to\x18\x02 \x01(\tH\x01R\x02to\x88\x01\x01B\a\n" +
 	"\x05_fromB\x05\n" +
-	"\x03_to*S\n" +
+	"\x03_to\"\xe6\x01\n" +
+	"\x0fHistoryCoverage\x120\n" +
+	"\x04kind\x18\x01 \x01(\x0e2\x1c.core.v1.HistoryCoverageKindR\x04kind\x12\x1b\n" +
+	"\tfrom_date\x18\x02 \x01(\tR\bfromDate\x12!\n" +
+	"\fthrough_date\x18\x03 \x01(\tR\vthroughDate\x12\x1c\n" +
+	"\treference\x18\x04 \x01(\tR\treference\x12!\n" +
+	"\fdata_version\x18\x05 \x01(\x03R\vdataVersion\x12 \n" +
+	"\vlimitations\x18\x06 \x03(\tR\vlimitations*S\n" +
 	"\tDirection\x12\x19\n" +
 	"\x15DIRECTION_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10DIRECTION_INFLOW\x10\x01\x12\x15\n" +
-	"\x11DIRECTION_OUTFLOW\x10\x02BVZTgithub.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1;corev1b\x06proto3"
+	"\x11DIRECTION_OUTFLOW\x10\x02*\x97\x01\n" +
+	"\x13HistoryCoverageKind\x12%\n" +
+	"!HISTORY_COVERAGE_KIND_UNSPECIFIED\x10\x00\x12#\n" +
+	"\x1fHISTORY_COVERAGE_KIND_CERTIFIED\x10\x01\x124\n" +
+	"0HISTORY_COVERAGE_KIND_DATASET_FIXTURE_ASSUMPTION\x10\x02BVZTgithub.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1;corev1b\x06proto3"
 
 var (
 	file_core_v1_common_proto_rawDescOnce sync.Once
@@ -374,22 +521,25 @@ func file_core_v1_common_proto_rawDescGZIP() []byte {
 	return file_core_v1_common_proto_rawDescData
 }
 
-var file_core_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_core_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_core_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_core_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_core_v1_common_proto_goTypes = []any{
-	(Direction)(0),       // 0: core.v1.Direction
-	(*AccountScope)(nil), // 1: core.v1.AccountScope
-	(*Money)(nil),        // 2: core.v1.Money
-	(*PageRequest)(nil),  // 3: core.v1.PageRequest
-	(*PageResponse)(nil), // 4: core.v1.PageResponse
-	(*DateRange)(nil),    // 5: core.v1.DateRange
+	(Direction)(0),           // 0: core.v1.Direction
+	(HistoryCoverageKind)(0), // 1: core.v1.HistoryCoverageKind
+	(*AccountScope)(nil),     // 2: core.v1.AccountScope
+	(*Money)(nil),            // 3: core.v1.Money
+	(*PageRequest)(nil),      // 4: core.v1.PageRequest
+	(*PageResponse)(nil),     // 5: core.v1.PageResponse
+	(*DateRange)(nil),        // 6: core.v1.DateRange
+	(*HistoryCoverage)(nil),  // 7: core.v1.HistoryCoverage
 }
 var file_core_v1_common_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	1, // 0: core.v1.HistoryCoverage.kind:type_name -> core.v1.HistoryCoverageKind
+	1, // [1:1] is the sub-list for method output_type
+	1, // [1:1] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_core_v1_common_proto_init() }
@@ -404,8 +554,8 @@ func file_core_v1_common_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_v1_common_proto_rawDesc), len(file_core_v1_common_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   5,
+			NumEnums:      2,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

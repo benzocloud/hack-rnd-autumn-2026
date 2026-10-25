@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -134,7 +135,7 @@ func TestLoadInvalid(t *testing.T) {
 			if !strings.Contains(err.Error(), tc.setting) || strings.Contains(err.Error(), "private-secret") {
 				t.Fatalf("unsafe or unhelpful error: %s", err)
 			}
-			if cfg != (config.Config{}) {
+			if !reflect.DeepEqual(cfg, config.Config{}) {
 				t.Fatal("failed load returned partially usable config")
 			}
 		})

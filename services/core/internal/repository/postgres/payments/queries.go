@@ -16,3 +16,6 @@ var queryAllocated string
 
 //go:embed sql/insert_match.sql
 var queryInsertMatch string
+
+//go:embed sql/carry_history_coverage.sql
+var queryCarryHistoryCoverage string
