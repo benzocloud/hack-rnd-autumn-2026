@@ -25,7 +25,7 @@ func TestCSVImportForecastWithoutManifestOrDuplicateFacts(t *testing.T) {
 	}
 	assertCount(t, application, "SELECT count(*) FROM core_history_coverage WHERE company_id=$1", scope, 0)
 	model := forecastModelFunc(func(_ context.Context, input forecasting.FinancialModelInput) (forecasting.FinancialModelResult, error) {
-		if input.Assessment == nil || input.Assessment.OperationDays != 2 || input.Coverage.Kind != "" || len(input.Snapshot.History) != 0 || len(input.Operations) != 2 || input.Snapshot.Model.Version != forecasting.CSVModelVersion {
+		if input.Assessment == nil || input.Assessment.OperationDays != 2 || input.Coverage.Kind != "" || len(input.Snapshot.History) != 0 || len(input.Operations) != 2 || input.Snapshot.Model.Version != forecasting.CSVAnalysisVersion {
 			t.Fatal("CSV input lost provenance", input)
 		}
 		cutoff, _ := time.Parse(time.DateOnly, string(input.Snapshot.Cutoff))
@@ -33,7 +33,7 @@ func TestCSVImportForecastWithoutManifestOrDuplicateFacts(t *testing.T) {
 		for n := 0; n < 30; n++ {
 			projection.Days = append(projection.Days, forecasting.ModelForecastDay{Date: ledger.Date(cutoff.AddDate(0, 0, n+1).Format(time.DateOnly)), Inflow: rubModel(100), Outflow: rubModel(50), ReferenceBalance: rubModel(95500 + int64(n+1)*50)})
 		}
-		return forecasting.FinancialModelResult{Projection: projection, ProbabilityUnavailableReason: "not_calibrated", Limitations: input.Assessment.Limitations}, nil
+		return forecasting.FinancialModelResult{Analysis: fixtureUnknownAnalysis(input), Projection: projection, ProbabilityUnavailableReason: "not_calibrated", Limitations: input.Assessment.Limitations}, nil
 	})
 	jobs := newForecastJobs(application.db, cfg.Postgres, model)
 	cmd := forecasting.CreateForecastCommand{Scope: scope, ActorID: "actor", IdempotencyKey: uuid.NewString(), Cutoff: "2026-09-29", Today: "2026-10-25", HorizonDays: 30}

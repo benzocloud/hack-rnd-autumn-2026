@@ -7,6 +7,7 @@ import grpc
 from ml.v1 import forecast_pb2 as pb
 from ml.v1 import forecast_pb2_grpc as rpc
 
+from .analysis import PROFILES, analysis_forecast
 from .csv_calendar import CSV_CALENDAR_VERSION, csv_calendar_forecast
 from .csv_forecast import CSV_VERSION, csv_forecast
 from .financial import FINANCIAL_VERSION, financial_forecast
@@ -20,6 +21,8 @@ class ForecastService(rpc.ForecastServiceServicer):
         self.insecure_local = insecure_local
 
     def Predict(self, request, context):
+        if request.model.model_version in PROFILES:
+            return self._compute(request, context, lambda r: analysis_forecast(r, pb))
         if request.model.model_version == CSV_CALENDAR_VERSION:
             return self._compute(request, context, lambda r: csv_calendar_forecast(r, pb))
         if request.model.model_version == CSV_VERSION:

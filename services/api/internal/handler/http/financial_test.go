@@ -171,6 +171,7 @@ func TestFinancialContractResponses(t *testing.T) {
 			capture(f, "GET", financialRoot+"/account", "/api/v1/companies/{company_id}/account", "", httpCode)
 		}
 	}
+	capture(analysisForecastFixture(), "GET", financialRoot+"/forecasts/"+forecastID, "/api/v1/companies/{company_id}/forecasts/{forecast_id}", "", 200)
 	if path := os.Getenv("API_FINANCIAL_REPORT"); path != "" {
 		data, err := json.MarshalIndent(reports, "", "  ")
 		if err != nil {

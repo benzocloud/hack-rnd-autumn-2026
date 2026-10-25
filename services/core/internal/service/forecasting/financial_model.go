@@ -22,6 +22,7 @@ type Coverage struct {
 // FinancialModelInput currently represents an explicitly unavailable historical
 // calendar. An unavailable calendar never selects the history-only model.
 type FinancialModelInput struct {
+	Categories []ledger.CategoryDefinition
 	Calendar   domain.Calendar
 	Snapshot   ModelInput
 	Coverage   Coverage
@@ -43,6 +44,7 @@ type HistoryEvidence struct {
 }
 
 type FinancialModelResult struct {
+	Analysis                     *Analysis
 	Projection                   ModelResult
 	Components                   []FinancialComponent
 	Evidence                     []HistoryEvidence

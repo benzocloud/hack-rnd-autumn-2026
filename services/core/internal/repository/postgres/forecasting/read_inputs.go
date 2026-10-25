@@ -16,6 +16,10 @@ import (
 	paymentsSQL "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/repository/postgres/payments"
 )
 
+func (r *repository) ReadCategories(ctx context.Context, scope ledger.Scope) ([]ledger.CategoryDefinition, error) {
+	return ledgerSQL.New(r.tx).ListCategories(ctx, scope.CompanyID, uuid.Nil, 1001)
+}
+
 func (r *repository) ReadDataVersion(ctx context.Context, scope ledger.Scope) (int64, error) {
 	var revision int64
 	err := r.tx.QueryRowxContext(ctx, queryReadRevision, scope.CompanyID, scope.AccountID).Scan(&revision)

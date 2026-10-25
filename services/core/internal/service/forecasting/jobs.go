@@ -34,6 +34,7 @@ type jobCommands interface {
 }
 
 type jobSnapshots interface {
+	ReadCategories(context.Context, ledger.Scope) ([]ledger.CategoryDefinition, error)
 	ReadOpeningBalance(context.Context, ledger.Scope, ledger.Date) (domain.OpeningBalance, bool, error)
 	ReadFacts(context.Context, ledger.Scope, ledger.Date) ([]domain.Fact, error)
 	ReadBalanceHistory(context.Context, ledger.Scope, ledger.Date) ([]domain.OpeningBalance, error)
@@ -77,6 +78,7 @@ type SavedForecastDay struct {
 // SavedForecast uses explicit primitive money fields, never JSON-encodes the
 // private internals of Money. Residual evidence stays auditable, not targetable.
 type SavedForecast struct {
+	Analysis                           *Analysis `json:",omitempty"`
 	SchemaVersion                      int
 	Days                               []SavedForecastDay
 	FirstNegativeDate                  *ledger.Date
