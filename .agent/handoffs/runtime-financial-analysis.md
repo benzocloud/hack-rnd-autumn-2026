@@ -4,14 +4,14 @@
 
 PR: https://github.com/benzocloud/hack-rnd-autumn-2026/pull/51 (draft).
 Branch: `globalarray/feat/runtime_financial_analysis`, checkout `/workspace/repo-analysis`.
-Base: `globalarray/feat/payments_frozen_calendar`, parent draft #48.
+Base теперь **`main`**. Parent #48 merged владельцем25.10 09:11UTC; собственный PR51 retargeted на main после обычного merge свежего origin/main.
 Parent functional SHA: `7771af9e945de0e2b51d14af19fbb30de94ce4c2`;
 актуальный parent с внешними CI-only обновлениями: `795963731bfe837462682d51acebc02d5c5d0972`.
-Проверенный main: `71f2a86ffbcf218d7fff517830b7aa41f0a97c95`, новых main commits нет.
+Финальный проверенный main: `f2df9dfff1bef00206a983be074894d22ebae5b0` (владелец также merged49/50/52); начальный main71f2a86.
 Reviewed implementation SHA: `f56b9b29defce44949514aba34f9e6a5b353c7e7`.
-Current source после обычного parent merge: `a690983b0c60fc22cca00283cf789df3273e8c11`.
-Перед этим docs checkpoint опубликованный local/remote f56b9b2 совпадали; следующий push публикует a690983 + только этот docs checkpoint, итоговый SHA проверяется git ls-remote и указан в PR.
-Порядок принятия: сначала #48, затем #51; base чужих PR не менялся.
+Current source после обычного main merge: **`f9febb5ea1e13ba868cdaee3ad2b669b79a5c740`**; предыдущий parent-only merge a690983.
+Перед этим docs checkpoint опубликованный local/remote **6b8c376cf4ef2cbb1605f45f3b360aefab44b506** совпадали; следующий push публикует main merge f9febb5 + только этот docs checkpoint, итоговый SHA проверяется git ls-remote и указан в PR.
+Parent dependency #48 уже merged commit4a5efac; остался итоговый review #51. Base чужих PR не менялся.
 
 ## Что действительно работает
 
@@ -71,9 +71,11 @@ Caveman/ponytail e57eabe:2findings; followup2eff14c: закрыты + найде
 
 Actual GitHub Actions на проверенный f56b9b2 — **pending/queued**, не passed: Core contracts/lint, API verify/onboarding, ML rpc/tests/safety. Проверено API jobs:runner_id0,steps0,conclusion null. Прежний billing failure не выдаётся за текущий статус: owner отдельно опубликовал self-hosted CI #52; billing/settings/CI policies здесь не менялись. После final push нужно смотреть latest run SHA, pending не pass. Source run: https://github.com/benzocloud/hack-rnd-autumn-2026/actions/runs/40179333469.
 
-GBrain MCP отсутствует в tool catalog, recall/remember не изображались; RTK отсутствует. Go routing skills + caveman/ponytail применены; ignored reference checkouts отсутствуют, использованы tracked go-services/ADRs/source. Active PR48–52 bodies/files и все доступные comments/reviews/inline прочитаны; discussions пусты. Изменения #52 пришли только обычными merges в remote/parent; D2.4 diff к parent не содержит frontend/Auth/deploy/CI/training/чужих plans/handoffs. `/workspace/repo-payments` остаётся clean на7771af9, его ветка/PR body не изменялись нами.
+GBrain MCP отсутствует в tool catalog, recall/remember не изображались; RTK отсутствует. Go routing skills + caveman/ponytail применены; ignored reference checkouts отсутствуют, использованы tracked go-services/ADRs/source. PR48–52 bodies/files и все доступные comments/reviews/inline прочитаны; discussions пусты. На финал48/49/50/52 уже merged владельцем. Изменения #52 пришли только обычными merges в remote/parent; D2.4 diff к parent не содержит frontend/Auth/deploy/CI/training/чужих plans/handoffs. `/workspace/repo-payments` остаётся clean на7771af9, его ветка/PR body не изменялись нами.
 
 ## Точный подхват
 
 Следующая команда: **`gh pr checks 51`**.
-Владельцу: дождаться/проверить CI и итогово review draft51 после48. B/C: использовать опубликованный новый profile/optional analysis DTO; настоящий Auth/browser и frontend presentation остаются отдельной интеграцией, здесь не заявлены. Принятия/merge/ready/deploy нет. Owner deadline11:45МСК прошёл во время работы; runnable checkpoint публиковался рано, реализация/gates по прямому поручению продолжены до связного результата.
+Владельцу: дождаться/проверить CI и итогово review draft51 к main;48 уже merged. B/C: использовать опубликованный новый profile/optional analysis DTO; настоящий Auth/browser и frontend presentation остаются отдельной интеграцией, здесь не заявлены. Принятия/merge/ready/deploy нет. Owner deadline11:45МСК прошёл во время работы; runnable checkpoint публиковался рано, реализация/gates по прямому поручению продолжены до связного результата.
+
+Финальная синхронизация09:15UTC: source diff относительно mainf2df9df побайтно совпадает с reviewed f56b9b2 (cmp PASS, SHA256314ba9eb47d314d7986cd9157f7b63a6529ad587c75ae87cbb00ce09c3e58a8f). Независимый reviewer подтвердил binding к f9febb5. Между parent7959637 и main нет изменений Core/API/ML/proto/API contracts; B/C изменения пришли обычным merge, не входят в собственный D2.4 diff. Поэтому прежние backend gates остаются применимы, новый frontend/E2E suite в этой задаче не запускался. CI последнего опубликованного6b8c376:7checks QUEUED, conclusion empty, не passed; пример Core run40179772217. Следующая команда по-прежнему gh pr checks51.
