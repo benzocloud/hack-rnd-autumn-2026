@@ -434,22 +434,26 @@ func (s *service) AcceptInvitation(ctx context.Context, input AcceptInvitationIn
 		if !s.emailVerified(user) {
 			return ErrEmailUnverified
 		}
+		peek, err := invitations.Find(ctx, input.InvitationID, false)
+		if err != nil {
+			return mapInvitationLookup(err)
+		}
+		if beyondRetention(peek, s.now()) || peek.Email != user.Email {
+			return ErrNotFound
+		}
+		members, err := memberships.LockCompanyMemberships(ctx, peek.CompanyID)
+		if err != nil {
+			return err
+		}
 		invitation, err := invitations.Find(ctx, input.InvitationID, true)
 		if err != nil {
 			return mapInvitationLookup(err)
 		}
-		if beyondRetention(invitation, s.now()) {
-			return ErrNotFound
-		}
-		if invitation.Email != user.Email {
+		if beyondRetention(invitation, s.now()) || invitation.Email != user.Email || invitation.CompanyID != peek.CompanyID {
 			return ErrNotFound
 		}
 		now := s.now().UTC().Truncate(time.Microsecond)
 		invitation, err = s.expireIfNeeded(ctx, invitations, invitation, now)
-		if err != nil {
-			return err
-		}
-		members, err := memberships.LockCompanyMemberships(ctx, invitation.CompanyID)
 		if err != nil {
 			return err
 		}
@@ -517,14 +521,21 @@ func (s *service) DeclineInvitation(ctx context.Context, input DeclineInvitation
 		if !s.emailVerified(user) {
 			return ErrEmailUnverified
 		}
+		peek, err := invitations.Find(ctx, input.InvitationID, false)
+		if err != nil {
+			return mapInvitationLookup(err)
+		}
+		if beyondRetention(peek, s.now()) || peek.Email != user.Email {
+			return ErrNotFound
+		}
+		if _, err := memberships.LockCompanyMemberships(ctx, peek.CompanyID); err != nil {
+			return err
+		}
 		invitation, err := invitations.Find(ctx, input.InvitationID, true)
 		if err != nil {
 			return mapInvitationLookup(err)
 		}
-		if beyondRetention(invitation, s.now()) {
-			return ErrNotFound
-		}
-		if invitation.Email != user.Email {
+		if beyondRetention(invitation, s.now()) || invitation.Email != user.Email || invitation.CompanyID != peek.CompanyID {
 			return ErrNotFound
 		}
 		now := s.now().UTC().Truncate(time.Microsecond)
@@ -542,9 +553,6 @@ func (s *service) DeclineInvitation(ctx context.Context, input DeclineInvitation
 		expectedVersion, err := strconv.ParseInt(input.Version, 10, 64)
 		if err != nil || expectedVersion != invitation.Version {
 			return ErrVersionConflict
-		}
-		if _, err := memberships.LockCompanyMemberships(ctx, invitation.CompanyID); err != nil {
-			return err
 		}
 		invitation.Status = "declined"
 		invitation.Version++

@@ -1,54 +1,42 @@
 # Handoff: team access cycle
 
-Updated: 2026-10-25
+Updated: 2026-10-25 (post-merge review)
 
 ## Branch / PR
 
 - Worktree: `/tmp/saldo-team-access`
 - Branch: `globalarray/feat/team_access_cycle`
-- Source SHA at start: `dccf513e4145a8a32b87dbd321187726adb5ffc5`
-- Draft PR: not published yet (first commit/push in progress)
+- Draft PR: https://github.com/benzocloud/hack-rnd-autumn-2026/pull/58
+- Started from: `dccf513e4145a8a32b87dbd321187726adb5ffc5`
+- Merged `origin/main` through `6d2cb37` (scenarios #56/#57 kept; `router.go` auto-merged with team + scenario routes)
 
-## Closed in this block
+## Closed
 
-1. Auth owns members/invitations:
-   - Migration `services/auth/migrations/00004_team_invitations.sql`
-   - Domain `invitation.go`; repo `internal/repository/invitation/`
-   - Membership: insert/delete financier, list company members, company lock
-   - Service `team.go`: list/remove members; create/list/accept/decline/revoke
-   - Pending lifetime **7 days**; terminal history ≤30 days; role always financier
-   - Accept idempotency does not restore removed membership (`MEMBERSHIP_REVOKED`)
-   - Company name snapshot accepted from API (Core-read under owner), not trusted as authz
-2. gRPC `team.go` + error mapping for invitation/membership reasons
-3. API HTTP `team.go`: `/companies/{id}/members|invitations`, `/me/invitations` (+ accept/decline)
-   - CreateInvitation: Core `ReadCompany` → Auth CreateInvitation
-   - AcceptInvitation: Auth Accept → Core `ReadCompany` → Company DTO
-4. Checks run:
-   - `golangci-lint` **v2.15.0** on Auth touched packages + API `handler/http`: 0 issues
-   - `go test -race` Auth account+grpc; API handler/http (502)
-   - Integration on disposable Postgres `127.0.0.1:58432/auth_test`:
-     `TestTeamAccessDatabaseCycle` (owner/financier/stranger, CSRF, idempotency,
-     revoke/decline/expiry, remove + accept replay, app restart)
+1. Auth members/invitations (migration `00004`, repos, service, gRPC, errors)
+2. API HTTP team routes; Core name snapshot on create; Company DTO on accept
+3. Invitation lifetime **7 days**; history ≤30 days after terminal
+4. Accept idempotency never restores removed membership
+5. Lock order fix: Accept/Decline peek invitation → lock memberships → lock invitation
+6. Checks (after main merge):
+   - Auth `go test -race` account+grpc: pass
+   - `TestTeamAccessDatabaseCycle` on disposable PG `:58432/auth_test`: pass
+   - API `handler/http` 504 tests + golangci-lint v2.15.0: pass
+7. No merge/deploy from this agent
 
 ## Schema
 
-- `invitations` table; unique pending `(company_id, email)`; create idempotency unique
-- Membership PK unchanged; financier insert `ON CONFLICT DO NOTHING`
+- `invitations` + financier membership SQL only (Auth). Core scenarios migration `00016` from main untouched.
 
-## Not done / limits
+## Remaining / limits
 
-- Full monorepo CI / release not run (owner forbid)
-- Latest `origin/main` merge still required before final push
-- No production deploy; no email sender
-- Frontend unchanged (already calls real REST)
+- Full monorepo CI not run
+- Production update is for the main agent after review
+- Disposable PG container `saldo-team-access-pg` can be removed when done
 
-## Next exact step
+## Next command for pickup
 
 ```bash
 cd /tmp/saldo-team-access
-# after commit+push+draft PR:
-git fetch origin && git merge origin/main
-# resolve conflicts keeping Scenarios/Comparisons and team routes
-AUTH_TEST_DATABASE_URL='postgres://saldo:saldo@127.0.0.1:58432/auth_test?sslmode=disable' \
-  go test -tags=integration -race -count=1 ./services/auth/integration/ -run TestTeamAccessDatabaseCycle
+gh pr view 58 --json url,isDraft,mergeStateStatus
+# main agent: review PR #58, then integrate/deploy — do not merge from this worktree unless owner says so
 ```
