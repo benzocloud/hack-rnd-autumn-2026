@@ -1,93 +1,177 @@
-# Payments backend checkpoint
+# Payments / frozen calendar — итоговый handoff
 
-Branch: globalarray/feat/payments_frozen_calendar
-Base: 0abae4f (fresh origin/main). Current/remote SHA: первый docs checkpoint публикуется; точный SHA доступен в Git/PR head. PR URL: создаётся сразу после push.
+Статус: **На ревью**. PR остаётся draft: https://github.com/benzocloud/hack-rnd-autumn-2026/pull/48.
+Branch: `globalarray/feat/payments_frozen_calendar`.
+Original base: `0abae4f`; проверенный integration base: `6c9edd969b3a694bccabaf6980b86531e2722490`.
+Current implementation SHA: `ac90fa3bc7118403275c7a2e9d24c5d0eba75e0b`.
+Remote SHA на последнюю проверку: `ac90fa3bc7118403275c7a2e9d24c5d0eba75e0b` (совпадает).
+Последующий docs-only commit не меняет implementation SHA; окончательный head проверяется `git ls-remote` и указан в PR.
 
-Последний законченный этап: source/contract inventory, На ревью; runtime не реализован.
+## Готовность
 
-## Матрица
-| Область | Existing | Not wired / not implemented |
+Работает полный payment lifecycle через API → Core → PostgreSQL, включая CAS,
+CSRF/Auth scope, immutable create/match replay, точные RUB-копейки и историю
+reversal. Cancel сохраняет оставшуюся сумму и allocations; unmatch после cancel
+явно возвращает PAYMENT_STATE_CONFLICT, factual transaction не удаляется.
+
+В covered CURRENT профиле `mean_90_components_v1/calendar_replacement_v1`
+новый прогноз учитывает remaining ровно один раз. Одна согласованная Tx фиксирует
+calendar amount/remaining/status/version/source/group, независимые reconciliation
+groups, mode/as-of/provenance, factual revision и model context. Worker/read не
+перечитывают live calendar. Go независимо проверяет residual после replacement,
+суммы компонентов, source IDs, даты, непересечение групп и overflow. Public
+components/effective occurrences детерминированно проектируются из сохранённых
+components и frozen snapshot; residual components/history evidence также хранятся
+в immutable result. Ни одна projection не использует live payment.
+
+Additional требует явного подтверждения. Complete replacement сохраняется при
+cancel/full match/переносе за горизонт; residual возвращается только после revoke.
+CURRENT допустим только cutoff сегодня/вчера и без post-cutoff фактов; overdue
+отклоняется, дата не переносится. Available empty и unavailable различаются.
+
+Последний законченный этап: lifecycle + snapshot + Predict + regression +
+независимые reviews, **На ревью**, без owner acceptance.
+
+## Frontend: фактически подключённые endpoints / DTO
+
+Все пути ниже относительно `/api/v1/companies/{company_id}`. Account и actor
+Core/API получают из авторизованного scope, браузер их не сертифицирует.
+
+| Метод/путь | Ввод | Ответ |
 |---|---|---|
-| Create/match | domain/service/SQL + proto | Core gRPC/API |
-| List/get/history | proto/OpenAPI | application read + adapters |
-| Update/cancel/unmatch | domain operations + proto | application commands/SQL/adapters |
-| Calendar | snapshot domain/codec/SQL | полная проверка job capture + groups/mode/ML compatibility |
+| GET `/payments` | limit/cursor/from/to/status; default planned+partially_matched | items, next_cursor |
+| POST `/payments` | direction, amount, scheduled_date, counterparty_name, description; optional category_id/reconciliation_group_id; Idempotency-Key | 201 Payment |
+| GET `/payments/{id}` | resource UUID | Payment |
+| PATCH `/payments/{id}` | version + изменяемые поля; omission сохраняет, category/group null очищает | Payment |
+| DELETE `/payments/{id}?version=N` | decimal resource version | 204 |
+| GET `/payments/{id}/matches` | limit/cursor | items, next_cursor; includes removed_at tombstones |
+| POST `/payments/{id}/matches` | transaction_id, payment_version, transaction_version, amount; Idempotency-Key | 201 Match |
+| DELETE `/payments/{id}/matches/{match_id}?payment_version=N` | decimal payment version | 204 |
+| GET/POST `/reconciliation-groups` | list include_revoked/limit/cursor; create exact cutoff/horizon + tagged evidence + Idempotency-Key | list / 201 Group |
+| GET `/reconciliation-groups/{id}` | group UUID | Group |
+| POST `/reconciliation-groups/{id}/revoke` | {"version":"N"}; Idempotency-Key | Group |
 
-## Frontend handoff (canonical contract, ещё не runtime)
-REST paths/DTO: docs/api/openapi.yaml; RPC: proto/core/v1/payments.proto; map: docs/core/rest-rpc-map.json.
-ExpectedPayment: id/account_id, direction, amount/remaining_amount (RUB decimal minor strings), scheduled_date, category_id, counterparty_name, description, status, source, version (decimal string), created_at, reconciliation_group_id.
-List/get/create/update/cancel, matches list/create/delete и reconciliation groups должны сохранять существующий wire; additive diff пока отсутствует. Не считать endpoints подключёнными.
+Payment DTO: id/account_id/direction, amount/remaining_amount, scheduled_date,
+category_id, counterparty_name, description, status, source, version, created_at,
+reconciliation_group_id. Money.amount_minor и версии — decimal strings, currency RUB.
+Match: id/payment_id/transaction_id/amount/created_at/nullable removed_at.
+Group kind=additional с additional.confirmed=true либо kind=replacement с
+replacement.complete_for_horizon=true и historical_operations[{transaction_id,version}].
+Write requests сохраняют Origin/Referer, cookie session и X-CSRF-Token.
 
-Проверки: gh authenticated nickname globalarray; fetch main/#47; PR list и #47 comments/reviews/inline (пусты). Tests ещё не запускались. RTK отсутствует. GBrain unavailable: MCP tools не подключены. Sandbox bwrap отсутствует, shell работает через approved escalation.
-Known failures: реализации lifecycle adapters ещё нет; P0 не готов.
-Dependency: https://github.com/benzocloud/hack-rnd-autumn-2026/pull/47 @7e5c0d4aff78286c13d9a8245f801e8a5b82e16c, прочитан опубликованный handoff; не переносить dirty tree.
-Schema/rollback: изменений нет. Merge/deploy не выполнялись.
-Следующая команда: cat services/core/internal/domain/payments/payment_state.go services/core/internal/service/ledger/read.go
+Canonical wire diff: `PaymentMatch.optional Timestamp removed_at=6`;
+`ForecastInput.calendar_knowledge_mode=18` typed enum (mirror ML values0–4),
+`calendar_as_of_date=19`, `no_post_cutoff_movements=20`. Поля1–17 не менялись.
+REST input projection использует current/unavailable/nullable legacy mode.
+calendar_mode request available/synthetic — выбор режима, не доказательство знания.
+Synthetic selection сейчас явно unsupported. Contracts: proto/core/v1/payments.proto,
+proto/core/v1/forecasting.proto, docs/api/openapi.yaml, docs/core/rest-rpc-map.json.
 
-## Checkpoint 10:18 МСК
+## Проверки
 
-Draft PR: https://github.com/benzocloud/hack-rnd-autumn-2026/pull/48.
-Плановый checkpoint `34b6add27a897577e4ed3c2f5d736d4ae67e01f6` pushed и remote проверен.
-Опубликованная зависимость #47 @7e5c0d4aff78286c13d9a8245f801e8a5b82e16c интегрирована обычным merge `22a5bcc`; PR является stacked относительно #47. Изменения frontend/общих docs в merge принадлежат зависимости, собственная реализация их не редактирует.
-Lifecycle в работе: новые domain update/unmatch, сервисные reads/CAS mutations, исходные projections create/match. Узкий Go unit набор до последних audit-изменений прошёл. Полный блок ещё не проверен/не закоммичен.
-Дополнительный wire diff: `PaymentMatch.optional google.protobuf.Timestamp removed_at = 6` — audit отменённого распределения, исключённого из active total. Старые поля/номера неизменны. Generation и schema projection ещё в работе.
-Изолированный PostgreSQL18 поднимается внутри контейнера на 127.0.0.1:55488, отдельный .agent/local/pg18, DB saldo_core_test, marker saldo-core-integration. После смены модели прежний процесс отсутствовал; новый старт перепроверяется.
-Следующая команда: `git status --short`; затем закончить lifecycle block и serial integration.
+- Core после merge: full serial `-tags=integration,mlintegration -race -count=1 ./...`
+  PASS, 755 tests/subtests,30 test packages,9 packages без tests; один skip —
+  opt-in large-import measurement. Full tagged module lint0, vet и fmt PASS.
+- Real HTTP `TestPaymentForecastHTTPWithPostgresPythonAndRestart` и
+  `TestPaymentHTTPAPILifecyclePersistsAudit`: семь forecasts после create →
+  amount edit → date edit → partial match → unmatch → rematch → cancel;
+  все30точек/remaining/components, stale старого прогноза и byte-identical
+  snapshot/input/result, история и API restart. Auth double явно отмечен;
+  финансовые Core/PG/Python/mTLS вызовы настоящие.
+- `TestPaymentForecastFrozenCalendarPostgresPythonRestart`: live edit до старта
+  worker не меняет старый forecast; replacement остаётся после cancel/full match/
+  даты за горизонтом; explicit revoke восстанавливает residual; reopened pool
+  читает старые bytes. Covered fixture не доказательство ordinary CSV.
+- Negative PG tests: duplicate key/body conflict, stale payment/fact/group,
+  foreign scope/reference/link, overlap, revoked group, overmatch, cancelled
+  unmatch; current/mode/overdue/ML unknown/unavailable regressions.
+- API штатный check: generation/build/unit/race/vet/fmt/full lint/Ruff/schema,
+  own coverage **88.42% statements /88.77% lines**, HTTPS/mTLS process smoke,
+  OpenAPI conformance41 responses — PASS. `/tmp` noexec потребовал TMPDIR в
+  workspace для smoke; первоначальный env failure не считался pass.
+- Buf lint/build/breaking/drift + consumer compilation +58 REST maps PASS;
+  API schema13 PASS. API bindings --check PASS с pinned grpc_tools1.78/protoc6.33.5.
+- ML после integration main:55 RPC/mTLS tests без skips PASS; pinned Ruff0.17.1
+  check/format17files PASS. Обучение не запускалось, default не менялся нами.
 
-## Lifecycle checkpoint 10:27 МСК — На ревью
+Ранний полный Core прогон имел2 roundtrip failures; microsecond/UTC/nil-slice
+normalization и проверки исправлены, последний полный merged прогон зелёный.
+Первый опубликованный f344200 пропустил API file и не собирался; исправлен
+f4627f1. Не считать эти ранние результаты зелёными.
 
-Текущий опубликованный baseline до этого блока: d7674d52abaac411e689f74d7c738c98fd60b310 (remote SHA проверен). Следующий commit содержит lifecycle, исходные projections create/match, scoped cursor reads, audit unmatch и durable group primitives. P0 forecast activation ещё в работе.
+## Независимое review
 
-Проверено: Go domain/service unit; Core handler/server compile; API handler/app tests; marked PG18 integration `TestPaymentLifecyclePersistsAuditAndOriginalReplay|TestPaymentExternalReplayAfterMatch|TestHistoryCoverageCarries` с race — pass. ML existing RPC/mTLS suite — 45 tests, без skips после generation; API schema suite — 13 tests pass. Первый ML запуск с 45 skips был неуспешным и заменён настоящим прогоном. Full module lint preliminary обнаружил handler enum/date/format findings; исправляются, итоговый lint ещё не pass.
+caveman-review + ponytail-review выполнены read-only отдельным агентом:
+- f344200:4 findings (missing file, peer allowlist, nil source, imported linkage replay).
+- 2723d0a: все4 исправлены, новых нет.
+- 27657de: roundtrip fixes/main shared router проверены, новых нет.
+- ac90fa3: новые HTTP tests проверены, production прежний; новых нет.
+Ponytail net:-0 lines possible. Review не заменяет owner acceptance.
+GBrain unavailable (MCP не подключён); RTK отсутствует. Original reference
+checkouts недоступны; использованы tracked go-services guidance и ADR.
 
-Реализовано: list/get/create/update/cancel/match/unmatch/history на service/SQL/Core RPC и API lifecycle adapters. Partial cancel сохраняет remaining и allocations; unmatch после cancel возвращает PAYMENT_STATE_CONFLICT. Tombstones читаются через nullable removed_at. Для create/match новых receipts сохранена исходная projection; legacy receipt codec/fingerprint tests сохранены.
+## Known limitations / зависимости
 
-Schema: 00013 audit tombstone, downgrade guard при reversed allocations; 00014 independent scoped groups и nullable payment FK. Обе миграции применены только в own disposable DB. Group/calendar end-to-end приёмка ещё не выполнена. Rollback со схемы14 требует совместимого decoder и сохранения групп, не обещается простой downgrade.
-Следующая команда: `go test -p 1 -tags=integration,mlintegration -race ./internal/app -run TestPaymentHTTP` с own DB/API binary/Python env после завершения API process build. Затем закончить current calendar/Predict arithmetic, gates и независимое review.
+- `mean_90_csv_v1` не поддерживает calendar: при любом persisted payment/group
+  CreateForecast явно UNSUPPORTED_MODEL_CONTEXT, без молчаливого игнорирования
+  или fallback. Для совместимости нужен отдельно принятый versioned CSV/calendar
+  profile + acceptance; менять модель/default этим PR не разрешалось.
+- Historical nonempty/synthetic calendar не реализован; отказ явный. Не выдавать
+  CURRENT covered сценарий за historical knowledge или ordinary CSV поддержку.
+- Probability not_calibrated; настоящий browser/Auth acceptance у других агентов.
+- #47 @7e5c0d4 интегрирован обычным merge; теперь включён в main6c9edd9.
+  Onboarding/training/frontend/deploy изменения из merge принадлежат main,
+  собственный diff к main эти компоненты не меняет.
 
-Wire diff перед следующим блоком: для явного различия available-empty и unavailable добавляются `ForecastInput.calendar_knowledge_mode = 18` (новый typed `ForecastCalendarKnowledgeMode`, значения mirror ML: unspecified0/current1/historical_as_of_certified2/unavailable3/synthetic_scenario4), `calendar_as_of_date = 19` string, `no_post_cutoff_movements = 20` bool. Поля 1–17 неизменны. Legacy unspecified не превращается в historical/current knowledge. REST read projection — optional mode/date/bool; request calendar_mode остаётся прежним выбором available/synthetic, а не assertion знания. Current context не выдаётся за synthetic historical; synthetic пока explicit unsupported.
+## Schema / rollback / окружение
 
-## Проверка публикации и исправление checkpoint
+00013: audit tombstones; down отказывается при reversed allocations.
+00014: независимые scoped groups и nullable payment FK.
+00015: snapshot payload_version1/2; down откажется при payload2 records.
+Новые current jobs используют schema2, старые codecs/results читаются.
+Перед возможной поставкой остановить старый Core, затем запускать новый
+producer/worker. Rollback сохраняет schema2 decoder; старый бинарник нельзя
+смешивать с новыми jobs. Ни merge в main, ни ready-for-review, ни deployment,
+ни изменение работающего сервера не выполнялись.
 
-Independent caveman review f344200 обнаружил пропущенный untracked API `payment_groups.go`: опубликованный API checkpoint не собирался. Исправление включается отдельным fix commit немедленно; этот неуспешный checkpoint не объявляется passing. Review также обнаружил external reimport/linkage comparison — исключение изменяемого reconciliation_group_id из external identity исправлено с regression.
+Own disposable PostgreSQL18: .agent/local/pg18,127.0.0.1:55488,
+DB saldo_core_test, marker saldo-core-integration, штатные migrations1–15.
+Локальные tools/state в ignored .agent/local. Финальный process teardown
+фиксируется отдельным checkpoint; чужие DB/socket/Docker не использовались.
 
-Real HTTP tests текущего дерева с race: `TestPaymentForecastHTTPWithPostgresPythonAndRestart` и `TestPaymentHTTPAPILifecyclePersistsAudit` — PASS, package4.577s; весь API→Core→PG→Python mTLS путь, семь прогнозов, 30 exact points, audit/stale/immutable bytes/restart. Auth double и covered CURRENT fixture обозначены в тестах, обычный CSV и настоящий Auth не заявляются.
+## Следующая команда / owner pickup
 
-## Frozen calendar / Predict checkpoint 10:38 МСК — На ревью
+`gh pr checks 48` — проверить CI окончательного head, pending не pass.
+Owner: review draft48; frontend B подключает DTO выше; C прогоняет настоящий
+Auth/browser сценарий. CSV/calendar activation требует отдельного profile решения.
+Окончательный CI/status и remote head публикуются последующим docs checkpoint.
 
-Lifecycle publication fix pushed `f4627f1cfcca5fa2ad01ec7e52a618f8e608d4ea`, remote совпал. CURRENT block публикуется следующим commit; Git/PR head — точный current SHA (self-referential SHA не встраивается в собственный commit).
+## История checkpoint
 
-Работает: frozen snapshot payload2 содержит payment remaining/status/version/provenance/group и независимые groups; legacy payload1 читается. Covered current jobs schema2 сохраняют прежний model context mean_90_components_v1/calendar_replacement_v1. Один Predict и independent Go residual/replacement/remaining/components/sourceIDs/overlap/overflow validation. Current пустой календарь отличается от unavailable; public read fields18–20 и known components/effective occurrences объясняют remaining.
+34b6add — ранние plan/handoff/draft;22a5bcc — dependency merge;
+f344200 — lifecycle;f4627f1 — publication/peer/projection fixes;
+2723d0a — current calendar;bed1e68 — roundtrip fixes;
+a4c7078 — clean main merge;27657de — integration handoff;
+ac90fa3 — API coverage tests. Полная история статусов/команд сохранена в Git.
 
-Проверки: real Go→Python mTLS current lifecycle; `TestCurrentCalendarForecastFreezesLifecycleAndReplacement` (фактическое имя см. source) real PG/job/worker/reopen, PASS7.083s; combined real HTTP tests PASS4.577s (семь новых forecasts, все30points). Codec current clone/remaining/group regression и mode/overdue/unknown tests прошли узко. Existing ML45 без skips; API schema13 — первый новый запуск нашёл устаревшую copied ForecastInput definition, она синхронизирована и rerun в работе. Full Core serial integration+mlintegration race, full tagged lint/vet запущены; не объявлены passing до завершения.
+## Финальная фиксация
 
-Ограничения: mean_90_csv_v1 не принимает calendar — любой persisted payment/group даёт UNSUPPORTED_MODEL_CONTEXT (conservative explicit blocker). Historical nonempty calendar/synthetic mode не активируются; synthetic selection явно unsupported, не CURRENT. Недоказанный replacement/overdue/incompatible horizon отклоняются, даты не сдвигаются. Covered CURRENT тесты не доказывают ordinary CSV/calendar поддержку. Probability not_calibrated; training/default не менялись.
+Own PostgreSQL18 остановлен успешно (`pg_ctl ... -m fast stop`), каталог данных
+сохранён в ignored `.agent/local/pg18`. Чужие процессы/серверы не затрагивались.
 
-Schema/rollback: 00013 tombstones, 00014 groups/link, 00015 разрешает snapshot payload2. Downgrade15 не пройдёт при существующих payload2; rollback обязан сохранять decoder. Старый Core остановить до запуска schema2 producer; работающий сервер не менялся. Старый бинарник нельзя смешивать с новыми jobs. Все миграции выполнялись только в собственном marked PG18.
-Следующая команда: проверить `.agent/local/core-full.json`/`core-full.err`, `core-final-lint.log` и `core-final-vet.log`; независимое review следующего опубликованного SHA, затем исправления и финальные CI/main checks.
+Actual CI implementation ac90fa3 на 25.10.2026 07:52 UTC: ML RPC **SUCCESS**;
+Core contracts/lint, API verify и Real company onboarding **IN_PROGRESS**.
+Pending не pass. Core source прежний проверенный27657de; последний test-only
+commit увеличивает API coverage. Проверки могут продолжаться после docs-only
+финального checkpoint, точный head/status: `gh pr view 48 --json headRefOid,isDraft`
+и `gh pr checks 48`.
 
-## Проверки и независимое review 10:44 МСК
+CI links: [Core](https://github.com/benzocloud/hack-rnd-autumn-2026/actions/runs/40174232071),
+[API/onboarding](https://github.com/benzocloud/hack-rnd-autumn-2026/actions/runs/40174232163),
+[ML RPC](https://github.com/benzocloud/hack-rnd-autumn-2026/actions/runs/40174232041).
+Локальные обязательные gates завершены, upstream CI ещё ожидается. Последний
+законченный этап5 — **На ревью**, без acceptance/merge/ready/deploy.
 
-Published current calendar SHA:2723d0a7552abb892d27c297d5772f3b0b01b031, remote совпал. Независимый агент применил caveman-review и ponytail-review к собственному diff d7674d5..2723d0a: все4 earlier findings исправлены, новых подтверждённых нет; ponytail net:-0. Review read-only, без тестов/апрува. Проверка более поздних fixes будет отдельной.
-
-Full serial Core race integration+mlintegration:746 passed tests/subtests,2 failed,1 opt-in large-import skip;29 test packages passed,1 failed,9 packages без tests. Два failures — timestamp microsecond roundtrip external payment replay и []/nil roundtrip пустых groups. Исправлены normalization; affected packages rerun нашёл дополнительное UTC-location различие revoke receipt, исправлено в scanGroup. Все3 проблемных test scenarios затем прошли с race1.545s. Старый immutable snapshot test теперь меняет valid timestamp вместо заведомо несогласованного ExcludedPayments. Не выдавать исходный suite за полностью зелёный.
-
-API final full race:298 tests/subtests /8 test packages pass (4 без tests); vet/full lint0/fmt clean. Core tagged full lint0/vet pass; последний fmt fix calendar_mode_test сделан с module config. Buf lint/build/breaking и scripts/check-core-contracts.sh — pass (58 REST maps, generated drift, consumer compilation). API generation --check — pass после генерации настоящим pinned grpc_tools protoc: Buf unknown version header ранее вызывал CI false drift, сохраняется реальный version header. API schema13 pass; ML45 без skips; pinned Ruff0/check+format14files clean.
-
-Свежий origin/main сейчас6c9edd969b3a694bccabaf6980b86531e2722490; включает #47/onboarding/training. Следующий шаг — обычный merge в нашу ветку, минимальные conflicts, релевантные checks и actual CI. Main не изменялся нами.
-
-## Integration main checkpoint 10:47 МСК
-
-Fixes roundtrip/negative groups pushed bed1e6825b1e49695d4eb1fae78f2132ba5034d6, remote verified. Затем обычный clean merge origin/main6c9edd969b3a694bccabaf6980b86531e2722490 → merge a4c7078423709cd33f468b15fedf4ded0fed0af2. Auth/onboarding/training/deploy/frontend изменения принадлежат upstream, не собственной реализации; конфликты отсутствовали. Новая API coverage gate85% из main требует дополнительных meaningful adapter checks, не weakening. Gate проверяется отдельно после merge.
-
-Actual CI2723d0a: contracts и ML RPC SUCCESS, Core lint FAILURE (один goimports diff уже исправлен), API verify FAILURE (protoc unknown header drift уже заменён реальным generated header), onboarding ещё IN_PROGRESS на момент проверки. Это прежний SHA, не статус интеграционного merge. Полный новый прогон/gates выполняются далее.
-
-## Full merged verification 10:50 МСК — На ревью
-
-Current/remote integration SHA27657de0af6dee3de40a1c40c4f3b6eb1a919eaa проверены. Base main6c9edd969b3a694bccabaf6980b86531e2722490. Независимые caveman/ponytail повторены на27657de относительно этого main: новыхfindingsнет, net:-0. Исходные4findings устранены.
-
-Полный Core `go test -json -p1 -tags=integration,mlintegration -race -count=1 ./...` на mergedtree — PASS:755tests/subtests,30testpackages,9packages безtests;1skip opt-in large-import measurement. Runtime real PG/API/Python checks included. Финальные tagged fullmodulelint/vet/fmt и contracts послеmerge завершаются.
-ML merged suite —55tests безskips PASS; Ruff check/format17files PASS. Local reference originals unavailable; применялось tracked go-services описание и ADR.
-API mandatory85 gate: initial70.37/71.00 показал непокрытые новые adapters; добавлены смысловые HTTP boundary tests happy paths/scope/CSRF/CAS/money/Core errors/bad projection/query/presence. Штатный check дошёл до own coverage88.42%statements/88.77%lines PASS; generation/build/unit/race/vet/fmt/full lint0/Ruff/data-contracts pass. Process smoke упёрся в noexec /tmp; только оставшиеся smoke/conformance перезапускаются с executable TMPDIR, без измененияguards.
-
-Actual CI27657de на проверку: Core contracts/lint и ML RPC/safety/ml-tests SUCCESS; Coretests/APIverify/onboarding IN_PROGRESS. Новые API tests публикуются следующим commit, его CI проверять отдельно.
+Owner pickup: проверить окончательный CI, review draft48, передать frontend B
+подключённые DTO и C настоящий Auth/browser сценарий. CSV/calendar и historical
+synthetic требуют принятого совместимого профиля; no silent fallback сохранён.
