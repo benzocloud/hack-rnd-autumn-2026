@@ -146,6 +146,13 @@ func (s *service) ProcessOne(ctx context.Context) (bool, error) {
 		preview.Excluded = stats.Excluded
 		for _, entry := range s.manifest {
 			if entry.Scope == current.Metadata.Scope && entry.FileSHA256 == current.Metadata.Digest && entry.SourceCompanyID == current.Metadata.SourceCompanyID {
+				manual, err := st.ManualHistoryExists(ctx, current.Metadata.Scope, entry.FromDate, entry.ThroughDate)
+				if err != nil {
+					return err
+				}
+				if manual {
+					break
+				}
 				preview.Coverage = &domain.HistoryCoverage{Kind: "dataset_fixture_assumption", FromDate: string(entry.FromDate), ThroughDate: string(entry.ThroughDate), Reference: "dataset_fixture_assumption:" + entry.FileSHA256, DataVersion: preview.BaseVersion, Limitations: []string{"dataset_coverage_assumed_not_bank_certified"}}
 				break
 			}

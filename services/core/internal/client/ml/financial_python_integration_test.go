@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/forecasting"
 )
 
@@ -61,6 +62,21 @@ server.wait_for_termination()
 	client, err := New(conn, 5*time.Second)
 	if err != nil {
 		t.Fatal(err)
+	}
+	csvResult, err := client.PredictFinancial(ctx, csvFixture(t))
+	if err != nil || len(csvResult.Projection.Days) != 30 || csvResult.Projection.Days[29].ReferenceBalance.Minor() != 97000 || csvResult.ProbabilityUnavailableReason != "not_calibrated" {
+		t.Fatal("CSV profile", csvResult, err)
+	}
+	mixed := csvFixture(t)
+	manual := mixed.Operations[1].Data()
+	manual.Source = ledger.Source{Kind: ledger.Manual}
+	mixed.Operations[1], err = ledger.NewTransaction(manual)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mixedResult, err := client.PredictFinancial(ctx, mixed)
+	if err != nil || len(mixedResult.Projection.Days) != 30 || mixedResult.Projection.Days[29].ReferenceBalance.Minor() != 97000 || mixedResult.ProbabilityUnavailableReason != "not_calibrated" {
+		t.Fatal("CSV with manual supplement", mixedResult, err)
 	}
 	i := financialFixture(t)
 	result, err := client.PredictFinancial(ctx, i)

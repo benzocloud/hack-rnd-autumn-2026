@@ -108,6 +108,12 @@ func (r *repository) VerifyCoverage(ctx context.Context, record domain.Record, f
 	err := r.tx.QueryRowxContext(ctx, queryVerifyCoverage, record.ID, string(from), string(through), record.Metadata.Scope.CompanyID, record.Metadata.Scope.AccountID, string(cutoff), balance, record.Metadata.SourceCompanyID, rowNumbers).Scan(&valid)
 	return valid, classify(err)
 }
+
+func (r *repository) ManualHistoryExists(ctx context.Context, scope ledger.Scope, from, through ledger.Date) (bool, error) {
+	var exists bool
+	err := r.tx.QueryRowxContext(ctx, queryManualHistoryExists, scope.CompanyID, scope.AccountID, string(from), string(through)).Scan(&exists)
+	return exists, classify(err)
+}
 func (r *repository) InsertCoverage(ctx context.Context, scope ledger.Scope, proof domain.HistoryCoverage, id uuid.UUID, hash string) error {
 	limitations, err := json.Marshal(proof.Limitations)
 	if err != nil {

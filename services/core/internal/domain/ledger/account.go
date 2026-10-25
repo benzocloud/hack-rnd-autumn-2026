@@ -48,6 +48,11 @@ func (a *BankAccount) BindStatementFacts(namespace Namespace) error {
 }
 
 func (a *BankAccount) bindFacts(kind SourceKind, namespace Namespace) error {
+	// Manual supplements retain the account's external identity. Their own
+	// transaction provenance remains manual and never claims bank completeness.
+	if kind == Manual && a.factual == Imported {
+		return nil
+	}
 	if a.factual != "" && (a.factual != kind || a.namespace != namespace) {
 		return ErrSourceConflict
 	}

@@ -648,8 +648,10 @@ type PredictRequest struct {
 	Operations              []*FinancialOperation  `protobuf:"bytes,4,rep,name=operations,proto3" json:"operations,omitempty"`
 	Calendar                *FinancialCalendar     `protobuf:"bytes,5,opt,name=calendar,proto3" json:"calendar,omitempty"`
 	AvailabilityLimitations []string               `protobuf:"bytes,6,rep,name=availability_limitations,json=availabilityLimitations,proto3" json:"availability_limitations,omitempty"`
-	unknownFields           protoimpl.UnknownFields
-	sizeCache               protoimpl.SizeCache
+	// Only the explicitly selected CSV profile accepts this context.
+	CsvHistory    *CsvHistoryContext `protobuf:"bytes,7,opt,name=csv_history,json=csvHistory,proto3" json:"csv_history,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PredictRequest) Reset() {
@@ -724,6 +726,89 @@ func (x *PredictRequest) GetAvailabilityLimitations() []string {
 	return nil
 }
 
+func (x *PredictRequest) GetCsvHistory() *CsvHistoryContext {
+	if x != nil {
+		return x.CsvHistory
+	}
+	return nil
+}
+
+type CsvHistoryContext struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	RuleVersion        string                 `protobuf:"bytes,1,opt,name=rule_version,json=ruleVersion,proto3" json:"rule_version,omitempty"`
+	FromDate           string                 `protobuf:"bytes,2,opt,name=from_date,json=fromDate,proto3" json:"from_date,omitempty"`
+	ThroughDate        string                 `protobuf:"bytes,3,opt,name=through_date,json=throughDate,proto3" json:"through_date,omitempty"`
+	DataVersion        uint64                 `protobuf:"varint,4,opt,name=data_version,json=dataVersion,proto3" json:"data_version,omitempty"`
+	FirstOperationDate string                 `protobuf:"bytes,5,opt,name=first_operation_date,json=firstOperationDate,proto3" json:"first_operation_date,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *CsvHistoryContext) Reset() {
+	*x = CsvHistoryContext{}
+	mi := &file_ml_v1_forecast_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CsvHistoryContext) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CsvHistoryContext) ProtoMessage() {}
+
+func (x *CsvHistoryContext) ProtoReflect() protoreflect.Message {
+	mi := &file_ml_v1_forecast_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CsvHistoryContext.ProtoReflect.Descriptor instead.
+func (*CsvHistoryContext) Descriptor() ([]byte, []int) {
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *CsvHistoryContext) GetRuleVersion() string {
+	if x != nil {
+		return x.RuleVersion
+	}
+	return ""
+}
+
+func (x *CsvHistoryContext) GetFromDate() string {
+	if x != nil {
+		return x.FromDate
+	}
+	return ""
+}
+
+func (x *CsvHistoryContext) GetThroughDate() string {
+	if x != nil {
+		return x.ThroughDate
+	}
+	return ""
+}
+
+func (x *CsvHistoryContext) GetDataVersion() uint64 {
+	if x != nil {
+		return x.DataVersion
+	}
+	return 0
+}
+
+func (x *CsvHistoryContext) GetFirstOperationDate() string {
+	if x != nil {
+		return x.FirstOperationDate
+	}
+	return ""
+}
+
 type ForecastDay struct {
 	state        protoimpl.MessageState `protogen:"open.v1"`
 	Date         string                 `protobuf:"bytes,1,opt,name=date,proto3" json:"date,omitempty"`
@@ -741,7 +826,7 @@ type ForecastDay struct {
 
 func (x *ForecastDay) Reset() {
 	*x = ForecastDay{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[5]
+	mi := &file_ml_v1_forecast_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -753,7 +838,7 @@ func (x *ForecastDay) String() string {
 func (*ForecastDay) ProtoMessage() {}
 
 func (x *ForecastDay) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[5]
+	mi := &file_ml_v1_forecast_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -766,7 +851,7 @@ func (x *ForecastDay) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForecastDay.ProtoReflect.Descriptor instead.
 func (*ForecastDay) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{5}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ForecastDay) GetDate() string {
@@ -854,13 +939,14 @@ type PredictResponse struct {
 	RecurringHypotheses []*RecurringHypothesis `protobuf:"bytes,24,rep,name=recurring_hypotheses,json=recurringHypotheses,proto3" json:"recurring_hypotheses,omitempty"`
 	// Exact echo of the synthetic calendar context; absent in every other mode.
 	ScenarioContext *SyntheticScenarioContext `protobuf:"bytes,25,opt,name=scenario_context,json=scenarioContext,proto3" json:"scenario_context,omitempty"`
+	CsvHistory      *CsvHistoryContext        `protobuf:"bytes,26,opt,name=csv_history,json=csvHistory,proto3" json:"csv_history,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
 
 func (x *PredictResponse) Reset() {
 	*x = PredictResponse{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[6]
+	mi := &file_ml_v1_forecast_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -872,7 +958,7 @@ func (x *PredictResponse) String() string {
 func (*PredictResponse) ProtoMessage() {}
 
 func (x *PredictResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[6]
+	mi := &file_ml_v1_forecast_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -885,7 +971,7 @@ func (x *PredictResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PredictResponse.ProtoReflect.Descriptor instead.
 func (*PredictResponse) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{6}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *PredictResponse) GetSnapshotId() string {
@@ -1063,6 +1149,13 @@ func (x *PredictResponse) GetScenarioContext() *SyntheticScenarioContext {
 	return nil
 }
 
+func (x *PredictResponse) GetCsvHistory() *CsvHistoryContext {
+	if x != nil {
+		return x.CsvHistory
+	}
+	return nil
+}
+
 // Caller-owned immutable facts. At most one direction is positive. Categories
 // and regularity keys are retained as metadata; they are not gap probabilities.
 type FinancialOperation struct {
@@ -1093,7 +1186,7 @@ type FinancialOperation struct {
 
 func (x *FinancialOperation) Reset() {
 	*x = FinancialOperation{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[7]
+	mi := &file_ml_v1_forecast_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1105,7 +1198,7 @@ func (x *FinancialOperation) String() string {
 func (*FinancialOperation) ProtoMessage() {}
 
 func (x *FinancialOperation) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[7]
+	mi := &file_ml_v1_forecast_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1118,7 +1211,7 @@ func (x *FinancialOperation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FinancialOperation.ProtoReflect.Descriptor instead.
 func (*FinancialOperation) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{7}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *FinancialOperation) GetOperationId() string {
@@ -1254,7 +1347,7 @@ type CalendarGroup struct {
 
 func (x *CalendarGroup) Reset() {
 	*x = CalendarGroup{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[8]
+	mi := &file_ml_v1_forecast_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1266,7 +1359,7 @@ func (x *CalendarGroup) String() string {
 func (*CalendarGroup) ProtoMessage() {}
 
 func (x *CalendarGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[8]
+	mi := &file_ml_v1_forecast_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1279,7 +1372,7 @@ func (x *CalendarGroup) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CalendarGroup.ProtoReflect.Descriptor instead.
 func (*CalendarGroup) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{8}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *CalendarGroup) GetGroupId() string {
@@ -1330,7 +1423,7 @@ type ScheduledPayment struct {
 
 func (x *ScheduledPayment) Reset() {
 	*x = ScheduledPayment{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[9]
+	mi := &file_ml_v1_forecast_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1342,7 +1435,7 @@ func (x *ScheduledPayment) String() string {
 func (*ScheduledPayment) ProtoMessage() {}
 
 func (x *ScheduledPayment) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[9]
+	mi := &file_ml_v1_forecast_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1355,7 +1448,7 @@ func (x *ScheduledPayment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScheduledPayment.ProtoReflect.Descriptor instead.
 func (*ScheduledPayment) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{9}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ScheduledPayment) GetPaymentId() string {
@@ -1465,7 +1558,7 @@ type FinancialCalendar struct {
 
 func (x *FinancialCalendar) Reset() {
 	*x = FinancialCalendar{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[10]
+	mi := &file_ml_v1_forecast_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1477,7 +1570,7 @@ func (x *FinancialCalendar) String() string {
 func (*FinancialCalendar) ProtoMessage() {}
 
 func (x *FinancialCalendar) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[10]
+	mi := &file_ml_v1_forecast_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1490,7 +1583,7 @@ func (x *FinancialCalendar) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FinancialCalendar.ProtoReflect.Descriptor instead.
 func (*FinancialCalendar) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{10}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *FinancialCalendar) GetSnapshotId() string {
@@ -1564,7 +1657,7 @@ type SyntheticScenarioContext struct {
 
 func (x *SyntheticScenarioContext) Reset() {
 	*x = SyntheticScenarioContext{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[11]
+	mi := &file_ml_v1_forecast_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1576,7 +1669,7 @@ func (x *SyntheticScenarioContext) String() string {
 func (*SyntheticScenarioContext) ProtoMessage() {}
 
 func (x *SyntheticScenarioContext) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[11]
+	mi := &file_ml_v1_forecast_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1589,7 +1682,7 @@ func (x *SyntheticScenarioContext) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyntheticScenarioContext.ProtoReflect.Descriptor instead.
 func (*SyntheticScenarioContext) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{11}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *SyntheticScenarioContext) GetScenarioReference() string {
@@ -1629,7 +1722,7 @@ type AnalysisContext struct {
 
 func (x *AnalysisContext) Reset() {
 	*x = AnalysisContext{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[12]
+	mi := &file_ml_v1_forecast_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1641,7 +1734,7 @@ func (x *AnalysisContext) String() string {
 func (*AnalysisContext) ProtoMessage() {}
 
 func (x *AnalysisContext) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[12]
+	mi := &file_ml_v1_forecast_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1654,7 +1747,7 @@ func (x *AnalysisContext) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalysisContext.ProtoReflect.Descriptor instead.
 func (*AnalysisContext) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{12}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *AnalysisContext) GetAnalysisVersion() string {
@@ -1688,7 +1781,7 @@ type OperationVersionReference struct {
 
 func (x *OperationVersionReference) Reset() {
 	*x = OperationVersionReference{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[13]
+	mi := &file_ml_v1_forecast_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1700,7 +1793,7 @@ func (x *OperationVersionReference) String() string {
 func (*OperationVersionReference) ProtoMessage() {}
 
 func (x *OperationVersionReference) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[13]
+	mi := &file_ml_v1_forecast_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1713,7 +1806,7 @@ func (x *OperationVersionReference) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OperationVersionReference.ProtoReflect.Descriptor instead.
 func (*OperationVersionReference) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{13}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *OperationVersionReference) GetOperationId() string {
@@ -1764,7 +1857,7 @@ type RecurringHypothesis struct {
 
 func (x *RecurringHypothesis) Reset() {
 	*x = RecurringHypothesis{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[14]
+	mi := &file_ml_v1_forecast_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1776,7 +1869,7 @@ func (x *RecurringHypothesis) String() string {
 func (*RecurringHypothesis) ProtoMessage() {}
 
 func (x *RecurringHypothesis) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[14]
+	mi := &file_ml_v1_forecast_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1789,7 +1882,7 @@ func (x *RecurringHypothesis) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecurringHypothesis.ProtoReflect.Descriptor instead.
 func (*RecurringHypothesis) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{14}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *RecurringHypothesis) GetPatternId() string {
@@ -1942,7 +2035,7 @@ type ForecastComponent struct {
 
 func (x *ForecastComponent) Reset() {
 	*x = ForecastComponent{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[15]
+	mi := &file_ml_v1_forecast_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1954,7 +2047,7 @@ func (x *ForecastComponent) String() string {
 func (*ForecastComponent) ProtoMessage() {}
 
 func (x *ForecastComponent) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[15]
+	mi := &file_ml_v1_forecast_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1967,7 +2060,7 @@ func (x *ForecastComponent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForecastComponent.ProtoReflect.Descriptor instead.
 func (*ForecastComponent) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{15}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ForecastComponent) GetComponentId() string {
@@ -2051,7 +2144,7 @@ type EmpiricalBalanceBand struct {
 
 func (x *EmpiricalBalanceBand) Reset() {
 	*x = EmpiricalBalanceBand{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[16]
+	mi := &file_ml_v1_forecast_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2063,7 +2156,7 @@ func (x *EmpiricalBalanceBand) String() string {
 func (*EmpiricalBalanceBand) ProtoMessage() {}
 
 func (x *EmpiricalBalanceBand) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[16]
+	mi := &file_ml_v1_forecast_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2076,7 +2169,7 @@ func (x *EmpiricalBalanceBand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EmpiricalBalanceBand.ProtoReflect.Descriptor instead.
 func (*EmpiricalBalanceBand) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{16}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *EmpiricalBalanceBand) GetDate() string {
@@ -2111,7 +2204,7 @@ type HistoryGroupEvidence struct {
 
 func (x *HistoryGroupEvidence) Reset() {
 	*x = HistoryGroupEvidence{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[17]
+	mi := &file_ml_v1_forecast_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2123,7 +2216,7 @@ func (x *HistoryGroupEvidence) String() string {
 func (*HistoryGroupEvidence) ProtoMessage() {}
 
 func (x *HistoryGroupEvidence) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[17]
+	mi := &file_ml_v1_forecast_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2136,7 +2229,7 @@ func (x *HistoryGroupEvidence) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HistoryGroupEvidence.ProtoReflect.Descriptor instead.
 func (*HistoryGroupEvidence) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{17}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *HistoryGroupEvidence) GetEvidenceId() string {
@@ -2178,7 +2271,7 @@ type ForecastUncertainty struct {
 
 func (x *ForecastUncertainty) Reset() {
 	*x = ForecastUncertainty{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[18]
+	mi := &file_ml_v1_forecast_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2190,7 +2283,7 @@ func (x *ForecastUncertainty) String() string {
 func (*ForecastUncertainty) ProtoMessage() {}
 
 func (x *ForecastUncertainty) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[18]
+	mi := &file_ml_v1_forecast_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2203,7 +2296,7 @@ func (x *ForecastUncertainty) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForecastUncertainty.ProtoReflect.Descriptor instead.
 func (*ForecastUncertainty) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{18}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ForecastUncertainty) GetMethod() string {
@@ -2289,7 +2382,7 @@ type CalibratedEstimate struct {
 
 func (x *CalibratedEstimate) Reset() {
 	*x = CalibratedEstimate{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[19]
+	mi := &file_ml_v1_forecast_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2301,7 +2394,7 @@ func (x *CalibratedEstimate) String() string {
 func (*CalibratedEstimate) ProtoMessage() {}
 
 func (x *CalibratedEstimate) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[19]
+	mi := &file_ml_v1_forecast_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2314,7 +2407,7 @@ func (x *CalibratedEstimate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CalibratedEstimate.ProtoReflect.Descriptor instead.
 func (*CalibratedEstimate) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{19}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *CalibratedEstimate) GetValue() float64 {
@@ -2351,7 +2444,7 @@ type FinancialProbability struct {
 
 func (x *FinancialProbability) Reset() {
 	*x = FinancialProbability{}
-	mi := &file_ml_v1_forecast_proto_msgTypes[20]
+	mi := &file_ml_v1_forecast_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2363,7 +2456,7 @@ func (x *FinancialProbability) String() string {
 func (*FinancialProbability) ProtoMessage() {}
 
 func (x *FinancialProbability) ProtoReflect() protoreflect.Message {
-	mi := &file_ml_v1_forecast_proto_msgTypes[20]
+	mi := &file_ml_v1_forecast_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2376,7 +2469,7 @@ func (x *FinancialProbability) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FinancialProbability.ProtoReflect.Descriptor instead.
 func (*FinancialProbability) Descriptor() ([]byte, []int) {
-	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{20}
+	return file_ml_v1_forecast_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *FinancialProbability) GetEstimate() isFinancialProbability_Estimate {
@@ -2466,7 +2559,7 @@ const file_ml_v1_forecast_proto_rawDesc = "" +
 	"\x15initial_balance_minor\x18\a \x01(\x03H\x00R\x13initialBalanceMinor\x88\x01\x01\x12.\n" +
 	"\ahistory\x18\b \x03(\v2\x14.ml.v1.HistoricalDayR\ahistory\x12:\n" +
 	"\x0eknown_payments\x18\t \x03(\v2\x13.ml.v1.KnownPaymentR\rknownPaymentsB\x18\n" +
-	"\x16_initial_balance_minor\"\xbf\x02\n" +
+	"\x16_initial_balance_minor\"\xfa\x02\n" +
 	"\x0ePredictRequest\x123\n" +
 	"\bsnapshot\x18\x01 \x01(\v2\x17.ml.v1.ForecastSnapshotR\bsnapshot\x12!\n" +
 	"\fhorizon_days\x18\x02 \x01(\rR\vhorizonDays\x12)\n" +
@@ -2475,7 +2568,15 @@ const file_ml_v1_forecast_proto_rawDesc = "" +
 	"operations\x18\x04 \x03(\v2\x19.ml.v1.FinancialOperationR\n" +
 	"operations\x124\n" +
 	"\bcalendar\x18\x05 \x01(\v2\x18.ml.v1.FinancialCalendarR\bcalendar\x129\n" +
-	"\x18availability_limitations\x18\x06 \x03(\tR\x17availabilityLimitations\"\x9a\x03\n" +
+	"\x18availability_limitations\x18\x06 \x03(\tR\x17availabilityLimitations\x129\n" +
+	"\vcsv_history\x18\a \x01(\v2\x18.ml.v1.CsvHistoryContextR\n" +
+	"csvHistory\"\xcb\x01\n" +
+	"\x11CsvHistoryContext\x12!\n" +
+	"\frule_version\x18\x01 \x01(\tR\vruleVersion\x12\x1b\n" +
+	"\tfrom_date\x18\x02 \x01(\tR\bfromDate\x12!\n" +
+	"\fthrough_date\x18\x03 \x01(\tR\vthroughDate\x12!\n" +
+	"\fdata_version\x18\x04 \x01(\x04R\vdataVersion\x120\n" +
+	"\x14first_operation_date\x18\x05 \x01(\tR\x12firstOperationDate\"\x9a\x03\n" +
 	"\vForecastDay\x12\x12\n" +
 	"\x04date\x18\x01 \x01(\tR\x04date\x12!\n" +
 	"\finflow_minor\x18\x02 \x01(\x03R\vinflowMinor\x12#\n" +
@@ -2485,8 +2586,7 @@ const file_ml_v1_forecast_proto_rawDesc = "" +
 	"\x13balance_upper_minor\x18\x06 \x01(\x03H\x01R\x11balanceUpperMinor\x88\x01\x01\x12]\n" +
 	"\x1cnegative_balance_probability\x18\a \x01(\v2\x1b.ml.v1.FinancialProbabilityR\x1anegativeBalanceProbabilityB\x16\n" +
 	"\x14_balance_lower_minorB\x16\n" +
-	"\x14_balance_upper_minor\"\xd6\n" +
-	"\n" +
+	"\x14_balance_upper_minor\"\x91\v\n" +
 	"\x0fPredictResponse\x12\x1f\n" +
 	"\vsnapshot_id\x18\x01 \x01(\tR\n" +
 	"snapshotId\x12\x1d\n" +
@@ -2520,7 +2620,9 @@ const file_ml_v1_forecast_proto_rawDesc = "" +
 	"\x10history_evidence\x18\x16 \x03(\v2\x1b.ml.v1.HistoryGroupEvidenceR\x0fhistoryEvidence\x12A\n" +
 	"\x10analysis_context\x18\x17 \x01(\v2\x16.ml.v1.AnalysisContextR\x0fanalysisContext\x12M\n" +
 	"\x14recurring_hypotheses\x18\x18 \x03(\v2\x1a.ml.v1.RecurringHypothesisR\x13recurringHypotheses\x12J\n" +
-	"\x10scenario_context\x18\x19 \x01(\v2\x1f.ml.v1.SyntheticScenarioContextR\x0fscenarioContextB\x1e\n" +
+	"\x10scenario_context\x18\x19 \x01(\v2\x1f.ml.v1.SyntheticScenarioContextR\x0fscenarioContext\x129\n" +
+	"\vcsv_history\x18\x1a \x01(\v2\x18.ml.v1.CsvHistoryContextR\n" +
+	"csvHistoryB\x1e\n" +
 	"\x1c_first_negative_balance_date\"\xdf\x05\n" +
 	"\x12FinancialOperation\x12!\n" +
 	"\foperation_id\x18\x01 \x01(\tR\voperationId\x12\x12\n" +
@@ -2704,7 +2806,7 @@ func file_ml_v1_forecast_proto_rawDescGZIP() []byte {
 }
 
 var file_ml_v1_forecast_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_ml_v1_forecast_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_ml_v1_forecast_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_ml_v1_forecast_proto_goTypes = []any{
 	(DaySource)(0),                    // 0: ml.v1.DaySource
 	(CalendarKnowledgeMode)(0),        // 1: ml.v1.CalendarKnowledgeMode
@@ -2716,24 +2818,25 @@ var file_ml_v1_forecast_proto_goTypes = []any{
 	(*KnownPayment)(nil),              // 7: ml.v1.KnownPayment
 	(*ForecastSnapshot)(nil),          // 8: ml.v1.ForecastSnapshot
 	(*PredictRequest)(nil),            // 9: ml.v1.PredictRequest
-	(*ForecastDay)(nil),               // 10: ml.v1.ForecastDay
-	(*PredictResponse)(nil),           // 11: ml.v1.PredictResponse
-	(*FinancialOperation)(nil),        // 12: ml.v1.FinancialOperation
-	(*CalendarGroup)(nil),             // 13: ml.v1.CalendarGroup
-	(*ScheduledPayment)(nil),          // 14: ml.v1.ScheduledPayment
-	(*FinancialCalendar)(nil),         // 15: ml.v1.FinancialCalendar
-	(*SyntheticScenarioContext)(nil),  // 16: ml.v1.SyntheticScenarioContext
-	(*AnalysisContext)(nil),           // 17: ml.v1.AnalysisContext
-	(*OperationVersionReference)(nil), // 18: ml.v1.OperationVersionReference
-	(*RecurringHypothesis)(nil),       // 19: ml.v1.RecurringHypothesis
-	(*ForecastComponent)(nil),         // 20: ml.v1.ForecastComponent
-	(*EmpiricalBalanceBand)(nil),      // 21: ml.v1.EmpiricalBalanceBand
-	(*HistoryGroupEvidence)(nil),      // 22: ml.v1.HistoryGroupEvidence
-	(*ForecastUncertainty)(nil),       // 23: ml.v1.ForecastUncertainty
-	(*CalibratedEstimate)(nil),        // 24: ml.v1.CalibratedEstimate
-	(*FinancialProbability)(nil),      // 25: ml.v1.FinancialProbability
-	(*timestamppb.Timestamp)(nil),     // 26: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),             // 27: google.protobuf.Empty
+	(*CsvHistoryContext)(nil),         // 10: ml.v1.CsvHistoryContext
+	(*ForecastDay)(nil),               // 11: ml.v1.ForecastDay
+	(*PredictResponse)(nil),           // 12: ml.v1.PredictResponse
+	(*FinancialOperation)(nil),        // 13: ml.v1.FinancialOperation
+	(*CalendarGroup)(nil),             // 14: ml.v1.CalendarGroup
+	(*ScheduledPayment)(nil),          // 15: ml.v1.ScheduledPayment
+	(*FinancialCalendar)(nil),         // 16: ml.v1.FinancialCalendar
+	(*SyntheticScenarioContext)(nil),  // 17: ml.v1.SyntheticScenarioContext
+	(*AnalysisContext)(nil),           // 18: ml.v1.AnalysisContext
+	(*OperationVersionReference)(nil), // 19: ml.v1.OperationVersionReference
+	(*RecurringHypothesis)(nil),       // 20: ml.v1.RecurringHypothesis
+	(*ForecastComponent)(nil),         // 21: ml.v1.ForecastComponent
+	(*EmpiricalBalanceBand)(nil),      // 22: ml.v1.EmpiricalBalanceBand
+	(*HistoryGroupEvidence)(nil),      // 23: ml.v1.HistoryGroupEvidence
+	(*ForecastUncertainty)(nil),       // 24: ml.v1.ForecastUncertainty
+	(*CalibratedEstimate)(nil),        // 25: ml.v1.CalibratedEstimate
+	(*FinancialProbability)(nil),      // 26: ml.v1.FinancialProbability
+	(*timestamppb.Timestamp)(nil),     // 27: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),             // 28: google.protobuf.Empty
 }
 var file_ml_v1_forecast_proto_depIdxs = []int32{
 	0,  // 0: ml.v1.HistoricalDay.source:type_name -> ml.v1.DaySource
@@ -2741,38 +2844,40 @@ var file_ml_v1_forecast_proto_depIdxs = []int32{
 	7,  // 2: ml.v1.ForecastSnapshot.known_payments:type_name -> ml.v1.KnownPayment
 	8,  // 3: ml.v1.PredictRequest.snapshot:type_name -> ml.v1.ForecastSnapshot
 	6,  // 4: ml.v1.PredictRequest.model:type_name -> ml.v1.ModelContext
-	12, // 5: ml.v1.PredictRequest.operations:type_name -> ml.v1.FinancialOperation
-	15, // 6: ml.v1.PredictRequest.calendar:type_name -> ml.v1.FinancialCalendar
-	25, // 7: ml.v1.ForecastDay.negative_balance_probability:type_name -> ml.v1.FinancialProbability
-	6,  // 8: ml.v1.PredictResponse.model:type_name -> ml.v1.ModelContext
-	10, // 9: ml.v1.PredictResponse.days:type_name -> ml.v1.ForecastDay
-	20, // 10: ml.v1.PredictResponse.components:type_name -> ml.v1.ForecastComponent
-	25, // 11: ml.v1.PredictResponse.gap_probability:type_name -> ml.v1.FinancialProbability
-	23, // 12: ml.v1.PredictResponse.uncertainty:type_name -> ml.v1.ForecastUncertainty
-	12, // 13: ml.v1.PredictResponse.classified_operations:type_name -> ml.v1.FinancialOperation
-	22, // 14: ml.v1.PredictResponse.history_evidence:type_name -> ml.v1.HistoryGroupEvidence
-	17, // 15: ml.v1.PredictResponse.analysis_context:type_name -> ml.v1.AnalysisContext
-	19, // 16: ml.v1.PredictResponse.recurring_hypotheses:type_name -> ml.v1.RecurringHypothesis
-	16, // 17: ml.v1.PredictResponse.scenario_context:type_name -> ml.v1.SyntheticScenarioContext
-	13, // 18: ml.v1.FinancialCalendar.groups:type_name -> ml.v1.CalendarGroup
-	14, // 19: ml.v1.FinancialCalendar.payments:type_name -> ml.v1.ScheduledPayment
-	1,  // 20: ml.v1.FinancialCalendar.knowledge_mode:type_name -> ml.v1.CalendarKnowledgeMode
-	16, // 21: ml.v1.FinancialCalendar.scenario_context:type_name -> ml.v1.SyntheticScenarioContext
-	26, // 22: ml.v1.SyntheticScenarioContext.recorded_at:type_name -> google.protobuf.Timestamp
-	2,  // 23: ml.v1.RecurringHypothesis.direction:type_name -> ml.v1.RecurringDirection
-	18, // 24: ml.v1.RecurringHypothesis.historical_operations:type_name -> ml.v1.OperationVersionReference
-	27, // 25: ml.v1.RecurringHypothesis.month_end:type_name -> google.protobuf.Empty
-	3,  // 26: ml.v1.RecurringHypothesis.weekend_shift:type_name -> ml.v1.RecurringWeekendShift
-	4,  // 27: ml.v1.RecurringHypothesis.status:type_name -> ml.v1.RecurringHypothesisStatus
-	21, // 28: ml.v1.ForecastUncertainty.bands:type_name -> ml.v1.EmpiricalBalanceBand
-	24, // 29: ml.v1.FinancialProbability.calibrated:type_name -> ml.v1.CalibratedEstimate
-	9,  // 30: ml.v1.ForecastService.Predict:input_type -> ml.v1.PredictRequest
-	11, // 31: ml.v1.ForecastService.Predict:output_type -> ml.v1.PredictResponse
-	31, // [31:32] is the sub-list for method output_type
-	30, // [30:31] is the sub-list for method input_type
-	30, // [30:30] is the sub-list for extension type_name
-	30, // [30:30] is the sub-list for extension extendee
-	0,  // [0:30] is the sub-list for field type_name
+	13, // 5: ml.v1.PredictRequest.operations:type_name -> ml.v1.FinancialOperation
+	16, // 6: ml.v1.PredictRequest.calendar:type_name -> ml.v1.FinancialCalendar
+	10, // 7: ml.v1.PredictRequest.csv_history:type_name -> ml.v1.CsvHistoryContext
+	26, // 8: ml.v1.ForecastDay.negative_balance_probability:type_name -> ml.v1.FinancialProbability
+	6,  // 9: ml.v1.PredictResponse.model:type_name -> ml.v1.ModelContext
+	11, // 10: ml.v1.PredictResponse.days:type_name -> ml.v1.ForecastDay
+	21, // 11: ml.v1.PredictResponse.components:type_name -> ml.v1.ForecastComponent
+	26, // 12: ml.v1.PredictResponse.gap_probability:type_name -> ml.v1.FinancialProbability
+	24, // 13: ml.v1.PredictResponse.uncertainty:type_name -> ml.v1.ForecastUncertainty
+	13, // 14: ml.v1.PredictResponse.classified_operations:type_name -> ml.v1.FinancialOperation
+	23, // 15: ml.v1.PredictResponse.history_evidence:type_name -> ml.v1.HistoryGroupEvidence
+	18, // 16: ml.v1.PredictResponse.analysis_context:type_name -> ml.v1.AnalysisContext
+	20, // 17: ml.v1.PredictResponse.recurring_hypotheses:type_name -> ml.v1.RecurringHypothesis
+	17, // 18: ml.v1.PredictResponse.scenario_context:type_name -> ml.v1.SyntheticScenarioContext
+	10, // 19: ml.v1.PredictResponse.csv_history:type_name -> ml.v1.CsvHistoryContext
+	14, // 20: ml.v1.FinancialCalendar.groups:type_name -> ml.v1.CalendarGroup
+	15, // 21: ml.v1.FinancialCalendar.payments:type_name -> ml.v1.ScheduledPayment
+	1,  // 22: ml.v1.FinancialCalendar.knowledge_mode:type_name -> ml.v1.CalendarKnowledgeMode
+	17, // 23: ml.v1.FinancialCalendar.scenario_context:type_name -> ml.v1.SyntheticScenarioContext
+	27, // 24: ml.v1.SyntheticScenarioContext.recorded_at:type_name -> google.protobuf.Timestamp
+	2,  // 25: ml.v1.RecurringHypothesis.direction:type_name -> ml.v1.RecurringDirection
+	19, // 26: ml.v1.RecurringHypothesis.historical_operations:type_name -> ml.v1.OperationVersionReference
+	28, // 27: ml.v1.RecurringHypothesis.month_end:type_name -> google.protobuf.Empty
+	3,  // 28: ml.v1.RecurringHypothesis.weekend_shift:type_name -> ml.v1.RecurringWeekendShift
+	4,  // 29: ml.v1.RecurringHypothesis.status:type_name -> ml.v1.RecurringHypothesisStatus
+	22, // 30: ml.v1.ForecastUncertainty.bands:type_name -> ml.v1.EmpiricalBalanceBand
+	25, // 31: ml.v1.FinancialProbability.calibrated:type_name -> ml.v1.CalibratedEstimate
+	9,  // 32: ml.v1.ForecastService.Predict:input_type -> ml.v1.PredictRequest
+	12, // 33: ml.v1.ForecastService.Predict:output_type -> ml.v1.PredictResponse
+	33, // [33:34] is the sub-list for method output_type
+	32, // [32:33] is the sub-list for method input_type
+	32, // [32:32] is the sub-list for extension type_name
+	32, // [32:32] is the sub-list for extension extendee
+	0,  // [0:32] is the sub-list for field type_name
 }
 
 func init() { file_ml_v1_forecast_proto_init() }
@@ -2783,16 +2888,16 @@ func file_ml_v1_forecast_proto_init() {
 	file_ml_v1_forecast_proto_msgTypes[0].OneofWrappers = []any{}
 	file_ml_v1_forecast_proto_msgTypes[1].OneofWrappers = []any{}
 	file_ml_v1_forecast_proto_msgTypes[3].OneofWrappers = []any{}
-	file_ml_v1_forecast_proto_msgTypes[5].OneofWrappers = []any{}
 	file_ml_v1_forecast_proto_msgTypes[6].OneofWrappers = []any{}
 	file_ml_v1_forecast_proto_msgTypes[7].OneofWrappers = []any{}
-	file_ml_v1_forecast_proto_msgTypes[9].OneofWrappers = []any{}
-	file_ml_v1_forecast_proto_msgTypes[14].OneofWrappers = []any{
+	file_ml_v1_forecast_proto_msgTypes[8].OneofWrappers = []any{}
+	file_ml_v1_forecast_proto_msgTypes[10].OneofWrappers = []any{}
+	file_ml_v1_forecast_proto_msgTypes[15].OneofWrappers = []any{
 		(*RecurringHypothesis_DayOfMonth)(nil),
 		(*RecurringHypothesis_MonthEnd)(nil),
 	}
-	file_ml_v1_forecast_proto_msgTypes[15].OneofWrappers = []any{}
-	file_ml_v1_forecast_proto_msgTypes[20].OneofWrappers = []any{
+	file_ml_v1_forecast_proto_msgTypes[16].OneofWrappers = []any{}
+	file_ml_v1_forecast_proto_msgTypes[21].OneofWrappers = []any{
 		(*FinancialProbability_Calibrated)(nil),
 		(*FinancialProbability_UnavailableReason)(nil),
 	}
@@ -2802,7 +2907,7 @@ func file_ml_v1_forecast_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ml_v1_forecast_proto_rawDesc), len(file_ml_v1_forecast_proto_rawDesc)),
 			NumEnums:      5,
-			NumMessages:   21,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

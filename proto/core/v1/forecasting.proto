@@ -76,6 +76,17 @@ message ForecastInput {
   HistoryCoverage history_coverage = 14;
   ForecastCalendarMode calendar_mode = 15;
   SyntheticScenarioContext scenario_context = 16;
+  // CSV suitability is not an assertion of complete bank history.
+  HistoryAssessment history_assessment = 17;
+}
+message HistoryAssessment {
+  string rule_version = 1;
+  string from_date = 2;
+  string through_date = 3;
+  int64 data_version = 4;
+  uint32 operation_days = 5;
+  uint32 balance_days = 6;
+  repeated string limitations = 7;
 }
 message ForecastReadiness {
   // ready / limited / insufficient; unknown coverage cannot be ready.

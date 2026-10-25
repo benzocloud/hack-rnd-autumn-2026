@@ -41,6 +41,9 @@ func (c *client) PredictFinancial(ctx context.Context, input forecasting.Financi
 }
 
 func encodeFinancial(input forecasting.FinancialModelInput) (*pb.PredictRequest, error) {
+	if input.Snapshot.Model.Version == forecasting.CSVModelVersion {
+		return encodeCSV(input)
+	}
 	i := input.Snapshot
 	if i.Model != (forecasting.ModelContext{Name: "mean_90", Version: financialVersion, PreprocessingVersion: financialPreprocessing}) {
 		return nil, forecasting.ErrModelContext
@@ -131,6 +134,9 @@ func unavailableFinancialProbability(p *pb.FinancialProbability) bool {
 }
 
 func validateFinancialResponse(input forecasting.FinancialModelInput, request *pb.PredictRequest, r *pb.PredictResponse) error {
+	if input.Snapshot.Model.Version == forecasting.CSVModelVersion {
+		return validateCSVResponse(input, request, r)
+	}
 	if r == nil || r.SnapshotId != request.Snapshot.SnapshotId || r.CompanyId != request.Snapshot.CompanyId || r.AccountId != request.Snapshot.AccountId || r.DataVersion != request.Snapshot.DataVersion || r.Currency != money.RUB || r.CutoffDate != request.Snapshot.CutoffDate ||
 		!proto.Equal(r.Model, request.Model) || r.CalendarSnapshotId != request.Calendar.SnapshotId || r.CalendarDataVersion != request.Calendar.DataVersion || len(r.ReplacedHistoricalOperationIds) != 0 || !r.HistoryOnlyIncludesRecurringFlows ||
 		len(r.Days) != 30 || !unavailableFinancialProbability(r.GapProbability) || !slices.Equal(r.AvailabilityLimitations, request.AvailabilityLimitations) || len(r.ClassifiedOperations) != len(request.Operations) ||

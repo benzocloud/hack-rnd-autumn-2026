@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -21,7 +22,7 @@ func TestStaleImportPreviewMapsAbortedToConflict(t *testing.T) {
 			t.Fatal(err)
 		}
 		response := httptest.NewRecorder()
-		coreRPCError(response, httptest.NewRequest("POST", "/api/v1/companies/company/imports/import/commit", nil), st.Err())
+		coreRPCError(response, httptest.NewRequest(http.MethodPost, "/api/v1/companies/company/imports/import/commit", nil), st.Err())
 		if response.Code != test.want || strings.Contains(response.Body.String(), "private upstream") {
 			t.Fatal(response.Code, response.Body.String())
 		}

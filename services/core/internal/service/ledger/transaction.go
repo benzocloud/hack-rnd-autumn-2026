@@ -26,6 +26,7 @@ type transactionStore interface {
 	accountStore
 	FindTransaction(context.Context, domain.Scope, uuid.UUID, domain.Source) (domain.Transaction, int64, bool, error)
 	InsertTransaction(context.Context, domain.Transaction, int64) error
+	HasImportedEquivalent(context.Context, domain.TransactionData) (bool, error)
 }
 
 func (s *service) CreateTransaction(ctx context.Context, cmd TransactionCommand) (CreateTransactionResult, error) {
@@ -106,6 +107,15 @@ func createTransactionOnAccount(ctx context.Context, store transactionStore, acc
 	}
 	if account.DataVersion() != cmd.ExpectedDataVersion {
 		return CreateTransactionResult{}, ErrStaleVersion
+	}
+	if record.Data().Source.Kind == domain.Manual && account.State().Factual == domain.Imported {
+		duplicate, err := store.HasImportedEquivalent(ctx, record.Data())
+		if err != nil {
+			return CreateTransactionResult{}, err
+		}
+		if duplicate {
+			return CreateTransactionResult{}, ErrSuspectedDuplicate
+		}
 	}
 	if err := account.BindFacts(record.Data().Source); err != nil {
 		return CreateTransactionResult{}, err
