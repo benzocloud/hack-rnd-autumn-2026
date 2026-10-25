@@ -15,6 +15,7 @@ import (
 )
 
 var uuid4 = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
+var uuid7 = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
 var code6 = regexp.MustCompile(`^[0-9]{6}$`)
 var sha256hex = regexp.MustCompile(`^[a-f0-9]{64}$`)
 var opaque = regexp.MustCompile(`^[A-Za-z0-9_-]{43}$`)
@@ -72,6 +73,8 @@ func decode(w http.ResponseWriter, r *http.Request, into any) error {
 func exactFields(data []byte, into any) error {
 	var allowed []string
 	switch into.(type) {
+	case *createCompanyRequest:
+		allowed = []string{"name", "inn", "currency", "timezone"}
 	case *createForecastRequest:
 		allowed = []string{"cutoff_date", "horizon_days"}
 	case *registerRequest:

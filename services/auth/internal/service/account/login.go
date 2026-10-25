@@ -13,7 +13,7 @@ func (s *service) Login(ctx context.Context, input LoginInput) (LoginResult, err
 		return LoginResult{}, ErrInvalidCredentials
 	}
 	var observed domain.User
-	err = s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, _ challengeStore, _ consentStore, _ membershipStore) error {
+	err = s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, _ challengeStore, _ consentStore, _ membershipStore, _ creationStore) error {
 		if _, _, err := s.checkContext(ctx, users, contexts, input.Context, true, false); err != nil {
 			return err
 		}
@@ -42,7 +42,7 @@ func (s *service) Login(ctx context.Context, input LoginInput) (LoginResult, err
 		return LoginResult{}, ErrInvalidCredentials
 	}
 	var result LoginResult
-	err = s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, _ challengeStore, _ consentStore, _ membershipStore) error {
+	err = s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, _ challengeStore, _ consentStore, _ membershipStore, _ creationStore) error {
 		h, ok := tokenHash(input.Context.CookieToken)
 		if !ok {
 			return ErrAuthRequired

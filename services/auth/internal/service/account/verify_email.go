@@ -17,14 +17,14 @@ func (s *service) VerifyEmail(ctx context.Context, input VerifyEmailInput) error
 	}
 	// Validate the caller before looking up even an inert/unknown challenge. This
 	// avoids turning differing CSRF errors into an account-enumeration oracle.
-	if err := s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, _ challengeStore, _ consentStore, _ membershipStore) error {
+	if err := s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, _ challengeStore, _ consentStore, _ membershipStore, _ creationStore) error {
 		_, _, err := s.checkContext(ctx, users, contexts, input.Context, true, false)
 		return err
 	}); err != nil {
 		return err
 	}
 	var rejection error
-	err := s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, challenges challengeStore, _ consentStore, _ membershipStore) error {
+	err := s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, challenges challengeStore, _ consentStore, _ membershipStore, _ creationStore) error {
 		peek, err := challenges.FindChallenge(ctx, input.ChallengeID, false)
 		if errors.Is(err, domain.ErrNotFound) {
 			rejection = ErrCodeInvalid

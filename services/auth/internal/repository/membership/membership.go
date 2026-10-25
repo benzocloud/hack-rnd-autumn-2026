@@ -14,6 +14,25 @@ import (
 func fromRecord(row record.Membership) domain.Membership {
 	return domain.Membership{CompanyID: row.CompanyID, UserID: row.UserID, Role: row.Role, CreatedAt: row.CreatedAt}
 }
+
+// InsertOwner never promotes an existing financier or replaces another owner.
+// The caller holds the user lock and completes its command in this same Tx.
+func (r *repository) InsertOwner(ctx context.Context, company, user uuid.UUID, created time.Time) error {
+	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
+	defer cancel()
+	result, err := r.db.ExecContext(ctx, insertOwnerSQL, company, user, created)
+	if err != nil {
+		return storageError(err)
+	}
+	count, err := result.RowsAffected()
+	if err != nil {
+		return storageError(err)
+	}
+	if count != 1 {
+		return domain.ErrConflict
+	}
+	return nil
+}
 func (r *repository) FindMembership(ctx context.Context, company, user uuid.UUID) (domain.Membership, error) {
 	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
 	defer cancel()

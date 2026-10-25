@@ -172,3 +172,53 @@ cosmohack layout, зафиксированного в Core-снимке `20d2adc
 Профиль по умолчанию выключен; mock касается только email-кода. Проверка пароля,
 серверная сессия, CSRF и права компании остаются настоящими.
 Миграция 2 обязательна для RPC-среза; исторический отчёт 3.2 описывает прежнюю схему.
+
+## Durable company onboarding — текущий срез
+
+Миграция 3 добавляет Auth-owned command store, scoped key, PREPARED/COMPLETED/
+QUARANTINED и recovery leases. Схему обновляет отдельная migration command;
+server startup/readiness требуют version3. Старые миграции не переписываются.
+
+Реализованы BeginCompanyCreation (live verified session/CSRF), Core-only
+AuthorizeCompanyBootstrap и CompleteCompanyCreation. Complete сам читает Core
+receipt, затем под user→command locks атомарно пишет owner membership/COMPLETED.
+Чтение Core проходит вне SQL Tx. Иной payload под тем же scoped key — conflict;
+disabled/deleted initiator или несовпавший receipt — durable quarantine без owner.
+Completed replay не восстанавливает отозванную membership.
+
+Необязательный Core client использует AUTH_CORE_ADDRESS, AUTH_CORE_SERVER_NAME
+и AUTH_CORE_TIMEOUT (default2s, 50ms–3s). App владеет connection/Close и deadlines;
+сертификат/ключ/CA берутся из AUTH_GRPC_* настроек. Сертификат Auth должен иметь
+clientAuth EKU и ровно URI spiffe://saldo.local/auth; Core проверяется обычными
+CA/hostname checks плюс ровно spiffe://saldo.local/core. TLS13, без transport retries.
+Отсутствующий/недоступный client не отключает существующие login/verify; операции
+создания без подтверждённого receipt не объявляются успешными.
+
+Canonical bindings генерируются только для Auth и Core Company/Errors через
+существующий buf.auth-core.gen.yaml. В services/auth выполнить с Buf1.75.0,
+golangci-lint2.15.0 и Go1.27.3 в PATH:
+
+```sh
+bash scripts/generate.sh
+bash scripts/generate.sh --check
+```
+
+Auth CI проверяет drift, весь module formatting/import/lint, unit/race и настоящую
+PostgreSQL integration/race. Новые real DB tests включают две replicas, restart,
+rollback owner/completion, leases/fencing и protected register/verify/login при
+ошибке optional Core client. Test Core boundary fixtures не подтверждают полный
+runtime Auth→Core E2E; отдельные TLS tests доказывают CA/hostname/URI peer checks.
+
+При настроенном Core client приложение запускает один bounded recovery worker.
+Он восстанавливает PREPARED без cookie: receipt read → при отсутствии
+идемпотентный bootstrap → повторный receipt read → общий finalizer. PostgreSQL
+выдаёт/проверяет 60s lease и fencing token; expired/reset session не отменяет
+команду, disabled/deleted user карантинится до Core. Retries/backoff1s–60s,
+каждый проход ограничен10s; отменённая работа остаётся durable за lease. При
+shutdown приложение cancel/join worker до закрытия RPC/client/DB. SQL CAS,
+а не локальные часы Auth, определяет истечение lease.
+
+HTTP POST /companies и Workspace onboarding path ещё в работе.
+Точный актуальный checkpoint, выполненные gates и продолжение:
+[handoff](../../.agent/handoffs/company-onboarding.md),
+[draft PR #41](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/41).

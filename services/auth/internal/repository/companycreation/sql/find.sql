@@ -1,0 +1,1 @@
+SELECT id,company_id,initiator_id,idempotency_key,name,inn,currency,timezone,request_sha256,state,created_at,updated_at,next_attempt_at,attempts,lease_token,lease_expires_at,account_id,committed_at FROM company_creation_commands WHERE id=$1;

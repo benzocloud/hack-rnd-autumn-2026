@@ -36,6 +36,9 @@ func (h *handler) financialRoute(w http.ResponseWriter, r *http.Request) bool {
 	switch {
 	case len(parts) == 1:
 		action = h.listCompanies
+		if r.Method == http.MethodPost {
+			method, action = http.MethodPost, h.createCompany
+		}
 	case len(parts) == 2:
 		action = h.getCompany
 	case len(parts) == 3 && parts[2] == "account":
@@ -51,7 +54,7 @@ func (h *handler) financialRoute(w http.ResponseWriter, r *http.Request) bool {
 		return false
 	}
 	if r.Method != method {
-		if len(parts) == 3 && parts[2] == "forecasts" {
+		if len(parts) == 1 || len(parts) == 3 && parts[2] == "forecasts" {
 			w.Header().Set("Allow", "GET, POST")
 		} else {
 			w.Header().Set("Allow", method)
@@ -67,7 +70,7 @@ func (h *handler) financialRoute(w http.ResponseWriter, r *http.Request) bool {
 		writeError(w, r, 403, "CSRF_INVALID", nil)
 		return true
 	}
-	if h.core.Companies == nil || h.core.Ledger == nil || h.core.Forecasts == nil {
+	if h.core.Companies == nil || (len(parts) != 1 || method != http.MethodPost) && (h.core.Ledger == nil || h.core.Forecasts == nil) {
 		writeError(w, r, 503, "DEPENDENCY_UNAVAILABLE", nil)
 		return true
 	}

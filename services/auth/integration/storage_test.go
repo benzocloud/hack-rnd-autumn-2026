@@ -119,8 +119,8 @@ func TestMigrationsStorageRestartAndRollback(t *testing.T) {
 		t.Fatal(err)
 	}
 	var tables int
-	if err := db.QueryRow(t.Context(), "SELECT count(*) FROM information_schema.tables WHERE table_schema=current_schema()").Scan(&tables); err != nil || tables != 10 {
-		t.Fatalf("expected nine Auth tables and goose history, got %d", tables)
+	if err := db.QueryRow(t.Context(), "SELECT count(*) FROM information_schema.tables WHERE table_schema=current_schema()").Scan(&tables); err != nil || tables != 11 {
+		t.Fatalf("expected ten Auth tables and goose history, got %d", tables)
 	}
 	id, err := uuid.NewRandom()
 	if err != nil {
@@ -265,7 +265,7 @@ func TestConcurrentEmailUniquenessAndStorageConstraints(t *testing.T) {
 	if _, err := db.Exec(t.Context(), "INSERT INTO sessions(context_id,user_id,credential_version) VALUES($1,$2,1)", contextID, user.ID); err == nil {
 		t.Fatal("pre-auth became session")
 	}
-	if _, err := db.Exec(t.Context(), "UPDATE goose_db_version SET version_id=99 WHERE version_id=2"); err != nil {
+	if _, err := db.Exec(t.Context(), "UPDATE goose_db_version SET version_id=99 WHERE version_id=3"); err != nil {
 		t.Fatal(err)
 	}
 	if !errors.Is(postgres.NewSchemaRepository(pool, cfg.QueryTimeout).CheckSchema(t.Context()), postgres.ErrSchema) {

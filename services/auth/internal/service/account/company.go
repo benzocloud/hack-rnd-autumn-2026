@@ -27,7 +27,7 @@ func (s *service) AuthorizeCompany(ctx context.Context, input AuthorizeCompanyIn
 		return Authorization{}, ErrCSRFInvalid
 	}
 	var result Authorization
-	err := s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, _ challengeStore, _ consentStore, memberships membershipStore) error {
+	err := s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, _ challengeStore, _ consentStore, memberships membershipStore, _ creationStore) error {
 		_, user, err := s.checkContext(ctx, users, contexts, WriteContext{CookieToken: input.CookieToken, CSRFToken: input.CSRFToken}, mutation || input.Write, true)
 		if err != nil {
 			return err
@@ -61,7 +61,7 @@ func (s *service) ListMemberships(ctx context.Context, cookie string, limit int,
 		return MembershipPage{}, ErrInvalidCursor
 	}
 	result := MembershipPage{Items: []Membership{}}
-	err := s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, _ challengeStore, _ consentStore, memberships membershipStore) error {
+	err := s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, _ challengeStore, _ consentStore, memberships membershipStore, _ creationStore) error {
 		_, user, err := s.checkContext(ctx, users, contexts, WriteContext{CookieToken: cookie}, false, true)
 		if err != nil {
 			return err

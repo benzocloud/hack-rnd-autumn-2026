@@ -51,15 +51,27 @@ type consentStore interface {
 	InsertEvidence(context.Context, domain.ConsentEvidence) error
 	GetActiveDocument(context.Context, bool) (domain.ConsentDocument, error)
 }
+type creationStore interface {
+	FindCreation(context.Context, uuid.UUID, bool) (domain.CompanyCreation, error)
+	FindCreationByKey(context.Context, uuid.UUID, string) (domain.CompanyCreation, error)
+	InsertCreation(context.Context, domain.CompanyCreation) error
+	CompleteCreation(context.Context, uuid.UUID, uuid.UUID, time.Time, uuid.UUID) error
+	QuarantineCreation(context.Context, uuid.UUID, uuid.UUID) error
+	ClaimCreation(context.Context, uuid.UUID) (domain.CompanyCreation, error)
+	RetryCreation(context.Context, uuid.UUID, uuid.UUID, time.Duration) error
+}
+
 type membershipStore interface {
+	InsertOwner(context.Context, uuid.UUID, uuid.UUID, time.Time) error
 	FindMembership(context.Context, uuid.UUID, uuid.UUID) (domain.Membership, error)
 	ListMemberships(context.Context, uuid.UUID, uuid.UUID, *time.Time, int) ([]domain.Membership, error)
 }
 
 // Work binds consumer-owned ports to one transaction in the composing application.
-type Work func(context.Context, userStore, contextStore, challengeStore, consentStore, membershipStore) error
+type Work func(context.Context, userStore, contextStore, challengeStore, consentStore, membershipStore, creationStore) error
 
 type Options struct {
+	Core             creationCore
 	CodeKey, CSRFKey []byte
 	Demo             bool
 	DemoEmails       []string
@@ -121,6 +133,7 @@ type MembershipPage struct {
 }
 
 type service struct {
+	core             creationCore
 	withinTx         func(context.Context, Work) error
 	codeKey, csrfKey []byte
 	demo             bool
@@ -151,7 +164,7 @@ func New(withinTx func(context.Context, Work) error, options Options) (*service,
 	if err != nil {
 		return nil, ErrUnavailable
 	}
-	return &service{withinTx: withinTx, codeKey: append([]byte(nil), options.CodeKey...), csrfKey: append([]byte(nil), options.CSRFKey...), demo: options.Demo, demoEmails: emails, consent: options.Consent, now: now, dummyHash: dummy, hashSlots: make(chan struct{}, 2)}, nil
+	return &service{core: options.Core, withinTx: withinTx, codeKey: append([]byte(nil), options.CodeKey...), csrfKey: append([]byte(nil), options.CSRFKey...), demo: options.Demo, demoEmails: emails, consent: options.Consent, now: now, dummyHash: dummy, hashSlots: make(chan struct{}, 2)}, nil
 }
 
 func validateOptions(work func(context.Context, Work) error, o Options) error {
@@ -163,7 +176,7 @@ func validateOptions(work func(context.Context, Work) error, o Options) error {
 }
 func (s *service) GetPersonalDataConsent(ctx context.Context) (Document, error) {
 	var result Document
-	err := s.withinTx(ctx, func(ctx context.Context, _ userStore, _ contextStore, _ challengeStore, consents consentStore, _ membershipStore) error {
+	err := s.withinTx(ctx, func(ctx context.Context, _ userStore, _ contextStore, _ challengeStore, consents consentStore, _ membershipStore, _ creationStore) error {
 		active, err := consents.GetActiveDocument(ctx, false)
 		if err != nil {
 			return err

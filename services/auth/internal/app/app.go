@@ -34,6 +34,9 @@ func run(ctx context.Context, cfg config.Config, logger *slog.Logger, open func(
 		return errors.New("auth startup: database unavailable")
 	}
 	defer db.Close()
+	if application, ok := db.(*application); ok && application.coreUnavailable {
+		logger.Warn("company onboarding Core client unavailable")
+	}
 	if err := db.CheckSchema(startup); err != nil {
 		cancelStartup()
 		return errors.New("auth startup: schema mismatch; run migrations")
@@ -44,6 +47,10 @@ func run(ctx context.Context, cfg config.Config, logger *slog.Logger, open func(
 		return errors.New("auth startup: private RPC unavailable")
 	}
 	defer stopRPC()
+	if application, ok := db.(*application); ok && application.coreConnection != nil && application.Account != nil {
+		stopRecovery := startRecovery(ctx, application.Account, logger)
+		defer stopRecovery()
+	}
 	if ctx.Err() != nil {
 		return nil
 	}

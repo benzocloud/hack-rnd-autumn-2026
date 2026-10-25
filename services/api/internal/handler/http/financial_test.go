@@ -42,6 +42,10 @@ type financialFixture struct {
 	browserToken       string
 }
 
+func (f *financialFixture) CreateCompanyBootstrap(context.Context, *corev1.CreateCompanyBootstrapRequest, ...grpc.CallOption) (*corev1.CreateCompanyBootstrapResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "fixture company creation unavailable")
+}
+
 func (f *financialFixture) ReadCompany(_ context.Context, r *corev1.ReadCompanyRequest, _ ...grpc.CallOption) (*corev1.ReadCompanyResponse, error) {
 	f.calls++
 	f.browserToken = r.GetContext().GetCookieToken()
