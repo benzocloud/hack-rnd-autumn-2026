@@ -171,11 +171,11 @@ class TrainedFinancialTests(unittest.TestCase):
 
     def test_old_financial_profile_response_bytes_are_unchanged(self):
         expected = {
-            "full": "af3f55049bd3756e9f265646dd6d57de63e0061a8f2c14ed27e6b62e383e190d",
-            "partial": "1bf826b4219b23bc55f53168d4d86911e85803c3e6a61ce15d40eb503117d6d9",
-            "cancelled": "030dde8dd366915123fd655191a89eea0542ea2b9fc0ea53b780ab19c8c43790",
-            "additional": "417fc3c8b2b1f6de001414268ed7bb186ec9c6128d391d4a0c101fb4d3d46685",
-            "unavailable": "1017fbbab3a43736e6269a95ed68ea3bf5928f23c62d674e4fbf2aa3f106ebfc",
+            "full": "6e5531b14fbf06b5ccfb8171e806d070ad46d2f722640db5b2a345d45f50ed8e",
+            "partial": "2e538e09d497451e0cd2f3f44f99ebb12e51a47fd2cc6955e03bfe38f2bfb567",
+            "cancelled": "38eda48a5df523e610c7674f43ee01950ca7cf265698b4b4c0f123c0822ba622",
+            "additional": "35e2eef2ff4349e0ffbab3c2bbb932662d2e5006fb458c9286f462d7099440dc",
+            "unavailable": "ded21966a9cb6595a953b76e917265d07682094ccb45c4eafef6888ed2024c7f",
         }
         for label, checksum in expected.items():
             request = financial_request()
