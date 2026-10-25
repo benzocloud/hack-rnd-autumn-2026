@@ -96,9 +96,9 @@ invitations, reset/email delivery, новые роли и полный redesign 
 | A0 | На ревью владельца | Удалённые plan/handoff и один проверенный draft PR |
 | A1 | На ревью владельца | Durable Auth command/repository и atomic owner finalization |
 | A2 | На ревью владельца | RPC, Core client и recovery после restart |
-| A3 | На ревью владельца | Настоящий POST /companies, conformance и actual HTTPS/mTLS/PG process gate |
-| A4 | Не начат | Workspace без блокирующей зависимости от invitations |
-| A5 | Не начат | Реальный полный сценарий, два ревью, CI, итоговый handoff |
+| A3 | На ревью владельца | Настоящий POST /companies, HTTPS/mTLS conformance |
+| A4 | На ревью владельца: UI/gates готовы; браузер с real API ещё открыт | Workspace без блокирующей зависимости от invitations |
+| A5 | В работе: API E2E и reviews есть; браузерный UI и свежий CI SHA — остаток | Реальный полный сценарий, два ревью, CI, итоговый handoff |
 
 ### A0 — Контекст и публичный checkpoint
 
@@ -148,7 +148,7 @@ canonical generated Core bindings только через generator; Core тол
 - [x] Missing/mismatched receipt, lost reply, restart/rollback переходов,
   две реплики, disabled/deleted user, expired/reset session, quarantined command,
   unavailable dependencies и сохранённый login/verify.
-- [x] RPC/client checkpoint `382fed6`; recovery `b2f882b` опубликован. Два read-only reviews обоих slices завершены, clock-skew defect исправлен и проверен.
+- [x] RPC/client checkpoint `382fed6`; recovery готов к отдельному push. Два read-only reviews обоих slices завершены, clock-skew defect исправлен и проверен.
 
 Критерий: восстановление принятой PREPARED без браузера выдаёт ровно одну
 membership, небезопасный receipt/инициатор не выдаёт доступ.
@@ -162,41 +162,44 @@ REST conformance/security tests; минимальные config examples/deploy t
 - [x] Typed clients, safe Russian errors/request ID, key conflict и 503/in-progress;
   201 только после COMPLETED и успешного read. Не дублировать Company domain.
 - [x] OpenAPI conformance и adapter boundary regressions (201/409/503, Origin/CSRF, owner injection, revoked/malformed dependencies).
-- [x] Реальный HTTPS API → mTLS Auth/Core → PostgreSQL: чужой command/peer/CSRF/revocation/timeouts/replay.
-- [x] Полный API check и два reviews adapter slice пройдены; adapter49938a6 опубликован.
-- [x] Реальная интеграция A3 и её отдельные Caveman/Ponytail reviews; checkpoint подготовлен к публикации.
+- [x] Реальный HTTPS API → mTLS Auth/Core → PostgreSQL: чужой command/peer/CSRF/revocation/timeouts/replay. Прогнаны register, HMAC кода, login, owner и пустой счёт, replay, конфликт ключа, CSRF 403, чужой пользователь 403/404, чужой ключ не отдаёт чужую компанию, Auth не читает компанию и API не читает receipt, таймаут Core даёт 503, потерянный ответ bootstrap восстанавливается одной компанией, удалённое membership не возвращается повтором, чтение после перезапуска Auth.
+- [x] Полный API check и два reviews adapter slice пройдены, отдельный checkpoint готов к push.
+- [x] Реальная интеграция A3 перепрогнана; CI шаг `-tags=onboarding` уже в workflow.
+  Review fixes: COMPLETED replay без Core bootstrap; Begin conflict re-read;
+  Authorize COMPLETED при disabled initiator. Caveman/Ponytail на текущем diff.
 
 ### A4 — Workspace и пользовательский путь
 
 Зависимость: A3. Компоненты: Workspace, companiesService, existing auth/company
 context/request hooks; только блокирующая часть settings redirect.
 
-- [ ] Проверить уже включённое из PR #40 разделение companies/invitations
+- [x] Проверить уже включённое из PR #40 разделение companies/invitations
   loading/error states; P1 честно недоступен, без fake success или реализации
   invitations. Повторную реализацию разделения не делать.
-- [ ] После create обновить company/membership context; стабильный retry key,
-  double click, lost response, refresh сохраняют ту же компанию.
-- [ ] Проверить фактический redirect/settings unsupported endpoints;
-  убрать только зависимость, блокирующую onboarding.
-- [ ] Изолированные UI tests, test/typecheck/lint/build, настоящий браузер
-  с financial mocks off; review и checkpoint.
+- [x] После create обновить company/membership context; стабильный retry key,
+  double click, lost response, refresh сохраняют ту же компанию. Ключ создания
+  хранится в sessionStorage до подтверждённого ответа, а при недоступном хранилище остаётся одним значением на время страницы; переход идёт в настройки,
+  где компания читается заново через CompanyShell (getCompany + default account).
+- [x] Redirect в settings: страница опирается на company/account reads, не на P1
+  invitations/members; Members остаётся отдельным нереализованным P1 экраном.
+- [x] Изолированные UI tests (`company-create-key`), test/typecheck/lint/build.
+- [ ] Настоящий браузер с financial mocks off против кандидата этой ветки.
 
 ### A5 — Интеграция и итоговая передача
 
 Зависимость: A1–A4. Компоненты: воспроизводимая isolated test topology/fixtures,
 security/failure E2E, plan/handoff/PR.
 
-- [ ] Новая user через register/verify/login, без SQL membership;
-  create → owner → company/default account read → reload/logout/login.
-- [ ] Одна company/account/membership при double click, key replay,
-  Core commit/lost reply/restart; чужой command/peer/CSRF/revoked access отказаны.
-- [ ] Полные Go/contract/frontend gates, реальные marked Auth/Core test DB,
-  два независимых SHA-bound caveman-review и ponytail-review;
-  Go review с golang-how-to и нужными secondary skills; fixes и повторные checks.
-- [ ] Проверить актуальный CI, pending/queued не считать passing;
+- [x] Новая user через register/verify/login, без SQL membership;
+  create → owner → company/default account read (живой HTTPS/mTLS/PG тест).
+- [x] Одна company/account/membership при key replay, Core commit/lost reply/
+  Auth restart; чужой command/peer/CSRF/revoked access отказаны (тот же тест).
+- [x] Auth unit/race, API company handler + onboarding tag, frontend gates;
+  два независимых caveman/ponytail; подтверждённые дефекты исправлены.
+- [ ] Browser reload/logout/login UI path; актуальный CI на финальном SHA;
   при доступном runner один /agent-review на финальный SHA.
-- [ ] Финальный remote checkpoint, draft URL/head SHA, остающиеся дефекты,
-  точные команды и следующий шаг владельца; всё остаётся на ревью владельца.
+- [ ] Финальный remote checkpoint после push review-fix + docs; всё остаётся
+  на ревью владельца. Merge/ready-for-review/deploy запрещены.
 
 ## Проверки и публикация
 
@@ -220,6 +223,5 @@ merge свежего main → проверки затронутой интегр
 - Параллельные изменения Workspace/Core/API требуют проверки свежего main и PR;
   не дублировать уже сделанное. Исторический `5c5797e` не является pin.
 
-A3 actual runtime поверх49938a6: -race process/PG security/replay/lostreply/restart PASS, full tag lint0. Core task check и real markedPG task integration/race PASS. Два независимых runtime reviews закрыты после readiness/PATH fixes; checkpoint публикуется. Браузер/A4 не объявлены завершёнными.
 
-Свежий main0abae4f включается обычным merge; actualruntime/Core gates повторно PASS. API fullgate послеmain FAILcoverage83.14<85, unchangedmainbaseline82.48<85 подтверждён; thresholdнеизменён, см.handoff. Независимые A4/A5 продолжаются, готовность полногоgate не утверждается.
+По последнему запросу владельца выполняется только публикация законченного local runtime checkpointdfa89d4 вместе с remote0b35904; дальнейшая разработка остановлена. Дополнительные проверки/ограничения сохранены в handoff.

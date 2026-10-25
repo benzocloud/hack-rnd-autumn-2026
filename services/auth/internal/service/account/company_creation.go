@@ -94,7 +94,24 @@ func (s *service) BeginCompanyCreation(ctx context.Context, input BeginCompanyCr
 		}
 		now := s.now().UTC().Truncate(time.Microsecond)
 		result = domain.CompanyCreation{ID: id, CompanyID: companyID, InitiatorID: user.ID, Key: input.Key, Spec: spec, RequestSHA256: hash, State: domain.CreationPrepared, CreatedAt: now, UpdatedAt: now, NextAttemptAt: now}
-		return commands.InsertCreation(ctx, result)
+		err = commands.InsertCreation(ctx, result)
+		if err == nil {
+			return nil
+		}
+		// Same-user Begin is serialized by the user lock; still re-read on unique
+		// conflict so a lost reply / concurrent insert never surfaces as 409.
+		if !errors.Is(err, domain.ErrConflict) {
+			return err
+		}
+		stored, lookupErr := commands.FindCreationByKey(ctx, user.ID, input.Key)
+		if lookupErr != nil {
+			return err
+		}
+		if stored.Spec != spec || stored.RequestSHA256 != hash {
+			return ErrIdempotencyConflict
+		}
+		result = stored
+		return nil
 	})
 	if err != nil {
 		return CreationCommand{}, err
@@ -134,15 +151,21 @@ func (s *service) AuthorizeCompanyBootstrap(ctx context.Context, input Authorize
 		if command.CompanyID != input.CompanyID || command.RequestSHA256 != input.RequestSHA256 {
 			return ErrForbidden
 		}
-		if !s.creationInitiatorEnabled(user) || command.State == domain.CreationQuarantined {
+		if command.State == domain.CreationQuarantined {
 			denied = true
-			if command.State == domain.CreationPrepared {
-				return commands.QuarantineCreation(ctx, command.ID, uuid.Nil)
-			}
 			return nil
 		}
-		if command.State != domain.CreationPrepared && command.State != domain.CreationCompleted {
+		if command.State == domain.CreationCompleted {
+			// Membership already committed; Core bootstrap replay must not deny.
+			result = command
+			return nil
+		}
+		if command.State != domain.CreationPrepared {
 			return ErrUnavailable
+		}
+		if !s.creationInitiatorEnabled(user) {
+			denied = true
+			return commands.QuarantineCreation(ctx, command.ID, uuid.Nil)
 		}
 		result = command
 		return nil

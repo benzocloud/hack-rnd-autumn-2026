@@ -40,30 +40,10 @@ func (h *handler) createCompany(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, 403, "FORBIDDEN", nil)
 		return
 	}
-	// Forward Auth's saved spec unchanged. The browser payload is not authoritative.
-	_, err = h.core.Companies.CreateCompanyBootstrap(r.Context(), &corev1.CreateCompanyBootstrapRequest{CommandId: command.Id, CompanyId: command.CompanyId, CompanySpec: command.Company, RequestSha256: command.RequestSha256})
-	if err != nil {
-		companyCreationCoreError(w, r, err)
-		return
-	}
-	// A bootstrap acknowledgement does not grant membership. Auth reads the receipt.
-	completed, err := h.auth.CompleteCompanyCreation(r.Context(), &authv1.CompleteCompanyCreationRequest{Context: writeContext(r), CommandId: command.Id})
-	if err != nil {
-		rpcError(w, r, err)
-		return
-	}
-	result := completed.GetCommand()
-	if !validCreationCommand(result) || result.Id != command.Id || result.CompanyId != command.CompanyId || result.InitiatorId != command.InitiatorId || result.RequestSha256 != command.RequestSha256 || !proto.Equal(result.Company, command.Company) {
-		dependencyError(w, r)
-		return
-	}
-	if result.State == authv1.CompanyCreationState_COMPANY_CREATION_STATE_QUARANTINED {
-		writeError(w, r, 403, "FORBIDDEN", nil)
-		return
-	}
-	if result.State != authv1.CompanyCreationState_COMPANY_CREATION_STATE_COMPLETED {
-		writeError(w, r, 503, "COMPANY_CREATION_IN_PROGRESS", nil)
-		return
+	if command.State != authv1.CompanyCreationState_COMPANY_CREATION_STATE_COMPLETED {
+		if !h.bootstrapAndCompleteCompany(w, r, command) {
+			return
+		}
 	}
 	read, err := h.core.Companies.ReadCompany(r.Context(), &corev1.ReadCompanyRequest{Context: browser(r), CompanyId: command.CompanyId})
 	if err != nil {
@@ -76,6 +56,37 @@ func (h *handler) createCompany(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 201, value)
+}
+
+// Completed Auth commands skip Core bootstrap so replay does not depend on a
+// healthy Core authorize path after membership already exists.
+func (h *handler) bootstrapAndCompleteCompany(w http.ResponseWriter, r *http.Request, command *authv1.CompanyCreationCommand) bool {
+	// Forward Auth's saved spec unchanged. The browser payload is not authoritative.
+	_, err := h.core.Companies.CreateCompanyBootstrap(r.Context(), &corev1.CreateCompanyBootstrapRequest{CommandId: command.Id, CompanyId: command.CompanyId, CompanySpec: command.Company, RequestSha256: command.RequestSha256})
+	if err != nil {
+		companyCreationCoreError(w, r, err)
+		return false
+	}
+	// A bootstrap acknowledgement does not grant membership. Auth reads the receipt.
+	completed, err := h.auth.CompleteCompanyCreation(r.Context(), &authv1.CompleteCompanyCreationRequest{Context: writeContext(r), CommandId: command.Id})
+	if err != nil {
+		rpcError(w, r, err)
+		return false
+	}
+	result := completed.GetCommand()
+	if !validCreationCommand(result) || result.Id != command.Id || result.CompanyId != command.CompanyId || result.InitiatorId != command.InitiatorId || result.RequestSha256 != command.RequestSha256 || !proto.Equal(result.Company, command.Company) {
+		dependencyError(w, r)
+		return false
+	}
+	if result.State == authv1.CompanyCreationState_COMPANY_CREATION_STATE_QUARANTINED {
+		writeError(w, r, 403, "FORBIDDEN", nil)
+		return false
+	}
+	if result.State != authv1.CompanyCreationState_COMPANY_CREATION_STATE_COMPLETED {
+		writeError(w, r, 503, "COMPANY_CREATION_IN_PROGRESS", nil)
+		return false
+	}
+	return true
 }
 
 // Creation uses the durable Auth command's 503/retry semantics. Other Core

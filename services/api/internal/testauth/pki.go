@@ -69,12 +69,13 @@ func GeneratePKI(directory string) (PKI, error) {
 	}
 	certificates := []struct {
 		name, uri, certificate, key string
-		usage                       x509.ExtKeyUsage
+		usage                       []x509.ExtKeyUsage
 	}{
-		{"test API", "spiffe://saldo.local/api", paths.APICert, paths.APIKey, x509.ExtKeyUsageClientAuth},
-		{"test Auth", "spiffe://saldo.local/auth", paths.AuthCert, paths.AuthKey, x509.ExtKeyUsageServerAuth},
-		{"test Core", "spiffe://saldo.local/core", paths.CoreCert, paths.CoreKey, x509.ExtKeyUsageServerAuth},
-		{"test HTTPS", "", paths.HTTPCert, paths.HTTPKey, x509.ExtKeyUsageServerAuth},
+		{"test API", "spiffe://saldo.local/api", paths.APICert, paths.APIKey, []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}},
+		// Auth and Core call each other, so both identities are a server and a client.
+		{"test Auth", "spiffe://saldo.local/auth", paths.AuthCert, paths.AuthKey, []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth}},
+		{"test Core", "spiffe://saldo.local/core", paths.CoreCert, paths.CoreKey, []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth}},
+		{"test HTTPS", "", paths.HTTPCert, paths.HTTPKey, []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}},
 	}
 	for i, item := range certificates {
 		if err := issueCertificate(ca, caKey, int64(i+2), item.name, item.uri, item.usage, item.certificate, item.key); err != nil {
@@ -84,7 +85,7 @@ func GeneratePKI(directory string) (PKI, error) {
 	return paths, nil
 }
 
-func issueCertificate(ca *x509.Certificate, caKey *ecdsa.PrivateKey, serial int64, name, uri string, usage x509.ExtKeyUsage, certificatePath, keyPath string) error {
+func issueCertificate(ca *x509.Certificate, caKey *ecdsa.PrivateKey, serial int64, name, uri string, usage []x509.ExtKeyUsage, certificatePath, keyPath string) error {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return fmt.Errorf("generate test leaf key: %w", err)
@@ -92,16 +93,13 @@ func issueCertificate(ca *x509.Certificate, caKey *ecdsa.PrivateKey, serial int6
 	certificate := &x509.Certificate{
 		SerialNumber: big.NewInt(serial), Subject: pkix.Name{CommonName: name},
 		NotBefore: ca.NotBefore, NotAfter: ca.NotAfter, BasicConstraintsValid: true,
-		KeyUsage: x509.KeyUsageDigitalSignature, ExtKeyUsage: []x509.ExtKeyUsage{usage},
+		KeyUsage: x509.KeyUsageDigitalSignature, ExtKeyUsage: usage,
 	}
-	// Real Auth/Core loopback integration uses each service identity in both
-	// directions, as the deployed service certificates do.
-	if uri == "spiffe://saldo.local/auth" || uri == "spiffe://saldo.local/core" {
-		certificate.ExtKeyUsage = append(certificate.ExtKeyUsage, x509.ExtKeyUsageClientAuth)
-	}
-	if usage == x509.ExtKeyUsageServerAuth {
-		certificate.DNSNames = []string{"localhost"}
-		certificate.IPAddresses = []net.IP{net.ParseIP("127.0.0.1")}
+	for _, item := range usage {
+		if item == x509.ExtKeyUsageServerAuth {
+			certificate.DNSNames = []string{"localhost"}
+			certificate.IPAddresses = []net.IP{net.ParseIP("127.0.0.1")}
+		}
 	}
 	if uri != "" {
 		identity, parseErr := url.Parse(uri)

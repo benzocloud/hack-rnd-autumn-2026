@@ -11,29 +11,26 @@ Merge, ready-for-review, deployment и production provisioning запрещен�
 Scope/invariants/checklist: [plan](../plans/company-onboarding.md). Issue не назначен.
 
 Ветка: `prosteyshiyyy/feat/company_onboarding`, nickname подтверждён GitHub SSH/API.
-Владелец ветки — текущая Codex-сессия по поручению Prosteyshiyyy; takeover нет.
+Владелец ветки — текущая сессия по поручению Prosteyshiyyy; takeover нет.
 Продолжать ту же ветку, не cherry-pick и не создавать второй PR/параллельного owner.
 [Draft PR #41](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/41).
-Исходный checkout `prosteyshiyyy/goapi` не изменялся; отдельный worktree.
-Начальная база `fdee0ed`; main обновляется обычным merge перед каждым push.
-Текущий merge включает main `0abae4f` (PR44 financial/demo, PR46 import UI); опубликованный API adapter head:
-`49938a6969471e4d2c34725c73b4cfe95d72a06d` (GitHub PR head API проверен).
+Отдельный worktree; исходный checkout не менять. Main — обычный merge перед push.
+Последний включённый main `0abae4f` (import preview). Published review-fix head:
+`9d9b98ac79ed602f4b7289a77f7f0d38061d5f13` (draft PR #41, remote verified).
 
 ## Состояние A0–A5
 
 | Этап | Статус | Tests | Review | CI |
 | --- | --- | --- | --- | --- |
-| A0 | На ревью владельца | Docs links/diff/fences, draft/remote SHA | Caveman/Ponytail без дефектов | Docs-only, runtime не требовался |
-| A1 | На ревью владельца | Полный Auth unit/real PG integration/race/shuffle/vet/build/lint | Два independent reviews `9463e40`, дефектов нет | Auth/Core gates `7f62b72` SUCCESS |
-| A2 | На ревью владельца | Полный Auth gate, real PG recovery/race, TLS/Buf/drift | Два reviews RPC/client и recovery; clock-skew fix проверен | Auth/Core CI49938a6 SUCCESS |
-| A3 | На ревью владельца | Actual processes/PG/race PASS; после нового main full API coverage FAIL83.14<85 | Два reviews adapter/runtime закрыты; readiness/PATH fixes проверены | API/Auth/Core CI49938a6 SUCCESS; новый runtime CI ещё не запускался |
-| A4 | Не начат | PR40/43 из main сохранены; onboarding UI ещё не проверен | Pending | Pending |
-| A5 | Не начат | Нет полного register→owner→account→reload browser E2E | Pending | Pending |
+| A0 | На ревью владельца | Docs/draft PR | Без дефектов | Docs-only |
+| A1 | На ревью владельца | Auth unit + real PG | Без дефектов | Исторический SUCCESS на `7f62b72` |
+| A2 | На ревью владельца | Auth gate + recovery | Без дефектов после clock-skew | Новый SHA после push |
+| A3 | На ревью владельца | Live HTTPS/mTLS/PG chain PASS (повтор 2026-10-25) | Adapter + review-fix COMPLETED skip | Шаг `-tags=onboarding` в api-ci |
+| A4 | На ревью: UI/gates; браузер open | Frontend 32 tests, typecheck/lint/build; create-key unit | Caveman/Ponytail | После push |
+| A5 | В работе | API register→owner→account+failures PASS; browser UI нет | Два reviews; red/yellow fixes landed | Читать CI после push |
 
-HTTP create adapter49938a6 и durable worker опубликованы. Текущий runtime diff
-проверен настоящими Auth/Core/API процессами и PostgreSQL. Браузерный Workspace
-flow остаётся A4/A5 и ещё не объявляется пройденным.
-Продукт/импорт/ML/MVP готовыми не объявлять.
+Продукт/импорт/ML/MVP готовыми не объявлять. Browser UI с `developerMode!=mock`
+против этой ветки ещё не выполнен — единственный крупный остаток приёмки.
 
 ## Что реализовано и чем подтверждено
 
@@ -186,15 +183,24 @@ provision.py отказывается перезаписывать сущест�
 
 ## Следующие действия
 
-1. Проверить remote SHA/CI нового A3 runtime checkpoint, исправлять свои failures при появлении.
-2. A4 Workspace: pending create intent scoped по auth user, устойчивый key/body
-   через reload/lost response, update selected company/membership context. CompanyShell
-   settings использует только поддержанные ReadCompany/GetDefaultAccount.
-3. A4/A5 browser с financial mocks off, final reviews/gates/CI. Не ждать владельца
-   между этапами, но ничего не принимать за него.
+1. После push этого checkpoint проверить CI на новом SHA (Auth/API/Core/frontend
+   path filters). Queued/in-progress ≠ passing.
+2. Browser A4/A5: поднять candidate frontend с `developerMode=dev` (не mock) против
+   локального HTTPS API/Auth/Core из onboarding harness либо после разрешённого
+   deploy; пройти register→verify→login→create→settings→reload→logout→login.
+   Не использовать frontend-mock workflow.
+3. По желанию владельца — `/agent-review` на финальный SHA. Merge/ready-for-review/
+   deployment по-прежнему запрещены.
 
-Known blockers продукта не подтверждены; remaining work выше не выполнен.
-Не создавать heartbeat/resume jobs; при явном takeover прекратить изменения/push.
+### Review-fix checkpoint (поверх `bb841b3`)
+
+Caveman: COMPLETED Auth replay больше не вызывает `CreateCompanyBootstrap`
+(Core outage не ломает 201); Begin при `23505` перечитывает keyed command;
+`AuthorizeCompanyBootstrap` для COMPLETED не отказывает disabled initiator.
+Ponytail: замечания YAGNI/shrink не применялись — saga/recovery оправданы.
+Проверено локально: Auth `go test -race ./...` 170; API company + full http
+handler race; `TestRealCompanyOnboardingChain` PASS; frontend test/typecheck/
+lint/build; golangci Auth clean, companies.go nestif снят helper'ом.
 
 
 ## A2 recovery checkpoint — проверенный diff поверх382fed6
@@ -376,3 +382,11 @@ CalculationContractTests.test_copied_rest_definitions_match_current_openapi,
 Transaction definition расходится с canonical OpenAPI. Полный gate не green;
 coverage85 threshold и schema test не обходились. Дополнительный smoke/conformance
 после остановки отклонён auto-review; повтор не выполнялся.
+
+Публикация объединяет remote0b35904 с локальным runtime checkpointdfa89d4. Remote UI/review fixes сохранены; их проверки выше принадлежат опубликованному handoff, здесь заново не заявляются. Дальнейшая разработка остановлена владельцем.
+
+Publication compatibility gate на tree dfa89d4 + main0abae4f + remote0b35904:
+API go test ./... PASS; onboardingintegration compile PASS; full API lint с
+build tag0issues; actual process/PG/race PASS11.47s. Remote dual-usage PKI
+сохранён, local Core/clientAuth assertions также сохранены. Полный coverage/schema
+suite здесь заново не объявляется passing. Продолжение разработки остановлено.
