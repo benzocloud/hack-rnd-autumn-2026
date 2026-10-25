@@ -45,8 +45,8 @@ func encodeFinancial(input forecasting.FinancialModelInput) (*pb.PredictRequest,
 	if i.Model != (forecasting.ModelContext{Name: "mean_90", Version: financialVersion, PreprocessingVersion: financialPreprocessing}) {
 		return nil, forecasting.ErrModelContext
 	}
-	if i.HorizonDays != 30 || len(i.KnownPayments) > 0 || len(input.Operations) > 20000 || len(i.History) != 90 || strings.TrimSpace(input.Coverage.Reference) == "" || len(input.Coverage.Reference) > 2048 ||
-		input.Coverage.From != i.History[0].Date || input.Coverage.Through != i.Cutoff {
+	if i.HorizonDays != 30 || len(i.KnownPayments) > 0 || len(input.Operations) > 20000 || len(i.History) != 90 || strings.TrimSpace(input.Coverage.Reference) == "" || len(input.Coverage.Reference) > 2048 || input.Coverage.DataVersion != i.DataVersion ||
+		(input.Coverage.Kind != "certified" && input.Coverage.Kind != "dataset_fixture_assumption") || input.Coverage.From != i.History[0].Date || input.Coverage.Through != i.Cutoff || (input.Coverage.Kind == "dataset_fixture_assumption" && !slices.Contains(input.Coverage.Limitations, "dataset_coverage_assumed_not_bank_certified")) {
 		return nil, forecasting.ErrModelInput
 	}
 	// Reuse the existing exact money/date/reconciliation checks. Only the copied
@@ -74,6 +74,8 @@ func encodeFinancial(input forecasting.FinancialModelInput) (*pb.PredictRequest,
 	request.Model.ConfigurationId = financialVersion
 	request.Calendar = &pb.FinancialCalendar{SnapshotId: i.SnapshotID.String(), DataVersion: uint64(i.DataVersion), KnowledgeMode: pb.CalendarKnowledgeMode_CALENDAR_KNOWLEDGE_MODE_UNAVAILABLE}
 	request.AvailabilityLimitations = []string{"historical_calendar_unavailable", "historical_availability_unverified"}
+	request.AvailabilityLimitations = append(request.AvailabilityLimitations, "history_coverage_kind_"+input.Coverage.Kind)
+	request.AvailabilityLimitations = append(request.AvailabilityLimitations, input.Coverage.Limitations...)
 	for n, day := range i.History {
 		if day.Source == forecasting.ReconstructedCovered {
 			request.Snapshot.History[n].Source = pb.DaySource_DAY_SOURCE_RECONSTRUCTED_COVERED

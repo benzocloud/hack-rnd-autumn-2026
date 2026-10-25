@@ -14,6 +14,7 @@ type store interface {
 	InsertCompany(context.Context, uuid.UUID) error
 	InsertAccount(context.Context, *ledger.BankAccount) error
 	InsertProfile(context.Context, domain.Profile) error
+	SeedCategories(context.Context, []ledger.CategoryDefinition) error
 	ReadProfile(context.Context, uuid.UUID) (domain.Profile, error)
 	ReadBootstrap(context.Context, uuid.UUID) (domain.BootstrapRecord, error)
 	UpdateProfile(context.Context, domain.Profile, int64) error

@@ -3,6 +3,7 @@ package forecasting
 import (
 	"encoding/json"
 	"math/big"
+	"slices"
 	"strings"
 	"time"
 
@@ -40,7 +41,7 @@ func frozenInput(snapshot domain.FinancialSnapshot, coverage domain.JobCoverage)
 func decodeJobInput(job domain.Job) (jobInput, error) {
 	var input jobInput
 	if len(job.Input) == 0 || len(job.Input) > 2<<20 || json.Unmarshal(job.Input, &input) != nil || input.SchemaVersion != 1 || input.SnapshotID == uuid.Nil || input.ModelContextID == uuid.Nil || input.Scope != job.Scope || input.DataVersion != job.DataVersion || input.HorizonDays != 30 || input.Cutoff.Validate() != nil ||
-		input.Model != (ModelContext{Name: "mean_90", Version: financialJobVersion, PreprocessingVersion: financialJobPreprocessing}) || input.Coverage.From.Validate() != nil || input.Coverage.Through.Validate() != nil || strings.TrimSpace(input.Coverage.Reference) == "" || len(input.Coverage.Reference) > 2048 {
+		input.Model != (ModelContext{Name: "mean_90", Version: financialJobVersion, PreprocessingVersion: financialJobPreprocessing}) || !validCoverage(input.Coverage, input.DataVersion) {
 		return jobInput{}, ErrUnavailable
 	}
 	cutoff, _ := time.Parse(time.DateOnly, string(input.Cutoff))
@@ -54,10 +55,10 @@ func prepareFinancial(snapshot domain.FinancialSnapshot, proof domain.JobCoverag
 	d := snapshot.Data()
 	cutoff, _ := time.Parse(time.DateOnly, string(d.Cutoff))
 	start := cutoff.AddDate(0, 0, -89)
-	if start.Year() < 1 || cutoff.AddDate(0, 0, 30).Year() > 9999 || proof.From > ledger.Date(start.Format(time.DateOnly)) || proof.Through < d.Cutoff || strings.TrimSpace(proof.Reference) == "" || len(proof.Reference) > 2048 {
+	if start.Year() < 1 || cutoff.AddDate(0, 0, 30).Year() > 9999 || proof.From > ledger.Date(start.Format(time.DateOnly)) || proof.Through < d.Cutoff || !validCoverage(proof, d.DataVersion) {
 		return FinancialModelInput{}, ErrHistory
 	}
-	input := FinancialModelInput{Snapshot: ModelInput{SnapshotID: d.ID, Scope: d.Scope, DataVersion: d.DataVersion, Cutoff: d.Cutoff, OpeningBalance: d.Opening.Observation.Amount(), HorizonDays: 30, Model: ModelContext{Name: "mean_90", Version: financialJobVersion, PreprocessingVersion: financialJobPreprocessing}}, Coverage: Coverage{From: ledger.Date(start.Format(time.DateOnly)), Through: d.Cutoff, Reference: proof.Reference}}
+	input := FinancialModelInput{Snapshot: ModelInput{SnapshotID: d.ID, Scope: d.Scope, DataVersion: d.DataVersion, Cutoff: d.Cutoff, OpeningBalance: d.Opening.Observation.Amount(), HorizonDays: 30, Model: ModelContext{Name: "mean_90", Version: financialJobVersion, PreprocessingVersion: financialJobPreprocessing}}, Coverage: Coverage{Kind: proof.Kind, From: ledger.Date(start.Format(time.DateOnly)), Through: d.Cutoff, Reference: proof.Reference, DataVersion: proof.DataVersion, Limitations: slices.Clone(proof.Limitations)}}
 	flows := make(map[ledger.Date][2]*big.Int)
 	for _, fact := range d.Facts {
 		op := fact.Transaction.Data()
@@ -102,4 +103,18 @@ func prepareFinancial(snapshot domain.FinancialSnapshot, proof domain.JobCoverag
 		balance.Add(balance, sum[1])
 	}
 	return input, nil
+}
+
+func validCoverage(proof domain.JobCoverage, revision int64) bool {
+	if (proof.Kind != "certified" && proof.Kind != "dataset_fixture_assumption") || proof.From.Validate() != nil || proof.Through.Validate() != nil || strings.TrimSpace(proof.Reference) == "" || len(proof.Reference) > 2048 || proof.DataVersion != revision || len(proof.Limitations) > 32 {
+		return false
+	}
+	seen := make(map[string]bool, len(proof.Limitations))
+	for _, limitation := range proof.Limitations {
+		if strings.TrimSpace(limitation) == "" || len(limitation) > 128 || seen[limitation] {
+			return false
+		}
+		seen[limitation] = true
+	}
+	return proof.Kind != "dataset_fixture_assumption" || slices.Contains(proof.Limitations, "dataset_coverage_assumed_not_bank_certified")
 }

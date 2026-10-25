@@ -22,3 +22,6 @@ var insertProfileSQL string
 
 //go:embed sql/update_profile.sql
 var updateProfileSQL string
+
+//go:embed sql/seed_category.sql
+var seedCategorySQL string

@@ -19,6 +19,7 @@ class Coverage:
     start: str
     end: str
     reference: str
+    kind: str
 
 
 def prepare_financial_request(snapshot, operations, coverage, pb, *, calendar=None, limitations=()):
@@ -50,6 +51,8 @@ def prepare_financial_request(snapshot, operations, coverage, pb, *, calendar=No
     if (
         not isinstance(coverage, Coverage)
         or not coverage.reference.strip()
+        or coverage.kind not in ("certified", "dataset_fixture_assumption")
+        or any(item.startswith("history_coverage_kind_") for item in limitations)
         or _date(coverage.start) > start
         or _date(coverage.end) != cutoff
     ):
@@ -86,6 +89,15 @@ def prepare_financial_request(snapshot, operations, coverage, pb, *, calendar=No
         ),
         availability_limitations=list(limitations),
     )
+    fixture_limitation = "dataset_coverage_assumed_not_bank_certified"
+    if (
+        coverage.kind == "dataset_fixture_assumption"
+        and fixture_limitation not in request.availability_limitations
+    ):
+        request.availability_limitations.append(fixture_limitation)
+    if coverage.kind == "certified" and fixture_limitation in request.availability_limitations:
+        raise InvalidSnapshot("Certified coverage cannot carry the dataset fixture limitation")
+    request.availability_limitations.append("history_coverage_kind_" + coverage.kind)
     request.operations.extend(sorted(operations, key=lambda op: (op.date, op.operation_id)))
     balance = snapshot.initial_balance_minor
     history = []

@@ -10,4 +10,5 @@ var (
 	ErrConflict            = errors.New("financial write conflict")
 	ErrIdempotencyConflict = errors.New("idempotency key body conflict")
 	ErrUnavailable         = errors.New("financial storage unavailable")
+	ErrCursor              = errors.New("invalid ledger cursor")
 )

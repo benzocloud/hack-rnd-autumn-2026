@@ -83,6 +83,7 @@ def dataset_request(data_dir, company_id, cutoff):
         start=(cutoff - timedelta(days=89)).isoformat(),
         end=cutoff.isoformat(),
         reference="dataset_fixture_assumption:" + sha256(data_dir / "all_operations.csv"),
+        kind="dataset_fixture_assumption",
     )
     request = prepare_financial_request(
         snapshot,

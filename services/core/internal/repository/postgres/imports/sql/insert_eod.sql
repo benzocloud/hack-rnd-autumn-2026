@@ -1,0 +1,1 @@
+INSERT INTO core_balances(company_id,account_id,balance_date,amount_minor,currency,source_kind,source_system,source_company_id,recorded_at,note,created_data_version) VALUES($1,$2,$3,$4,'RUB','statement_eod','dataset_v1',$5,$6,'',$7) ON CONFLICT(company_id,account_id,balance_date) DO NOTHING;

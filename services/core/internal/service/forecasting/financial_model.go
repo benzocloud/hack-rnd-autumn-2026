@@ -11,8 +11,11 @@ const ReconstructedCovered HistorySource = "reconstructed_covered"
 // Coverage is an upstream assertion with provenance, not inferred from missing
 // rows. The future job producer must persist it with its immutable input.
 type Coverage struct {
+	Kind          string
 	From, Through ledger.Date
 	Reference     string
+	DataVersion   int64
+	Limitations   []string
 }
 
 // FinancialModelInput currently represents an explicitly unavailable historical

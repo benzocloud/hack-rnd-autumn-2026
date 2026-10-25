@@ -157,6 +157,40 @@
         },
         "model_context": {
           "$ref": "#/$defs/ModelContext"
+        },
+        "history_coverage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HistoryCoverage"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "readOnly": true,
+          "description": "Server-owned proof or null when unavailable/legacy. Preview is a proposal; only successful atomic commit establishes proof. Omission remains valid for legacy responses."
+        },
+        "calendar_mode": {
+          "type": "string",
+          "enum": [
+            "available",
+            "synthetic_scenario"
+          ],
+          "default": "available",
+          "description": "available preserves ordinary calendar availability rules; synthetic_scenario requires server-enabled dataset manifest plus explicit user selection. Missing legacy field means available, never synthetic.",
+          "readOnly": true
+        },
+        "scenario_context": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SyntheticScenarioContext"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "readOnly": true,
+          "description": "Frozen server-owned context for synthetic_scenario; null/omitted for ordinary or legacy forecasts. Browser cannot provide identity, recorded_at or provenance."
         }
       },
       "required": [
@@ -174,7 +208,38 @@
         "risk_definition",
         "model_context"
       ],
-      "description": "Immutable snapshot. Historical mode excludes facts and derived features after cutoff_date. start_date must equal cutoff_date+1 calendar day; data_as_of is latest usable factual coverage; balance_as_of must equal cutoff_date. opening_balance is a dated accepted EOD observation at cutoff, never a silent carry-forward of an earlier balance. Missing cutoff EOD causes BALANCE_AS_OF_UNAVAILABLE; no assumption of zero unobserved cashflow. A new explicit manual dated balance on an unobserved date may supply an onboarding/later-cutoff anchor with its provenance/quality warning, without changing the transaction-history source binding; a same-date statement observation cannot be overwritten. Known future payments in backtests require point-in-time availability; dataset has no such labels. below_zero_eod is a transparent negative-EOD-balance proxy, not a verified unpaid-obligation metric or credit-limit-aware insolvency prediction. Horizon counts calendar days, timezone company Europe/Moscow."
+      "description": "Immutable snapshot. Historical mode excludes facts and derived features after cutoff_date. start_date must equal cutoff_date+1 calendar day; data_as_of is latest usable factual coverage; balance_as_of must equal cutoff_date. opening_balance is a dated accepted EOD observation at cutoff, never a silent carry-forward of an earlier balance. Missing cutoff EOD causes BALANCE_AS_OF_UNAVAILABLE; no assumption of zero unobserved cashflow. A new explicit manual dated balance on an unobserved date may supply an onboarding/later-cutoff anchor with its provenance/quality warning, without changing the transaction-history source binding; a same-date statement observation cannot be overwritten. Known future payments in backtests require point-in-time availability; dataset has no such labels. below_zero_eod is a transparent negative-EOD-balance proxy, not a verified unpaid-obligation metric or credit-limit-aware insolvency prediction. Horizon counts calendar days, timezone company Europe/Moscow.",
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "calendar_mode": {
+                "const": "synthetic_scenario"
+              }
+            },
+            "required": [
+              "calendar_mode"
+            ]
+          },
+          "then": {
+            "required": [
+              "scenario_context"
+            ],
+            "properties": {
+              "scenario_context": {
+                "$ref": "#/$defs/SyntheticScenarioContext"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "scenario_context": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
     },
     "Money": {
       "type": "object",
@@ -608,6 +673,11 @@
           "examples": [
             "2026-10-23T12:00:00Z"
           ]
+        },
+        "reconciliation_group_id": {
+          "$ref": "#/$defs/NullableResourceID",
+          "readOnly": true,
+          "description": "Saved group association or null/omitted for unresolved legacy payment. Only an active group compatible with the frozen forecast window reconciles the payment; cancel/match/date changes do not revoke the group."
         }
       },
       "required": [
@@ -956,6 +1026,107 @@
           "type": "null"
         }
       ]
+    },
+    "HistoryCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "readOnly": true,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "certified",
+            "dataset_fixture_assumption"
+          ]
+        },
+        "from_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "through_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "data_version": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*$",
+          "maxLength": 19,
+          "description": "Positive signed int64 decimal string; server checks <=9223372036854775807 before conversion."
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "kind",
+        "from_date",
+        "through_date",
+        "reference",
+        "data_version",
+        "limitations"
+      ],
+      "description": "Server-owned inclusive history proof, never writable by browser. Dataset fixture assumption requires an allowlisted file hash/company/account/window and limitation dataset_coverage_assumed_not_bank_certified; readiness stays limited. Dates are ordered and scoped to the immutable data version. Unknown/legacy proof is null, never inferred from reference prefix.",
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "dataset_fixture_assumption"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "limitations": {
+                "contains": {
+                  "const": "dataset_coverage_assumed_not_bank_certified"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "SyntheticScenarioContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "readOnly": true,
+      "properties": {
+        "scenario_reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "recorded_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$"
+        },
+        "scenario_business_date": {
+          "type": "string",
+          "format": "date"
+        }
+      },
+      "required": [
+        "scenario_reference",
+        "recorded_at",
+        "scenario_business_date"
+      ],
+      "description": "Core-owned immutable identity and actual recording time; scenario_business_date equals forecast cutoff. Requires synthetic_calendar_scenario_not_historical_fact in forecast limitations; never used for historical evaluation/calibration or claimed as current bank state."
     }
   },
   "allOf": [
@@ -979,6 +1150,16 @@
                     }
                   }
                 }
+              }
+            }
+          },
+          "input": {
+            "properties": {
+              "calendar_mode": {
+                "const": "available"
+              },
+              "scenario_context": {
+                "type": "null"
               }
             }
           }

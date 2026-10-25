@@ -55,6 +55,13 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 		coreConn.Connect()
 		coreReady = func() bool { return coreConn.GetState() == connectivity.Ready }
 		financial = httpapi.CoreClients{Companies: corev1.NewCompanyServiceClient(coreConn), Ledger: corev1.NewLedgerServiceClient(coreConn), Forecasts: corev1.NewForecastingServiceClient(coreConn)}
+		financial.Imports = corev1.NewImportsServiceClient(coreConn)
+		if cfg.ImportSpoolDir != "" {
+			financial.ImportSpool, err = httpapi.NewImportSpool(cfg.ImportSpoolDir)
+			if err != nil {
+				return err
+			}
+		}
 	}
 	return serve(ctx, cfg, logger, client, listener, financial, coreReady)
 }
@@ -78,6 +85,12 @@ func serve(ctx context.Context, cfg config.Config, logger *slog.Logger, client a
 	serverCtx, cancelServer := context.WithCancel(context.Background())
 	defer cancelServer()
 	server := &http.Server{Handler: httpapi.NewWithCore(client, cfg.Origin, logger, ready, financial), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: max(cfg.RPCDeadline, cfg.SlowDeadline) + 20*time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10, BaseContext: func(net.Listener) context.Context { return serverCtx }}
+	if cfg.ImportSpoolDir != "" {
+		// Upload has its own size/slot/deadline budget; ordinary handlers retain
+		// their shorter per-request context deadlines.
+		server.ReadTimeout = 2 * time.Minute
+		server.WriteTimeout = 3 * time.Minute
+	}
 	errorsCh := make(chan error, 1)
 	go func() { errorsCh <- server.Serve(listener) }()
 	logger.InfoContext(ctx, "API started", "address", listener.Addr().String())

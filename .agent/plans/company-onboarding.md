@@ -221,3 +221,5 @@ merge свежего main → проверки затронутой интегр
   не дублировать уже сделанное. Исторический `5c5797e` не является pin.
 
 A3 actual runtime поверх49938a6: -race process/PG security/replay/lostreply/restart PASS, full tag lint0. Core task check и real markedPG task integration/race PASS. Два независимых runtime reviews закрыты после readiness/PATH fixes; checkpoint публикуется. Браузер/A4 не объявлены завершёнными.
+
+Свежий main0abae4f включается обычным merge; actualruntime/Core gates повторно PASS. API fullgate послеmain FAILcoverage83.14<85, unchangedmainbaseline82.48<85 подтверждён; thresholdнеизменён, см.handoff. Независимые A4/A5 продолжаются, готовность полногоgate не утверждается.

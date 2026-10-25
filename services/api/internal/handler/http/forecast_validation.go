@@ -15,7 +15,7 @@ func validForecast(f *corev1.Forecast, a *corev1.Account, id string) bool {
 	case *corev1.Forecast_Pending:
 		return state != nil && state.Pending != nil && (state.Pending.Status == corev1.ForecastStatus_FORECAST_STATUS_QUEUED || state.Pending.Status == corev1.ForecastStatus_FORECAST_STATUS_RUNNING)
 	case *corev1.Forecast_Succeeded:
-		return f.Readiness.Status != "insufficient" && state != nil && state.Succeeded != nil && timestamp(state.Succeeded.CompletedAt) && !state.Succeeded.CompletedAt.AsTime().Before(f.CreatedAt.AsTime()) && validForecastResult(state.Succeeded.Result, f.Input)
+		return provenCoverage(f.Input.GetHistoryCoverage()) && f.Readiness.Status != "insufficient" && state != nil && state.Succeeded != nil && timestamp(state.Succeeded.CompletedAt) && !state.Succeeded.CompletedAt.AsTime().Before(f.CreatedAt.AsTime()) && validForecastResult(state.Succeeded.Result, f.Input)
 	case *corev1.Forecast_Failed:
 		if state == nil || state.Failed == nil || !timestamp(state.Failed.CompletedAt) || state.Failed.CompletedAt.AsTime().Before(f.CreatedAt.AsTime()) {
 			return false
@@ -27,11 +27,43 @@ func validForecast(f *corev1.Forecast, a *corev1.Account, id string) bool {
 	}
 }
 func validForecastInput(i *corev1.ForecastInput, account string) bool {
-	if i == nil || !resourceID(i.SnapshotId) || i.AccountId != account || i.DataVersion < 1 || i.Currency != "RUB" || !validMoney(i.OpeningBalance) || !dateSequence(i.CutoffDate, i.StartDate, i.EndDate, i.HorizonDays) || i.BalanceAsOf != i.CutoffDate || !businessDate(i.DataAsOf) || i.DataAsOf > i.CutoffDate || i.RiskDefinition != "below_zero_eod" {
+	if i == nil || !resourceID(i.SnapshotId) || i.AccountId != account || i.DataVersion < 1 || i.Currency != "RUB" || !validMoney(i.OpeningBalance) || !dateSequence(i.CutoffDate, i.StartDate, i.EndDate, i.HorizonDays) || i.BalanceAsOf != i.CutoffDate || !businessDate(i.DataAsOf) || i.DataAsOf > i.CutoffDate || i.RiskDefinition != "below_zero_eod" || !validHistoryCoverage(i.HistoryCoverage, i.DataVersion, i.CutoffDate) {
 		return false
 	}
 	m := i.ModelContext
 	return m != nil && resourceID(m.Id) && nonempty(m.ModelName, 128) && nonempty(m.ModelVersion, 128) && nonempty(m.PreprocessingVersion, 128) && nonempty(m.ConfigurationId, 128) && (m.RandomSeed == nil || unsignedDecimal(*m.RandomSeed)) && (m.TrajectoryCount == nil || *m.TrajectoryCount > 0)
+}
+func provenCoverage(c *corev1.HistoryCoverage) bool {
+	if c == nil {
+		return false
+	}
+	return c.Kind == corev1.HistoryCoverageKind_HISTORY_COVERAGE_KIND_CERTIFIED || c.Kind == corev1.HistoryCoverageKind_HISTORY_COVERAGE_KIND_DATASET_FIXTURE_ASSUMPTION
+}
+
+func validHistoryCoverage(c *corev1.HistoryCoverage, revision int64, cutoff string) bool {
+	if c == nil || c.Kind == corev1.HistoryCoverageKind_HISTORY_COVERAGE_KIND_UNSPECIFIED {
+		return true
+	}
+	if !businessDate(c.FromDate) || !businessDate(c.ThroughDate) || c.FromDate > c.ThroughDate || c.ThroughDate < cutoff || c.DataVersion != revision || !nonempty(c.Reference, 256) || len(c.Limitations) > 32 {
+		return false
+	}
+	switch c.Kind {
+	case corev1.HistoryCoverageKind_HISTORY_COVERAGE_KIND_UNSPECIFIED, corev1.HistoryCoverageKind_HISTORY_COVERAGE_KIND_CERTIFIED:
+	case corev1.HistoryCoverageKind_HISTORY_COVERAGE_KIND_DATASET_FIXTURE_ASSUMPTION:
+		if !contains("dataset_coverage_assumed_not_bank_certified", c.Limitations...) {
+			return false
+		}
+	default:
+		return false
+	}
+	seen := make(map[string]bool, len(c.Limitations))
+	for _, limitation := range c.Limitations {
+		if !nonempty(limitation, 128) || seen[limitation] {
+			return false
+		}
+		seen[limitation] = true
+	}
+	return true
 }
 func unsignedDecimal(s string) bool {
 	if s == "" {

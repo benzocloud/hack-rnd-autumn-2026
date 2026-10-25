@@ -34,7 +34,7 @@ interface ITransaction {
     category_id: string | null;
     source: ISource;
     version: string;
-    created_at: string;
+    created_at?: string | null;
 }
 
 

@@ -2,6 +2,9 @@ syntax = "proto3";
 
 package ml.v1;
 
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
 option go_package = "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/ml/v1;mlv1";
 
 // Private Core -> ML interface. Core owns authorization, a consistent input
@@ -111,6 +114,14 @@ message PredictResponse {
   repeated FinancialOperation classified_operations = 20;
   repeated string availability_limitations = 21;
   repeated HistoryGroupEvidence history_evidence = 22;
+  // Only the explicitly selected v2 profile provides derived analysis. Absence
+  // on a legacy result means not analyzed, never an empty successful analysis.
+  AnalysisContext analysis_context = 23;
+  // At most 1000 hypotheses and 20000 evidence references in the whole response.
+  // Hypotheses do not create obligations or certify calendar completeness.
+  repeated RecurringHypothesis recurring_hypotheses = 24;
+  // Exact echo of the synthetic calendar context; absent in every other mode.
+  SyntheticScenarioContext scenario_context = 25;
 }
 
 // Caller-owned immutable facts. At most one direction is positive. Categories
@@ -132,6 +143,10 @@ message FinancialOperation {
   string factual_source_kind = 14;
   string source_namespace = 15;
   string external_operation_id = 16;
+  // Derived allowlisted rule ID. Manual category/code/UUID takes precedence;
+  // date, amount, direction, version and factual provenance never change.
+  // Empty on legacy results and manual labels; not a confidence/probability.
+  string category_rule_id = 17;
 }
 
 // Full schedule for one explicitly identified component over this horizon.
@@ -172,6 +187,8 @@ message FinancialCalendar {
   // Otherwise remaining/status may omit a payment settled after that EOD;
   // advance the accepted cutoff or use a separately agreed intraday bridge.
   bool no_post_cutoff_movements = 7;
+  // Required only for SYNTHETIC_SCENARIO; forbidden in other knowledge modes.
+  SyntheticScenarioContext scenario_context = 8;
 }
 
 enum CalendarKnowledgeMode {
@@ -182,6 +199,82 @@ enum CalendarKnowledgeMode {
   // Caller preserves historical_calendar_unavailable in availability_limitations.
   // snapshot_id/data_version identify the facts whose calendar is unavailable.
   CALENDAR_KNOWLEDGE_MODE_UNAVAILABLE = 3;
+  // An explicitly authorized isolated historical demo, never historical proof.
+  // Requires synthetic_calendar_scenario_not_historical_fact limitation,
+  // empty as_of_business_date and no_post_cutoff_movements=false. Existing
+  // coverage/EOD/replacement checks still apply. No backtest or calibration.
+  CALENDAR_KNOWLEDGE_MODE_SYNTHETIC_SCENARIO = 4;
+}
+
+// Core owns identity/provenance and freezes this with the financial input.
+// Adding these fields does not enable the mode on an unsupported model version.
+message SyntheticScenarioContext {
+  string scenario_reference = 1;
+  // Actual recording time, not a claim of knowledge at the historical cutoff.
+  google.protobuf.Timestamp recorded_at = 2;
+  // Hypothetical scenario origin, exactly the snapshot cutoff business date.
+  string scenario_business_date = 3;
+}
+
+// Explicit v2 profile: mean_90_components_v2 / calendar_analysis_v2 /
+// mean_90_components_analysis90_v2; analysis text_categories_monthly_v1.
+// Core pins the complete context; fields never select a model or cause fallback.
+// Analysis is limited to the same 90 covered days and 20000 input operations.
+// With the same unavailable-calendar input, monetary outputs equal v1.
+message AnalysisContext {
+  string analysis_version = 1;
+  string window_from = 2;
+  string window_through = 3;
+}
+
+message OperationVersionReference {
+  string operation_id = 1;
+  uint64 version = 2;
+}
+
+enum RecurringDirection {
+  RECURRING_DIRECTION_UNSPECIFIED = 0;
+  RECURRING_DIRECTION_INFLOW = 1;
+  RECURRING_DIRECTION_OUTFLOW = 2;
+}
+
+enum RecurringWeekendShift {
+  RECURRING_WEEKEND_SHIFT_UNSPECIFIED = 0;
+  RECURRING_WEEKEND_SHIFT_NONE = 1;
+  RECURRING_WEEKEND_SHIFT_PREVIOUS = 2;
+  RECURRING_WEEKEND_SHIFT_NEXT = 3;
+}
+
+enum RecurringHypothesisStatus {
+  RECURRING_HYPOTHESIS_STATUS_UNSPECIFIED = 0;
+  RECURRING_HYPOTHESIS_STATUS_HYPOTHESIS = 1;
+}
+
+// A monthly hypothesis within AnalysisContext's window, stored as derived data
+// by snapshot/model/operation version. It never mutates caller-owned facts.
+message RecurringHypothesis {
+  // Opaque model-local key derived from snapshot/rule/version/source UUIDs;
+  // never embed raw party identifiers, payment purposes or amounts in IDs.
+  string pattern_id = 1;
+  string rule_id = 2;
+  RecurringDirection direction = 3;
+  // Unique scoped input references; party display resolves from these facts.
+  repeated OperationVersionReference historical_operations = 4;
+  // Exactly one anchor: day_of_month is 1..31, clamped to the month's last day.
+  oneof monthly_anchor {
+    uint32 day_of_month = 5;
+    google.protobuf.Empty month_end = 6;
+  }
+  RecurringWeekendShift weekend_shift = 7;
+  // Positive minor units. This expectation is not a known future obligation.
+  int64 expected_amount_minor = 8;
+  uint32 confirmations = 9;
+  uint32 expected_periods = 10;
+  string first_evidence_date = 11;
+  string last_evidence_date = 12;
+  string category_code = 13;
+  string rule_version = 14;
+  RecurringHypothesisStatus status = 15;
 }
 
 message ForecastComponent {

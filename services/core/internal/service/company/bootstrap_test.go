@@ -32,8 +32,9 @@ func (s *fakeStore) ReserveBootstrap(_ context.Context, r domain.BootstrapRecord
 	s.created = true
 	return r, true, nil
 }
-func (s *fakeStore) InsertCompany(_ context.Context, _ uuid.UUID) error           { return s.err }
-func (s *fakeStore) InsertAccount(_ context.Context, _ *ledger.BankAccount) error { return s.err }
+func (s *fakeStore) InsertCompany(_ context.Context, _ uuid.UUID) error                { return s.err }
+func (s *fakeStore) InsertAccount(_ context.Context, _ *ledger.BankAccount) error      { return s.err }
+func (s *fakeStore) SeedCategories(context.Context, []ledger.CategoryDefinition) error { return s.err }
 func (s *fakeStore) InsertProfile(_ context.Context, p domain.Profile) error {
 	s.inserts++
 	s.profile = p

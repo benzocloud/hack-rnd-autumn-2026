@@ -16,7 +16,7 @@ Scope/invariants/checklist: [plan](../plans/company-onboarding.md). Issue не �
 [Draft PR #41](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/41).
 Исходный checkout `prosteyshiyyy/goapi` не изменялся; отдельный worktree.
 Начальная база `fdee0ed`; main обновляется обычным merge перед каждым push.
-Последний включённый main `0f0ff73`, опубликованный API adapter head:
+Текущий merge включает main `0abae4f` (PR44 financial/demo, PR46 import UI); опубликованный API adapter head:
 `49938a6969471e4d2c34725c73b4cfe95d72a06d` (GitHub PR head API проверен).
 
 ## Состояние A0–A5
@@ -26,7 +26,7 @@ Scope/invariants/checklist: [plan](../plans/company-onboarding.md). Issue не �
 | A0 | На ревью владельца | Docs links/diff/fences, draft/remote SHA | Caveman/Ponytail без дефектов | Docs-only, runtime не требовался |
 | A1 | На ревью владельца | Полный Auth unit/real PG integration/race/shuffle/vet/build/lint | Два independent reviews `9463e40`, дефектов нет | Auth/Core gates `7f62b72` SUCCESS |
 | A2 | На ревью владельца | Полный Auth gate, real PG recovery/race, TLS/Buf/drift | Два reviews RPC/client и recovery; clock-skew fix проверен | Auth/Core CI49938a6 SUCCESS |
-| A3 | На ревью владельца | Full API check +41 OpenAPI responses; actual processes/PG/race PASS | Два reviews adapter/runtime закрыты; readiness/PATH fixes проверены | API/Auth/Core CI49938a6 SUCCESS; новый runtime CI ещё не запускался |
+| A3 | На ревью владельца | Actual processes/PG/race PASS; после нового main full API coverage FAIL83.14<85 | Два reviews adapter/runtime закрыты; readiness/PATH fixes проверены | API/Auth/Core CI49938a6 SUCCESS; новый runtime CI ещё не запускался |
 | A4 | Не начат | PR40/43 из main сохранены; onboarding UI ещё не проверен | Pending | Pending |
 | A5 | Не начат | Нет полного register→owner→account→reload browser E2E | Pending | Pending |
 
@@ -334,3 +334,45 @@ unit/race/build/vet/fmt/lint/generation/import/smoke, own statements90.33%,
 executable block lines90.91%. Runtime -race после readiness fix PASS9.64s,
 full API tag lint0issues. CI/Compose YAML parsed; новый GH job ещё должен пройти.
 A3 остаётся на ревью владельца, браузерный A4/A5 не завершён.
+
+
+## Merge свежего main0abae4f перед A3 push
+
+A3 runtime checkpoint dfa89d48ca26008e1ae3283b05b7e46ebe638514 сохранён локально;
+перед push fetch обнаружил main0abae4fbfe2f1ba97a4f54c07a305010f1002203.
+PR44/45/46 descriptions, comments/reviews/inline прочитаны; main включает
+financial/imports/category contracts/runtime, отдельный ML PR45 не включён.
+Один conflict CoreClients в API router разрешён как union: Imports/ImportSpool
+и все Ledger methods main сохранены вместе с нашим CreateCompanyBootstrap.
+Два независимых narrow reviews конфликтного объединения без дефектов. Main
+bootstrap seed categories сохранён; это не финансовые операции/остаток/coverage.
+Никакой дополнительной реализации imports/ML этим merge не делаем.
+
+На объединённом tree actual onboarding -race PASS13.69s, Core task check и
+полный real markedPG task integration -race PASS, миграции Core применены к
+своей disposable DB. Старый full API PASS90.33% относится к pre-merge49938a6
++runtime diff, не к этому merge. Literal API check.sh после merge FAIL:
+own statements83.14%, executable lines83.71%, required85%. Отдельный
+неизменённый archive origin/main0abae4f + тот же go test -race -coverpkg./...
+и coverage.py также FAIL82.48%/83.08%. Это воспроизведённая унаследованная
+main-регрессия; threshold/exclusions/check.sh не менялись для её сокрытия.
+Не выдавать текущий полный API gate/CI за green. Нужно meaningful test coverage
+в incoming API imports/ledger code либо согласованное исправление владельца;
+это не повод останавливать независимый A4/browser.
+
+Дополнительно incoming main имел fmt2files/lint3. В merge минимально сохранено
+поведение: alignment forecast_mapping, imports ledger_fixture_test, http.MethodPost
+в commit_error_test; directionName проверяется как string до присвоенияany
+без typeassert; exhaustive HistoryCoverage switch явно включает UNSPECIFIED,
+уже обработанный начальным guard. Финансовые контракты/семантика не менялись.
+Остальные независимые API gates проверяются отдельно, full gate остаётся FAIL.
+
+## Остановка и публикация по запросу владельца
+
+Владелец остановил разработку и отдельно разрешил публикацию законченной
+работы. A4/browser здесь больше не выполняются. После latest merge unit/race,
+vet/full tag lint0, Ruff check/format PASS. Из12 Python schema tests один FAIL:
+CalculationContractTests.test_copied_rest_definitions_match_current_openapi,
+Transaction definition расходится с canonical OpenAPI. Полный gate не green;
+coverage85 threshold и schema test не обходились. Дополнительный smoke/conformance
+после остановки отклонён auto-review; повтор не выполнялся.

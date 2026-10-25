@@ -350,8 +350,11 @@ type ImportPreview struct {
 	RecordKinds                  []ImportRecordKind     `protobuf:"varint,20,rep,packed,name=record_kinds,json=recordKinds,proto3,enum=core.v1.ImportRecordKind" json:"record_kinds,omitempty"`
 	TransactionSource            *FactualSourceBinding  `protobuf:"bytes,21,opt,name=transaction_source,json=transactionSource,proto3" json:"transaction_source,omitempty"`
 	WouldBindTransactionSource   *FactualSourceBinding  `protobuf:"bytes,22,opt,name=would_bind_transaction_source,json=wouldBindTransactionSource,proto3" json:"would_bind_transaction_source,omitempty"`
-	unknownFields                protoimpl.UnknownFields
-	sizeCache                    protoimpl.SizeCache
+	// Proposed proof at base_data_version, not an applied certification. Fixture
+	// bounds/scope/hash come from the server manifest, never from upload metadata.
+	HistoryCoverage *HistoryCoverage `protobuf:"bytes,23,opt,name=history_coverage,json=historyCoverage,proto3" json:"history_coverage,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ImportPreview) Reset() {
@@ -538,6 +541,13 @@ func (x *ImportPreview) GetWouldBindTransactionSource() *FactualSourceBinding {
 	return nil
 }
 
+func (x *ImportPreview) GetHistoryCoverage() *HistoryCoverage {
+	if x != nil {
+		return x.HistoryCoverage
+	}
+	return nil
+}
+
 type Import struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -554,8 +564,12 @@ type Import struct {
 	AppliedDataVersion *int64                 `protobuf:"varint,12,opt,name=applied_data_version,json=appliedDataVersion,proto3,oneof" json:"applied_data_version,omitempty"`
 	Error              *OperationError        `protobuf:"bytes,13,opt,name=error,proto3" json:"error,omitempty"`
 	RecordKinds        []ImportRecordKind     `protobuf:"varint,14,rep,packed,name=record_kinds,json=recordKinds,proto3,enum=core.v1.ImportRecordKind" json:"record_kinds,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Applied proof only; absent before successful atomic commit.
+	HistoryCoverage *HistoryCoverage `protobuf:"bytes,15,opt,name=history_coverage,json=historyCoverage,proto3" json:"history_coverage,omitempty"`
+	// Uncommitted preview deadline. Raw cleanup does not remove metadata/receipts.
+	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Import) Reset() {
@@ -682,6 +696,20 @@ func (x *Import) GetError() *OperationError {
 func (x *Import) GetRecordKinds() []ImportRecordKind {
 	if x != nil {
 		return x.RecordKinds
+	}
+	return nil
+}
+
+func (x *Import) GetHistoryCoverage() *HistoryCoverage {
+	if x != nil {
+		return x.HistoryCoverage
+	}
+	return nil
+}
+
+func (x *Import) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
 	}
 	return nil
 }
@@ -1472,7 +1500,7 @@ const file_core_v1_imports_proto_rawDesc = "" +
 	"\x12BalanceObservation\x12\x12\n" +
 	"\x04date\x18\x01 \x01(\tR\x04date\x12(\n" +
 	"\abalance\x18\x02 \x01(\v2\x0e.core.v1.MoneyR\abalance\x12.\n" +
-	"\x06source\x18\x03 \x01(\x0e2\x16.core.v1.BalanceSourceR\x06source\"\xb8\b\n" +
+	"\x06source\x18\x03 \x01(\x0e2\x16.core.v1.BalanceSourceR\x06source\"\xfd\b\n" +
 	"\rImportPreview\x12*\n" +
 	"\x11source_company_id\x18\x01 \x01(\tR\x0fsourceCompanyId\x12#\n" +
 	"\rsource_system\x18\x02 \x01(\tR\fsourceSystem\x12\x1d\n" +
@@ -1499,7 +1527,8 @@ const file_core_v1_imports_proto_rawDesc = "" +
 	"\x0fpreview_version\x18\x13 \x01(\x03R\x0epreviewVersion\x12<\n" +
 	"\frecord_kinds\x18\x14 \x03(\x0e2\x19.core.v1.ImportRecordKindR\vrecordKinds\x12L\n" +
 	"\x12transaction_source\x18\x15 \x01(\v2\x1d.core.v1.FactualSourceBindingR\x11transactionSource\x12`\n" +
-	"\x1dwould_bind_transaction_source\x18\x16 \x01(\v2\x1d.core.v1.FactualSourceBindingR\x1awouldBindTransactionSource\"\xa3\x05\n" +
+	"\x1dwould_bind_transaction_source\x18\x16 \x01(\v2\x1d.core.v1.FactualSourceBindingR\x1awouldBindTransactionSource\x12C\n" +
+	"\x10history_coverage\x18\x17 \x01(\v2\x18.core.v1.HistoryCoverageR\x0fhistoryCoverage\"\xa3\x06\n" +
 	"\x06Import\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -1519,7 +1548,10 @@ const file_core_v1_imports_proto_rawDesc = "" +
 	"\apreview\x18\v \x01(\v2\x16.core.v1.ImportPreviewR\apreview\x125\n" +
 	"\x14applied_data_version\x18\f \x01(\x03H\x01R\x12appliedDataVersion\x88\x01\x01\x12-\n" +
 	"\x05error\x18\r \x01(\v2\x17.core.v1.OperationErrorR\x05error\x12<\n" +
-	"\frecord_kinds\x18\x0e \x03(\x0e2\x19.core.v1.ImportRecordKindR\vrecordKindsB\x10\n" +
+	"\frecord_kinds\x18\x0e \x03(\x0e2\x19.core.v1.ImportRecordKindR\vrecordKinds\x12C\n" +
+	"\x10history_coverage\x18\x0f \x01(\v2\x18.core.v1.HistoryCoverageR\x0fhistoryCoverage\x129\n" +
+	"\n" +
+	"expires_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAtB\x10\n" +
 	"\x0e_connection_idB\x17\n" +
 	"\x15_applied_data_version\"s\n" +
 	"\x0eImportAccepted\x12\x0e\n" +
@@ -1637,14 +1669,15 @@ var file_core_v1_imports_proto_goTypes = []any{
 	(*Money)(nil),                    // 19: core.v1.Money
 	(BalanceSource)(0),               // 20: core.v1.BalanceSource
 	(*FactualSourceBinding)(nil),     // 21: core.v1.FactualSourceBinding
-	(RecordSourceKind)(0),            // 22: core.v1.RecordSourceKind
-	(*timestamppb.Timestamp)(nil),    // 23: google.protobuf.Timestamp
-	(*OperationError)(nil),           // 24: core.v1.OperationError
-	(*v1.BrowserContext)(nil),        // 25: auth.v1.BrowserContext
-	(*AccountScope)(nil),             // 26: core.v1.AccountScope
-	(*PageRequest)(nil),              // 27: core.v1.PageRequest
-	(*PageResponse)(nil),             // 28: core.v1.PageResponse
-	(*v1.WriteContext)(nil),          // 29: auth.v1.WriteContext
+	(*HistoryCoverage)(nil),          // 22: core.v1.HistoryCoverage
+	(RecordSourceKind)(0),            // 23: core.v1.RecordSourceKind
+	(*timestamppb.Timestamp)(nil),    // 24: google.protobuf.Timestamp
+	(*OperationError)(nil),           // 25: core.v1.OperationError
+	(*v1.BrowserContext)(nil),        // 26: auth.v1.BrowserContext
+	(*AccountScope)(nil),             // 27: core.v1.AccountScope
+	(*PageRequest)(nil),              // 28: core.v1.PageRequest
+	(*PageResponse)(nil),             // 29: core.v1.PageResponse
+	(*v1.WriteContext)(nil),          // 30: auth.v1.WriteContext
 }
 var file_core_v1_imports_proto_depIdxs = []int32{
 	2,  // 0: core.v1.ImportIssue.severity:type_name -> core.v1.IssueSeverity
@@ -1655,49 +1688,52 @@ var file_core_v1_imports_proto_depIdxs = []int32{
 	1,  // 5: core.v1.ImportPreview.record_kinds:type_name -> core.v1.ImportRecordKind
 	21, // 6: core.v1.ImportPreview.transaction_source:type_name -> core.v1.FactualSourceBinding
 	21, // 7: core.v1.ImportPreview.would_bind_transaction_source:type_name -> core.v1.FactualSourceBinding
-	22, // 8: core.v1.Import.source_kind:type_name -> core.v1.RecordSourceKind
-	0,  // 9: core.v1.Import.status:type_name -> core.v1.ImportStatus
-	23, // 10: core.v1.Import.created_at:type_name -> google.protobuf.Timestamp
-	23, // 11: core.v1.Import.updated_at:type_name -> google.protobuf.Timestamp
-	5,  // 12: core.v1.Import.preview:type_name -> core.v1.ImportPreview
-	24, // 13: core.v1.Import.error:type_name -> core.v1.OperationError
-	1,  // 14: core.v1.Import.record_kinds:type_name -> core.v1.ImportRecordKind
-	0,  // 15: core.v1.ImportAccepted.status:type_name -> core.v1.ImportStatus
-	25, // 16: core.v1.ListImportsRequest.context:type_name -> auth.v1.BrowserContext
-	26, // 17: core.v1.ListImportsRequest.scope:type_name -> core.v1.AccountScope
-	27, // 18: core.v1.ListImportsRequest.page:type_name -> core.v1.PageRequest
-	6,  // 19: core.v1.ListImportsResponse.items:type_name -> core.v1.Import
-	28, // 20: core.v1.ListImportsResponse.pagination:type_name -> core.v1.PageResponse
-	11, // 21: core.v1.UploadImportRequest.metadata:type_name -> core.v1.UploadImportMetadata
-	29, // 22: core.v1.UploadImportMetadata.context:type_name -> auth.v1.WriteContext
-	26, // 23: core.v1.UploadImportMetadata.scope:type_name -> core.v1.AccountScope
-	7,  // 24: core.v1.UploadImportResponse.accepted:type_name -> core.v1.ImportAccepted
-	25, // 25: core.v1.GetImportRequest.context:type_name -> auth.v1.BrowserContext
-	26, // 26: core.v1.GetImportRequest.scope:type_name -> core.v1.AccountScope
-	6,  // 27: core.v1.GetImportResponse.import:type_name -> core.v1.Import
-	25, // 28: core.v1.ListImportIssuesRequest.context:type_name -> auth.v1.BrowserContext
-	26, // 29: core.v1.ListImportIssuesRequest.scope:type_name -> core.v1.AccountScope
-	27, // 30: core.v1.ListImportIssuesRequest.page:type_name -> core.v1.PageRequest
-	3,  // 31: core.v1.ListImportIssuesResponse.items:type_name -> core.v1.ImportIssue
-	28, // 32: core.v1.ListImportIssuesResponse.pagination:type_name -> core.v1.PageResponse
-	29, // 33: core.v1.CommitImportRequest.context:type_name -> auth.v1.WriteContext
-	26, // 34: core.v1.CommitImportRequest.scope:type_name -> core.v1.AccountScope
-	6,  // 35: core.v1.CommitImportResponse.import:type_name -> core.v1.Import
-	8,  // 36: core.v1.ImportsService.ListImports:input_type -> core.v1.ListImportsRequest
-	10, // 37: core.v1.ImportsService.UploadImport:input_type -> core.v1.UploadImportRequest
-	13, // 38: core.v1.ImportsService.GetImport:input_type -> core.v1.GetImportRequest
-	15, // 39: core.v1.ImportsService.ListImportIssues:input_type -> core.v1.ListImportIssuesRequest
-	17, // 40: core.v1.ImportsService.CommitImport:input_type -> core.v1.CommitImportRequest
-	9,  // 41: core.v1.ImportsService.ListImports:output_type -> core.v1.ListImportsResponse
-	12, // 42: core.v1.ImportsService.UploadImport:output_type -> core.v1.UploadImportResponse
-	14, // 43: core.v1.ImportsService.GetImport:output_type -> core.v1.GetImportResponse
-	16, // 44: core.v1.ImportsService.ListImportIssues:output_type -> core.v1.ListImportIssuesResponse
-	18, // 45: core.v1.ImportsService.CommitImport:output_type -> core.v1.CommitImportResponse
-	41, // [41:46] is the sub-list for method output_type
-	36, // [36:41] is the sub-list for method input_type
-	36, // [36:36] is the sub-list for extension type_name
-	36, // [36:36] is the sub-list for extension extendee
-	0,  // [0:36] is the sub-list for field type_name
+	22, // 8: core.v1.ImportPreview.history_coverage:type_name -> core.v1.HistoryCoverage
+	23, // 9: core.v1.Import.source_kind:type_name -> core.v1.RecordSourceKind
+	0,  // 10: core.v1.Import.status:type_name -> core.v1.ImportStatus
+	24, // 11: core.v1.Import.created_at:type_name -> google.protobuf.Timestamp
+	24, // 12: core.v1.Import.updated_at:type_name -> google.protobuf.Timestamp
+	5,  // 13: core.v1.Import.preview:type_name -> core.v1.ImportPreview
+	25, // 14: core.v1.Import.error:type_name -> core.v1.OperationError
+	1,  // 15: core.v1.Import.record_kinds:type_name -> core.v1.ImportRecordKind
+	22, // 16: core.v1.Import.history_coverage:type_name -> core.v1.HistoryCoverage
+	24, // 17: core.v1.Import.expires_at:type_name -> google.protobuf.Timestamp
+	0,  // 18: core.v1.ImportAccepted.status:type_name -> core.v1.ImportStatus
+	26, // 19: core.v1.ListImportsRequest.context:type_name -> auth.v1.BrowserContext
+	27, // 20: core.v1.ListImportsRequest.scope:type_name -> core.v1.AccountScope
+	28, // 21: core.v1.ListImportsRequest.page:type_name -> core.v1.PageRequest
+	6,  // 22: core.v1.ListImportsResponse.items:type_name -> core.v1.Import
+	29, // 23: core.v1.ListImportsResponse.pagination:type_name -> core.v1.PageResponse
+	11, // 24: core.v1.UploadImportRequest.metadata:type_name -> core.v1.UploadImportMetadata
+	30, // 25: core.v1.UploadImportMetadata.context:type_name -> auth.v1.WriteContext
+	27, // 26: core.v1.UploadImportMetadata.scope:type_name -> core.v1.AccountScope
+	7,  // 27: core.v1.UploadImportResponse.accepted:type_name -> core.v1.ImportAccepted
+	26, // 28: core.v1.GetImportRequest.context:type_name -> auth.v1.BrowserContext
+	27, // 29: core.v1.GetImportRequest.scope:type_name -> core.v1.AccountScope
+	6,  // 30: core.v1.GetImportResponse.import:type_name -> core.v1.Import
+	26, // 31: core.v1.ListImportIssuesRequest.context:type_name -> auth.v1.BrowserContext
+	27, // 32: core.v1.ListImportIssuesRequest.scope:type_name -> core.v1.AccountScope
+	28, // 33: core.v1.ListImportIssuesRequest.page:type_name -> core.v1.PageRequest
+	3,  // 34: core.v1.ListImportIssuesResponse.items:type_name -> core.v1.ImportIssue
+	29, // 35: core.v1.ListImportIssuesResponse.pagination:type_name -> core.v1.PageResponse
+	30, // 36: core.v1.CommitImportRequest.context:type_name -> auth.v1.WriteContext
+	27, // 37: core.v1.CommitImportRequest.scope:type_name -> core.v1.AccountScope
+	6,  // 38: core.v1.CommitImportResponse.import:type_name -> core.v1.Import
+	8,  // 39: core.v1.ImportsService.ListImports:input_type -> core.v1.ListImportsRequest
+	10, // 40: core.v1.ImportsService.UploadImport:input_type -> core.v1.UploadImportRequest
+	13, // 41: core.v1.ImportsService.GetImport:input_type -> core.v1.GetImportRequest
+	15, // 42: core.v1.ImportsService.ListImportIssues:input_type -> core.v1.ListImportIssuesRequest
+	17, // 43: core.v1.ImportsService.CommitImport:input_type -> core.v1.CommitImportRequest
+	9,  // 44: core.v1.ImportsService.ListImports:output_type -> core.v1.ListImportsResponse
+	12, // 45: core.v1.ImportsService.UploadImport:output_type -> core.v1.UploadImportResponse
+	14, // 46: core.v1.ImportsService.GetImport:output_type -> core.v1.GetImportResponse
+	16, // 47: core.v1.ImportsService.ListImportIssues:output_type -> core.v1.ListImportIssuesResponse
+	18, // 48: core.v1.ImportsService.CommitImport:output_type -> core.v1.CommitImportResponse
+	44, // [44:49] is the sub-list for method output_type
+	39, // [39:44] is the sub-list for method input_type
+	39, // [39:39] is the sub-list for extension type_name
+	39, // [39:39] is the sub-list for extension extendee
+	0,  // [0:39] is the sub-list for field type_name
 }
 
 func init() { file_core_v1_imports_proto_init() }

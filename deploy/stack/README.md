@@ -5,6 +5,38 @@ Email confirmation alone uses ADR-028 demo mode for exact allowlisted `.test`
 accounts. Finance is real computation over explicitly synthetic operator data.
 Invitations, public company onboarding, imports and what-if are not implemented.
 
+## D2.2 upload candidate (not deployed)
+
+The financial-demo branch adds upload/list/preview/issues over real Core storage.
+Applying a preview remains disabled until D2.3; uploading never changes Ledger,
+source binding or account revision. This section describes a candidate, not the
+current public server state.
+
+Before an authorized rollout, apply Core migration 00007 separately. Install the
+updated Compose/nginx templates and add `API_IMPORT_SPOOL_DIR=/var/lib/saldo/import-spool`
+to the existing private `api.env`; do not rerun initial provisioning over existing
+credentials. The dedicated API volume starts with owner 65532 and mode 0700 from
+the image. Keep one API process per spool directory. It reserves at most two
+100 MiB uploads, creates 0600 files and removes orphans on startup. Do not point
+it at the 16 MiB `/tmp` tmpfs or a shared/public directory.
+
+Core accepts at most 100 MiB/300000 CSV rows; nginx permits a 101 MiB multipart
+envelope. Each logical CSV record is bounded to 64 KiB, including multiline
+quoted text. A preview with more than 1000 EOD dates is explicitly blocked and
+its displayed balance list is incomplete; all staged rows remain private.
+These candidate limits need review before broader historical datasets.
+Nginx streams directly to API. API/Core both verify size and SHA256.
+Core keeps chunks/jobs in PostgreSQL before 202, with 200 MiB/account, two
+unfinished jobs/account and 1 GiB global raw reservations. These are application
+quotas, not a filesystem/WAL limit: provision and monitor PostgreSQL disk space
+before enabling uploads. Incomplete receiving leases expire after five minutes;
+uncommitted previews expire after seven days. Raw bytes are removed 24 hours
+after the first terminal state; metadata/replay and diagnostics remain durable.
+
+The existing deployment workflow does not provision this new mount/env/nginx
+configuration automatically. Live installation and deployment need separate
+authorization and a restart/persistence smoke test.
+
 ## Server layout
 
 - `/opt/saldo-stack`: root-only configuration, credentials, private CA, service

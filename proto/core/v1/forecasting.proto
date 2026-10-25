@@ -6,6 +6,8 @@ import "core/v1/common.proto";
 import "core/v1/errors.proto";
 import "core/v1/imports.proto";
 import "core/v1/ledger.proto";
+import "core/v1/payments.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1;corev1";
@@ -29,6 +31,23 @@ enum ForecastStatus {
   FORECAST_STATUS_SUCCEEDED = 3;
   FORECAST_STATUS_FAILED = 4;
 }
+// Request selection, not an assertion that a usable calendar is available.
+// UNSPECIFIED retains legacy AVAILABLE behavior; unknown values are rejected.
+enum ForecastCalendarMode {
+  FORECAST_CALENDAR_MODE_UNSPECIFIED = 0;
+  FORECAST_CALENDAR_MODE_AVAILABLE = 1;
+  FORECAST_CALENDAR_MODE_SYNTHETIC_SCENARIO = 2;
+}
+
+// Core-owned identity and real recording time for a historical demonstration.
+// scenario_business_date equals cutoff; it is not a certified knowledge date.
+// Present only for SYNTHETIC_SCENARIO and never accepted from the browser.
+message SyntheticScenarioContext {
+  string scenario_reference = 1;
+  google.protobuf.Timestamp recorded_at = 2;
+  string scenario_business_date = 3;
+}
+
 message ForecastModelContext {
   string id = 1;
   string model_name = 2;
@@ -54,6 +73,9 @@ message ForecastInput {
   // Exactly "below_zero_eod"; unknown overdraft never silently changes it.
   string risk_definition = 12;
   ForecastModelContext model_context = 13;
+  HistoryCoverage history_coverage = 14;
+  ForecastCalendarMode calendar_mode = 15;
+  SyntheticScenarioContext scenario_context = 16;
 }
 message ForecastReadiness {
   // ready / limited / insufficient; unknown coverage cannot be ready.
@@ -146,6 +168,63 @@ message ForecastResult {
   repeated Recommendation recommendations = 5;
   repeated string assumptions = 6;
   repeated EffectiveOccurrence effective_occurrences = 7;
+  // Absent on legacy/not-analyzed results. Derived data never changes Ledger.
+  ForecastAnalysis analysis = 8;
+}
+
+message ClassifiedOperationAnalysis {
+  string transaction_id = 1;
+  int64 version = 2;
+  string category_code = 3;
+  string category_source = 4;
+  string category_rule_id = 5;
+  optional string category_id = 6;
+}
+
+enum RecurringWeekendShift {
+  RECURRING_WEEKEND_SHIFT_UNSPECIFIED = 0;
+  RECURRING_WEEKEND_SHIFT_NONE = 1;
+  RECURRING_WEEKEND_SHIFT_PREVIOUS = 2;
+  RECURRING_WEEKEND_SHIFT_NEXT = 3;
+}
+
+enum RecurringHypothesisStatus {
+  RECURRING_HYPOTHESIS_STATUS_UNSPECIFIED = 0;
+  RECURRING_HYPOTHESIS_STATUS_HYPOTHESIS = 1;
+}
+
+// Core-owned projection of model-local monthly evidence. References resolve in
+// the frozen company/account view, never by matching payment text or category.
+message RecurringHypothesis {
+  string pattern_id = 1;
+  string rule_id = 2;
+  Direction direction = 3;
+  repeated HistoricalOperationRef historical_operations = 4;
+  oneof monthly_anchor {
+    uint32 day_of_month = 5;
+    google.protobuf.Empty month_end = 6;
+  }
+  RecurringWeekendShift weekend_shift = 7;
+  int64 expected_amount_minor = 8;
+  uint32 confirmations = 9;
+  uint32 expected_periods = 10;
+  string first_evidence_date = 11;
+  string last_evidence_date = 12;
+  string category_code = 13;
+  string rule_version = 14;
+  RecurringHypothesisStatus status = 15;
+}
+
+// Analysis of exactly the 90-day frozen input. Operation IDs/versions and manual
+// overrides are validated against that view; category UUIDs belong to Core.
+// At most 1000 hypotheses and 20000 evidence refs, no silent truncation. Missing
+// analysis is not an empty successful analysis; hypotheses are not obligations.
+message ForecastAnalysis {
+  string analysis_version = 1;
+  string window_from = 2;
+  string window_through = 3;
+  repeated ClassifiedOperationAnalysis classified_operations = 4;
+  repeated RecurringHypothesis recurring_hypotheses = 5;
 }
 message ForecastPending {
   // Only QUEUED or RUNNING. Completed/result/error map to REST null.
@@ -185,6 +264,8 @@ message ForecastSummary {
   google.protobuf.Timestamp created_at = 6;
   bool is_stale = 7;
   optional string scenario_id = 8;
+  ForecastCalendarMode calendar_mode = 9;
+  SyntheticScenarioContext scenario_context = 10;
 }
 message ForecastAccepted {
   string id = 1;
@@ -199,6 +280,9 @@ message CreateForecastRequest {
   string cutoff_date = 4;
   // REST 30..90; unsupported model horizon fails explicitly, never truncates.
   uint32 horizon_days = 5;
+  // Server must authorize the fixture profile for synthetic mode. Mode and
+  // frozen server context participate in idempotency/reuse; no implicit upgrade.
+  ForecastCalendarMode calendar_mode = 6;
 }
 message CreateForecastResponse {
   ForecastAccepted accepted = 1;
