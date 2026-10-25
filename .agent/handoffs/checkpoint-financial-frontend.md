@@ -79,3 +79,14 @@ Runtime blocker: curl https://saldo.brokebyte.me/api/v1/auth/csrf => HTTP 503; h
 4. Runtime categories/regularity analysis не подтверждён; frontend не синтезирует результаты. Probability остаётся unavailable/null, численное качество не заявлено.
 
 Следующий точный шаг: проверить финальный source SHA/remote/CI #49; предоставить агенту C этот draft вместе с pinned #48 для реальной приёмки в отдельном integration checkout. Не менять чужую ветку и не включать backend commits в #49. Этапы 1–4 На ревью; независимые frontend gates/reviews выполнены, реальная часть этапа 5 заблокирована.
+
+## Синхронизация и публикационный receipt, 11:09 МСК
+
+Branch: globalarray/feat/financial_user_journey. PR: https://github.com/benzocloud/hack-rnd-autumn-2026/pull/49 (draft).
+Initial base: 6c9edd969b3a694bccabaf6980b86531e2722490; synchronized main: 71f2a86ffbcf218d7fff517830b7aa41f0a97c95.
+Local source SHA после обычного merge main: aaaa6a91e16eef00c8ae98b163283bef0e72e0d5. Последний проверенный remote перед финальным push: dfa9f505197457366b71db82be1e8181eb5d7e1e. Финальный metadata commit следует за source SHA; его local/remote receipt и CI фиксируются в описании PR после push (без self-reference в Git tree).
+Main merge принёс только verificationSession/authSlice/members_service + tests; эти изменения не принадлежат нашему diff относительно main. Чужие ветки/PR descriptions не менялись.
+После main sync из frontend/: npm test — 42/42 passed; npm run typecheck — passed; npm run lint — passed, 0 warnings; npm run build — passed. Состав diff проверен: только financial frontend, unit tests, fixture screenshots, свои plan/handoff. Forbidden services/proto/docs/api/deploy/financial E2E paths не менялись.
+Последний backend dependency: #48 1f10b6ee (полный SHA см. опубликованный PR), handlers/DTO без отличий от проверенного ac90fa3. Без runtime проверки source совместимость не означает real acceptance.
+Последние независимые review fixes: caveman — новых подтверждённых regressions нет; ponytail — Lean already. Ship. Все советы исправлены; owner approval отсутствует.
+К 11:15 опубликован цельный frontend срез; real backend остаётся blocker. Следующий шаг остаётся реальная приёмка агентом C с #48 и работающим изолированным runtime. Merge/ready/deployment не выполнялись.

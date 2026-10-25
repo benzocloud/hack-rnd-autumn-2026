@@ -5,7 +5,7 @@ API ответы перехвачены CDP Fetch и заменены фикси
 Банковских/личных данных, cookies и tokens в изображениях нет. Каждое изображение
 содержит маркировку FIXTURE UI SMOKE. Это проверка UI и payload, не Go API/Core/ML.
 
-Проверено на исходном срезе 7d6d749 плюс review fixes до финального push:
+Проверено на финансовом source срезе dfa9f505197457366b71db82be1e8181eb5d7e1e:
 - desktop: частичный платёж, перенос даты PATCH без amount/direction;
 - активная/снятая match history; cancel remaining и запрет кнопок unmatch после cancel;
 - ручная сумма 9007199254740993 копейки: после fixture HTTP 503 сохранены поля,
