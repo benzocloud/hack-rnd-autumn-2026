@@ -11,29 +11,26 @@ Merge, ready-for-review, deployment и production provisioning запрещен�
 Scope/invariants/checklist: [plan](../plans/company-onboarding.md). Issue не назначен.
 
 Ветка: `prosteyshiyyy/feat/company_onboarding`, nickname подтверждён GitHub SSH/API.
-Владелец ветки — текущая Codex-сессия по поручению Prosteyshiyyy; takeover нет.
+Владелец ветки — текущая сессия по поручению Prosteyshiyyy; takeover нет.
 Продолжать ту же ветку, не cherry-pick и не создавать второй PR/параллельного owner.
 [Draft PR #41](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/41).
-Исходный checkout `prosteyshiyyy/goapi` не изменялся; отдельный worktree.
-Начальная база `fdee0ed`; main обновляется обычным merge перед каждым push.
-Последний включённый main `0f0ff73`, опубликованный recovery head:
-`b2f882b5d28e637cb35215246ac83bf1ab7ea7f5` (remote API ref проверен).
+Отдельный worktree; исходный checkout не менять. Main — обычный merge перед push.
+Последний включённый main `0abae4f` (import preview). Предыдущий published head
+до этого checkpoint: `bb841b3`.
 
 ## Состояние A0–A5
 
 | Этап | Статус | Tests | Review | CI |
 | --- | --- | --- | --- | --- |
-| A0 | На ревью владельца | Docs links/diff/fences, draft/remote SHA | Caveman/Ponytail без дефектов | Docs-only, runtime не требовался |
-| A1 | На ревью владельца | Полный Auth unit/real PG integration/race/shuffle/vet/build/lint | Два independent reviews `9463e40`, дефектов нет | Auth/Core gates `7f62b72` SUCCESS |
-| A2 | На ревью владельца: recovery готов к push | Полный Auth gate, real PG recovery/race, TLS/Buf/drift | Два reviews RPC/client и recovery; clock-skew fix проверен | Новый recovery SHA требует CI |
-| A3 | В работе: живая цепочка включает отказы | Binaries HTTPS/mTLS/Postgres: owner, empty account, replay, CSRF 403, foreign user and foreign key, wrong peer, timeout 503, lost bootstrap reply, revoked membership, Auth restart, strict HMAC | Adapter reviews stand; this run is not reviewed | Шаг API CI с `-tags=onboarding`; новый SHA ещё не опубликован |
-| A4 | Не начат | PR40/43 из main сохранены; onboarding UI ещё не проверен | Pending | Pending |
-| A5 | Не начат | Нет полного register→owner→account→reload browser E2E | Pending | Pending |
+| A0 | На ревью владельца | Docs/draft PR | Без дефектов | Docs-only |
+| A1 | На ревью владельца | Auth unit + real PG | Без дефектов | Исторический SUCCESS на `7f62b72` |
+| A2 | На ревью владельца | Auth gate + recovery | Без дефектов после clock-skew | Новый SHA после push |
+| A3 | На ревью владельца | Live HTTPS/mTLS/PG chain PASS (повтор 2026-10-25) | Adapter + review-fix COMPLETED skip | Шаг `-tags=onboarding` в api-ci |
+| A4 | На ревью: UI/gates; браузер open | Frontend 32 tests, typecheck/lint/build; create-key unit | Caveman/Ponytail | После push |
+| A5 | В работе | API register→owner→account+failures PASS; browser UI нет | Два reviews; red/yellow fixes landed | Читать CI после push |
 
-HTTP create adapter реализован в текущем diff. Durable worker опубликован;
-Core в service integration пока boundary fixture, полный Core/API/browser E2E
-остаётся A3/A5 и ещё не объявляется пройденным.
-Продукт/импорт/ML/MVP готовыми не объявлять.
+Продукт/импорт/ML/MVP готовыми не объявлять. Browser UI с `developerMode!=mock`
+против этой ветки ещё не выполнен — единственный крупный остаток приёмки.
 
 ## Что реализовано и чем подтверждено
 
@@ -186,12 +183,24 @@ provision.py отказывается перезаписывать сущест�
 
 ## Следующие действия
 
-1. A3 живая цепочка прогнана локально и подключена отдельным шагом API CI: `cd services/api && GOTOOLCHAIN=go1.27.3 go test -tags=onboarding -count=1 -timeout=20m -run '^TestRealCompanyOnboardingChain$' ./integration`. Отдельные бинарники Auth/Core/API, HTTPS и mTLS, disposable Postgres с marker. Register, HMAC кода, login, owner, пустой счёт, replay, конфликт ключа, CSRF 403, чужой пользователь и чужой ключ, чужой peer, таймаут 503, потерянный ответ bootstrap с восстановлением одной компании, удалённое membership не восстанавливается повтором, чтение после перезапуска Auth.
-2. A4: ключ создания компании сохраняется до подтверждённого ответа. Если sessionStorage недоступен, тот же ключ живёт в памяти страницы до успеха. `node --import ./tests/register.mjs --test tests/company-create-key.test.mjs` из frontend/. Браузер с выключенными financial mocks ещё не прогнан; его очередь после остальных проверок.
-3. Дальше: браузер A4/A5 в самом конце, два ревью и проверка CI нового SHA. Не принимать этапы за владельца. Merge, ready-for-review и deployment по-прежнему запрещены.
+1. После push этого checkpoint проверить CI на новом SHA (Auth/API/Core/frontend
+   path filters). Queued/in-progress ≠ passing.
+2. Browser A4/A5: поднять candidate frontend с `developerMode=dev` (не mock) против
+   локального HTTPS API/Auth/Core из onboarding harness либо после разрешённого
+   deploy; пройти register→verify→login→create→settings→reload→logout→login.
+   Не использовать frontend-mock workflow.
+3. По желанию владельца — `/agent-review` на финальный SHA. Merge/ready-for-review/
+   deployment по-прежнему запрещены.
 
-Known blockers продукта не подтверждены; remaining work выше не выполнен.
-Не создавать heartbeat/resume jobs; при явном takeover прекратить изменения/push.
+### Review-fix checkpoint (поверх `bb841b3`)
+
+Caveman: COMPLETED Auth replay больше не вызывает `CreateCompanyBootstrap`
+(Core outage не ломает 201); Begin при `23505` перечитывает keyed command;
+`AuthorizeCompanyBootstrap` для COMPLETED не отказывает disabled initiator.
+Ponytail: замечания YAGNI/shrink не применялись — saga/recovery оправданы.
+Проверено локально: Auth `go test -race ./...` 170; API company + full http
+handler race; `TestRealCompanyOnboardingChain` PASS; frontend test/typecheck/
+lint/build; golangci Auth clean, companies.go nestif снят helper'ом.
 
 
 ## A2 recovery checkpoint — проверенный diff поверх382fed6

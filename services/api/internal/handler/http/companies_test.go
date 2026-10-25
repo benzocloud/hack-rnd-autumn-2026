@@ -97,10 +97,15 @@ func TestCompanyCreationSequenceUsesSavedSpecAndWaitsForOwner(t *testing.T) {
 	if body["id"] != companyID || body["default_account_id"] != accountID || body["name"] != "Кофейня" {
 		t.Fatal(body)
 	}
-	// The same completed Auth mapping follows the canonical chain again.
+	// Completed Auth mapping skips Core bootstrap so an Auth-only replay stays 201.
+	f.events = nil
 	f.prepared.State = authv1.CompanyCreationState_COMPANY_CREATION_STATE_COMPLETED
+	f.bootstrapErr = status.Error(codes.Unavailable, "PRIVATE_DIAGNOSTIC")
 	if w := financialRequest(f.companyHandler(), "POST", "/api/v1/companies", companyBody); w.Code != 201 {
 		t.Fatal(w.Code, w.Body.String())
+	}
+	if !reflect.DeepEqual(f.events, []string{"begin", "read"}) {
+		t.Fatal(f.events)
 	}
 }
 

@@ -315,4 +315,20 @@ func TestAuthorizeBootstrapQuarantinesDisabledButNotForeignInput(t *testing.T) {
 	if f.store.creations[cmd.ID].State != domain.CreationQuarantined {
 		t.Fatal("disabled command not durably quarantined")
 	}
+
+	f2, input2 := creationFixture(t)
+	cmd2, err := f2.service.BeginCompanyCreation(t.Context(), input2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f2.service.core = &fakeCreationCore{receipt: receiptFor(cmd2)}
+	if _, err := f2.service.CompleteCompanyCreation(t.Context(), CompleteCompanyCreationInput{Context: f2.write, CommandID: cmd2.ID}); err != nil {
+		t.Fatal(err)
+	}
+	disabled := f2.store.users[f2.user.ID]
+	disabled.State = "disabled"
+	f2.store.users[disabled.ID] = disabled
+	if got, err := f2.service.AuthorizeCompanyBootstrap(t.Context(), AuthorizeCompanyBootstrapInput{CommandID: cmd2.ID, CompanyID: cmd2.CompanyID, RequestSHA256: cmd2.RequestSHA256}); err != nil || got.State != domain.CreationCompleted {
+		t.Fatal(got, err)
+	}
 }
