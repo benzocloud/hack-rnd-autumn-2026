@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -63,5 +64,76 @@ func TestManualHTTPStrictBodyAndDuplicateError(t *testing.T) {
 	w := financialRequest(f.handler(), http.MethodPost, financialRoot+"/transactions", manualHTTPBody)
 	if w.Code != 409 || !strings.Contains(w.Body.String(), "TRANSACTION_DUPLICATE_SUSPECTED") || strings.Contains(w.Body.String(), "private") {
 		t.Fatal(w.Code, w.Body.String())
+	}
+}
+
+func TestManualHTTPRejectsMalformedMoneyAndOptionalReferencesBeforeCore(t *testing.T) {
+	for _, test := range []struct {
+		name, old, replacement string
+	}{
+		{"missing date", `"operation_date":"2026-10-24",`, ""},
+		{"noncanonical version", `"expected_data_version":"2"`, `"expected_data_version":"02"`},
+		{"amount is not an object", `{"amount_minor":"9007199254740993","currency":"RUB"}`, `[]`},
+		{"extra money field", `"currency":"RUB"`, `"currency":"RUB","scale":2`},
+		{"foreign currency", `"currency":"RUB"`, `"currency":"USD"`},
+		{"zero amount", `"amount_minor":"9007199254740993"`, `"amount_minor":"0"`},
+		{"invalid INN", `"counterparty_inn":"0012345678"`, `"counterparty_inn":"123"`},
+		{"numeric INN", `"counterparty_inn":"0012345678"`, `"counterparty_inn":1234567890`},
+		{"invalid category", `"expected_data_version":"2"`, `"expected_data_version":"2","category_id":"other"`},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			f := &manualHTTPFixture{financialFixture: newFinancialFixture()}
+			body := strings.Replace(manualHTTPBody, test.old, test.replacement, 1)
+			w := financialRequest(f.handler(), http.MethodPost, financialRoot+"/transactions", body)
+			if w.Code != http.StatusUnprocessableEntity || f.request != nil || f.calls != 0 {
+				t.Fatalf("malformed input reached Core: status=%d body=%s request=%v calls=%d", w.Code, w.Body.String(), f.request, f.calls)
+			}
+		})
+	}
+}
+
+func TestManualHTTPOutflowPreservesCategoryAndNullableINN(t *testing.T) {
+	f := &manualHTTPFixture{financialFixture: newFinancialFixture()}
+	body := strings.Replace(manualHTTPBody, `"direction":"inflow"`, `"direction":"outflow"`, 1)
+	body = strings.Replace(body, `"counterparty_inn":"0012345678"`, `"counterparty_inn":null`, 1)
+	body = strings.Replace(body, `"expected_data_version":"2"`, `"expected_data_version":"2","category_id":"`+forecastID+`"`, 1)
+	w := financialRequest(f.handler(), http.MethodPost, financialRoot+"/transactions", body)
+	if w.Code != http.StatusCreated || f.request == nil || f.request.Direction != pb.Direction_DIRECTION_OUTFLOW || f.request.CounterpartyInn != nil || f.request.GetCategoryId() != forecastID || !strings.Contains(w.Body.String(), `"counterparty_inn":null`) || !strings.Contains(w.Body.String(), `"category_id":"`+forecastID+`"`) {
+		t.Fatal(w.Code, w.Body.String(), f.request)
+	}
+}
+
+func TestManualHTTPAccountFailureDoesNotCreateTransaction(t *testing.T) {
+	f := &manualHTTPFixture{financialFixture: newFinancialFixture()}
+	f.err = status.Error(codes.Unavailable, "private account failure")
+	w := financialRequest(f.handler(), http.MethodPost, financialRoot+"/transactions", manualHTTPBody)
+	if w.Code != http.StatusServiceUnavailable || f.request != nil || strings.Contains(w.Body.String(), "private") {
+		t.Fatal(w.Code, w.Body.String(), f.request)
+	}
+}
+
+func TestManualHTTPRejectsInvalidJSONEnvelopeBeforeCore(t *testing.T) {
+	for _, test := range []struct {
+		name, contentType, body string
+	}{
+		{"wrong content type", "text/plain", manualHTTPBody},
+		{"oversized body", "application/json", `{"payment_purpose":"` + strings.Repeat("x", 16<<10) + `"}`},
+		{"invalid UTF-8", "application/json", string([]byte{'{', 0xff, '}'})},
+		{"extra JSON value", "application/json", manualHTTPBody + `{}`},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			f := &manualHTTPFixture{financialFixture: newFinancialFixture()}
+			r := httptest.NewRequest(http.MethodPost, financialRoot+"/transactions", strings.NewReader(test.body))
+			r.Header.Set("Content-Type", test.contentType)
+			r.Header.Set("Origin", "https://localhost")
+			r.Header.Set("X-CSRF-Token", strings.Repeat("c", 24))
+			r.Header.Set("Idempotency-Key", "financial-key-123")
+			r.AddCookie(&http.Cookie{Name: "__Host-saldo_session", Value: "opaque-session"})
+			w := httptest.NewRecorder()
+			f.handler().ServeHTTP(w, r)
+			if w.Code != http.StatusUnprocessableEntity || f.request != nil || f.calls != 0 {
+				t.Fatalf("invalid JSON envelope reached Core: %d %s", w.Code, w.Body.String())
+			}
+		})
 	}
 }
