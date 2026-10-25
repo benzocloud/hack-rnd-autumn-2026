@@ -87,6 +87,13 @@ Initial base: 6c9edd969b3a694bccabaf6980b86531e2722490; synchronized main: 71f2a
 Local source SHA после обычного merge main: aaaa6a91e16eef00c8ae98b163283bef0e72e0d5. Последний проверенный remote перед финальным push: dfa9f505197457366b71db82be1e8181eb5d7e1e. Финальный metadata commit следует за source SHA; его local/remote receipt и CI фиксируются в описании PR после push (без self-reference в Git tree).
 Main merge принёс только verificationSession/authSlice/members_service + tests; эти изменения не принадлежат нашему diff относительно main. Чужие ветки/PR descriptions не менялись.
 После main sync из frontend/: npm test — 42/42 passed; npm run typecheck — passed; npm run lint — passed, 0 warnings; npm run build — passed. Состав diff проверен: только financial frontend, unit tests, fixture screenshots, свои plan/handoff. Forbidden services/proto/docs/api/deploy/financial E2E paths не менялись.
-Последний backend dependency: #48 1f10b6ee (полный SHA см. опубликованный PR), handlers/DTO без отличий от проверенного ac90fa3. Без runtime проверки source совместимость не означает real acceptance.
+Последний backend dependency: #48 1f10b6e615296a01d64957730ac2ce38a2e2b11c, handlers/DTO без отличий от проверенного ac90fa3. Без runtime проверки source совместимость не означает real acceptance.
 Последние независимые review fixes: caveman — новых подтверждённых regressions нет; ponytail — Lean already. Ship. Все советы исправлены; owner approval отсутствует.
 К 11:15 опубликован цельный frontend срез; real backend остаётся blocker. Следующий шаг остаётся реальная приёмка агентом C с #48 и работающим изолированным runtime. Merge/ready/deployment не выполнялись.
+
+## CI blocker, 11:11 МСК
+
+Local/remote проверены после push: 64f4fe2ea8e74ca9ac2590fa203cbc0a5f5aea81. Source после main merge: aaaa6a91e16eef00c8ae98b163283bef0e72e0d5; source с этого момента не менялся.
+CI нового head FAILED ДО запуска jobs: https://github.com/benzocloud/hack-rnd-autumn-2026/actions/runs/40175497286. Annotations lint/test: "The job was not started because recent account payments have failed or your spending limit needs to be increased. Please check the 'Billing & plans' section in your settings". В jobs steps=[] и runner_id=0. Build/deploy SKIPPED. Локальные 42 tests/typecheck/lint/build passed не подменяют CI.
+Для CI нужен owner Billing & plans / лимит GitHub Actions и повторный запуск после восстановления. Workflow/runners/billing не менялись; бессмысленный rerun не запускался. Final metadata push может получить тот же внешний отказ, статус уточняется в PR description.
+Screenshots fixture smoke дополнительно проверяют category CAS recovery с сохранением выбора, explicit complete replacement refs и сброс completeness, narrow graph. Browser console exceptions отсутствовали; body width390 на viewport390. Настоящий backend не подключался.
