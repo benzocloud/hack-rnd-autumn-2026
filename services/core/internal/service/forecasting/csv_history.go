@@ -183,6 +183,3 @@ func csvAssessmentLimitations(snapshot domain.FinancialSnapshot) []string {
 	}
 	return csvLimitations()
 }
-func csvProfile(version string) bool {
-	return version == CSVModelVersion || version == CSVCalendarModelVersion
-}

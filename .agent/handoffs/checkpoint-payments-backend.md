@@ -229,3 +229,15 @@ replacement. Вычитается только подтверждённая grou
 scope/version сохраняется в frozen facts и calendar, категории не доказательство.
 Следующая команда: full serial Core taggedrace/vet/lint и independent review
 публикуемого SHA относительно1f10b6e; исправления пакетно, затем push.
+
+## Review continuation checkpoint — 11:21 МСК
+
+Published/local/remote a97f9c694ae41360867bb66877452c863c3326e0 совпадают.
+Независимые caveman-review/ponytail-review нового diff на a97f9c6 относительно
+1f10b6e завершены: correctness findings нет; ponytail нашёл только unused
+csvProfile helper (3 строки), удалён. Core full tagged lint0/vet PASS, Buf/drift/
+consumer contracts и schema13 PASS. Full serial taggedrace идёт безfailures,
+финальный статус будет записан после завершения. API полного check coverage
+88.70/89.04, ML59безskips и realCSV lifecycle3.166s уже PASS.
+Точная следующая команда: проверить `.agent/local/core-csv-calendar-full.json`,
+затем finalSHA review fix и CI. No protocol/schema changes beyond prior PR.
