@@ -132,9 +132,13 @@ func (s *jobs) Create(ctx context.Context, cmd CreateForecastCommand) (ForecastA
 			input.SchemaVersion = 2
 			input.Coverage = domain.JobCoverage{}
 			input.Assessment = assessment
-			input.Model = ModelContext{Name: "mean_90", Version: CSVModelVersion, PreprocessingVersion: CSVPreprocessing}
+			input.Categories, err = snapshots.ReadCategories(ctx, cmd.Scope)
+			if err != nil {
+				return err
+			}
+			input.Model = ModelContext{Name: "mean_90", Version: CSVAnalysisVersion, PreprocessingVersion: CSVAnalysisPreprocessing}
 			if activeCalendar(calendar) {
-				input.Model = ModelContext{Name: "mean_90", Version: CSVCalendarModelVersion, PreprocessingVersion: CSVCalendarPreprocessing}
+				input.Model = ModelContext{Name: "mean_90", Version: CSVCalendarAnalysisVersion, PreprocessingVersion: CSVCalendarAnalysisPreprocessing}
 			}
 		}
 		if _, err := prepareJob(snapshot, input); err != nil {

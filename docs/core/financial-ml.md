@@ -168,3 +168,52 @@ movements. Historical/synthetic и overdue не активируются/не с
 Обычный CSV до календаря сохраняет mean_90_csv_v1; при persisted payments/groups
 и допустимом CURRENT используется явный новый profile. REST endpoints/DTO и один
 Predict неизменны. Обучение/trained default не менялись.
+
+### Runtime CSV analysis v2 (D2.4)
+
+New ordinary CSV jobs explicitly select model_name=`mean_90`,
+model_version/configuration_id=`mean_90_csv_analysis_v2`,
+preprocessing_version=`csv_observed_operations_analysis_v2`. With frozen CURRENT
+calendar the tuple is `mean_90_csv_calendar_analysis_v2` /
+`csv_observed_operations_calendar_analysis_v2` /
+`mean_90_csv_calendar_analysis_v2`. Neither profile uses random seed or trajectories.
+The pinned analysis version is `text_categories_monthly_v1`.
+
+One Predict computes the existing v1 monetary projection from the same original
+CSV facts and calendar, then attaches derived labels and monthly evidence. Labels
+never participate in residual allocation or establish replacement completeness.
+CSV eligibility, unknown days, exact EOD reconciliation, manual provenance,
+CURRENT availability and all six limitations remain unchanged. Probability stays
+not_calibrated/null; there are no invented bands or measured category accuracy.
+Covered/trained jobs retain their previous explicit context and are not analyzed.
+Old v1/schema1/schema2 jobs/results retain their original bytes and decoders.
+
+The analysis covers exactly cutoff-89..cutoff, at most20000 input operations.
+Pure categorize/fit_monthly helpers keep the existing minimum3 confirmations for
+regular outflows and4 otherwise,75% observed-period threshold,4-day date tolerance
+and category exclusions. Unknown labels and an empty hypothesis list are explicit;
+legacy absence/null means not analyzed. A hypothesis has status=hypothesis and
+never creates a payment, reconciliation group, known occurrence or risk probability.
+Party identity resolves from scoped input refs (INN, otherwise normalized name),
+not from a raw identifier embedded in a pattern ID.
+
+Core validates caller-owned facts exactly, permits only allowlisted derived
+category/source/rule fields, preserves manual UUID/source, and validates all scoped
+IDs/versions, nonoverlap, monthly anchors/shifts/confirmations/expected amounts and
+overflow. The same derived validator runs when reading saved data. ML cannot
+assign tenant UUIDs: Core maps only explicit supported semantic codes to the
+frozen company catalogue, respecting direction; unmatched semantic codes have no
+UUID. Catalogue entries are frozen under the job's account transaction.
+
+Derived data lives in immutable core_forecast_jobs.result.Analysis, separately
+from Ledger/Payments; optional Categories is frozen in existing schema2 job input.
+No SQL migration or new protobuf field is needed. GET forecast returns the existing
+optional result.analysis contract, with category_source manual/rules/unknown,
+exact decimal-string versions/amounts and typed hypotheses. PATCH
+transactions/{id}/category with category_id UUID or null remains the manual
+command. A forecast's is_stale/current_data_version/input.data_version applies to
+its entire frozen analysis. Consumers must never attach stale labels to a newer
+transaction version or infer labels for operations outside the analysis window.
+Reads/restarts do not call ML or modify facts/revision. A rollback must retain
+support for newly persisted v2 contexts; stop new producers before rolling back
+workers/readers. Old immutable payloads are never rewritten.

@@ -1,0 +1,37 @@
+# D2.4 — runtime financial analysis
+
+Прямое поручение владельца: автономная реализация/публикация, промежуточный owner review отложен (ADR-020). Все законченные стадии — На ревью; merge/ready/deploy запрещены.
+
+Начальный parent: draft #48, SHA `7771af9e945de0e2b51d14af19fbb30de94ce4c2`, base branch `globalarray/feat/payments_frozen_calendar`. На финал владелец merged48/49/50/52: fresh main `f2df9dfff1bef00206a983be074894d22ebae5b0` обычным merge включён в свою ветку, base только PR51 изменён на main. Diff содержит только D2.4; чужие PR не менялись.
+
+## Фактическая матрица
+
+| Компонент | Состояние |
+|---|---|
+| categories.categorize / recurring.fit_monthly | pure helpers существуют; offline infer_patterns/daily_as_of не используем |
+| ML AnalysisContext/hypotheses и Core ForecastAnalysis | canonical/generated contracts уже есть; runtime/read wiring отсутствует |
+| CSV-only / CSV CURRENT | explicit v1 profiles работают; derived fields запрещены validators |
+| Ledger manual category/clear | существующие commands/CAS; анализ не меняет факты |
+| Snapshot/job/result | immutable schema1/2; используем additive optional saved analysis без новой SQL таблицы |
+
+## Scope / compatibility
+
+Ровно 90 дней исходного Predict, максимум20000 operations, до cutoff; manual metadata приоритетны. Rules `text_categories_monthly_v1`; monthly fit thresholds не меняем. Новые contexts: `mean_90_csv_analysis_v2` / `csv_observed_operations_analysis_v2` и `mean_90_csv_calendar_analysis_v2` / `csv_observed_operations_calendar_analysis_v2`; configuration_id равен model_version, model_name=mean_90, без seed/trajectories. Core выбирает их явно для новых eligible CSV jobs, frozen context остаётся в schema2. Старые jobs/bytes/v1 guards сохраняются. Covered/trained default не меняем, analysis там пока not-analyzed. Денежный расчёт переиспользует v1 без derived labels в arithmetic. Никакой новой калибровки/accuracy.
+
+Wire diff до wiring: новых protobuf полей/номеров не планируется — используем ML response23/24 и Core ForecastResult.analysis8. REST additive nullable analysis повторяет существующий Core contract; точная DTO фиксируется в handoff перед consumer wiring. Отдельное сохранение derived result от Ledger/Payments; old JSON без analysis читается. Stale forecast остаётся доступным только как frozen view и не применяется к новым фактам.
+
+## Этапы
+
+1. План/compatibility/draft — На ревью. Прочитаны ADR/workflows/D2.4, #48–50 bodies/files/full discussions (comments/reviews/inline пусты), main и parent. Пересечений с B/C нет.
+2. ML pure runtime analysis — На ревью. Single Predict, explicit new contexts, deterministic evidence, strict limits/manual precedence, regression/RPC/Ruff.
+3. Core validation/persistence и API read — На ревью. Factual equality + derived allowlist, scoped evidence/version/rules, unchanged money validators; saved result projection, additive REST DTO/schema/tests. Go patterns: feature-owned DTO/manual app wiring/sqlx Tx из go-services; reference checkouts отсутствуют.
+4. Реальный ordinary CSV + CURRENT lifecycle — На ревью. Own marked disposable PG18/Core/Python/mTLS, Auth double явно; manual override/clear, immutable results/restart/revisions. Backward и negative cases, serial race/vet/full lint/API check/Buf/schema.
+5. Независимые caveman/ponytail на SHA, исправления и публикация — На ревью. Финальный diff/remote/main/actual CI, handoff и итоговое owner review.
+
+GBrain MCP отсутствует в tool catalog; RTK отсутствует. Billing CI blocker перепроверяется, локальные gates обязательны. Training/frontend/Auth/deploy/чужие plans/handoffs вне scope. Риск: транспорт2MiB и время monthly fitting; превышение — явный отказ без усечения. Гипотеза не платёж/mapping/probability. Quality measurements отсутствуют.
+
+Checkpoint e57eabe опубликован и remote проверен. ML63 RPC/mTLS/security/financial tests PASS; оба real CSV lifecycle -race PASS. Независимый review нашёл2guard gaps; исправлены общим durable/RPC validator,19negative service cases; API positive+30negative PASS. Full tagged race/vet/API штатный check/Buf идут после законченного блока. Parent CI-only fd1cb15 сохранён обычным merge внешнего remote. Stage statuses не означают acceptance.
+
+Итог25.10: все стадии На ревью. Core full tagged race813 + final negative rerun, vet/lint0; API full check88.94/89.27 и42HTTPschema; ML63/0skips и pinned Ruff20files; Buf/drift/schema13 PASS. Final independent caveman/ponytail f56b9b2:3findings закрыты, новых нет; binding подтверждён к a690983 после CI-only parent7959637, D2.4 diff идентичен. PG18 teardown выполнен. CI queued/pending, не pass. Передать владельцу final review, не merge/deploy.
+
+Финальный main mergef9febb5 не меняет reviewed D2.4 source (cmp/hash подтверждены независимым reviewer), gates сохраняются. Последний опубликованный head6b8c376 local/remote совпал, финальный docs checkpoint отдельно публикует receipt в PR.
