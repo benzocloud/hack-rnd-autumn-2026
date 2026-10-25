@@ -3,10 +3,11 @@ package forecasting
 import (
 	"testing"
 
-	authpb "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/auth/v1"
-	pb "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	authpb "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/auth/v1"
+	pb "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/gen/core/v1"
 )
 
 func TestForecastRejectsUnsupportedCalendarSelection(t *testing.T) {

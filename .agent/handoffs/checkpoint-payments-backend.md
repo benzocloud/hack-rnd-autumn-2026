@@ -65,3 +65,13 @@ Lifecycle publication fix pushed `f4627f1cfcca5fa2ad01ec7e52a618f8e608d4ea`, rem
 
 Schema/rollback: 00013 tombstones, 00014 groups/link, 00015 разрешает snapshot payload2. Downgrade15 не пройдёт при существующих payload2; rollback обязан сохранять decoder. Старый Core остановить до запуска schema2 producer; работающий сервер не менялся. Старый бинарник нельзя смешивать с новыми jobs. Все миграции выполнялись только в собственном marked PG18.
 Следующая команда: проверить `.agent/local/core-full.json`/`core-full.err`, `core-final-lint.log` и `core-final-vet.log`; независимое review следующего опубликованного SHA, затем исправления и финальные CI/main checks.
+
+## Проверки и независимое review 10:44 МСК
+
+Published current calendar SHA:2723d0a7552abb892d27c297d5772f3b0b01b031, remote совпал. Независимый агент применил caveman-review и ponytail-review к собственному diff d7674d5..2723d0a: все4 earlier findings исправлены, новых подтверждённых нет; ponytail net:-0. Review read-only, без тестов/апрува. Проверка более поздних fixes будет отдельной.
+
+Full serial Core race integration+mlintegration:746 passed tests/subtests,2 failed,1 opt-in large-import skip;29 test packages passed,1 failed,9 packages без tests. Два failures — timestamp microsecond roundtrip external payment replay и []/nil roundtrip пустых groups. Исправлены normalization; affected packages rerun нашёл дополнительное UTC-location различие revoke receipt, исправлено в scanGroup. Все3 проблемных test scenarios затем прошли с race1.545s. Старый immutable snapshot test теперь меняет valid timestamp вместо заведомо несогласованного ExcludedPayments. Не выдавать исходный suite за полностью зелёный.
+
+API final full race:298 tests/subtests /8 test packages pass (4 без tests); vet/full lint0/fmt clean. Core tagged full lint0/vet pass; последний fmt fix calendar_mode_test сделан с module config. Buf lint/build/breaking и scripts/check-core-contracts.sh — pass (58 REST maps, generated drift, consumer compilation). API generation --check — pass после генерации настоящим pinned grpc_tools protoc: Buf unknown version header ранее вызывал CI false drift, сохраняется реальный version header. API schema13 pass; ML45 без skips; pinned Ruff0/check+format14files clean.
+
+Свежий origin/main сейчас6c9edd969b3a694bccabaf6980b86531e2722490; включает #47/onboarding/training. Следующий шаг — обычный merge в нашу ветку, минимальные conflicts, релевантные checks и actual CI. Main не изменялся нами.

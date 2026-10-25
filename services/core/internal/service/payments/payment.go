@@ -48,6 +48,10 @@ func (s *service) CreatePayment(ctx context.Context, cmd CreateCommand) (CreateP
 	if data.CreatedAt.IsZero() {
 		data.CreatedAt = time.Now().UTC()
 	}
+	// PostgreSQL timestamptz stores microseconds; return the same immutable
+	// projection that a later external replay reads from storage.
+	data.CreatedAt = data.CreatedAt.UTC().Truncate(time.Microsecond)
+	data.Source.ImportedAt = data.Source.ImportedAt.UTC().Truncate(time.Microsecond)
 	record, err := domain.NewExpectedPayment(data)
 	if err != nil {
 		return CreatePaymentResult{}, err

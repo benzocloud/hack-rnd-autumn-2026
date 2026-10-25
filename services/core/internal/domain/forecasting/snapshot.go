@@ -125,6 +125,12 @@ func (s FinancialSnapshot) Limitations() []string {
 func cloneCalendar(c Calendar) Calendar {
 	c.Payments = slices.Clone(c.Payments)
 	c.Groups = slices.Clone(c.Groups)
+	if len(c.Groups) == 0 {
+		c.Groups = nil
+	}
+	if len(c.Payments) == 0 {
+		c.Payments = nil
+	}
 	for i := range c.Groups {
 		c.Groups[i].Operations = slices.Clone(c.Groups[i].Operations)
 	}

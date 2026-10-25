@@ -7,6 +7,7 @@ import (
 	"math"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -126,7 +127,7 @@ func TestSnapshotConsistentAcrossCommittedMatchAndNewFacts(t *testing.T) {
 		t.Fatal("persisted snapshot changed or lost precision")
 	}
 	changed := d
-	changed.Calendar.ExcludedPayments = 99
+	changed.CreatedAt = changed.CreatedAt.Add(time.Microsecond)
 	replacement, err := domain.NewFinancialSnapshot(changed)
 	if err != nil {
 		t.Fatal(err)

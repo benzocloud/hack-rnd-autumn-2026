@@ -21,6 +21,7 @@ func scanGroup(row interface{ Scan(...any) error }, scope ledger.Scope) (forecas
 	if err != nil {
 		return g, storage.StorageError(err)
 	}
+	g.ConfirmedAt = g.ConfirmedAt.UTC()
 	g.Cutoff, g.HorizonStart, g.HorizonEnd = ledger.Date(cutoff), ledger.Date(start), ledger.Date(end)
 	if json.Unmarshal(refs, &g.Operations) != nil || g.Validate() != nil {
 		return forecast.ReconciliationGroup{}, storage.ErrUnavailable
