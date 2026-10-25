@@ -26,8 +26,10 @@ Wire diff до wiring: новых protobuf полей/номеров не пла
 2. ML pure runtime analysis — На ревью. Single Predict, explicit new contexts, deterministic evidence, strict limits/manual precedence, regression/RPC/Ruff.
 3. Core validation/persistence и API read — На ревью. Factual equality + derived allowlist, scoped evidence/version/rules, unchanged money validators; saved result projection, additive REST DTO/schema/tests. Go patterns: feature-owned DTO/manual app wiring/sqlx Tx из go-services; reference checkouts отсутствуют.
 4. Реальный ordinary CSV + CURRENT lifecycle — На ревью. Own marked disposable PG18/Core/Python/mTLS, Auth double явно; manual override/clear, immutable results/restart/revisions. Backward и negative cases, serial race/vet/full lint/API check/Buf/schema.
-5. Независимые caveman/ponytail на SHA, исправления и публикация — В работе. Финальный diff/remote/main/actual CI, handoff и итоговое owner review.
+5. Независимые caveman/ponytail на SHA, исправления и публикация — На ревью. Финальный diff/remote/main/actual CI, handoff и итоговое owner review.
 
 GBrain MCP отсутствует в tool catalog; RTK отсутствует. Billing CI blocker перепроверяется, локальные gates обязательны. Training/frontend/Auth/deploy/чужие plans/handoffs вне scope. Риск: транспорт2MiB и время monthly fitting; превышение — явный отказ без усечения. Гипотеза не платёж/mapping/probability. Quality measurements отсутствуют.
 
 Checkpoint e57eabe опубликован и remote проверен. ML63 RPC/mTLS/security/financial tests PASS; оба real CSV lifecycle -race PASS. Независимый review нашёл2guard gaps; исправлены общим durable/RPC validator,19negative service cases; API positive+30negative PASS. Full tagged race/vet/API штатный check/Buf идут после законченного блока. Parent CI-only fd1cb15 сохранён обычным merge внешнего remote. Stage statuses не означают acceptance.
+
+Итог25.10: все стадии На ревью. Core full tagged race813 + final negative rerun, vet/lint0; API full check88.94/89.27 и42HTTPschema; ML63/0skips и pinned Ruff20files; Buf/drift/schema13 PASS. Final independent caveman/ponytail f56b9b2:3findings закрыты, новых нет; binding подтверждён к a690983 после CI-only parent7959637, D2.4 diff идентичен. PG18 teardown выполнен. CI queued/pending, не pass. Передать владельцу final review, не merge/deploy.
