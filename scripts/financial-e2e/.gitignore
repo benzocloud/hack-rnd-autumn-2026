@@ -1,0 +1,9 @@
+artifacts/
+.env
+*.pem
+*.key
+cookies*.json
+credentials*.json
+__pycache__/
+.pytest_cache/
+.venv/
