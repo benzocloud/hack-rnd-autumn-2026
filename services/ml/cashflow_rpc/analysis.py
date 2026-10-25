@@ -6,6 +6,7 @@ from datetime import timedelta
 
 from .csv_calendar import CSV_CALENDAR_PREPROCESSING, CSV_CALENDAR_VERSION, csv_calendar_forecast
 from .csv_forecast import CSV_PREPROCESSING, CSV_VERSION, csv_forecast
+from .financial import checked
 from .inference import InvalidSnapshot, UnsupportedContext, _date
 
 ANALYSIS_VERSION = "text_categories_monthly_v1"
@@ -34,6 +35,15 @@ def analysis_forecast(request, pb):
         or request.model.configuration_id != request.model.model_version
     ):
         raise UnsupportedContext("Unsupported runtime analysis context")
+    for op in request.operations:
+        manual = op.category_source == "user"
+        if (
+            op.category_code != "unknown"
+            or op.category_rule_id
+            or (manual and not op.HasField("category_id"))
+            or (not manual and (op.category_source != "unknown" or op.HasField("category_id")))
+        ):
+            raise InvalidSnapshot("Analysis requires unchanged unknown or manual input labels")
     base = pb.PredictRequest()
     base.CopyFrom(request)
     base.model.model_version, base.model.configuration_id = profile[1], profile[1]
@@ -97,7 +107,7 @@ def analysis_forecast(request, pb):
                 "previous": pb.RECURRING_WEEKEND_SHIFT_PREVIOUS,
                 "next": pb.RECURRING_WEEKEND_SHIFT_NEXT,
             }[pattern.weekend_shift],
-            expected_amount_minor=pattern.amount,
+            expected_amount_minor=checked(pattern.amount),
             confirmations=pattern.confirmations,
             expected_periods=pattern.expected_periods,
             first_evidence_date=pattern.first_evidence.isoformat(),

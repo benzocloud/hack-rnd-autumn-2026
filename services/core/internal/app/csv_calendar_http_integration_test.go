@@ -36,6 +36,14 @@ import (
 // operator manifest or SQL coverage proof. Auth alone is an explicit test double;
 // API, Core, PostgreSQL and Python Predict calls use real mTLS services.
 func TestOrdinaryCSVCalendarHTTPPostgresPythonLifecycle(t *testing.T) {
+	runOrdinaryCSVAnalysisHTTP(t, false)
+}
+func TestOrdinaryCSVMonthlyAnalysisHTTPPostgresPythonLifecycle(t *testing.T) {
+	runOrdinaryCSVAnalysisHTTP(t, true)
+}
+
+func runOrdinaryCSVAnalysisHTTP(t *testing.T, monthly bool) {
+	t.Helper()
 	binary := os.Getenv("CORE_API_TEST_BINARY")
 	if binary == "" {
 		t.Skip("set CORE_API_TEST_BINARY built from this worktree")
@@ -190,6 +198,9 @@ func TestOrdinaryCSVCalendarHTTPPostgresPythonLifecycle(t *testing.T) {
 	// The two recorded operation days span ninety calendar days. The other 88
 	// remain unknown input days; the model's limited mean is checked independently.
 	csv := fmt.Sprintf("\ufeffcompany_id;operation_id;operation_date;amount;direction;counterparty_inn;counterparty_name;payment_purpose;balance_eod\nC001;FIRST;%s;90.00;Поступление;0012345678;Клиент;Первая операция;1000.00\nC001;LAST;%s;45.00;Списание;0012345678;Поставщик;Уплата налогов ЕНП;955.00\n", cutoffTime.AddDate(0, 0, -89).Format(time.DateOnly), cutoff)
+	if monthly {
+		csv = monthlyCSVInput(cutoffTime)
+	}
 	var upload bytes.Buffer
 	writer := multipart.NewWriter(&upload)
 	file, err := writer.CreateFormFile("file", "ordinary.csv")
@@ -223,6 +234,10 @@ func TestOrdinaryCSVCalendarHTTPPostgresPythonLifecycle(t *testing.T) {
 	applied := call(http.MethodPost, importURL+"/commit", `{"version":"`+text(previewBody, "preview_version")+`","expected_data_version":"`+text(previewBody, "base_data_version")+`","acknowledge_warnings":true}`, "csv-calendar-commit", 200)
 	if text(applied, "status") != "applied" || string(applied["history_coverage"]) != "null" {
 		t.Fatal(applied)
+	}
+	if monthly {
+		checkMonthlyAnalysisHTTP(t, f, company, cutoff, jobs, call, stop, start)
+		return
 	}
 	assertCount(t, f.app, "SELECT count(*) FROM core_transactions WHERE company_id=$1", f.scope, 2)
 	assertCount(t, f.app, "SELECT count(*) FROM core_history_coverage WHERE company_id=$1", f.scope, 0)

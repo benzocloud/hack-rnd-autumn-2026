@@ -3,8 +3,9 @@
 package app
 
 import (
-	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/forecasting"
 	"github.com/google/uuid"
+
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/service/forecasting"
 )
 
 // Explicit predictor double for tests whose subject is import/job transport.
@@ -20,7 +21,7 @@ func fixtureUnknownAnalysis(input forecasting.FinancialModelInput) *forecasting.
 		if d.Category.ID != uuid.Nil {
 			source, rule = "manual", ""
 		}
-		a.Operations = append(a.Operations, forecasting.OperationAnalysis{ID: d.ID, Version: int64(op.Version()), CategoryCode: "unknown", CategorySource: source, RuleID: rule, CategoryID: d.Category.ID})
+		a.Operations = append(a.Operations, forecasting.OperationAnalysis{ID: d.ID, Version: op.Version(), CategoryCode: "unknown", CategorySource: source, RuleID: rule, CategoryID: d.Category.ID})
 	}
 	return a
 }

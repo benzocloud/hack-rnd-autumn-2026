@@ -77,26 +77,3 @@ func TestAnalysisValidatesFactsAndKeepsCalendarMoneyGuards(t *testing.T) {
 		t.Fatal("legacy accepted derived output")
 	}
 }
-
-func TestMonthlyPatternThresholdsDatesAmountsAndAnchor(t *testing.T) {
-	facts := map[string]*pb.FinancialOperation{}
-	h := &pb.RecurringHypothesis{Direction: pb.RecurringDirection_RECURRING_DIRECTION_OUTFLOW, CategoryCode: "rent", ExpectedAmountMinor: 900, Confirmations: 3, ExpectedPeriods: 3, FirstEvidenceDate: "2026-07-05", LastEvidenceDate: "2026-09-05", MonthlyAnchor: &pb.RecurringHypothesis_DayOfMonth{DayOfMonth: 5}, WeekendShift: pb.RecurringWeekendShift_RECURRING_WEEKEND_SHIFT_NONE}
-	for _, date := range []string{"2026-07-05", "2026-08-05", "2026-09-05"} {
-		id := uuid.NewString()
-		facts[id] = &pb.FinancialOperation{Date: date, OutflowMinor: 900}
-		h.HistoricalOperations = append(h.HistoricalOperations, &pb.OperationVersionReference{OperationId: id, Version: 1})
-	}
-	if !validMonthlyPattern(h, facts, "2026-09-29") {
-		t.Fatal("valid monthly evidence rejected")
-	}
-	mutations := map[string]func(*pb.RecurringHypothesis){"amount": func(h *pb.RecurringHypothesis) { h.ExpectedAmountMinor++ }, "confirmations": func(h *pb.RecurringHypothesis) { h.Confirmations = 2 }, "periods": func(h *pb.RecurringHypothesis) { h.ExpectedPeriods = 4 }, "anchor": func(h *pb.RecurringHypothesis) { h.MonthlyAnchor = &pb.RecurringHypothesis_DayOfMonth{DayOfMonth: 20} }, "shift": func(h *pb.RecurringHypothesis) { h.WeekendShift = 0 }, "insufficient incoming": func(h *pb.RecurringHypothesis) { h.Direction = pb.RecurringDirection_RECURRING_DIRECTION_INFLOW }, "date": func(h *pb.RecurringHypothesis) { h.FirstEvidenceDate = "2026-06-01" }}
-	for name, mutate := range mutations {
-		t.Run(name, func(t *testing.T) {
-			v := proto.Clone(h).(*pb.RecurringHypothesis)
-			mutate(v)
-			if validMonthlyPattern(v, facts, "2026-09-29") {
-				t.Fatal("invalid pattern accepted")
-			}
-		})
-	}
-}

@@ -161,6 +161,9 @@ func validateFinancialResponse(input forecasting.FinancialModelInput, request *p
 	if forecasting.AnalysisProfile(input.Snapshot.Model.Version) {
 		return validateAnalysisResponse(input, request, r)
 	}
+	if r == nil || r.AnalysisContext != nil || len(r.RecurringHypotheses) != 0 {
+		return forecasting.ErrModelResponse
+	}
 	if input.Snapshot.Model.Version == forecasting.CSVCalendarModelVersion {
 		return validateCSVCalendarResponse(input, request, r)
 	}

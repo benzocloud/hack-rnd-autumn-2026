@@ -119,12 +119,35 @@ class RuntimeAnalysisTests(unittest.TestCase):
             op.ClearField("category_company_id")
         self.assertEqual(analysis_forecast(r, pb), result)
 
+    def test_insufficient_confirmations_and_excluded_categories_remain_empty(self):
+        r = monthly_request()
+        for op in r.operations:
+            op.payment_purpose = "Перевод собственных средств между счетами"
+        result = analysis_forecast(r, pb)
+        self.assertFalse(result.recurring_hypotheses)
+        self.assertTrue(
+            all(op.category_code == "own_transfer" for op in result.classified_operations)
+        )
+        r = monthly_request()
+        for op in r.operations:
+            if op.date.endswith("08-05"):
+                op.category_source = "user"
+                op.category_id = "019a0c65-9800-7000-8000-000000000101"
+                op.category_company_id = r.snapshot.company_id
+        self.assertFalse(analysis_forecast(r, pb).recurring_hypotheses)
+
     def test_invalid_inputs_never_relax_csv_guards_or_context(self):
         mutations = [
             lambda r: setattr(r.model, "preprocessing_version", "unknown"),
             lambda r: setattr(r.model, "configuration_id", "unknown"),
             lambda r: setattr(r.model, "model_version", "unknown"),
             lambda r: setattr(r.model, "random_seed", "1"),
+            lambda r: setattr(r.operations[-1], "category_source", "user"),
+            lambda r: setattr(r.operations[-1], "category_code", "rent"),
+            lambda r: setattr(r.operations[-1], "category_source", "rules"),
+            lambda r: setattr(
+                r.operations[-1], "category_id", "019a0c65-9800-7000-8000-000000000101"
+            ),
             lambda r: setattr(r.operations[-1], "date", "2030-01-01"),
             lambda r: setattr(r.operations[-1], "operation_id", r.operations[0].operation_id),
             lambda r: setattr(r.operations[-1], "category_rule_id", "forged"),
