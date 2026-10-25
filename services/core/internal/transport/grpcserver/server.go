@@ -45,7 +45,7 @@ func authorizePeer(ctx context.Context, request any, info *grpc.UnaryServerInfo,
 		pb.PaymentsService_ListReconciliationGroups_FullMethodName,
 		pb.PaymentsService_RevokeReconciliationGroup_FullMethodName:
 		allowed = identity == mtls.API
-	case pb.ForecastingService_CreateForecast_FullMethodName, pb.ForecastingService_GetForecast_FullMethodName, pb.ForecastingService_ListForecasts_FullMethodName:
+	case pb.ScenariosService_CreateScenario_FullMethodName, pb.ScenariosService_GetScenario_FullMethodName, pb.ScenariosService_ListScenarios_FullMethodName, pb.ForecastingService_CompareForecasts_FullMethodName, pb.ForecastingService_CreateForecast_FullMethodName, pb.ForecastingService_GetForecast_FullMethodName, pb.ForecastingService_ListForecasts_FullMethodName:
 		allowed = identity == mtls.API
 	case pb.ImportsService_ListImports_FullMethodName, pb.ImportsService_GetImport_FullMethodName, pb.ImportsService_ListImportIssues_FullMethodName:
 		allowed = identity == mtls.API

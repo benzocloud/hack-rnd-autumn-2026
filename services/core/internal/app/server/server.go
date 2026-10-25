@@ -82,7 +82,7 @@ func Run(ctx context.Context, cfg config.Config, rpc config.RPC) (err error) {
 		server.Stop()
 		return err
 	}
-	if err := forecastHandler.Register(server, application.ForecastJobs, application.Companies, auth); err != nil {
+	if err := forecastHandler.Register(server, application.ForecastJobs, application.Companies, auth, application.Scenarios); err != nil {
 		server.Stop()
 		return err
 	}

@@ -2,6 +2,7 @@ package forecasting
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,6 +29,8 @@ type authorizer interface {
 }
 type handler struct {
 	pb.UnimplementedForecastingServiceServer
+	pb.UnimplementedScenariosServiceServer
+	scenarios scenarioOperations
 	jobs      operations
 	companies companies
 	auth      authorizer
@@ -35,12 +38,17 @@ type handler struct {
 	now       func() time.Time
 }
 
-func Register(server grpc.ServiceRegistrar, jobs operations, companies companies, auth authorizer) error {
+func Register(server grpc.ServiceRegistrar, jobs operations, companies companies, auth authorizer, scenarios ...scenarioOperations) error {
 	location, err := time.LoadLocation("Europe/Moscow")
 	if err != nil {
 		return forecasting.ErrUnavailable
 	}
-	pb.RegisterForecastingServiceServer(server, &handler{jobs: jobs, companies: companies, auth: auth, location: location, now: time.Now})
+	h := &handler{jobs: jobs, companies: companies, auth: auth, location: location, now: time.Now}
+	if len(scenarios) > 0 {
+		h.scenarios = scenarios[0]
+		pb.RegisterScenariosServiceServer(server, h)
+	}
+	pb.RegisterForecastingServiceServer(server, h)
 	return nil
 }
 
@@ -130,7 +138,7 @@ func (h *handler) GetForecast(ctx context.Context, r *pb.GetForecastRequest) (*p
 	if _, err := h.authorize(ctx, scope, r.Context, nil); err != nil {
 		return nil, rpcerror.From(err)
 	}
-	result, err := h.jobs.Read(ctx, scope, id)
+	result, err := h.readForecast(ctx, scope, id)
 	if err != nil {
 		return nil, rpcerror.From(err)
 	}
@@ -169,4 +177,12 @@ func (h *handler) ListForecasts(ctx context.Context, r *pb.ListForecastsRequest)
 		response.Items = append(response.Items, encodeSummary(item))
 	}
 	return response, nil
+}
+
+func (h *handler) readForecast(ctx context.Context, scope ledger.Scope, id uuid.UUID) (forecasting.ForecastView, error) {
+	v, err := h.jobs.Read(ctx, scope, id)
+	if errors.Is(err, forecasting.ErrNotFound) && h.scenarios != nil {
+		return h.scenarios.Forecast(ctx, scope, id)
+	}
+	return v, err
 }
