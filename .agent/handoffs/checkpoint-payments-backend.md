@@ -23,3 +23,13 @@ Known failures: реализации lifecycle adapters ещё нет; P0 не �
 Dependency: https://github.com/benzocloud/hack-rnd-autumn-2026/pull/47 @7e5c0d4aff78286c13d9a8245f801e8a5b82e16c, прочитан опубликованный handoff; не переносить dirty tree.
 Schema/rollback: изменений нет. Merge/deploy не выполнялись.
 Следующая команда: cat services/core/internal/domain/payments/payment_state.go services/core/internal/service/ledger/read.go
+
+## Checkpoint 10:18 МСК
+
+Draft PR: https://github.com/benzocloud/hack-rnd-autumn-2026/pull/48.
+Плановый checkpoint `34b6add27a897577e4ed3c2f5d736d4ae67e01f6` pushed и remote проверен.
+Опубликованная зависимость #47 @7e5c0d4aff78286c13d9a8245f801e8a5b82e16c интегрирована обычным merge `22a5bcc`; PR является stacked относительно #47. Изменения frontend/общих docs в merge принадлежат зависимости, собственная реализация их не редактирует.
+Lifecycle в работе: новые domain update/unmatch, сервисные reads/CAS mutations, исходные projections create/match. Узкий Go unit набор до последних audit-изменений прошёл. Полный блок ещё не проверен/не закоммичен.
+Дополнительный wire diff: `PaymentMatch.optional google.protobuf.Timestamp removed_at = 6` — audit отменённого распределения, исключённого из active total. Старые поля/номера неизменны. Generation и schema projection ещё в работе.
+Изолированный PostgreSQL18 поднимается внутри контейнера на 127.0.0.1:55488, отдельный .agent/local/pg18, DB saldo_core_test, marker saldo-core-integration. После смены модели прежний процесс отсутствовал; новый старт перепроверяется.
+Следующая команда: `git status --short`; затем закончить lifecycle block и serial integration.
