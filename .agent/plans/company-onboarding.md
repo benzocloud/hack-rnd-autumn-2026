@@ -96,7 +96,7 @@ invitations, reset/email delivery, новые роли и полный redesign 
 | A0 | На ревью владельца | Удалённые plan/handoff и один проверенный draft PR |
 | A1 | На ревью владельца | Durable Auth command/repository и atomic owner finalization |
 | A2 | На ревью владельца | RPC, Core client и recovery после restart |
-| A3 | В работе | Настоящий POST /companies, HTTPS/mTLS conformance |
+| A3 | В работе: живая цепочка пройдена, peer/revocation/timeout/lost reply ещё нет | Настоящий POST /companies, HTTPS/mTLS conformance |
 | A4 | Не начат | Workspace без блокирующей зависимости от invitations |
 | A5 | Не начат | Реальный полный сценарий, два ревью, CI, итоговый handoff |
 
@@ -162,9 +162,9 @@ REST conformance/security tests; минимальные config examples/deploy t
 - [x] Typed clients, safe Russian errors/request ID, key conflict и 503/in-progress;
   201 только после COMPLETED и успешного read. Не дублировать Company domain.
 - [x] OpenAPI conformance и adapter boundary regressions (201/409/503, Origin/CSRF, owner injection, revoked/malformed dependencies).
-- [ ] Реальный HTTPS API → mTLS Auth/Core → PostgreSQL: чужой command/peer/CSRF/revocation/timeouts/replay.
+- [ ] Реальный HTTPS API → mTLS Auth/Core → PostgreSQL: чужой command/peer/CSRF/revocation/timeouts/replay. Прогнаны register/verify/login, owner и пустой счёт, replay, конфликт ключа, отказ без CSRF, чужой пользователь и чтение после перезапуска Auth. Peer, revocation, timeout и потерянный ответ bootstrap ещё не закрыты.
 - [x] Полный API check и два reviews adapter slice пройдены, отдельный checkpoint готов к push.
-- [ ] Реальная интеграция A3 и её отдельное ревью/публикация.
+- [ ] Реальная интеграция A3 и её отдельное ревью/публикация. Цепочка есть в `go test -tags=onboarding`; ревью этого прогона ещё нет.
 
 ### A4 — Workspace и пользовательский путь
 
@@ -175,7 +175,9 @@ context/request hooks; только блокирующая часть settings r
   loading/error states; P1 честно недоступен, без fake success или реализации
   invitations. Повторную реализацию разделения не делать.
 - [ ] После create обновить company/membership context; стабильный retry key,
-  double click, lost response, refresh сохраняют ту же компанию.
+  double click, lost response, refresh сохраняют ту же компанию. Ключ создания
+  хранится в sessionStorage до подтверждённого ответа; переход идёт в настройки,
+  где компания читается заново. Браузерный прогон ещё не сделан.
 - [ ] Проверить фактический redirect/settings unsupported endpoints;
   убрать только зависимость, блокирующую onboarding.
 - [ ] Изолированные UI tests, test/typecheck/lint/build, настоящий браузер

@@ -26,7 +26,7 @@ Scope/invariants/checklist: [plan](../plans/company-onboarding.md). Issue не �
 | A0 | На ревью владельца | Docs links/diff/fences, draft/remote SHA | Caveman/Ponytail без дефектов | Docs-only, runtime не требовался |
 | A1 | На ревью владельца | Полный Auth unit/real PG integration/race/shuffle/vet/build/lint | Два independent reviews `9463e40`, дефектов нет | Auth/Core gates `7f62b72` SUCCESS |
 | A2 | На ревью владельца: recovery готов к push | Полный Auth gate, real PG recovery/race, TLS/Buf/drift | Два reviews RPC/client и recovery; clock-skew fix проверен | Новый recovery SHA требует CI |
-| A3 | В работе: API adapter slice | Full API check +41 OpenAPI responses, real Core chain далее | Два reviews adapter, дефектов нет | Новый API SHA ещё не опубликован |
+| A3 | В работе: живая цепочка прогнана локально | Binaries HTTPS/mTLS/Postgres: owner, empty account, replay, CSRF, foreign user, Auth restart. Peer/revocation/timeout/lost reply pending | Adapter reviews stand; this run is not reviewed | Новый SHA ещё не опубликован |
 | A4 | Не начат | PR40/43 из main сохранены; onboarding UI ещё не проверен | Pending | Pending |
 | A5 | Не начат | Нет полного register→owner→account→reload browser E2E | Pending | Pending |
 
@@ -186,13 +186,9 @@ provision.py отказывается перезаписывать сущест�
 
 ## Следующие действия
 
-1. Опубликовать текущий API adapter slice в тот же draft, verify remote SHA/CI.
-2. A3 real integration: отдельные actual Auth/Core/API binaries, HTTPS/mTLS и
-   отдельные marked Auth/Core test DB. Register/verify/login→POST company→owner/
-   empty default account без SQL membership; lost reply/restart/replay security.
-3. A4 current Workspace/useRequest/CompanySettings context/retry/redirect;
-   financial mocks off, затем A5 browser/reviews/final gates/CI. Не ждать владельца
-   между этапами, но ничего не принимать за него.
+1. A3 живая цепочка прогнана локально: `cd services/api && GOTOOLCHAIN=go1.27.3 go test -tags=onboarding -count=1 -timeout=20m -run '^TestRealCompanyOnboardingChain$' ./integration`. Отдельные бинарники Auth/Core/API, HTTPS и mTLS, disposable Postgres с marker. Register/verify/login, owner, пустой счёт, replay, конфликт ключа, отказ без CSRF, чужой пользователь, чтение после перезапуска Auth. Не закрыто: чужой peer, revocation, timeout, потерянный ответ bootstrap.
+2. A4: ключ создания компании сохраняется до подтверждённого ответа, поэтому повтор и обновление страницы не создают вторую компанию. `node --import ./tests/register.mjs --test tests/company-create-key.test.mjs` из frontend/. Браузер с выключенными financial mocks ещё не прогнан.
+3. Дальше: недостающие отказы A3, браузер A4/A5, два ревью и CI. Не принимать этапы за владельца. Merge, ready-for-review и deployment по-прежнему запрещены.
 
 Known blockers продукта не подтверждены; remaining work выше не выполнен.
 Не создавать heartbeat/resume jobs; при явном takeover прекратить изменения/push.
