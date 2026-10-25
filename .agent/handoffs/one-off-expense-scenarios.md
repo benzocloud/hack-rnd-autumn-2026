@@ -1,0 +1,9 @@
+# One-off expense scenarios
+
+Owner priority, 2026-10-25: scenarios before team management; manual targeted production updates, no full CI builds.
+
+Implemented first slice: one or more explicit one-off expenses on an existing successful base forecast; durable scenario list/read, idempotent create, a separately identified saved projection, and comparison of minimum/closing balance, maximum shortfall and first negative day. No new ML call, financial mutation, account revision change or alteration of the base forecast. Original snapshot/model identity, assumptions, limitations and uncalibrated uncertainty remain visible. Money arithmetic rejects overflow and dates outside the original horizon. The result is calculated and committed during creation; the existing 202/queued acceptance contract is retained, and the first forecast poll can already return succeeded.
+
+Migration 00016 only adds core_scenarios. Core owns scoped reads and comparisons; API validates/marshals existing protobuf/REST contracts. Existing frontend needs no rebuild: one_off_expense capability is enabled. Saved simulations survive process restarts. Other stress templates and response actions remain explicitly unsupported. In particular reduce_sales is not enabled for undifferentiated CSV inflows: loans, owner funding and own transfers must not be silently treated as sales. Implement a verified eligible sales component before that next slice.
+
+Focused proof: expense propagation, first-gap date, immutable input, horizon/overflow rejection; PostgreSQL persistence/restart, idempotency replay/body conflict, tenant isolation and unchanged account revision; API accepted/invalid/unsupported request routing. Existing Core forecasting/transport and API HTTP/app checks plus project module linters are run for the completed slice. Production verification uses only the owned C900 QA company and compares factual/account/base-result hashes before and after.

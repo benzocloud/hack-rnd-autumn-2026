@@ -89,6 +89,8 @@ type SavedForecast struct {
 }
 
 type ForecastView struct {
+	ScenarioExpenses     []ExpenseChange
+	ScenarioID           *uuid.UUID
 	ID                   uuid.UUID
 	Scope                ledger.Scope
 	Status               string
