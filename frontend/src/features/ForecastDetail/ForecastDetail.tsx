@@ -49,7 +49,8 @@ const ForecastAnalysisPanel = ( { forecast }: { forecast: IForecastSucceeded } )
         }
 
         const page = await ledgerService.listTransactions({ company_id: company.id, from: analysis.window_from, to: analysis.window_through, limit: 100 }, signal);
-        const map = new Map(page.items.map(( item ) => [ item.id, item ]));
+        const versions = new Map(analysis.classified_operations.map(( item ) => [ item.transaction_id, item.version ]));
+        const map = new Map(page.items.filter(( item ) => versions.get(item.id) === item.version).map(( item ) => [ item.id, item ]));
 
         return map;
     }, [ analysis, company.id ]));
