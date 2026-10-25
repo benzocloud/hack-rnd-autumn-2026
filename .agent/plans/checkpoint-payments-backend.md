@@ -44,10 +44,10 @@ unobserved_days_unknown, observed_operations_mean_per_calendar_day,
 historical_availability_unverified, not_calibrated, current_calendar_only.
 Probability unavailable/null, bands отсутствуют; unknown не превращается в zero.
 
-6. CSV+CURRENT happy path — В работе: shared CSV eligibility и calendar math в ML,
+6. CSV+CURRENT happy path — На ревью: shared CSV eligibility и calendar math в ML,
 Core explicit selector/frozen decoder/independent arithmetic, API exact context;
 реальный CSV import/commit→forecast→payment→новый forecast в own marked PG/Python mTLS.
-7. Negatives/backward/review — Не начат: lifecycle/replacement lifetime/overflow/
+7. Negatives/backward/review — На ревью: lifecycle/replacement lifetime/overflow/
 scope/CAS/replay/unknown context/unavailable ML, serial Go gates/APIcheck/MLRuff,
 independent caveman+ponytail нового diff на SHA, fixes и push в draft48.
 
@@ -55,3 +55,11 @@ independent caveman+ponytail нового diff на SHA, fixes и push в draft4
 movements). Historical/synthetic не расширяются. Additional только explicit;
 replacement только exact IDs/versions/completeness, не категория. Cancel/fullmatch/
 за горизонтом сохраняют mapping до revoke. Новое обучение/accuracy claim отсутствуют.
+
+
+Итог продолжения: CSV+CURRENT path закрыт реальным CSV upload/commit без proof.
+Implementation0826fa6; Core765tests/subtests+APIcheck88.70/89.04%+ML59+contracts
+PASS локально; independent caveman/ponytail findings closed. Actual CI FAILURE
+до запускаjobs из-за GitHub account billing/spending limit, не passing.
+Прежний CSV/calendar blocker superseded новым явно разрешённым profile;
+historical/synthetic/calibration не расширялись. Все стадии На ревью.
