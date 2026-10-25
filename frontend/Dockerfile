@@ -11,7 +11,8 @@ FROM node:24-alpine AS builder
 WORKDIR /app
 
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_OPTIONS="--max-old-space-size=4096"
+ARG NODE_OPTIONS="--max-old-space-size=4096"
+ENV NODE_OPTIONS=${NODE_OPTIONS}
 
 ARG NEXT_PUBLIC_API_URL=/api/v1
 ARG developerMode=dev
@@ -22,7 +23,7 @@ ENV developerMode=${developerMode}
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 
-RUN npm run build
+RUN --mount=type=cache,target=/app/.next/cache npm run build
 
 
 FROM node:24-alpine AS runner

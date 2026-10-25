@@ -3,9 +3,6 @@ name: Go API transport checks
 on:
   pull_request:
     paths: ['services/api/**', 'services/auth/**', 'services/core/**', 'testdata/company-bootstrap-fingerprint-v1.json', 'proto/auth/**', 'proto/core/**', 'docs/api/**', 'docs/auth/**', 'docs/data-contracts/**', 'buf*.yaml', '.github/workflows/api-ci.yml', 'LICENSE']
-  push:
-    branches: [main]
-    paths: ['services/api/**', 'services/auth/**', 'services/core/**', 'testdata/company-bootstrap-fingerprint-v1.json', 'proto/auth/**', 'proto/core/**', 'docs/api/**', 'docs/auth/**', 'docs/data-contracts/**', 'buf*.yaml', '.github/workflows/api-ci.yml', 'LICENSE']
   workflow_dispatch:
 
 permissions:
@@ -22,7 +19,8 @@ defaults:
 
 jobs:
   verify:
-    runs-on: ubuntu-24.04
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -44,8 +42,7 @@ jobs:
           "$RUNNER_TEMP/api-python/bin/python" -m pip install -r requirements-dev.txt
       - name: Install protobuf compiler and pinned Go plugins
         run: |
-          sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
+          protoc --version
           go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.12
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2
       - name: Build, test, race, coverage, vet, lint, process smoke and OpenAPI contracts
@@ -62,8 +59,9 @@ jobs:
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
 
   onboarding:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Real company onboarding
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 15
     services:
       authdb:
@@ -72,7 +70,7 @@ jobs:
           POSTGRES_USER: onboarding_test
           POSTGRES_PASSWORD: onboarding_test_only
           POSTGRES_DB: saldo_onboarding_auth_test
-        ports: ['5432/tcp']
+        ports: ['127.0.0.1::5432']
         options: >-
           --health-cmd "pg_isready -U onboarding_test -d saldo_onboarding_auth_test"
           --health-interval 2s --health-timeout 3s --health-retries 30
@@ -82,7 +80,7 @@ jobs:
           POSTGRES_USER: onboarding_test
           POSTGRES_PASSWORD: onboarding_test_only
           POSTGRES_DB: saldo_onboarding_core_test
-        ports: ['5432/tcp']
+        ports: ['127.0.0.1::5432']
         options: >-
           --health-cmd "pg_isready -U onboarding_test -d saldo_onboarding_core_test"
           --health-interval 2s --health-timeout 3s --health-retries 30
@@ -102,17 +100,16 @@ jobs:
           skip-cache: true
       - name: Install psql and pinned migration CLI
         run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
+          psql --version
           go install github.com/pressly/goose/v3/cmd/goose@v3.29.0
       - name: Mark disposable databases and run real HTTPS/mTLS/process/recovery gate
         env:
           CGO_ENABLED: '1'
-          AUTH_TEST_PORT: ${{ job.services.authdb.ports[5432] }}
-          CORE_TEST_PORT: ${{ job.services.coredb.ports[5432] }}
+          AUTH_TEST_PORT: ${{ job.services.authdb.ports['5432'] }}
+          CORE_TEST_PORT: ${{ job.services.coredb.ports['5432'] }}
           PGPASSWORD: onboarding_test_only
-          API_ONBOARDING_AUTH_DATABASE_URL: postgres://onboarding_test:onboarding_test_only@127.0.0.1:${{ job.services.authdb.ports[5432] }}/saldo_onboarding_auth_test?sslmode=disable
-          API_ONBOARDING_CORE_DATABASE_URL: postgres://onboarding_test:onboarding_test_only@127.0.0.1:${{ job.services.coredb.ports[5432] }}/saldo_onboarding_core_test?sslmode=disable
+          API_ONBOARDING_AUTH_DATABASE_URL: postgres://onboarding_test:onboarding_test_only@127.0.0.1:${{ job.services.authdb.ports['5432'] }}/saldo_onboarding_auth_test?sslmode=disable
+          API_ONBOARDING_CORE_DATABASE_URL: postgres://onboarding_test:onboarding_test_only@127.0.0.1:${{ job.services.coredb.ports['5432'] }}/saldo_onboarding_core_test?sslmode=disable
         run: |
           psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$AUTH_TEST_PORT" -U onboarding_test -d saldo_onboarding_auth_test -c "ALTER DATABASE saldo_onboarding_auth_test SET saldo.test_database='saldo-auth-integration'"
           psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$CORE_TEST_PORT" -U onboarding_test -d saldo_onboarding_core_test -c "ALTER DATABASE saldo_onboarding_core_test SET saldo.test_database='saldo-core-integration'"

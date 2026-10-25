@@ -3,9 +3,6 @@ name: Auth CI
 on:
   pull_request:
     paths: ['testdata/company-bootstrap-fingerprint-v1.json', 'services/auth/**', 'proto/auth/**', 'proto/core/v1/company.proto', 'proto/core/v1/errors.proto', 'buf.auth-core.gen.yaml', 'buf.yaml', '.github/workflows/auth-ci.yml', 'LICENSE']
-  push:
-    branches: [main]
-    paths: ['testdata/company-bootstrap-fingerprint-v1.json', 'services/auth/**', 'proto/auth/**', 'proto/core/v1/company.proto', 'proto/core/v1/errors.proto', 'buf.auth-core.gen.yaml', 'buf.yaml', '.github/workflows/auth-ci.yml', 'LICENSE']
   workflow_dispatch:
 
 permissions:
@@ -22,8 +19,9 @@ defaults:
 
 jobs:
   lint:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Auth lint
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -59,9 +57,10 @@ jobs:
         run: golangci-lint run ./...
 
   test:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Auth tests
     needs: lint
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 10
     services:
       postgres:
@@ -71,7 +70,7 @@ jobs:
           POSTGRES_PASSWORD: auth_test
           POSTGRES_DB: auth_test
         ports:
-          - 5432:5432
+          - '127.0.0.1::5432'
         options: >-
           --health-cmd "pg_isready -U auth_test -d auth_test"
           --health-interval 5s
@@ -89,13 +88,14 @@ jobs:
         run: go test -race -shuffle=on -count=1 -timeout=90s ./...
       - name: Run PostgreSQL integration tests with the race detector
         env:
-          AUTH_TEST_DATABASE_URL: postgres://auth_test:auth_test@127.0.0.1:5432/auth_test?sslmode=disable
+          AUTH_TEST_DATABASE_URL: postgres://auth_test:auth_test@127.0.0.1:${{ job.services.postgres.ports['5432'] }}/auth_test?sslmode=disable
         run: go test -race -tags=integration -shuffle=on -count=1 -timeout=90s ./...
 
   build:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Auth build
     needs: test
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

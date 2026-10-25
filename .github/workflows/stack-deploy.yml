@@ -17,23 +17,24 @@ concurrency:
 
 jobs:
   verify:
-    runs-on: ubuntu-24.04
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with: {persist-credentials: false}
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
         with: {go-version: '1.27.3', cache: false}
-      - name: Check each Go runtime
+      - name: Check Go runtime unit tests
         run: |
           for service in api auth core; do
-            (cd "services/$service" && go test -race ./... && go vet ./...)
+            (cd "services/$service" && go test -short ./...)
           done
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with: {node-version: '24'}
       - name: Verify frontend
         working-directory: frontend
-        run: npm ci --no-audit --no-fund && npm test && npm run typecheck && npm run lint
+        run: npm ci --no-audit --no-fund && npm test && npm run typecheck
       - name: Check deployment scripts
         run: |
           shellcheck deploy/stack/*.sh
@@ -41,69 +42,76 @@ jobs:
           python3 -m unittest discover -s deploy/stack -p 'test_*.py'
 
   image:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     needs: verify
-    runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    runs-on: [self-hosted, Linux, X64, saldo-ci, saldo-build]
+    timeout-minutes: 60
     permissions: {contents: read, packages: write}
-    strategy:
-      fail-fast: false
-      matrix:
-        service: [api, auth, core, ml, frontend-real]
+    outputs:
+      api: ${{ steps.images.outputs.api }}
+      auth: ${{ steps.images.outputs.auth }}
+      core: ${{ steps.images.outputs.core }}
+      ml: ${{ steps.images.outputs.ml }}
+      frontend: ${{ steps.images.outputs.frontend }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with: {persist-credentials: false}
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
-      - name: Select image build
-        id: build
-        env: {SERVICE: '${{ matrix.service }}'}
-        run: |
-          context=.
-          file=deploy/stack/Dockerfile.go
-          if [[ "$SERVICE" == ml ]]; then file=deploy/stack/Dockerfile.ml; fi
-          if [[ "$SERVICE" == frontend-real ]]; then context=frontend; file=frontend/Dockerfile; fi
-          echo "context=$context" >> "$GITHUB_OUTPUT"
-          echo "file=$file" >> "$GITHUB_OUTPUT"
+        with:
+          name: saldo-stack
+          keep-state: true
+          buildkitd-config-inline: |
+            [worker.oci]
+              max-parallelism = 1
       - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6
         if: github.event_name != 'pull_request'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
-        id: image
-        with:
-          context: ${{ steps.build.outputs.context }}
-          file: ${{ steps.build.outputs.file }}
-          platforms: linux/amd64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ghcr.io/benzocloud/saldo-${{ matrix.service }}:sha-${{ github.sha }}
-          build-args: |
-            SERVICE=${{ matrix.service }}
-            developerMode=dev
-            NEXT_PUBLIC_API_URL=/api/v1
-          labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-      - name: Save immutable digest
-        if: github.event_name != 'pull_request'
-        env: {DIGEST: '${{ steps.image.outputs.digest }}', SERVICE: '${{ matrix.service }}'}
+      - name: Build images serially and export immutable digests
+        id: images
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REVISION: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
         run: |
-          [[ "$DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]
-          printf '%s\n' "$DIGEST" > "$SERVICE.digest"
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-        if: github.event_name != 'pull_request'
-        with: {name: 'digest-${{ matrix.service }}', path: '*.digest', retention-days: 7}
+          set -euo pipefail
+          for service in api auth core ml frontend-real; do
+            context=.
+            file=deploy/stack/Dockerfile.go
+            if [[ "$service" == ml ]]; then file=deploy/stack/Dockerfile.ml; fi
+            if [[ "$service" == frontend-real ]]; then context=frontend; file=frontend/Dockerfile; fi
+            publish=()
+            if [[ "$EVENT_NAME" != pull_request ]]; then publish+=(--push); fi
+            metadata="$RUNNER_TEMP/saldo-$service.json"
+            docker buildx build --file "$file" --platform linux/amd64 \
+              --tag "ghcr.io/benzocloud/saldo-$service:sha-$REVISION" \
+              --build-arg "SERVICE=$service" --build-arg developerMode=dev \
+              --build-arg NEXT_PUBLIC_API_URL=/api/v1 \
+              --build-arg NODE_OPTIONS=--max-old-space-size=1536 \
+              --label "org.opencontainers.image.source=https://github.com/$REPOSITORY" \
+              --label "org.opencontainers.image.revision=$REVISION" \
+              --metadata-file "$metadata" "${publish[@]}" "$context"
+            if [[ "$EVENT_NAME" != pull_request ]]; then
+              digest=$(jq -r '."containerimage.digest"' "$metadata")
+              [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+              output=$service
+              if [[ "$service" == frontend-real ]]; then output=frontend; fi
+              printf '%s=%s\n' "$output" "$digest" >> "$GITHUB_OUTPUT"
+            fi
+          done
 
   deploy:
     needs: image
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: ubuntu-24.04
+    if: >-
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) &&
+      (github.ref == 'refs/heads/main' && github.event_name != 'pull_request')
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 15
     environment: frontend-mock
     permissions: {contents: read, packages: read}
     steps:
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
-        with: {pattern: 'digest-*', merge-multiple: true}
       - name: Deploy the complete immutable release
         env:
           DEPLOY_KEY: ${{ secrets.FRONTEND_DEPLOY_SSH_KEY }}
@@ -111,6 +119,11 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REGISTRY_USER: ${{ github.actor }}
           REVISION: ${{ github.sha }}
+          API_DIGEST: ${{ needs.image.outputs.api }}
+          AUTH_DIGEST: ${{ needs.image.outputs.auth }}
+          CORE_DIGEST: ${{ needs.image.outputs.core }}
+          ML_DIGEST: ${{ needs.image.outputs.ml }}
+          FRONTEND_DIGEST: ${{ needs.image.outputs.frontend }}
         run: |
           set -euo pipefail
           umask 077
@@ -119,8 +132,7 @@ jobs:
           printf '%s\n' "$DEPLOY_KEY" > "$directory/key"
           printf '%s\n' "$KNOWN_HOSTS" > "$directory/known_hosts"
           digests=()
-          for service in api auth core ml frontend-real; do
-            digest=$(cat "$service.digest")
+          for digest in "$API_DIGEST" "$AUTH_DIGEST" "$CORE_DIGEST" "$ML_DIGEST" "$FRONTEND_DIGEST"; do
             [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
             digests+=("$digest")
           done

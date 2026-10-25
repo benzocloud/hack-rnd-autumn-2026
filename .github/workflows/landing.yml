@@ -20,10 +20,11 @@ env:
 
 jobs:
   lint:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     defaults:
       run:
         working-directory: landing
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -42,10 +43,11 @@ jobs:
         run: shellcheck deploy/landing/*.sh
 
   test:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     defaults:
       run:
         working-directory: landing
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -60,8 +62,9 @@ jobs:
       - run: npm test
 
   build:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     needs: [lint, test]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 20
     permissions:
       contents: read
@@ -113,8 +116,10 @@ jobs:
 
   deploy:
     needs: build
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    if: >-
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) &&
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 10
     environment:
       name: frontend-mock
