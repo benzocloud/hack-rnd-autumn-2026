@@ -28,6 +28,14 @@ func encodeScenario(v forecasting.ScenarioView) *pb.Scenario {
 	for _, c := range v.Changes {
 		s.Changes = append(s.Changes, &pb.ScenarioChange{Change: &pb.ScenarioChange_OneOffExpense{OneOffExpense: &pb.OneOffExpenseChange{Id: c.ID.String(), Date: string(c.Date), Amount: kopecks(c.AmountMinor), Description: c.Description}}})
 	}
+	for _, c := range v.SalesChanges {
+		targets := []*pb.OccurrenceTarget{}
+		for _, t := range c.Targets {
+			targets = append(targets, &pb.OccurrenceTarget{ComponentId: t.ComponentID, OccurrenceId: t.OccurrenceID})
+		}
+		s.Changes = append(s.Changes, &pb.ScenarioChange{Change: &pb.ScenarioChange_ReduceSales{ReduceSales: &pb.ReduceSalesChange{Id: c.ID.String(), Targets: targets, PeriodStart: string(c.PeriodStart), PeriodEnd: string(c.PeriodEnd), ReductionBasisPoints: c.ReductionBasisPoints}}})
+	}
+
 	return s
 }
 func (h *handler) CreateScenario(ctx context.Context, r *pb.CreateScenarioRequest) (*pb.CreateScenarioResponse, error) {
@@ -52,6 +60,19 @@ func (h *handler) CreateScenario(ctx context.Context, r *pb.CreateScenarioReques
 	}
 	cmd := forecasting.ScenarioCommand{Scope: scope, ActorID: actor, IdempotencyKey: r.IdempotencyKey, Name: r.Name, BaseForecastID: base}
 	for _, c := range input.Changes {
+		if reduction := c.GetReduceSales(); reduction != nil {
+			id, e := parseID(reduction.Id)
+			if e != nil {
+				return nil, rpcerror.From(e)
+			}
+			change := forecasting.SalesReductionChange{ID: id, PeriodStart: ledger.Date(reduction.PeriodStart), PeriodEnd: ledger.Date(reduction.PeriodEnd), ReductionBasisPoints: reduction.ReductionBasisPoints}
+			for _, t := range reduction.Targets {
+				change.Targets = append(change.Targets, forecasting.SalesTarget{ComponentID: t.GetComponentId(), OccurrenceID: t.GetOccurrenceId()})
+			}
+			cmd.SalesChanges = append(cmd.SalesChanges, change)
+			continue
+		}
+
 		v := c.GetOneOffExpense()
 		if v == nil {
 			return nil, rpcerror.New(codes.FailedPrecondition, pb.CoreErrorReason_CORE_ERROR_REASON_SCENARIO_NOT_SUPPORTED)

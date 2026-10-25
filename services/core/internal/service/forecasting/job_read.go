@@ -81,6 +81,8 @@ func readForecastView(ctx context.Context, snapshots jobSnapshots, job domain.Jo
 			return ForecastView{}, ErrUnavailable
 		}
 		view.Result = &saved
+		view.Categories = input.Categories
+		view.Sales = ScenarioSales(view)
 	case "failed":
 		if job.CompletedAt == nil || job.CompletedAt.Before(job.CreatedAt) || job.ErrorCode == "" || job.RequestID == "" || len(job.Result) != 0 {
 			return ForecastView{}, ErrUnavailable

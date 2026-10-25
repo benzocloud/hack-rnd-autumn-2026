@@ -89,6 +89,7 @@ func encodeForecast(view forecasting.ForecastView) *pb.Forecast {
 	}
 	if view.Status == "succeeded" {
 		encodeKnownComponents(out.GetSucceeded().Result, view.Result, d.Calendar)
+		encodeSales(out.GetSucceeded().Result, view)
 		for _, expense := range view.ScenarioExpenses {
 			out.GetSucceeded().Result.Components = append(out.GetSucceeded().Result.Components, &pb.ForecastComponent{Id: expense.ID.String(), OccurrenceId: expense.ID.String(), Kind: "scenario_expense", Direction: pb.Direction_DIRECTION_OUTFLOW, Date: string(expense.Date), Amount: kopecks(expense.AmountMinor), RemainingAmount: kopecks(expense.AmountMinor)})
 		}
@@ -170,4 +171,19 @@ func observedDays(facts []domain.Fact, coverage domain.JobCoverage, cutoff time.
 		seen[date] = struct{}{}
 	}
 	return uint32(len(seen))
+}
+
+func encodeSales(out *pb.ForecastResult, view forecasting.ForecastView) {
+	for _, c := range view.Sales {
+		item := &pb.ForecastComponent{Id: c.ID, OccurrenceId: c.ID, Kind: "ml_sales_receipt", Direction: pb.Direction_DIRECTION_INFLOW, Date: string(c.Date), Amount: kopecks(c.AmountMinor), RemainingAmount: kopecks(c.RemainingMinor), ScenarioEligible: view.ScenarioID == nil && c.RemainingMinor > 0}
+		if c.CategoryID != uuid.Nil {
+			item.CategoryId = new(c.CategoryID.String())
+		}
+		out.Components = append(out.Components, item)
+	}
+	if len(view.Sales) > 0 {
+		out.ScenarioCapabilities.ReduceSales = view.ScenarioID == nil
+		out.Assumptions = append(out.Assumptions, "classified_sales_mean_90_v1: модельная доля продаж по сохранённой классификации за 90 дней; займы, свои переводы и платежи календаря исключены")
+	}
+	out.ScenarioCapabilities.UnavailableReason = new("Для этого шаблона нет подходящих проверенных компонентов прогноза.")
 }

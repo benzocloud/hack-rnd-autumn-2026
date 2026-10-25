@@ -89,6 +89,8 @@ type SavedForecast struct {
 }
 
 type ForecastView struct {
+	Sales                []SalesComponent
+	Categories           []ledger.CategoryDefinition
 	ScenarioExpenses     []ExpenseChange
 	ScenarioID           *uuid.UUID
 	ID                   uuid.UUID
