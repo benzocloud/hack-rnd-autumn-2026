@@ -1,0 +1,28 @@
+{
+  "source_c001_sha256": "945fe67e8418882bf7bd5e9bdcda570c613fc7777113d55424ae34b052dfa92a",
+  "dataset_dir": "/Users/globalarray/hack-rnd-autumn-2026/dataset",
+  "ordinary_window": {
+    "start": "2026-07-02",
+    "cutoff": "2026-09-29",
+    "span_calendar_days": 90,
+    "operation_count": 151,
+    "unique_days": 51
+  },
+  "files": {
+    "ordinary_90d_c001.csv": {
+      "path": "fixtures/ordinary_90d_c001.csv",
+      "sha256": "8780e7806a705f1c2898acf234c301ff6c1391f88fbb99bd27bb55f7c4e4bf85",
+      "rows": 151
+    },
+    "short_history.csv": {
+      "path": "fixtures/short_history.csv",
+      "sha256": "a25c0d3ccf4c2823a7740c2617889f0cad02a3bda67eaa1fe94be6f9445f4df3",
+      "rows": 59
+    },
+    "eod_conflict.csv": {
+      "path": "fixtures/eod_conflict.csv",
+      "sha256": "e5f8d0aebf64ca6fef8a82792ea4d3bb605f32b96c43a219f9fcfb1b06a9aa99",
+      "rows": 151
+    }
+  }
+}
