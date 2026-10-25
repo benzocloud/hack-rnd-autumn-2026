@@ -15,8 +15,8 @@ Scope/invariants/checklist: [plan](../plans/company-onboarding.md). Issue не �
 Продолжать ту же ветку, не cherry-pick и не создавать второй PR/параллельного owner.
 [Draft PR #41](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/41).
 Отдельный worktree; исходный checkout не менять. Main — обычный merge перед push.
-Последний включённый main `0abae4f` (import preview). Предыдущий published head
-до этого checkpoint: `bb841b3`.
+Последний включённый main `0abae4f` (import preview). Published review-fix head:
+`9d9b98ac79ed602f4b7289a77f7f0d38061d5f13` (draft PR #41, remote verified).
 
 ## Состояние A0–A5
 
