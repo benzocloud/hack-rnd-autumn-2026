@@ -10,7 +10,10 @@ from cashflow_rpc.csv_forecast import (
 )
 from cashflow_rpc.financial import financial_forecast
 from cashflow_rpc.inference import InvalidSnapshot, UnsupportedContext
-from ml.v1 import forecast_pb2 as pb
+from test_rpc import RPC_READY
+
+if RPC_READY:
+    from ml.v1 import forecast_pb2 as pb
 
 
 def csv_request():
@@ -71,6 +74,7 @@ def csv_request():
     return r
 
 
+@unittest.skipUnless(RPC_READY, "Install RPC requirements and generate the current ML proto")
 class CsvForecastTests(unittest.TestCase):
     def test_manual_supplement_retains_manual_provenance(self):
         request = csv_request()
