@@ -102,10 +102,8 @@ func (s *jobs) Create(ctx context.Context, cmd CreateForecastCommand) (ForecastA
 		if err != nil {
 			return err
 		}
-		if hasCoverage {
+		if hasCoverage || len(calendar.Payments) > 0 || len(calendar.Groups) > 0 {
 			calendar, err = activateCalendar(calendar, cmd.Cutoff, cmd.Today, facts)
-		} else if len(calendar.Payments) > 0 || len(calendar.Groups) > 0 {
-			return ErrHorizon
 		}
 		if err != nil {
 			return err
@@ -135,6 +133,9 @@ func (s *jobs) Create(ctx context.Context, cmd CreateForecastCommand) (ForecastA
 			input.Coverage = domain.JobCoverage{}
 			input.Assessment = assessment
 			input.Model = ModelContext{Name: "mean_90", Version: CSVModelVersion, PreprocessingVersion: CSVPreprocessing}
+			if activeCalendar(calendar) {
+				input.Model = ModelContext{Name: "mean_90", Version: CSVCalendarModelVersion, PreprocessingVersion: CSVCalendarPreprocessing}
+			}
 		}
 		if _, err := prepareJob(snapshot, input); err != nil {
 			return err

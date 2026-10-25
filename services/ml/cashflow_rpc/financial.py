@@ -201,61 +201,9 @@ def financial_forecast(request, pb):
             raise InvalidSnapshot(
                 "Historical operations must exactly reconstruct covered daily flows"
             )
-    groups, covered = {}, set()
-    for group in calendar.groups:
-        if not group.group_id or group.group_id in groups or not group.complete_for_horizon:
-            raise InvalidSnapshot("Calendar group must be unique and complete for the horizon")
-        ids = list(group.historical_operation_ids)
-        if len(set(ids)) != len(ids) or any(i not in operations or i in covered for i in ids):
-            raise InvalidSnapshot(
-                "Calendar replacement has duplicate, overlapping or unknown facts"
-            )
-        if (not ids and not group.additional_obligation_confirmed) or (
-            ids and group.additional_obligation_confirmed
-        ):
-            raise InvalidSnapshot(
-                "Additional obligation and historical replacement are explicit alternatives"
-            )
-        groups[group.group_id] = group
-        covered.update(ids)
-    known, known_components, seen = [[0, 0] for _ in range(30)], [], set()
-    for payment in calendar.payments:
-        _uuid(payment.payment_id)
-        validate_category(payment, s.company_id)
-        effective = _date(payment.effective_date)
-        _date(payment.original_due_date)
-        incoming, outgoing = payment.remaining_inflow_minor, payment.remaining_outflow_minor
-        if payment.payment_id in seen or payment.version < 1 or payment.group_id not in groups:
-            raise InvalidSnapshot("Payment requires unique ID, version and reconciliation group")
-        if not (cutoff < effective <= cutoff + timedelta(days=30)):
-            raise InvalidSnapshot(
-                "Payment requires original due date and explicit effective horizon date"
-            )
-        if (
-            not payment.category_code
-            or not payment.source
-            or not ((incoming > 0 and outgoing == 0) or (outgoing > 0 and incoming == 0))
-        ):
-            raise InvalidSnapshot("Known payment requires positive remaining amount and provenance")
-        seen.add(payment.payment_id)
-        step = (effective - cutoff).days - 1
-        known[step][0] = checked(known[step][0] + incoming)
-        known[step][1] = checked(known[step][1] + outgoing)
-        known_components.append(
-            pb.ForecastComponent(
-                component_id="known:" + payment.payment_id,
-                date=payment.effective_date,
-                category_code=payment.category_code,
-                inflow_minor=incoming,
-                outflow_minor=outgoing,
-                kind="known_remaining_payment",
-                source_ids=[payment.payment_id],
-                regularity_key=payment.regularity_key,
-            )
-        )
-        if payment.HasField("category_id"):
-            known_components[-1].category_id = payment.category_id
-            known_components[-1].category_company_id = payment.category_company_id
+    covered, known, known_components = calendar_contributions(
+        calendar, operations, s.company_id, cutoff, pb
+    )
     # Non-covered history is the only source of baseline and bootstrap residuals.
     residual = {raw.date: [0, 0] for raw in s.history}
     # At the fitted mean_90 corner the algebra is identical: reuse allocation,
@@ -391,3 +339,63 @@ def financial_forecast(request, pb):
     for point in result.days:
         point.negative_balance_probability.unavailable_reason = "not_calibrated"
     return result
+
+
+def calendar_contributions(calendar, operations, company_id, cutoff, pb):
+    """Validate independent mappings and return exact remaining occurrences."""
+    groups, covered = {}, set()
+    for group in calendar.groups:
+        if not group.group_id or group.group_id in groups or not group.complete_for_horizon:
+            raise InvalidSnapshot("Calendar group must be unique and complete for the horizon")
+        ids = list(group.historical_operation_ids)
+        if len(set(ids)) != len(ids) or any(i not in operations or i in covered for i in ids):
+            raise InvalidSnapshot(
+                "Calendar replacement has duplicate, overlapping or unknown facts"
+            )
+        if (not ids and not group.additional_obligation_confirmed) or (
+            ids and group.additional_obligation_confirmed
+        ):
+            raise InvalidSnapshot(
+                "Additional obligation and historical replacement are explicit alternatives"
+            )
+        groups[group.group_id] = group
+        covered.update(ids)
+    known, known_components, seen = [[0, 0] for _ in range(30)], [], set()
+    for payment in calendar.payments:
+        _uuid(payment.payment_id)
+        validate_category(payment, company_id)
+        effective = _date(payment.effective_date)
+        _date(payment.original_due_date)
+        incoming, outgoing = payment.remaining_inflow_minor, payment.remaining_outflow_minor
+        if payment.payment_id in seen or payment.version < 1 or payment.group_id not in groups:
+            raise InvalidSnapshot("Payment requires unique ID, version and reconciliation group")
+        if not (cutoff < effective <= cutoff + timedelta(days=30)):
+            raise InvalidSnapshot(
+                "Payment requires original due date and explicit effective horizon date"
+            )
+        if (
+            not payment.category_code
+            or not payment.source
+            or not ((incoming > 0 and outgoing == 0) or (outgoing > 0 and incoming == 0))
+        ):
+            raise InvalidSnapshot("Known payment requires positive remaining amount and provenance")
+        seen.add(payment.payment_id)
+        step = (effective - cutoff).days - 1
+        known[step][0] = checked(known[step][0] + incoming)
+        known[step][1] = checked(known[step][1] + outgoing)
+        known_components.append(
+            pb.ForecastComponent(
+                component_id="known:" + payment.payment_id,
+                date=payment.effective_date,
+                category_code=payment.category_code,
+                inflow_minor=incoming,
+                outflow_minor=outgoing,
+                kind="known_remaining_payment",
+                source_ids=[payment.payment_id],
+                regularity_key=payment.regularity_key,
+            )
+        )
+        if payment.HasField("category_id"):
+            known_components[-1].category_id = payment.category_id
+            known_components[-1].category_company_id = payment.category_company_id
+    return covered, known, known_components

@@ -202,3 +202,30 @@ SQL facts. Residual только supplied operations после proven replaceme
 Tools/state .agent/local сохранены; RTK/GBrain MCP ранее отсутствовали, новые calls
 не заявляются. OwnPG18 остановлен после прошлого блока, поднимается снова.
 Следующая команда: `pg_ctl -D .agent/local/pg18 -l .agent/local/pg18.log -o '-h 127.0.0.1 -p 55488 -k /tmp' start`; затем Core selector/ML shared validation.
+
+## CSV+CURRENT happy-path checkpoint — 25.10 11:16 МСК, На ревью
+
+Plan continuation pushed a7acc469ae1a99a63e565a13fe4d172346bccec6 (remote совпал).
+Новый profile mean_90_csv_calendar_v1/csv_observed_operations_calendar_v1, config
+mean_90_csv_calendar_v1 реализован без wire/REST DTO изменений и без миграций.
+Старые CSV-only/covered/schema1/2 сохранены. Frozen assessment для нового profile
+содержит CSV limitations + current_calendar_only, не completeness proof.
+
+`TestOrdinaryCSVCalendarHTTPPostgresPythonLifecycle` — race PASS3.166s:
+настоящий multipart ordinary CSV import/commit без manifest/SQLfacts/proof,
+90-day window/2operation days/88unknown days; CSV-only oldprofile→additional
+newprofile→amount/date/partial/unmatch/rematch/cancel, все30points; replacement
+fullmatch/outsidehorizon/cancel не возвращают residual без revoke; API/Core reader
+restart, old immutable snapshot/input/result и staleness. Auth double явно указан.
+ML59 RPC/security/financial/trained tests безskips PASS; pinned Ruff PASS.
+API штатный fullcheck PASS, coverage88.70%statements/89.04%lines; source/DTO/path
+unchanged. Go service/client units PASS, independent response corruption cases
+добавлены; full Core taggedrace/vet/lint нового diff и независимые reviews далее.
+
+Неоднозначности не скрыты: newprofile только CURRENT; historical/synthetic не
+расширены. CSV assessment проверяется по исходным полным facts/EOD до исключения
+replacement. Вычитается только подтверждённая group history, known remaining
+прибавляется один раз; group lifetime прежний. Точное соответствие direction/RUB/
+scope/version сохраняется в frozen facts и calendar, категории не доказательство.
+Следующая команда: full serial Core taggedrace/vet/lint и independent review
+публикуемого SHA относительно1f10b6e; исправления пакетно, затем push.

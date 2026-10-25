@@ -143,3 +143,28 @@ mTLS с allowlist Core SAN, deadline <=30s, 2 MiB, 2 workers/4 concurrent RPC.
 неверные даты/суммы/coverage/ссылки/overflow; FailedPrecondition — неизвестная
 версия/конфигурация или неподдерживаемая финансовая семантика. Отмена/timeout
 не создают успешный частичный прогноз. Рабочая PKI/deployment не проверены.
+
+## CSV с CURRENT calendar
+
+По прямому поручению владельца поддержан отдельный профиль
+`mean_90_csv_calendar_v1`, preprocessing `csv_observed_operations_calendar_v1`,
+configuration `mean_90_csv_calendar_v1` (model_name `mean_90`). Это не covered или
+trained context. Прежние CSV-only/covered результаты и schema1/2 читаются прежним
+decoder; новый выбор фиксируется с job и snapshot, без повторного использования
+старого результата при изменённой revision.
+
+Исходные 90 дней supplied operations и cutoff EOD проходят прежний exact CSV
+assessment до любого replacement. Unknown дни остаются unknown, proof/fixture
+не создаётся. После допустимого replacement residual доступных операций делится
+на90 (прежнее half-up округление); известные remaining добавляются однократно на
+исходные даты. Groups независимы от cancel/full match/выхода платежа за горизонт.
+Go независимо проверяет arithmetic/components/evidence/overflow.
+
+Context поддерживает только CURRENT: cutoff сегодня/вчера и отсутствие post-cutoff
+movements. Historical/synthetic и overdue не активируются/не сдвигаются. Limitations:
+`csv_history_completeness_unverified`, `unobserved_days_unknown`,
+`observed_operations_mean_per_calendar_day`, `historical_availability_unverified`,
+`not_calibrated`, `current_calendar_only`. Probability unavailable, bands отсутствуют.
+Обычный CSV до календаря сохраняет mean_90_csv_v1; при persisted payments/groups
+и допустимом CURRENT используется явный новый profile. REST endpoints/DTO и один
+Predict неизменны. Обучение/trained default не менялись.

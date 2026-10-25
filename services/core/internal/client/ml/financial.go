@@ -41,6 +41,9 @@ func (c *client) PredictFinancial(ctx context.Context, input forecasting.Financi
 }
 
 func encodeFinancial(input forecasting.FinancialModelInput) (*pb.PredictRequest, error) {
+	if input.Snapshot.Model.Version == forecasting.CSVCalendarModelVersion {
+		return encodeCSV(input)
+	}
 	if input.Snapshot.Model.Version == forecasting.CSVModelVersion {
 		if input.Calendar.Captured && input.Calendar.KnowledgeMode == "current" {
 			return nil, forecasting.ErrModelContext
@@ -152,6 +155,9 @@ func unavailableFinancialProbability(p *pb.FinancialProbability) bool {
 }
 
 func validateFinancialResponse(input forecasting.FinancialModelInput, request *pb.PredictRequest, r *pb.PredictResponse) error {
+	if input.Snapshot.Model.Version == forecasting.CSVCalendarModelVersion {
+		return validateCSVCalendarResponse(input, request, r)
+	}
 	if request.Calendar.KnowledgeMode == pb.CalendarKnowledgeMode_CALENDAR_KNOWLEDGE_MODE_CURRENT {
 		return validateCurrentFinancialResponse(input, request, r)
 	}

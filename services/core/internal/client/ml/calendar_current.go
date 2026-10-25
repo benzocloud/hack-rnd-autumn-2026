@@ -73,7 +73,11 @@ func encodeCurrentCalendar(input forecasting.FinancialModelInput) (*pb.Financial
 }
 func validateCurrentFinancialResponse(input forecasting.FinancialModelInput, request *pb.PredictRequest, r *pb.PredictResponse) error {
 	s := request.Snapshot
-	if r == nil || r.SnapshotId != s.SnapshotId || r.CompanyId != s.CompanyId || r.AccountId != s.AccountId || r.DataVersion != s.DataVersion || r.Currency != money.RUB || r.CutoffDate != s.CutoffDate || !proto.Equal(r.Model, request.Model) || r.CalendarSnapshotId != s.SnapshotId || r.CalendarDataVersion != s.DataVersion || r.HistoryOnlyIncludesRecurringFlows || len(r.Days) != 30 || !unavailableFinancialProbability(r.GapProbability) || !slices.Equal(r.AvailabilityLimitations, request.AvailabilityLimitations) || len(r.ClassifiedOperations) != len(request.Operations) || !slices.Contains(r.Warnings, "EXPLICIT_COMPLETE_CALENDAR_REPLACEMENT") || !slices.Contains(r.Warnings, "UNCALIBRATED_NO_PROBABILITY") || r.ScenarioContext != nil || r.AnalysisContext != nil || len(r.RecurringHypotheses) > 0 {
+	warning := "EXPLICIT_COMPLETE_CALENDAR_REPLACEMENT"
+	if input.Snapshot.Model.Version == forecasting.CSVCalendarModelVersion {
+		warning = "CURRENT_CALENDAR_INCLUDED"
+	}
+	if r == nil || r.SnapshotId != s.SnapshotId || r.CompanyId != s.CompanyId || r.AccountId != s.AccountId || r.DataVersion != s.DataVersion || r.Currency != money.RUB || r.CutoffDate != s.CutoffDate || !proto.Equal(r.Model, request.Model) || r.CalendarSnapshotId != s.SnapshotId || r.CalendarDataVersion != s.DataVersion || r.HistoryOnlyIncludesRecurringFlows || len(r.Days) != 30 || !unavailableFinancialProbability(r.GapProbability) || !slices.Equal(r.AvailabilityLimitations, request.AvailabilityLimitations) || len(r.ClassifiedOperations) != len(request.Operations) || !slices.Contains(r.Warnings, warning) || !slices.Contains(r.Warnings, "UNCALIBRATED_NO_PROBABILITY") || r.ScenarioContext != nil || r.AnalysisContext != nil || len(r.RecurringHypotheses) > 0 {
 		return forecasting.ErrModelResponse
 	}
 	for i, op := range request.Operations {
@@ -215,6 +219,9 @@ func validateCurrentEvidence(request *pb.PredictRequest, r *pb.PredictResponse, 
 		}
 		day.InflowMinor -= sum[0]
 		day.OutflowMinor -= sum[1]
+	}
+	if request.Model.ModelVersion == forecasting.CSVCalendarModelVersion {
+		return validateResidualEvidence(residualRequest, residual)
 	}
 	return validateFinancialEvidence(residualRequest, residual)
 }

@@ -22,6 +22,9 @@ func validateFinancialEvidence(request *pb.PredictRequest, r *pb.PredictResponse
 			return forecasting.ErrModelResponse
 		}
 	}
+	return validateResidualEvidence(request, r)
+}
+func validateResidualEvidence(request *pb.PredictRequest, r *pb.PredictResponse) error {
 	operations := make(map[string]*pb.FinancialOperation)
 	for _, op := range request.Operations {
 		operations[op.OperationId] = op
@@ -96,7 +99,7 @@ func decodeFinancial(input forecasting.FinancialModelInput, r *pb.PredictRespons
 		projection.FirstNegativeDate = &date
 	}
 	result := forecasting.FinancialModelResult{Projection: projection, ProbabilityUnavailableReason: "not_calibrated", Assumptions: append(slices.Clone(r.Assumptions), r.Uncertainty.Assumptions...), Limitations: slices.Clone(r.AvailabilityLimitations)}
-	if i.Model.Version != forecasting.CSVModelVersion {
+	if i.Model.Version != forecasting.CSVModelVersion && i.Model.Version != forecasting.CSVCalendarModelVersion {
 		result.Assumptions = append(result.Assumptions, "Empirical uncalibrated bands are not exposed as public confidence intervals; residual components are not scenario targets.")
 	}
 	for _, c := range r.Components {

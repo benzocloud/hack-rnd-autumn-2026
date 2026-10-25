@@ -6334,7 +6334,7 @@ components:
           - $ref: '#/components/schemas/HistoryAssessment'
           - type: 'null'
           readOnly: true
-          description: Frozen CSV model suitability; never certified bank coverage. Present only for mean_90_csv_v1.
+          description: Frozen CSV model suitability; never certified bank coverage. Present for mean_90_csv_v1 or the explicit mean_90_csv_calendar_v1 CURRENT-calendar profile. The calendar profile retains CSV limitations, replaces historical_calendar_unavailable with current_calendar_only, and never claims calibrated probability or bands.
         calendar_mode:
           type: string
           enum:

@@ -138,6 +138,9 @@ func validateSavedForecast(frozen jobInput, snapshot domain.FinancialSnapshot, r
 	if frozen.Model.Version == CSVModelVersion && (result == nil || !slices.Equal(result.Limitations, csvLimitations()) || len(result.Components) != 0 || len(result.Evidence) != 0) {
 		return ErrModelResponse
 	}
+	if frozen.Model.Version == CSVCalendarModelVersion && (result == nil || !activeCalendar(snapshot.Data().Calendar) || !slices.Equal(result.Limitations, csvCalendarLimitations())) {
+		return ErrModelResponse
+	}
 	if result == nil || result.SchemaVersion != 1 || len(result.Days) != 30 || result.ProbabilityReason != "not_calibrated" || (!activeCalendar(snapshot.Data().Calendar) && !slices.Contains(result.Limitations, "historical_calendar_unavailable")) {
 		return ErrModelResponse
 	}

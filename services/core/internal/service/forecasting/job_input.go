@@ -132,21 +132,22 @@ func validFrozenProfile(input jobInput) bool {
 		return input.Assessment == nil && input.Model == (ModelContext{Name: "mean_90", Version: financialJobVersion, PreprocessingVersion: financialJobPreprocessing}) && validCoverage(input.Coverage, input.DataVersion)
 	}
 	a := input.Assessment
-	return input.SchemaVersion == 2 && a != nil && a.RuleVersion == CSVQualityVersion && a.Scope == input.Scope && a.DataVersion == input.DataVersion && a.Through == input.Cutoff && input.Coverage.Kind == "" && input.Coverage.Reference == "" && input.Coverage.DataVersion == 0 && input.Model == (ModelContext{Name: "mean_90", Version: CSVModelVersion, PreprocessingVersion: CSVPreprocessing})
+	return input.SchemaVersion == 2 && a != nil && a.RuleVersion == CSVQualityVersion && a.Scope == input.Scope && a.DataVersion == input.DataVersion && a.Through == input.Cutoff && input.Coverage.Kind == "" && input.Coverage.Reference == "" && input.Coverage.DataVersion == 0 && (input.Model == (ModelContext{Name: "mean_90", Version: CSVModelVersion, PreprocessingVersion: CSVPreprocessing}) || input.Model == (ModelContext{Name: "mean_90", Version: CSVCalendarModelVersion, PreprocessingVersion: CSVCalendarPreprocessing}))
 }
 
 func prepareJob(snapshot domain.FinancialSnapshot, input jobInput) (FinancialModelInput, error) {
 	if input.Model.Version == financialJobVersion {
 		return prepareFinancial(snapshot, input.Coverage)
 	}
-	if activeCalendar(snapshot.Data().Calendar) {
+	current := activeCalendar(snapshot.Data().Calendar)
+	if input.Model.Version == CSVCalendarModelVersion && !current || input.Model.Version == CSVModelVersion && current {
 		return FinancialModelInput{}, ErrHorizon
 	}
 	if !validCSVAssessment(input.Assessment, snapshot) {
 		return FinancialModelInput{}, ErrUnavailable
 	}
 	d := snapshot.Data()
-	result := FinancialModelInput{Snapshot: ModelInput{SnapshotID: d.ID, Scope: d.Scope, DataVersion: d.DataVersion, Cutoff: d.Cutoff, OpeningBalance: d.Opening.Observation.Amount(), HorizonDays: 30, Model: input.Model}, Assessment: input.Assessment}
+	result := FinancialModelInput{Calendar: d.Calendar, Snapshot: ModelInput{SnapshotID: d.ID, Scope: d.Scope, DataVersion: d.DataVersion, Cutoff: d.Cutoff, OpeningBalance: d.Opening.Observation.Amount(), HorizonDays: 30, Model: input.Model}, Assessment: input.Assessment}
 	for _, fact := range d.Facts {
 		if fact.Transaction.Data().Date >= input.Assessment.From {
 			result.Operations = append(result.Operations, fact.Transaction)
