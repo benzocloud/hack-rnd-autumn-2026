@@ -417,9 +417,13 @@
           ]
         },
         "created_at": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "date-time",
           "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$",
+          "description": "Persisted creation time in UTC, or null when unknown for a legacy operation predating creation-time storage. Reads and category changes preserve that unknown value; never substitute the read/update time.",
           "examples": [
             "2026-10-23T12:00:00Z"
           ]
@@ -436,8 +440,7 @@
         "payment_purpose",
         "category_id",
         "source",
-        "version",
-        "created_at"
+        "version"
       ],
       "description": "A factual operation, not a planned payment. Blank dataset purpose/INN is represented as empty purpose/null INN with quality warning, not guessed data. Amount is positive; direction supplies sign. Raw balance_eod is a dated account observation, not added once per row."
     },
