@@ -78,6 +78,7 @@ const createForecast = ( company: IMockCompanyData, request: ICreateForecastRequ
     }));
     forecast.result.assumptions = [ "Демонстрационный расчёт по запланированным платежам. ML-модель в режиме mock не вызывается." ];
     forecast.result.recommendations = [];
+    forecast.result.analysis = null;
     calculateForecast(forecast);
     company.forecasts.unshift(forecast);
 

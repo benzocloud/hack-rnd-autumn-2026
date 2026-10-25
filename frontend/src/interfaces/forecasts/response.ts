@@ -136,6 +136,60 @@ interface IScenarioCapabilities {
 }
 
 
+interface IHistoricalOperationRef {
+    transaction_id: string;
+    version: string;
+}
+
+
+type ICategorySource = "manual" | "rules" | "unknown";
+
+
+interface IClassifiedOperationAnalysis {
+    transaction_id: string;
+    version: string;
+    category_code: string;
+    category_source: ICategorySource;
+    category_rule_id: string;
+    category_id: string | null;
+}
+
+
+interface IRecurringHypothesisBase {
+    pattern_id: string;
+    rule_id: string;
+    direction: "inflow" | "outflow";
+    historical_operations: Array<IHistoricalOperationRef>;
+    weekend_shift: "none" | "previous" | "next";
+    expected_amount_minor: string;
+    confirmations: number;
+    expected_periods: number;
+    first_evidence_date: string;
+    last_evidence_date: string;
+    category_code: string;
+    rule_version: string;
+    status: "hypothesis";
+}
+
+
+type IRecurringHypothesis = (IRecurringHypothesisBase & {
+    day_of_month: number;
+    month_end?: never;
+}) | (IRecurringHypothesisBase & {
+    month_end: true;
+    day_of_month?: never;
+});
+
+
+interface IForecastAnalysis {
+    analysis_version: "text_categories_monthly_v1";
+    window_from: string;
+    window_through: string;
+    classified_operations: Array<IClassifiedOperationAnalysis>;
+    recurring_hypotheses: Array<IRecurringHypothesis>;
+}
+
+
 interface IForecastResult {
     metrics: IForecastMetrics;
     daily_points: Array<IForecastPoint>;
@@ -144,6 +198,7 @@ interface IForecastResult {
     recommendations: Array<IRecommendation>;
     assumptions: Array<string>;
     effective_occurrences: Array<IEffectiveOccurrence>;
+    analysis: IForecastAnalysis | null;
 }
 
 
@@ -277,4 +332,4 @@ interface IEffectiveOccurrence {
 }
 
 
-export type { IForecastReadiness, IModelContext, IForecastInput, IForecastAccepted, IProbability, ICashGap, IForecastMetrics, IForecastPoint, IEvidence, IRecommendation, IForecastComponent, IScenarioCapabilities, IForecastResult, IForecastPending, IForecastSucceeded, IForecastFailed, IForecast, IForecastSummary, IComparison, IActualCoverage, IPlanFactPoint, IPlanFact, IForecastList, IEffectiveOccurrence };
+export type { IForecastReadiness, IModelContext, IForecastInput, IForecastAccepted, IProbability, ICashGap, IForecastMetrics, IForecastPoint, IEvidence, IRecommendation, IForecastComponent, IScenarioCapabilities, IHistoricalOperationRef, ICategorySource, IClassifiedOperationAnalysis, IRecurringHypothesis, IForecastAnalysis, IForecastResult, IForecastPending, IForecastSucceeded, IForecastFailed, IForecast, IForecastSummary, IComparison, IActualCoverage, IPlanFactPoint, IPlanFact, IForecastList, IEffectiveOccurrence };
