@@ -9,10 +9,9 @@ permissions: {}
 jobs:
   authorize:
     if: >-
-      github.event.issue.pull_request &&
-      github.event.comment.body == '/agent-review' &&
-      github.run_attempt == 1
-    runs-on: ubuntu-latest
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) &&
+      ( github.event.issue.pull_request && github.event.comment.body == '/agent-review' && github.run_attempt == 1)
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 5
     permissions:
       contents: read
@@ -31,8 +30,10 @@ jobs:
 
   announce:
     needs: authorize
-    if: needs.authorize.outputs.requested == 'true'
-    runs-on: ubuntu-latest
+    if: >-
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) &&
+      (needs.authorize.outputs.requested == 'true')
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 5
     permissions:
       contents: read
@@ -49,8 +50,10 @@ jobs:
 
   review:
     needs: [authorize, announce]
-    if: needs.authorize.outputs.requested == 'true'
-    runs-on: ubuntu-latest
+    if: >-
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) &&
+      (needs.authorize.outputs.requested == 'true')
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 25
     # Apply cancellation only AFTER authorization. Other comments cannot cancel jobs.
     concurrency:
@@ -92,8 +95,10 @@ jobs:
 
   publish:
     needs: [authorize, announce, review]
-    if: always() && needs.authorize.outputs.requested == 'true' && needs.announce.result == 'success'
-    runs-on: ubuntu-latest
+    if: >-
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) &&
+      (always() && needs.authorize.outputs.requested == 'true' && needs.announce.result == 'success')
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 5
     permissions:
       contents: read

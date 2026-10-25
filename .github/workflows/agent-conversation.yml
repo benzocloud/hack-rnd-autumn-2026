@@ -9,10 +9,9 @@ permissions: {}
 jobs:
   authorize:
     if: >-
-      github.run_attempt == 1 &&
-      (startsWith(github.event.comment.body, '/question') ||
-      startsWith(github.event.comment.body, '/discuss'))
-    runs-on: ubuntu-latest
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) &&
+      ( github.run_attempt == 1 && (startsWith(github.event.comment.body, '/question') || startsWith(github.event.comment.body, '/discuss')))
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 5
     permissions:
       contents: read
@@ -32,8 +31,10 @@ jobs:
 
   announce:
     needs: authorize
-    if: needs.authorize.outputs.requested == 'true'
-    runs-on: ubuntu-latest
+    if: >-
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) &&
+      (needs.authorize.outputs.requested == 'true')
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 5
     permissions:
       contents: read
@@ -50,8 +51,10 @@ jobs:
 
   analyze:
     needs: [authorize, announce]
-    if: needs.authorize.outputs.requested == 'true'
-    runs-on: ubuntu-latest
+    if: >-
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) &&
+      (needs.authorize.outputs.requested == 'true')
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 25
     concurrency:
       group: agent-plan-analysis-${{ github.repository }}-${{ github.event.issue.number }}
@@ -87,8 +90,10 @@ jobs:
 
   publish:
     needs: [authorize, announce, analyze]
-    if: always() && needs.authorize.outputs.requested == 'true' && needs.announce.result == 'success'
-    runs-on: ubuntu-latest
+    if: >-
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) &&
+      (always() && needs.authorize.outputs.requested == 'true' && needs.announce.result == 'success')
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 5
     concurrency:
       group: agent-plan-publish-${{ github.repository }}-${{ github.event.issue.number }}

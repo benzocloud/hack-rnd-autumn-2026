@@ -11,11 +11,9 @@ permissions: {}
 jobs:
   authorize:
     if: >-
-      github.run_attempt == 1 &&
-      (github.event_name == 'issues' ||
-      (!github.event.issue.pull_request && github.event.comment.body == '/create-plan') ||
-      (github.event.issue.pull_request && startsWith(github.event.comment.body, '/discuss')))
-    runs-on: ubuntu-latest
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) &&
+      ( github.run_attempt == 1 && (github.event_name == 'issues' || (!github.event.issue.pull_request && github.event.comment.body == '/create-plan') || (github.event.issue.pull_request && startsWith(github.event.comment.body, '/discuss'))))
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 5
     permissions:
       contents: read
@@ -35,8 +33,10 @@ jobs:
 
   announce:
     needs: authorize
-    if: needs.authorize.outputs.requested == 'true' && (github.event_name == 'issues' || github.event.issue.pull_request)
-    runs-on: ubuntu-latest
+    if: >-
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) &&
+      (needs.authorize.outputs.requested == 'true' && (github.event_name == 'issues' || github.event.issue.pull_request))
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 5
     permissions:
       contents: read
@@ -55,9 +55,9 @@ jobs:
   analyze:
     needs: [authorize, announce]
     if: >-
-      !cancelled() && needs.authorize.outputs.requested == 'true' &&
-      (needs.announce.result == 'success' || needs.announce.result == 'skipped')
-    runs-on: ubuntu-latest
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) &&
+      ( !cancelled() && needs.authorize.outputs.requested == 'true' && (needs.announce.result == 'success' || needs.announce.result == 'skipped'))
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 25
     concurrency:
       group: agent-plan-analysis-${{ github.repository }}-${{ github.event.issue.number }}
@@ -94,9 +94,9 @@ jobs:
   publish:
     needs: [authorize, announce, analyze]
     if: >-
-      always() && needs.authorize.outputs.requested == 'true' &&
-      (needs.announce.result == 'success' || needs.analyze.result == 'success')
-    runs-on: ubuntu-latest
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) &&
+      ( always() && needs.authorize.outputs.requested == 'true' && (needs.announce.result == 'success' || needs.analyze.result == 'success'))
+    runs-on: [self-hosted, Linux, X64, saldo-ci]
     timeout-minutes: 5
     concurrency:
       group: agent-plan-publish-${{ github.repository }}-${{ github.event.issue.number }}
