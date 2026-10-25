@@ -41,6 +41,9 @@ func (c *client) PredictFinancial(ctx context.Context, input forecasting.Financi
 }
 
 func encodeFinancial(input forecasting.FinancialModelInput) (*pb.PredictRequest, error) {
+	if forecasting.AnalysisProfile(input.Snapshot.Model.Version) {
+		return encodeAnalysis(input)
+	}
 	if input.Snapshot.Model.Version == forecasting.CSVCalendarModelVersion {
 		return encodeCSV(input)
 	}
@@ -155,6 +158,9 @@ func unavailableFinancialProbability(p *pb.FinancialProbability) bool {
 }
 
 func validateFinancialResponse(input forecasting.FinancialModelInput, request *pb.PredictRequest, r *pb.PredictResponse) error {
+	if forecasting.AnalysisProfile(input.Snapshot.Model.Version) {
+		return validateAnalysisResponse(input, request, r)
+	}
 	if input.Snapshot.Model.Version == forecasting.CSVCalendarModelVersion {
 		return validateCSVCalendarResponse(input, request, r)
 	}

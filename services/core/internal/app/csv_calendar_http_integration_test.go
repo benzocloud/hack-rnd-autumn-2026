@@ -189,7 +189,7 @@ func TestOrdinaryCSVCalendarHTTPPostgresPythonLifecycle(t *testing.T) {
 	company := "/api/v1/companies/" + f.scope.CompanyID.String()
 	// The two recorded operation days span ninety calendar days. The other 88
 	// remain unknown input days; the model's limited mean is checked independently.
-	csv := fmt.Sprintf("\ufeffcompany_id;operation_id;operation_date;amount;direction;counterparty_inn;counterparty_name;payment_purpose;balance_eod\nC001;FIRST;%s;90.00;Поступление;0012345678;Клиент;Первая операция;1000.00\nC001;LAST;%s;45.00;Списание;0012345678;Поставщик;Последняя операция;955.00\n", cutoffTime.AddDate(0, 0, -89).Format(time.DateOnly), cutoff)
+	csv := fmt.Sprintf("\ufeffcompany_id;operation_id;operation_date;amount;direction;counterparty_inn;counterparty_name;payment_purpose;balance_eod\nC001;FIRST;%s;90.00;Поступление;0012345678;Клиент;Первая операция;1000.00\nC001;LAST;%s;45.00;Списание;0012345678;Поставщик;Уплата налогов ЕНП;955.00\n", cutoffTime.AddDate(0, 0, -89).Format(time.DateOnly), cutoff)
 	var upload bytes.Buffer
 	writer := multipart.NewWriter(&upload)
 	file, err := writer.CreateFormFile("file", "ordinary.csv")
@@ -226,6 +226,7 @@ func TestOrdinaryCSVCalendarHTTPPostgresPythonLifecycle(t *testing.T) {
 	}
 	assertCount(t, f.app, "SELECT count(*) FROM core_transactions WHERE company_id=$1", f.scope, 2)
 	assertCount(t, f.app, "SELECT count(*) FROM core_history_coverage WHERE company_id=$1", f.scope, 0)
+	expectedCategorySource := "rules"
 	forecast := func(key, profile string, residualIn, residualOut int64, knownDirection string, remaining int64, dueDay int, knownID string) map[string]json.RawMessage {
 		t.Helper()
 		accepted := call(http.MethodPost, company+"/forecasts", `{"cutoff_date":"`+cutoff+`","horizon_days":30}`, key, 202)
@@ -245,16 +246,40 @@ func TestOrdinaryCSVCalendarHTTPPostgresPythonLifecycle(t *testing.T) {
 		if string(assessment["operation_days"]) != "2" {
 			t.Fatal("unknown days became recorded days", assessment)
 		}
-		if profile == "mean_90_csv_v1" {
+		if profile == "mean_90_csv_analysis_v2" {
 			if text(input, "calendar_knowledge_mode") != "unavailable" {
 				t.Fatal(input)
 			}
 		} else {
-			if text(modelContext, "preprocessing_version") != "csv_observed_operations_calendar_v1" || text(input, "calendar_knowledge_mode") != "current" || text(input, "calendar_as_of_date") != string(f.today) || string(input["no_post_cutoff_movements"]) != "true" {
+			if text(modelContext, "preprocessing_version") != "csv_observed_operations_calendar_analysis_v2" || text(input, "calendar_knowledge_mode") != "current" || text(input, "calendar_as_of_date") != string(f.today) || string(input["no_post_cutoff_movements"]) != "true" {
 				t.Fatal(input)
 			}
 		}
 		result := object(ready["result"])
+		analysis := object(result["analysis"])
+		if text(analysis, "analysis_version") != "text_categories_monthly_v1" || text(analysis, "window_from") != cutoffTime.AddDate(0, 0, -89).Format(time.DateOnly) || text(analysis, "window_through") != cutoff {
+			t.Fatal(analysis)
+		}
+		var labels []map[string]json.RawMessage
+		if json.Unmarshal(analysis["classified_operations"], &labels) != nil || len(labels) != 2 || string(analysis["recurring_hypotheses"]) != "[]" {
+			t.Fatal(analysis)
+		}
+		matchedLabel := false
+		for _, label := range labels {
+			if text(label, "category_source") == expectedCategorySource {
+				if expectedCategorySource == "rules" && (text(label, "category_code") != "tax" || text(label, "category_rule_id") != "explicit_tax_text" || string(label["category_id"]) == "null") {
+					t.Fatal(label)
+				}
+				if expectedCategorySource == "manual" && (text(label, "category_rule_id") != "" || string(label["category_id"]) == "null") {
+					t.Fatal(label)
+				}
+				matchedLabel = true
+			}
+		}
+		if !matchedLabel {
+			t.Fatal("missing expected classification", analysis)
+		}
+
 		probability := object(object(result["metrics"])["gap_probability"])
 		if string(probability["value"]) != "null" || text(probability, "unavailable_reason") != "not_calibrated" {
 			t.Fatal(probability)
@@ -296,13 +321,48 @@ func TestOrdinaryCSVCalendarHTTPPostgresPythonLifecycle(t *testing.T) {
 		}
 		return ready
 	}
-	baseline := forecast("csv-calendar-baseline", "mean_90_csv_v1", 100, 50, "inflow", 0, 0, "")
+	baseline := forecast("csv-calendar-baseline", "mean_90_csv_analysis_v2", 100, 50, "inflow", 0, 0, "")
+	outflowList := call(http.MethodGet, company+"/transactions?direction=outflow&limit=100", "", "", 200)
+	var categoryFacts []map[string]json.RawMessage
+	if json.Unmarshal(outflowList["items"], &categoryFacts) != nil || len(categoryFacts) != 1 {
+		t.Fatal(outflowList)
+	}
+	categoryFact := categoryFacts[0]
+	categoryList := call(http.MethodGet, company+"/categories?limit=100", "", "", 200)
+	var categoryItems []map[string]json.RawMessage
+	if json.Unmarshal(categoryList["items"], &categoryItems) != nil || len(categoryItems) == 0 {
+		t.Fatal(categoryList)
+	}
+	categoryID := ""
+	for _, c := range categoryItems {
+		if string(c["direction"]) == `"outflow"` {
+			categoryID = text(c, "id")
+			break
+		}
+	}
+	if categoryID == "" {
+		t.Fatal(categoryList)
+	}
+	categoryPath := company + "/transactions/" + text(categoryFact, "id") + "/category"
+	var beforeAnalysisRevision int64
+	if err := f.app.db.GetContext(t.Context(), &beforeAnalysisRevision, "SELECT data_version FROM core_accounts WHERE company_id=$1 AND id=$2", f.scope.CompanyID, f.scope.AccountID); err != nil {
+		t.Fatal(err)
+	}
+	manualFact := call(http.MethodPatch, categoryPath, `{"version":"`+text(categoryFact, "version")+`","category_id":"`+categoryID+`"}`, "", 200)
+	expectedCategorySource = "manual"
+	forecast("csv-analysis-manual", "mean_90_csv_analysis_v2", 100, 50, "inflow", 0, 0, "")
+	assertRevision(t, f.app, f.scope, beforeAnalysisRevision+1)
+	manualView := manualFact
+	call(http.MethodPatch, categoryPath, `{"version":"`+text(manualView, "version")+`","category_id":null}`, "", 200)
+	expectedCategorySource = "rules"
+	forecast("csv-analysis-clear", "mean_90_csv_analysis_v2", 100, 50, "inflow", 0, 0, "")
+	assertRevision(t, f.app, f.scope, beforeAnalysisRevision+2)
 	group := call(http.MethodPost, company+"/reconciliation-groups", `{"cutoff_date":"`+cutoff+`","horizon_start":"`+cutoffTime.AddDate(0, 0, 1).Format(time.DateOnly)+`","horizon_end":"`+cutoffTime.AddDate(0, 0, 30).Format(time.DateOnly)+`","kind":"additional","additional":{"confirmed":true}}`, "csv-calendar-group", 201)
 	due := cutoffTime.AddDate(0, 0, 2).Format(time.DateOnly)
 	payment := call(http.MethodPost, company+"/payments", `{"direction":"inflow","amount":{"amount_minor":"900","currency":"RUB"},"scheduled_date":"`+due+`","counterparty_name":"Клиент","description":"Дополнительное обязательство","reconciliation_group_id":"`+text(group, "id")+`"}`, "csv-calendar-payment", 201)
 	paymentID := text(payment, "id")
 	path := company + "/payments/" + paymentID
-	const calendarProfile = "mean_90_csv_calendar_v1"
+	const calendarProfile = "mean_90_csv_calendar_analysis_v2"
 	first := forecast("csv-calendar-first", calendarProfile, 100, 50, "inflow", 900, 2, paymentID)
 	var frozenSnapshot string
 	snapshotID := text(object(first["input"]), "snapshot_id")

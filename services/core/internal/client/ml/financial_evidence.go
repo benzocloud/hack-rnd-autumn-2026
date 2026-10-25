@@ -98,8 +98,8 @@ func decodeFinancial(input forecasting.FinancialModelInput, r *pb.PredictRespons
 		date := domain.Date(*r.FirstNegativeBalanceDate)
 		projection.FirstNegativeDate = &date
 	}
-	result := forecasting.FinancialModelResult{Projection: projection, ProbabilityUnavailableReason: "not_calibrated", Assumptions: append(slices.Clone(r.Assumptions), r.Uncertainty.Assumptions...), Limitations: slices.Clone(r.AvailabilityLimitations)}
-	if i.Model.Version != forecasting.CSVModelVersion && i.Model.Version != forecasting.CSVCalendarModelVersion {
+	result := forecasting.FinancialModelResult{Analysis: decodeAnalysis(input, r), Projection: projection, ProbabilityUnavailableReason: "not_calibrated", Assumptions: append(slices.Clone(r.Assumptions), r.Uncertainty.Assumptions...), Limitations: slices.Clone(r.AvailabilityLimitations)}
+	if !forecasting.ValidCSVContext(i.Model) {
 		result.Assumptions = append(result.Assumptions, "Empirical uncalibrated bands are not exposed as public confidence intervals; residual components are not scenario targets.")
 	}
 	for _, c := range r.Components {

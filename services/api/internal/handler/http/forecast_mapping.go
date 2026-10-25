@@ -101,7 +101,7 @@ func forecastResultDTO(r *corev1.ForecastResult) object {
 		recommendations = append(recommendations, object{"id": rec.Id, "title": rec.Title, "explanation": rec.Explanation, "feasibility_condition": rec.FeasibilityCondition, "evidence": evidence, "suggested_action": textPointer(rec.SuggestedAction)})
 	}
 	c := r.ScenarioCapabilities
-	return object{"metrics": metrics, "daily_points": points, "components": components, "scenario_capabilities": object{"delay_receipt": c.DelayReceipt, "reduce_sales": c.ReduceSales, "one_off_expense": c.OneOffExpense, "increase_recurring_expenses": c.IncreaseRecurringExpenses, "unavailable_reason": textPointer(c.UnavailableReason)}, "recommendations": recommendations, "assumptions": stringsDTO(r.Assumptions), "effective_occurrences": effective}
+	return object{"analysis": forecastAnalysisDTO(r.Analysis), "metrics": metrics, "daily_points": points, "components": components, "scenario_capabilities": object{"delay_receipt": c.DelayReceipt, "reduce_sales": c.ReduceSales, "one_off_expense": c.OneOffExpense, "increase_recurring_expenses": c.IncreaseRecurringExpenses, "unavailable_reason": textPointer(c.UnavailableReason)}, "recommendations": recommendations, "assumptions": stringsDTO(r.Assumptions), "effective_occurrences": effective}
 }
 
 func historyAssessmentDTO(a *corev1.HistoryAssessment) any {

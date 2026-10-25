@@ -128,7 +128,7 @@ func encodeKnownComponents(out *pb.ForecastResult, saved *forecasting.SavedForec
 
 func encodeResult(saved *forecasting.SavedForecast) *pb.ForecastResult {
 	metrics := &pb.ForecastMetrics{MaxShortfall: kopecks(0), MinimumBalance: kopecks(math.MaxInt64), ClosingBalance: kopecks(saved.Days[29].Balance), GapProbability: probability()}
-	result := &pb.ForecastResult{Metrics: metrics, DailyPoints: []*pb.ForecastPoint{}, Components: []*pb.ForecastComponent{}, EffectiveOccurrences: []*pb.EffectiveOccurrence{}, Recommendations: []*pb.Recommendation{}, Assumptions: append(append([]string{}, saved.Assumptions...), saved.Limitations...), ScenarioCapabilities: &pb.ScenarioCapabilities{UnavailableReason: new("Residual forecast components are not certified scenario targets")}}
+	result := &pb.ForecastResult{Analysis: encodeAnalysis(saved.Analysis), Metrics: metrics, DailyPoints: []*pb.ForecastPoint{}, Components: []*pb.ForecastComponent{}, EffectiveOccurrences: []*pb.EffectiveOccurrence{}, Recommendations: []*pb.Recommendation{}, Assumptions: append(append([]string{}, saved.Assumptions...), saved.Limitations...), ScenarioCapabilities: &pb.ScenarioCapabilities{UnavailableReason: new("Residual forecast components are not certified scenario targets")}}
 	for _, day := range saved.Days {
 		if day.Balance < metrics.MinimumBalance.AmountMinor {
 			metrics.MinimumBalance = kopecks(day.Balance)

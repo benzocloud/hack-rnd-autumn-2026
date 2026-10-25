@@ -127,7 +127,7 @@ func encodeModelResult(snapshot domain.FinancialSnapshot, frozen jobInput, resul
 }
 
 func saveForecast(result FinancialModelResult) SavedForecast {
-	saved := SavedForecast{SchemaVersion: 1, FirstNegativeDate: result.Projection.FirstNegativeDate, ProbabilityReason: result.ProbabilityUnavailableReason, Components: result.Components, Evidence: result.Evidence, Assumptions: result.Assumptions, Limitations: result.Limitations, Warnings: result.Projection.Warnings}
+	saved := SavedForecast{Analysis: result.Analysis, SchemaVersion: 1, FirstNegativeDate: result.Projection.FirstNegativeDate, ProbabilityReason: result.ProbabilityUnavailableReason, Components: result.Components, Evidence: result.Evidence, Assumptions: result.Assumptions, Limitations: result.Limitations, Warnings: result.Projection.Warnings}
 	for _, day := range result.Projection.Days {
 		saved.Days = append(saved.Days, SavedForecastDay{Date: day.Date, Inflow: day.Inflow.Minor(), Outflow: day.Outflow.Minor(), Balance: day.ReferenceBalance.Minor()})
 	}
@@ -135,14 +135,17 @@ func saveForecast(result FinancialModelResult) SavedForecast {
 }
 
 func validateSavedForecast(frozen jobInput, snapshot domain.FinancialSnapshot, result *SavedForecast) error {
-	if frozen.Model.Version == CSVModelVersion && (result == nil || !slices.Equal(result.Limitations, csvLimitations()) || len(result.Components) != 0 || len(result.Evidence) != 0) {
+	if (frozen.Model.Version == CSVModelVersion || frozen.Model.Version == CSVAnalysisVersion) && (result == nil || !slices.Equal(result.Limitations, csvLimitations()) || len(result.Components) != 0 || len(result.Evidence) != 0) {
 		return ErrModelResponse
 	}
-	if frozen.Model.Version == CSVCalendarModelVersion && (result == nil || !activeCalendar(snapshot.Data().Calendar) || !slices.Equal(result.Limitations, csvCalendarLimitations())) {
+	if CSVCalendarProfile(frozen.Model.Version) && (result == nil || !activeCalendar(snapshot.Data().Calendar) || !slices.Equal(result.Limitations, csvCalendarLimitations())) {
 		return ErrModelResponse
 	}
 	if result == nil || result.SchemaVersion != 1 || len(result.Days) != 30 || result.ProbabilityReason != "not_calibrated" || (!activeCalendar(snapshot.Data().Calendar) && !slices.Contains(result.Limitations, "historical_calendar_unavailable")) {
 		return ErrModelResponse
+	}
+	if err := validateSavedAnalysis(frozen, snapshot, result.Analysis); err != nil {
+		return err
 	}
 	cutoff, _ := time.Parse(time.DateOnly, string(frozen.Cutoff))
 	balance := snapshot.Data().Opening.Observation.Amount()

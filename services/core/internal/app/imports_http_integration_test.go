@@ -151,6 +151,7 @@ func TestImportsHTTPAPIWithPostgres(t *testing.T) {
 		result, err := deterministicForecast(ctx, input)
 		if input.Assessment != nil {
 			result.Limitations = append([]string{}, input.Assessment.Limitations...)
+			result.Analysis = fixtureUnknownAnalysis(input)
 		}
 		return result, err
 	})
@@ -544,7 +545,7 @@ func TestImportsHTTPAPIWithPostgres(t *testing.T) {
 	if string(csvReady["status"]) != `"succeeded"` || !bytes.Equal(csvReady["result"], csvReload["result"]) || json.Unmarshal(csvReady["input"], &csvInput) != nil || csvInput.Coverage != nil || csvInput.Assessment == nil || csvInput.Assessment.RuleVersion != "csv_history_quality_v1" || csvInput.Assessment.Version != strconv.FormatInt(accountVersion, 10) {
 		t.Fatal("CSV HTTP projection lost its assessment", csvReady)
 	}
-	if predictedInput == nil || predictedInput.Assessment == nil || predictedInput.Snapshot.Model.Version != forecasting.CSVModelVersion || len(predictedInput.Snapshot.History) != 0 {
+	if predictedInput == nil || predictedInput.Assessment == nil || predictedInput.Snapshot.Model.Version != forecasting.CSVAnalysisVersion || len(predictedInput.Snapshot.History) != 0 {
 		t.Fatal("CSV input was relabeled covered", predictedInput)
 	}
 	assertCount(t, f.app, "SELECT count(*) FROM core_history_coverage WHERE company_id=$1", f.scope, 0)
