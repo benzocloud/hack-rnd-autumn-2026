@@ -28,8 +28,20 @@
     .actions { justify-content: stretch; > * { flex: 1; } }
 }
 @media (max-width: 380px) { .filters { grid-template-columns: 1fr; } }
-@media (prefers-reduced-motion: reduce) { .inlineLink { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .inlineLink, .choice, .more { transition: none; } }
 
+.sources { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.choice { min-height: 44px; padding: 11px 18px; border: 1px solid global.$gray2; border-radius: 12px; background: global.$background; color: global.$text; font: inherit; font-size: 16px; font-weight: 500; line-height: 1.3; cursor: pointer; transition: background-color global.$transition-duration, color global.$transition-duration, border-color global.$transition-duration, box-shadow global.$transition-duration; }
+.choice[aria-pressed="true"] { border-color: global.$green2; background: global.$green2; color: global.$white; box-shadow: 0 0 5px global.$green2; }
+.sources:hover .choice[aria-pressed="true"]:not(:hover) { border-color: global.$gray2; background: global.$background; color: global.$text; box-shadow: none; }
+.sources:hover .choice:hover:not([aria-pressed="true"]):not(:disabled) { border-color: global.$green2; background: global.$green2; color: global.$white; box-shadow: 0 0 5px global.$green2; }
+@media (max-width: 600px) {
+    .choice[aria-pressed="true"], .sources:hover .choice:hover:not([aria-pressed="true"]):not(:disabled) { box-shadow: 0 0 3px global.$green2; }
+}
+.choice:disabled { opacity: 0.4; cursor: not-allowed; }
+.filePreview { height: 300px; overflow: hidden; }
+.filePreview pre, .fileFull pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 13px; line-height: 1.45; }
+.more { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 0; border: 0; background: none; color: global.$green2; font: inherit; line-height: 1.4; cursor: pointer; transition: color global.$transition-duration; &:hover { color: global.$green1; } }
 .importForm { max-width: 650px; margin-top: 24px; }
 .checks { label { display: flex; align-items: center; gap: 10px; min-height: 32px; } legend { margin-bottom: 12px; } input { width: 18px; height: 18px; accent-color: global.$green2; } }
 .acknowledgement { display: flex; align-items: center; gap: 10px; line-height: 1.5; cursor: pointer; input { flex-shrink: 0; width: 20px; height: 20px; accent-color: global.$green2; } }

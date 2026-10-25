@@ -36,7 +36,7 @@ const setup = () => {
         ...Object.fromEntries([ "Panel", "DataState", "JobState", "Notice", "Badge", "ActionButton", "FormError" ].map((name) => [ name, name ])),
     };
     const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React, jsxFactory: "createElement", jsxFragmentFactory: "Fragment" } }).outputText;
-    const components = new Function(...Object.keys(dependencies), `${compiled}\nreturn { ImportJob, ImportIssues };`)(...Object.values(dependencies));
+    const components = new Function(...Object.keys(dependencies), `${compiled}\nreturn { ImportJob, ImportIssues, companiesInFile };`)(...Object.values(dependencies));
     const render = (component, props, slots) => { state = slots; index = 0; return component(props); };
     return { ...components, render, requests };
 };
@@ -81,4 +81,21 @@ test("import issues load on expansion and replace one bounded page at a time", (
     nodes(job()).find((node) => node.type === "details").props.onToggle({ currentTarget: { open: false } });
     assert.equal(nodes(job()).some((node) => node.type === ImportIssues), false);
     assert.equal(requests.length, 3);
+});
+
+
+test("company codes are read from the file, including a semicolon inside quotes", async () => {
+    const { companiesInFile } = setup();
+    const file = new File([
+        "\uFEFFcompany_id;operation_date;payment_purpose\n",
+        "C001;2024-10-01;\"Оплата; НДС\"\n",
+        "C001;2026-09-29;Комиссия\n",
+        "C002;2025-01-01;Другая\n",
+    ], "statements.csv", { type: "text/csv" });
+
+    assert.deepEqual(await companiesInFile(file), [
+        { id: "C001", rows: 2, from: "2024-10-01", to: "2026-09-29" },
+        { id: "C002", rows: 1, from: "2025-01-01", to: "2025-01-01" },
+    ]);
+    await assert.rejects(companiesInFile(new File([ "amount;direction\n1;in\n" ], "other.csv", { type: "text/csv" })), /dataset_v1/);
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useState, type FormEvent } from "react";
+import { useCallback, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 
 import { useCompany } from "@/features/CompanyShell/CompanyShell";
 import { addDays, companyPath, dateField, formatDate, formIdentity, invalid, textField, today } from "@/helpers/finance";
@@ -12,7 +12,7 @@ import useRequest from "@/hooks/useRequest";
 import useResource from "@/hooks/useResource";
 import type { IConnection, IImportRecordKinds } from "@/interfaces";
 import { importsService, integrationsService } from "@/service";
-import { ActionButton, Badge, DataState, EmptyState, Field, FormError, JobState, Modal, Notice, PageHeading, Panel, Select } from "@/widgets/FinanceUI/FinanceUI";
+import { ActionButton, Badge, DataState, EmptyState, Field, FormError, Icon, JobState, Modal, Notice, PageHeading, Panel, Select } from "@/widgets/FinanceUI/FinanceUI";
 
 import ValidatedForm from "@/widgets/ValidatedForm/ValidatedForm";
 
@@ -22,6 +22,72 @@ import styles from "./style.module.scss";
 const importStatus = { queued: "В очереди", processing: "Проверяется", preview_ready: "Ожидает подтверждения", applied: "Данные добавлены", failed: "Ошибка" };
 
 
+type FileCompany = { id: string; rows: number; from: string; to: string };
+
+
+const rowCount = ( count: number ) => {
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    const word = mod10 === 1 && mod100 !== 11 ? "строка" : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14) ? "строки" : "строк";
+
+    return `${count} ${word}`;
+};
+
+
+// ponytail: records split on newlines; a quoted line break inside payment_purpose would cut one row into two.
+const csvCells = ( line: string ) => {
+    const cells: string[] = [];
+    let value = "";
+    let quoted = false;
+
+    for (let index = 0; index < line.length; index++) {
+        const char = line[index];
+
+        if (quoted) {
+            if (char === "\"") {
+                if (line[index + 1] === "\"") { value += "\""; index++; }
+                else { quoted = false; }
+            } else { value += char; }
+        } else if (char === "\"") { quoted = true; }
+        else if (char === ";") { cells.push(value); value = ""; }
+        else { value += char; }
+    }
+
+    cells.push(value);
+
+    return cells;
+};
+
+
+const companiesInFile = async ( file: File ): Promise<FileCompany[]> => {
+    const lines = (await file.text()).replace(/^\uFEFF/, "").split(/\r?\n/).filter(( line ) => line.trim());
+    const header = csvCells(lines[0] || "");
+    const company = header.indexOf("company_id");
+    const date = header.indexOf("operation_date");
+
+    if (company < 0) { throw new Error("Это не выписка dataset_v1: нет столбца company_id."); }
+
+    const found = new Map<string, FileCompany>();
+
+    for (const line of lines.slice(1)) {
+        const cells = csvCells(line);
+        const id = cells[company]?.trim() || "";
+
+        if (!id) { continue; }
+
+        const day = date < 0 ? "" : (cells[date] || "").trim().slice(0, 10);
+        const current = found.get(id) || { id, rows: 0, from: day, to: day };
+
+        current.rows += 1;
+        if (day && (!current.from || day < current.from)) { current.from = day; }
+        if (day && day > current.to) { current.to = day; }
+        found.set(id, current);
+    }
+
+    return [ ...found.values() ];
+};
+
+
 const Imports = ( { importId = "" }: { importId?: string } ) => {
     const { company, account } = useCompany();
     const router = useRouter();
@@ -29,6 +95,13 @@ const Imports = ( { importId = "" }: { importId?: string } ) => {
     const [ adding, setAdding ] = useState(false);
     const [ disabled, setDisabled ] = useState<IConnection | null>(null);
     const [ selectedConnection, setSelectedConnection ] = useState("");
+    const [ fileCompanies, setFileCompanies ] = useState<FileCompany[]>([]);
+    const [ fileCompany, setFileCompany ] = useState("");
+    const [ fileProblem, setFileProblem ] = useState("");
+    const [ readingFile, setReadingFile ] = useState(false);
+    const [ fileText, setFileText ] = useState("");
+    const [ fileOpen, setFileOpen ] = useState(false);
+    const readGeneration = useRef(0);
     const request = useRequest();
     const resource = useResource(useCallback(async ( signal: AbortSignal ) => {
         const history = await collectPages(( cursor ) => importsService.listImports({ company_id: company.id, limit: 100, cursor }, signal));
@@ -54,6 +127,39 @@ const Imports = ( { importId = "" }: { importId?: string } ) => {
     const openImport = ( id: string ) => router.push(`${companyPath(company.id, "imports")}?import=${encodeURIComponent(id)}`, { scroll: false });
 
 
+    const readFile = async ( event: ChangeEvent<HTMLInputElement> ) => {
+        const generation = ++readGeneration.current;
+        const file = event.target.files?.[0];
+
+        setFileCompanies([]);
+        setFileCompany("");
+        setFileProblem("");
+        setFileText("");
+        setFileOpen(false);
+        if (!file?.size) { return; }
+        setReadingFile(true);
+
+        try {
+            const found = await companiesInFile(file);
+            const text = await file.text();
+
+            if (generation !== readGeneration.current) { return; }
+            if (!found.length) { setFileProblem("В файле нет операций."); return; }
+            setFileText(text.replace(/^\uFEFF/, ""));
+
+            const bound = account.transaction_source?.mode === "external" ? account.transaction_source.source_company_id : "";
+
+            setFileCompanies(found);
+            setFileCompany(found.length === 1 ? found[0].id : found.find(( item ) => item.id === bound)?.id || "");
+        } catch (cause) {
+            if (generation !== readGeneration.current) { return; }
+            setFileProblem(cause instanceof Error ? cause.message : "Не удалось прочитать файл.");
+        } finally {
+            if (generation === readGeneration.current) { setReadingFile(false); }
+        }
+    };
+
+
     const upload = async ( event: FormEvent<HTMLFormElement> ) => {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
@@ -63,8 +169,11 @@ const Imports = ( { importId = "" }: { importId?: string } ) => {
             if (!(file instanceof File) || !file.size) { return invalid("Выберите непустой CSV-файл.", "file"); }
             if (file.size > 100 * 1024 * 1024) { return invalid("Размер CSV не должен превышать 100 МиБ.", "file"); }
             if (!file.name.toLowerCase().endsWith(".csv")) { return invalid("Поддерживаются выписки в формате CSV (dataset_v1).", "file"); }
+            if (readingFile) { return invalid("Файл ещё читается.", "file"); }
+            if (fileProblem) { return invalid(fileProblem, "file"); }
+            if (!fileCompany) { return invalid(fileCompanies.length > 1 ? "Выберите компанию из файла." : "Выберите непустой CSV-файл.", fileCompanies.length > 1 ? "source_company_id" : "file"); }
 
-            return importsService.uploadImport({ company_id: company.id, idempotency_key: key, data: { file, adapter: "dataset_v1", source_company_id: textField(form, "source_company_id", "ID компании в файле"), account_id: account.id, currency: "RUB" } }, signal);
+            return importsService.uploadImport({ company_id: company.id, idempotency_key: key, data: { file, adapter: "dataset_v1", source_company_id: fileCompany, account_id: account.id, currency: "RUB" } }, signal);
         }, "Файл принят на проверку", formIdentity(form));
 
         if (result.ok) { openImport(result.data.id); }
@@ -107,7 +216,7 @@ const Imports = ( { importId = "" }: { importId?: string } ) => {
     };
 
 
-    return <main className={styles.page}><PageHeading title="Импорт данных" description="Сначала проверка и предварительный просмотр, затем ваше подтверждение. Загрузка сама по себе не меняет операции." /><div className={styles.stack}>{ importId && <ImportJob key={importId} id={importId} onChanged={resource.reload} /> }<Panel title="Добавить данные"><div className={styles.row}><ActionButton variant="secondary" aria-pressed={tab === "file"} disabled={request.busy} onClick={() => setTab("file")}>Из файла</ActionButton><ActionButton variant="secondary" aria-pressed={tab === "external"} disabled={request.busy} onClick={() => setTab("external")}>Из внешнего источника</ActionButton></div><div className={styles.importForm}>{ tab === "file" ? <ValidatedForm request={request} noValidate className={styles.form} onSubmit={upload}><fieldset disabled={request.busy}><Field data-maximum="200" name="file" label="Выписка CSV" type="file" accept=".csv,text/csv" hint="Формат dataset_v1. Файл должен содержать операции в рублях." /><Field required data-maximum="200" name="source_company_id" label="ID компании в файле" placeholder="Значение company_id из выписки" hint="Из общего файла будут выбраны только строки указанной компании." /></fieldset><FormError message={request.error} /><ActionButton type="submit" loading={request.busy}>Загрузить и проверить</ActionButton></ValidatedForm> : <DataState loading={external.loading} error={external.error} onRetry={external.reload}><ValidatedForm request={request} noValidate className={styles.form} onSubmit={sync}><Notice>Доступные внешние источники работают в демонстрационном режиме. Данные поступят на предварительный просмотр.</Notice><fieldset disabled={request.busy}><Select disabled={request.busy} name="connection" label="Подключение" value={selectedConnection} onChange={( event ) => setSelectedConnection(event.target.value)}><option value="">Выберите подключение</option>{ external.data?.connections.filter(( item ) => item.status === "ready").map(( item ) => <option key={item.id} value={item.id}>{ item.display_name }</option>) }</Select>{ connection && <><Field data-maximum="200" name="period_start" label="Начало периода" type="date" defaultValue={addDays(today(), -30)} /><Field data-maximum="200" name="period_end" label="Конец периода" type="date" defaultValue={today()} /><fieldset className={styles.checks}><legend>Какие данные загрузить</legend>{ provider?.capabilities.map(( kind ) => <label key={`${connection.id}-${kind}`}><input type="checkbox" name="record_kinds" value={kind} defaultChecked />{ { transactions: "Фактические операции", planned_payments: "Плановые платежи", balance_observations: "Остатки на счёте" }[kind] }</label>) }</fieldset></> }</fieldset><div className={styles.row}><ActionButton type="submit" loading={request.busy} disabled={!connection}>Получить и проверить</ActionButton><ActionButton variant="secondary" disabled={request.busy || !external.data?.providers.length} onClick={() => setAdding(true)}>Новое подключение</ActionButton>{ connection && <ActionButton variant="secondary" disabled={request.busy} onClick={() => setDisabled(connection)}>Отключить</ActionButton> }</div><FormError message={request.error} /></ValidatedForm></DataState> }</div></Panel><Panel title="История загрузок"><DataState loading={resource.loading} error={resource.error} onRetry={resource.reload}>{ resource.data?.history.length ? resource.data.history.map(( item ) => <div className={styles.item} key={item.id}><div><h3>{ item.source_kind === "file" ? "Выписка из файла" : "Внешний источник" }</h3><p className={styles.muted}>{ formatDate(item.created_at) } · { item.preview ? `${formatDate(item.preview.period_start)} — ${formatDate(item.preview.period_end)}` : "Период определяется" }</p><Badge tone={item.status === "failed" ? "danger" : item.status === "applied" ? "success" : "neutral"}>{ importStatus[item.status] }</Badge></div><ActionButton variant="secondary" onClick={() => openImport(item.id)}>Открыть</ActionButton></div>) : <EmptyState title="История пока пуста" icon="file-upload">Загрузите выписку, чтобы проверить и добавить операции.</EmptyState> }</DataState></Panel></div>{ adding && <Modal title="Новое подключение" busy={request.busy} onClose={() => setAdding(false)}><ValidatedForm request={request} className={styles.form} noValidate onSubmit={createConnection}><fieldset disabled={request.busy}><Select disabled={request.busy} name="provider_id" label="Источник"><option value="">Выберите источник</option>{ external.data?.providers.map(( item ) => <option key={item.id} value={item.id}>{ item.name } · демо</option>) }</Select><Field data-maximum="200" name="display_name" label="Название подключения" placeholder="Например, основной счёт" /><Field required data-maximum="200" name="source_company_id" label="ID компании у источника" /></fieldset><FormError message={request.error} /><ActionButton type="submit" loading={request.busy}>Создать подключение</ActionButton></ValidatedForm></Modal> }{ disabled && <Modal title="Отключить источник?" busy={request.busy} onClose={() => setDisabled(null)}><p>Подключение «{ disabled.display_name }» перестанет получать новые данные. Уже добавленные операции сохранятся.</p><div className={styles.actions}><ActionButton variant="secondary" disabled={request.busy} onClick={() => setDisabled(null)}>Оставить</ActionButton><ActionButton variant="danger" loading={request.busy} onClick={disable}>Отключить</ActionButton></div><FormError message={request.error} /></Modal> }</main>;
+    return <main className={styles.page}><PageHeading title="Импорт данных" description="Сначала проверка и предварительный просмотр, затем ваше подтверждение. Загрузка сама по себе не меняет операции." /><div className={styles.stack}>{ importId && <ImportJob key={importId} id={importId} onChanged={resource.reload} /> }<Panel title="Добавить данные"><div className={styles.sources}><button type="button" className={styles.choice} aria-pressed={tab === "file"} disabled={request.busy} onClick={() => setTab("file")}>Из файла</button><button type="button" className={styles.choice} aria-pressed={tab === "external"} disabled={request.busy} onClick={() => setTab("external")}>Из внешнего источника</button></div><div className={styles.importForm}>{ tab === "file" ? <ValidatedForm request={request} noValidate className={styles.form} onSubmit={upload}><fieldset disabled={request.busy}><Field data-maximum="200" name="file" label="Выписка CSV" type="file" accept=".csv,text/csv" hint="Формат dataset_v1. Файл должен содержать операции в рублях." onChange={readFile} />{ fileCompanies.length > 1 && <Select disabled={request.busy} name="source_company_id" label="Компания в файле" value={fileCompany} onChange={( event ) => setFileCompany(event.target.value)} hint="Будут загружены только строки выбранной компании."><option value="">Выберите компанию</option>{ fileCompanies.map(( item ) => <option key={item.id} value={item.id}>{ item.id } · { rowCount(item.rows) }{ item.from ? ` · ${formatDate(item.from)} — ${formatDate(item.to)}` : "" }</option>) }</Select> }{ fileText && <div><div className={fileOpen ? styles.fileFull : styles.filePreview}>{ fileCompanies.length === 1 && <p>В файле одна компания, код { fileCompanies[0].id }.</p> }<pre>{ fileText }</pre></div>{ !fileOpen && <button type="button" className={styles.more} onClick={() => setFileOpen(true)}>Показать остальное <Icon name="chevron-down" size={16} /></button> }</div> }</fieldset><FormError message={request.error || fileProblem || null} /><ActionButton type="submit" loading={request.busy} disabled={readingFile}>Загрузить и проверить</ActionButton></ValidatedForm> : <DataState loading={external.loading} error={external.error} onRetry={external.reload}><ValidatedForm request={request} noValidate className={styles.form} onSubmit={sync}><Notice>Доступные внешние источники работают в демонстрационном режиме. Данные поступят на предварительный просмотр.</Notice><fieldset disabled={request.busy}><Select disabled={request.busy} name="connection" label="Подключение" value={selectedConnection} onChange={( event ) => setSelectedConnection(event.target.value)}><option value="">Выберите подключение</option>{ external.data?.connections.filter(( item ) => item.status === "ready").map(( item ) => <option key={item.id} value={item.id}>{ item.display_name }</option>) }</Select>{ connection && <><Field data-maximum="200" name="period_start" label="Начало периода" type="date" defaultValue={addDays(today(), -30)} /><Field data-maximum="200" name="period_end" label="Конец периода" type="date" defaultValue={today()} /><fieldset className={styles.checks}><legend>Какие данные загрузить</legend>{ provider?.capabilities.map(( kind ) => <label key={`${connection.id}-${kind}`}><input type="checkbox" name="record_kinds" value={kind} defaultChecked />{ { transactions: "Фактические операции", planned_payments: "Плановые платежи", balance_observations: "Остатки на счёте" }[kind] }</label>) }</fieldset></> }</fieldset><div className={styles.row}><ActionButton type="submit" loading={request.busy} disabled={!connection}>Получить и проверить</ActionButton><ActionButton variant="secondary" disabled={request.busy || !external.data?.providers.length} onClick={() => setAdding(true)}>Новое подключение</ActionButton>{ connection && <ActionButton variant="secondary" disabled={request.busy} onClick={() => setDisabled(connection)}>Отключить</ActionButton> }</div><FormError message={request.error} /></ValidatedForm></DataState> }</div></Panel><Panel title="История загрузок"><DataState loading={resource.loading} error={resource.error} onRetry={resource.reload}>{ resource.data?.history.length ? resource.data.history.map(( item ) => <div className={styles.item} key={item.id}><div><h3>{ item.source_kind === "file" ? "Выписка из файла" : "Внешний источник" }</h3><p className={styles.muted}>{ formatDate(item.created_at) } · { item.preview ? `${formatDate(item.preview.period_start)} — ${formatDate(item.preview.period_end)}` : "Период определяется" }</p><Badge tone={item.status === "failed" ? "danger" : item.status === "applied" ? "success" : "neutral"}>{ importStatus[item.status] }</Badge></div><ActionButton variant="secondary" onClick={() => openImport(item.id)}>Открыть</ActionButton></div>) : <EmptyState title="История пока пуста" icon="file-upload">Загрузите выписку, чтобы проверить и добавить операции.</EmptyState> }</DataState></Panel></div>{ adding && <Modal title="Новое подключение" busy={request.busy} onClose={() => setAdding(false)}><ValidatedForm request={request} className={styles.form} noValidate onSubmit={createConnection}><fieldset disabled={request.busy}><Select disabled={request.busy} name="provider_id" label="Источник"><option value="">Выберите источник</option>{ external.data?.providers.map(( item ) => <option key={item.id} value={item.id}>{ item.name } · демо</option>) }</Select><Field data-maximum="200" name="display_name" label="Название подключения" placeholder="Например, основной счёт" /><Field required data-maximum="200" name="source_company_id" label="ID компании у источника" /></fieldset><FormError message={request.error} /><ActionButton type="submit" loading={request.busy}>Создать подключение</ActionButton></ValidatedForm></Modal> }{ disabled && <Modal title="Отключить источник?" busy={request.busy} onClose={() => setDisabled(null)}><p>Подключение «{ disabled.display_name }» перестанет получать новые данные. Уже добавленные операции сохранятся.</p><div className={styles.actions}><ActionButton variant="secondary" disabled={request.busy} onClick={() => setDisabled(null)}>Оставить</ActionButton><ActionButton variant="danger" loading={request.busy} onClick={disable}>Отключить</ActionButton></div><FormError message={request.error} /></Modal> }</main>;
 };
 
 
