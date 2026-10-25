@@ -25,6 +25,7 @@ class ApiClient:
     origin: str
     timeout_s: float = 30.0
     user_agent: str = "saldo-financial-e2e/0.1"
+    ca_file: str | None = None
     jar: http.cookiejar.CookieJar = field(default_factory=http.cookiejar.CookieJar)
     csrf_token: str | None = None
     _opener: urllib.request.OpenerDirector = field(init=False, repr=False)
@@ -32,6 +33,18 @@ class ApiClient:
     def __post_init__(self) -> None:
         self.origin = self.origin.rstrip("/")
         context = ssl.create_default_context()
+        # Go API requires TLS 1.3; macOS CLT Python/LibreSSL cannot offer it.
+        if hasattr(ssl, "TLSVersion"):
+            try:
+                context.minimum_version = ssl.TLSVersion.TLSv1_3
+            except ValueError as exc:
+                raise RuntimeError(
+                    "Python SSL stack cannot enable TLS 1.3; use Homebrew "
+                    "Python 3.12+ with OpenSSL 3 (SALDO_E2E_PYTHON)"
+                ) from exc
+        ca = self.ca_file or __import__("os").environ.get("SALDO_E2E_CA_FILE") or __import__("os").environ.get("SSL_CERT_FILE")
+        if ca:
+            context.load_verify_locations(cafile=ca)
         self._opener = urllib.request.build_opener(
             urllib.request.HTTPCookieProcessor(self.jar),
             urllib.request.HTTPSHandler(context=context),

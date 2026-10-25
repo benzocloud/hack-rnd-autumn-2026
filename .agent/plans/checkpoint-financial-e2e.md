@@ -121,13 +121,13 @@ rebuild/merge кандидата.
 
 ### 2. Изолированное окружение
 
-Статус: **Не начат**
+Статус: **На ревью**
 
 Результат: поднимается disposable stack реальных сервисов либо точный blocker.
 
 ### 3. Основной пользовательский сценарий
 
-Статус: **Не начат**
+Статус: **На ревью** (real HTTP P0 pass 11:11 МСК)
 
 register → verify → login → create company → upload → preview/issues/ack →
 commit → ledger → forecast → polling → 30 точек → saved reload.

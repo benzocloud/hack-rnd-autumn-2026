@@ -8,11 +8,15 @@
 
 ```sh
 cd scripts/financial-e2e
-python3 prepare_fixtures.py
-# после подъёма собственного isolated stack:
-export SALDO_E2E_API_ORIGIN='https://127.0.0.1:<port>'   # не production
-python3 run_http.py --dry-probe
-python3 run_http.py
+# macOS system Python 3.9/LibreSSL cannot speak TLS 1.3 required by API.
+# Prefer Homebrew Python 3.12+ (OpenSSL 3.x), e.g. /opt/homebrew/bin/python3
+PY=${SALDO_E2E_PYTHON:-/opt/homebrew/bin/python3}
+$PY prepare_fixtures.py
+$PY up_stack.py --keep --suffix local
+. artifacts/stack-local/env.sh
+$PY run_http.py --dry-probe
+$PY run_http.py
+$PY down_stack.py --suffix local
 ```
 
 Обязательные переменные (имена без секретов): см. handoff
@@ -34,3 +38,10 @@ scripts/deps — зона агента B; нужный diff сначала в ha
 Не меняем `deploy/**`. Оборачиваем reference Compose своим project name,
 свободными loopback ports и disposable volumes. Marker/identity перед teardown.
 Локальные images `saldo-*:86c1374` недостаточны без rebuild кандидата.
+
+## ML bindings (local only)
+
+`up_stack.py` expects generated Python stubs at
+`scripts/financial-e2e/artifacts/ml-gen/ml/` (gitignored). Copy from a checkout
+that already ran `services/ml/generate_rpc.py`, or generate into that directory.
+Do not commit private keys or stack state from `artifacts/`.

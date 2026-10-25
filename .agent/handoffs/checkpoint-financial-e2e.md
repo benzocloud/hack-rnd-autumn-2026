@@ -115,3 +115,43 @@ verification stub.
 - ML tip (#45): `462344f9a11ae563c7d8d104cd6844270f64983d`
 - Fixtures prepared; real stack not yet started.
 - Next: isolated stack under `scripts/financial-e2e` (no `deploy/**` edits).
+
+
+## Checkpoint 11:11 МСК — этапы 1–3 На ревью
+
+### Real HTTP P0 на изолированном stack (passed)
+
+Команда:
+
+```sh
+/opt/homebrew/bin/python3 scripts/financial-e2e/up_stack.py --keep --suffix p0ml
+. scripts/financial-e2e/artifacts/stack-p0ml/env.sh
+/opt/homebrew/bin/python3 scripts/financial-e2e/run_http.py
+```
+
+| ID | real HTTP |
+| --- | --- |
+| P0-01..P0-10 | **pass** (полный путь register→…→forecast 30→reload) |
+
+Проверенный stack source SHA (бинарники собраны из worktree): `e95e98eefd8e897e4d4cc2f339695f004cebb98f`  
+API origin: isolated `https://127.0.0.1:<ephemeral>` (не production)  
+Auth: `AUTH_DEMO_EMAIL_VERIFICATION=true` + exact allowlist `owner-p0ml-NN@financial-e2e.test`  
+TLS: Homebrew Python 3.14 / OpenSSL 3 (CLT Python не умеет TLS1.3)  
+ML: system `python3` + grpcio; generated `ml.v1` bindings скопированы в `artifacts/ml-gen/` (gitignore)  
+Fixture ordinary window: 2026-07-02..2026-09-29, SHA `8780e780…`  
+
+Base main: `71f2a86ffbcf218d7fff517830b7aa41f0a97c95`  
+#48 tip: `1f10b6e615296a01d64957730ac2ce38a2e2b11c`  
+#49 tip: `7d6d749c4dcd0547e11d48162527c38021dbb003`  
+#45 tip: `462344f9a11ae563c7d8d104cd6844270f64983d`  
+
+### Ещё не сделано
+- CSV/manual regression (этап 4)
+- Payment lifecycle (этап 5; нужен merge/integration #48)
+- Negatives (этап 6)
+- Restart persistence / browser walkthrough / caveman+ponytail (этап 7)
+
+### Blockers для подхвата
+1. Browser specs ещё checklist-only; `@playwright/test` в shared manifests — зона агента B.
+2. `artifacts/ml-gen` не в git: перед ML нужно скопировать/сгенерировать `services/ml/ml` bindings локально.
+3. Payment lifecycle не гонять на чистом main без #48 candidate checkout.
