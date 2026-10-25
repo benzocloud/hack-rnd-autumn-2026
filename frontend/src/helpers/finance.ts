@@ -52,7 +52,7 @@ const dateField = ( form: FormData, name: string, label: string ): string => {
 const parseMoney = ( value: string, allowNegative = false ): string => {
     const normalized = value.trim().replace(/[\s\u00a0]/g, "").replace(",", ".");
 
-    if (!/^-?\d{1,16}(\.\d{1,2})?$/.test(normalized) || (!allowNegative && normalized.startsWith("-"))) {
+    if (!/^-?\d{1,17}(\.\d{1,2})?$/.test(normalized) || (!allowNegative && normalized.startsWith("-"))) {
         invalid("Укажите сумму в рублях, не больше двух знаков после запятой.", "amount");
     }
 
@@ -61,6 +61,10 @@ const parseMoney = ( value: string, allowNegative = false ): string => {
 
     if (!allowNegative && amount <= BigInt(0)) {
         invalid("Сумма должна быть больше нуля.", "amount");
+    }
+
+    if (amount < BigInt("-9223372036854775808") || amount > BigInt("9223372036854775807")) {
+        invalid("Сумма выходит за допустимый диапазон RUB.", "amount");
     }
 
     return String(amount);

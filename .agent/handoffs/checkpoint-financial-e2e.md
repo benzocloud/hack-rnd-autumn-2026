@@ -1,0 +1,202 @@
+# Handoff: financial E2E checkpoint (агент C)
+
+Время: 25.10.2026 ~10:54 Europe/Moscow.
+
+## Публикация
+
+| Поле | Значение |
+| --- | --- |
+| PR URL | https://github.com/benzocloud/hack-rnd-autumn-2026/pull/50 |
+| Branch | `globalarray/test/verify_financial_user_journey` |
+| Base | `origin/main` `71f2a86ffbcf218d7fff517830b7aa41f0a97c95` |
+| Local HEAD | `971a1b79dca53ef87122b7637283961f2d3ed163` |
+| Remote HEAD | `971a1b79dca53ef87122b7637283961f2d3ed163` (match=yes) |
+| Worktree | `/Users/globalarray/hack-rnd-autumn-2026-financial-e2e` |
+| Nickname | `globalarray` |
+
+## GBrain
+
+`unavailable`: в Cursor-сессии нет MCP namespace/tools для
+`https://gbrain.brokebyte.me/mcp` (GetDynamicTools по gbrain/recall — пусто).
+Продолжаем по Git/ADR/OpenAPI/PR handoff агента B.
+
+## GitHub API / PR CLI
+
+- `git fetch` / `git push --dry-run` к origin работают через osxkeychain.
+- `gh` не залогинен (`gh auth status`: not logged in). Публичный REST к private
+  repo даёт 404 без token. ConnectScm Cursor завершился успешно, но CLI token
+  не появился.
+- Подхват PR, если `gh pr create` падает:
+  1. `gh auth login` (scopes: `repo`, `read:org`) на машине владельца/агента.
+  2. `cd /Users/globalarray/hack-rnd-autumn-2026-financial-e2e`
+  3. `gh pr create --draft --title "test: verify the real financial user journey" --body-file ...`
+  4. Либо открыть compare URL после push:
+     `https://github.com/benzocloud/hack-rnd-autumn-2026/compare/main...globalarray/test/verify_financial_user_journey?expand=1`
+
+## Зависимости кандидата (не в этом PR)
+
+| Компонент | Источник | SHA | Примечание |
+| --- | --- | --- | --- |
+| Base | `origin/main` `71f2a86ffbcf218d7fff517830b7aa41f0a97c95` |
+| CSV/manual (#47) | main | `f686ca8` | merged |
+| Onboarding (#41) | main | ancestor | 0 commits ahead |
+| Payments (#48) | `globalarray/feat/payments_frozen_calendar` | `0826fa6` | open; integration stack `pay48` |
+| Frontend (#49) | `globalarray/feat/financial_user_journey` | `14639d5` | open; browser manifests ещё у B |
+| ML train (#45) | `god4k1ta/feat/ml_trained_forecast` | ~`462344f` | open; не закрывает calibration |
+
+Интеграционный прогон: отдельный checkout = merge опубликованных SHA.
+Чужие product-коммиты **не** включаются в тестовый PR.
+
+## Env variable names (без значений)
+
+`SALDO_E2E_PROJECT`, `SALDO_E2E_API_ORIGIN`, `SALDO_E2E_FRONTEND_ORIGIN`,
+`SALDO_DATASET_DIR`, `SALDO_E2E_EMAIL_DOMAIN`, `AUTH_DEMO_EMAIL_VERIFICATION`,
+`AUTH_DEMO_TEST_EMAILS`, `AUTH_ENV`, `COMPOSE_PROJECT_NAME`,
+`SALDO_E2E_KEEP_STACK`, `SALDO_E2E_ARTIFACT_DIR`.
+
+Secrets/cookies/private keys не коммитятся; артефакты — под
+`scripts/financial-e2e/artifacts/` (gitignore).
+
+## Fixture hashes
+
+| Файл | SHA-256 | Примечание |
+| --- | --- | --- |
+| source `dataset/statements/C001.csv` | `945fe67e8418882bf7bd5e9bdcda570c613fc7777113d55424ae34b052dfa92a` | полный; gitignored |
+| generated `ordinary_90d_c001.csv` | `8780e7806a705f1c2898acf234c301ff6c1391f88fbb99bd27bb55f7c4e4bf85` | window 2026-07-02..2026-09-29, 151 ops |
+| generated `short_history.csv` | `a25c0d3ccf4c2823a7740c2617889f0cad02a3bda67eaa1fe94be6f9445f4df3` | 30d negative |
+| generated `eod_conflict.csv` | `e5f8d0aebf64ca6fef8a82792ea4d3bb605f32b96c43a219f9fcfb1b06a9aa99` | intra-day EOD conflict (blocking) |
+
+Наблюдение: C001 не имеет строк на `2026-09-30`; последний EOD `2026-09-29`.
+
+## Запрос к агенту B (frontend manifests)
+
+Если browser harness потребует прямой `@playwright/test` в `frontend/package.json`
+и npm script `test:e2e:financial`, точный diff опишем здесь до правки.
+Пока: сценарии в `frontend/tests/e2e/financial/**`; запуск через
+`scripts/financial-e2e` / npx без изменения shared manifests, если хватит
+существующих зависимостей.
+
+## Результаты / skips
+
+Этап 1 в публикации: матрица + skeleton harness. Real HTTP/browser ещё не
+прогонялись в этом worktree.
+
+## Blockers
+
+1. **gh CLI auth** — osxkeychain token проходит `git push`, но `gh auth login --with-token` отклоняет его (`missing required scope 'read:org'`). Draft PR создаём через REST `POST /repos/.../pulls` тем же token (repo) либо после `gh auth login` с полными scopes.
+2. **Images `86c1374`** — локальный GHCR/cache старше main; для real stack нужен
+   build/run binaries кандидата.
+3. **Public demo** — не использовать как proof (503 CSRF по handoff #49).
+4. **PR #48 не merged** — payment lifecycle на чистом main будет blocked;
+   проверять на integration merge.
+
+## Что сохранено на GitHub
+
+*(обновить после push)* plan, handoff, scenarios matrix, harness skeleton,
+verification stub.
+
+## Следующий шаг подхвата
+
+1. Проверить remote SHA == local.
+2. Довести `scripts/financial-e2e/run_http.py` happy-path против isolated stack.
+3. Поднять disposable stack (отдельный project/ports) или зафиксировать точный
+   blocker команд.
+4. Не ждать апрува этапов; статусы — «На ревью».
+
+
+## Checkpoint 10:58 МСК — этап 1 На ревью
+
+- Draft PR: https://github.com/benzocloud/hack-rnd-autumn-2026/pull/50
+- Pushed SHA matched remote at publication: `971a1b79dca53ef87122b7637283961f2d3ed163`
+- Current local before this docs commit: `971a1b79dca53ef87122b7637283961f2d3ed163`
+- Base main: `71f2a86ffbcf218d7fff517830b7aa41f0a97c95`
+- Payments tip (#48): `1f10b6e615296a01d64957730ac2ce38a2e2b11c`
+- Frontend tip (#49): `7d6d749c4dcd0547e11d48162527c38021dbb003`
+- ML tip (#45): `462344f9a11ae563c7d8d104cd6844270f64983d`
+- Fixtures prepared; real stack not yet started.
+- Next: isolated stack under `scripts/financial-e2e` (no `deploy/**` edits).
+
+
+## Checkpoint 11:11 МСК — этапы 1–3 На ревью
+
+### Real HTTP P0 на изолированном stack (passed)
+
+Команда:
+
+```sh
+/opt/homebrew/bin/python3 scripts/financial-e2e/up_stack.py --keep --suffix p0ml
+. scripts/financial-e2e/artifacts/stack-p0ml/env.sh
+/opt/homebrew/bin/python3 scripts/financial-e2e/run_http.py
+```
+
+| ID | real HTTP |
+| --- | --- |
+| P0-01..P0-10 | **pass** (полный путь register→…→forecast 30→reload) |
+
+Проверенный stack source SHA (бинарники собраны из worktree): `e95e98eefd8e897e4d4cc2f339695f004cebb98f`  
+API origin: isolated `https://127.0.0.1:<ephemeral>` (не production)  
+Auth: `AUTH_DEMO_EMAIL_VERIFICATION=true` + exact allowlist `owner-p0ml-NN@financial-e2e.test`  
+TLS: Homebrew Python 3.14 / OpenSSL 3 (CLT Python не умеет TLS1.3)  
+ML: system `python3` + grpcio; generated `ml.v1` bindings скопированы в `artifacts/ml-gen/` (gitignore)  
+Fixture ordinary window: 2026-07-02..2026-09-29, SHA `8780e780…`  
+
+Base main: `71f2a86ffbcf218d7fff517830b7aa41f0a97c95`  
+#48 tip: `1f10b6e615296a01d64957730ac2ce38a2e2b11c`  
+#49 tip: `7d6d749c4dcd0547e11d48162527c38021dbb003`  
+#45 tip: `462344f9a11ae563c7d8d104cd6844270f64983d`  
+
+### Ещё не сделано
+- CSV/manual regression (этап 4)
+- Payment lifecycle (этап 5; нужен merge/integration #48)
+- Negatives (этап 6)
+- Restart persistence / browser walkthrough / caveman+ponytail (этап 7)
+
+### Blockers для подхвата
+1. Browser specs ещё checklist-only; `@playwright/test` в shared manifests — зона агента B.
+2. `artifacts/ml-gen` не в git: перед ML нужно скопировать/сгенерировать `services/ml/ml` bindings локально.
+3. Payment lifecycle не гонять на чистом main без #48 candidate checkout.
+
+## Remote after 11:12 push
+
+- Local/remote: `52afc6d6d0e90e13add0841ba96bc6443ea4a677`
+- Draft PR #50 remains draft; CI check-runs may still be pending (pending ≠ passed).
+- Next: CSV/manual regression on same stack; payments need #48 integration checkout.
+
+## Checkpoint ~11:30 МСК — этапы 4–6 На ревью
+
+### R/N на `stack-p0ml` (exit 0)
+
+`run_regression.py`: R-01,R-02,R-03,R-04,R-05,R-08,N-01,N-02,N-04,N-05,N-08,N-09 = **pass**.
+
+Fixture fix: `eod_conflict.csv` now flips EOD on a multi-op day (blocking
+`INVALID_ROW` / `balance_eod`); SHA `e5f8d0ae…`.
+
+### PAY на `stack-pay48` из #48 `0826fa6`
+
+```sh
+up_stack.py --keep --suffix pay48 --repo-root …/hack-rnd-autumn-2026-pay48
+run_payments.py
+```
+
+| ID | Status |
+| --- | --- |
+| PAY-01 | `blocked:ordinary_csv_current_calendar` (payment ok; in-horizon → `UNSUPPORTED_MODEL_CONTEXT`) |
+| PAY-02 | pass |
+| PAY-03 | pass |
+| PAY-04 | pass |
+| PAY-05 | pass |
+
+### Browser
+
+`blocked:no_playwright_manifest` — shared manifests остаются у агента B;
+checklist не закрыт real browser.
+
+### Запрос к B (без правки shared manifests с нашей стороны)
+
+Если нужен `@playwright/test` + `test:e2e:financial` в `frontend/package.json`,
+добавьте в #49; harness готов потреблять isolated API origin + CA.
+
+### Next
+
+Commit/push harness+report to draft #50; не merge / не ready-for-review /
+не public deploy.

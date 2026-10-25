@@ -2,7 +2,7 @@
 
 import useMediaQuery from "@mui/material/useMediaQuery";
 import axios from "axios";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { useDispatch } from "react-redux";
 
 import { companyPath, formatDate } from "@/helpers/finance";
@@ -20,16 +20,15 @@ import { AuthButton, BalanceChart, LoadingText, Spinner } from "@/widgets";
 import styles from "./style.module.scss";
 
 
-const periods: ForecastPeriod[] = [ 30, 60, 90 ];
 const dateFormatter = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", timeZone: "UTC" });
 
 
-const Dashboard = ( { companyId }: { companyId?: string } ) => {
+const Dashboard = ( { companyId, forecastAction }: { companyId?: string; forecastAction?: ReactNode } ) => {
     const desktop = useMediaQuery("(min-width: 801px)");
     const [ expanded, setExpanded ] = useState(false);
     const summaryId = useId();
     const isExpanded = desktop && expanded;
-    const [ period, setPeriod ] = useState<ForecastPeriod>(30);
+    const period: ForecastPeriod = 30;
     const [ attempt, setAttempt ] = useState(0);
     const [ loading, setLoading ] = useState(true);
     const [ failed, setFailed ] = useState(false);
@@ -73,19 +72,6 @@ const Dashboard = ( { companyId }: { companyId?: string } ) => {
     }, [ period, attempt, dispatch, companyId ]);
 
 
-    const changePeriod = ( next: ForecastPeriod ) => {
-        if (loading || period === next) {
-            return;
-        }
-
-        setLoading(true);
-        setFailed(false);
-        setErrorMessage("");
-        setForecastStatus(null);
-        setPeriod(next);
-    };
-
-
     const retry = () => {
         if (loading) {
             return;
@@ -103,7 +89,7 @@ const Dashboard = ( { companyId }: { companyId?: string } ) => {
     const ready = !loading && !!data?.forecast && !failed;
     const insufficient = data?.forecast?.readiness.status === "insufficient";
     const loadingLabel = forecastStatus === "queued" ? "Прогноз в очереди" : forecastStatus === "running" ? "Рассчитываем прогноз" : "Загружаем прогноз";
-    const status = loading ? <LoadingText>{ loadingLabel }</LoadingText> : failed ? "Не удалось загрузить данные" : ready && !insufficient ? gap ? "ОЖИДАЕТСЯ КАССОВЫЙ РАЗРЫВ" : "КАССОВЫЙ РАЗРЫВ НЕ ПРОГНОЗИРУЕТСЯ" : "НЕДОСТАТОЧНО ДАННЫХ";
+    const status = loading ? <LoadingText>{ loadingLabel }</LoadingText> : failed ? "Не удалось загрузить данные" : ready && !insufficient ? gap ? "ОЖИДАЕТСЯ КАССОВЫЙ РАЗРЫВ" : "МОДЕЛЬ НЕ ПОКАЗЫВАЕТ РАЗРЫВ" : "НЕДОСТАТОЧНО ДАННЫХ";
     const warning = loading ? <LoadingText>Проверяем данные</LoadingText> : failed ? "Попробуйте повторить загрузку" : gap ? `${dateFormatter.format(new Date(`${gap.date}T00:00:00Z`)).toLocaleUpperCase("ru-RU")} ПРОГНОЗИРУЕТСЯ КАССОВЫЙ РАЗРЫВ` : ready && insufficient ? "Истории недостаточно для оценки риска. Проверьте полноту выписки." : ready ? forecastQualityDescription(data?.forecast?.readiness.limitations[0] || "На выбранный период предупреждений нет") : data?.company ? "Укажите датированный остаток на счёте для построения прогноза" : "Для прогноза нужна компания с данными счёта";
 
 
@@ -159,20 +145,14 @@ const Dashboard = ( { companyId }: { companyId?: string } ) => {
                     { desktop && <span className={styles.chartHint} aria-hidden="true">{ isExpanded ? "Нажмите, чтобы свернуть" : "Нажмите, чтобы развернуть" }</span> }
                 </div>
 
-                <div className={styles.periods} role="group" aria-label="Период прогноза" aria-busy={loading}>
-                    <div className={`${styles.periodOptions} ${loading ? styles.contentHidden : ""}`} aria-hidden={loading || undefined}>
-                        { periods.map(( item ) => (
-                            <button className={styles.period} type="button" key={item} aria-pressed={period === item} disabled={loading} onClick={() => changePeriod(item)}>{ item } дней</button>
-                        )) }
-                    </div>
-                    { loading && <span className={styles.periodSpinner}><Spinner label="Загружаем период прогноза" /></span> }
-                </div>
+                <p>Горизонт прогноза: 30 дней.</p>
+                { ready && data?.forecast && <div>{ data.forecast.input.history_assessment && <Notice tone="warning">Ограниченная оценка по CSV. Полнота банковской истории не подтверждена.</Notice> }{ data.forecast.readiness.limitations.map(( item, index ) => <p key={index}>{ forecastQualityDescription(item) }</p>) }</div> }
 
                 { failed && <div className={styles.retry}><AuthButton type="button" loading={loading} onClick={retry}>Повторить загрузку</AuthButton></div> }
             </section>
             <div className={styles.details}>
                 { process.env.developerMode === "mock" && <Notice tone="warning">Демонстрационные данные: финансы и прогнозы замоканы.</Notice> }
-                <div><AuthButton type="button" loading={loading} onClick={retry}>Обновить прогноз</AuthButton></div>
+                <div><AuthButton type="button" loading={loading} onClick={retry}>Обновить данные</AuthButton>{ forecastAction }</div>
                 { data?.forecast?.is_stale && <Notice tone="warning">После расчёта данные изменились. Этот прогноз отражает сохранённый снимок.</Notice> }
                 { data?.company ? <div className={styles.links}><LinkButton href={companyPath(data.company.id, "settings")} secondary>Остаток и реквизиты</LinkButton><LinkButton href={companyPath(data.company.id, "calendar")} secondary>Ближайшие платежи</LinkButton>{ data.forecast && <LinkButton href={companyPath(data.company.id, `forecasts/${data.forecast.id}`)}>Подробнее о прогнозе</LinkButton> }</div> : !loading && <LinkButton href="/workspace">Добавить компанию</LinkButton> }
                 { data?.forecast && <p className={styles.note}>Прогноз по данным на { formatDate(data.forecast.input.data_as_of) }. Вероятность отрицательного остатка: { data.forecast.result.metrics.gap_probability.value === null ? "не оценена" : `${Math.round(data.forecast.result.metrics.gap_probability.value * 100)}%` }.</p> }

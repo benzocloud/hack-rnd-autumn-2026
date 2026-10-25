@@ -31,6 +31,7 @@ const setup = () => {
         useResource: (loader) => { loader(new AbortController().signal); return { data: page, loading: false, error: null, reload() {} }; },
         importsService: { listImportIssues: (request) => { requests.push(request); page = pages[request.cursor || "first"]; return Promise.resolve(page); } },
         styles: {},
+        getErrorDetailMessage: (value) => value.message,
         formatDate: (value) => value,
         formatMoney: (value) => value,
         ...Object.fromEntries([ "Panel", "DataState", "JobState", "Notice", "Badge", "ActionButton", "FormError" ].map((name) => [ name, name ])),
@@ -98,4 +99,15 @@ test("company codes are read from the file, including a semicolon inside quotes"
         { id: "C002", rows: 1, from: "2025-01-01", to: "2025-01-01" },
     ]);
     await assert.rejects(companiesInFile(new File([ "amount;direction\n1;in\n" ], "other.csv", { type: "text/csv" })), /dataset_v1/);
+});
+
+
+test("company selection respects multiline quoted purposes and escaped quotes", async () => {
+    const { companiesInFile } = setup();
+    const file = new File([ 'company_id;operation_date;payment_purpose\r\nC001;2026-09-01;"First\r\nC_FAKE;2026-09-02;""quoted"" text"\r\nC002;2026-09-03;Other\r\n' ], "multiline.csv");
+    assert.deepEqual(await companiesInFile(file), [
+        { id: "C001", rows: 1, from: "2026-09-01", to: "2026-09-01" },
+        { id: "C002", rows: 1, from: "2026-09-03", to: "2026-09-03" },
+    ]);
+    await assert.rejects(companiesInFile(new File(['company_id;operation_date;payment_purpose\nC001;2026-09-01;"unfinished'], "broken.csv")), /не закрыта кавычка/);
 });

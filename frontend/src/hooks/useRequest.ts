@@ -3,7 +3,7 @@
 import axios from "axios";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import getErrorMessage from "@/helpers/getErrorMessage";
+import getErrorMessage, { getErrorCode } from "@/helpers/getErrorMessage";
 import { getFieldErrors, type FieldErrors } from "@/helpers/fieldErrors";
 import { showErrorSnackbar, showSuccessSnackbar } from "@/helpers/snackbar";
 
@@ -11,6 +11,7 @@ import { showErrorSnackbar, showSuccessSnackbar } from "@/helpers/snackbar";
 const useRequest = () => {
     const [ busy, setBusy ] = useState(false);
     const [ error, setError ] = useState<string | null>(null);
+    const [ errorCode, setErrorCode ] = useState<string | null>(null);
     const [ fieldErrors, setFieldErrors ] = useState<FieldErrors>({});
     const controller = useRef<AbortController | null>(null);
     const action = useRef<{ identity: string; key: string } | null>(null);
@@ -30,6 +31,7 @@ const useRequest = () => {
         action.current = action.current?.identity === identity ? action.current : { identity, key: crypto.randomUUID() };
         setBusy(true);
         setError(null);
+        setErrorCode(null);
         setFieldErrors({});
 
         try {
@@ -49,6 +51,7 @@ const useRequest = () => {
         } catch (cause: unknown) {
             if (!request.signal.aborted && !axios.isCancel(cause)) {
                 setError(getErrorMessage(cause));
+                setErrorCode(getErrorCode(cause));
                 const fields = getFieldErrors(cause);
                 setFieldErrors(fields);
 
@@ -69,10 +72,19 @@ const useRequest = () => {
     }, []);
 
 
+    const reset = useCallback(() => {
+        if (controller.current) { return; }
+        action.current = null;
+        setError(null);
+        setErrorCode(null);
+        setFieldErrors({});
+    }, []);
+
+
     const clearFieldError = ( name?: string ) => setFieldErrors(( current ) => name ? Object.fromEntries(Object.entries(current).filter(( [ field ] ) => field !== name)) : {});
 
 
-    return { run, busy, error, fieldErrors, clearFieldError };
+    return { run, reset, busy, error, errorCode, fieldErrors, clearFieldError };
 };
 
 

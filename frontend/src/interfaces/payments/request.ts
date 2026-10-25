@@ -8,6 +8,7 @@ interface ICreatePaymentRequest {
     counterparty_name: string;
     description: string;
     category_id?: string | null;
+    reconciliation_group_id?: string | null;
 }
 
 
@@ -18,6 +19,7 @@ type IUpdatePaymentRequest = ({
     counterparty_name?: string;
     description?: string;
     category_id?: string | null;
+    reconciliation_group_id?: string | null;
     version: string;
 } | {
     direction?: "inflow" | "outflow";
@@ -26,6 +28,7 @@ type IUpdatePaymentRequest = ({
     counterparty_name?: string;
     description?: string;
     category_id?: string | null;
+    reconciliation_group_id?: string | null;
     version: string;
 } | {
     direction?: "inflow" | "outflow";
@@ -34,6 +37,7 @@ type IUpdatePaymentRequest = ({
     counterparty_name?: string;
     description?: string;
     category_id?: string | null;
+    reconciliation_group_id?: string | null;
     version: string;
 } | {
     direction?: "inflow" | "outflow";
@@ -42,6 +46,7 @@ type IUpdatePaymentRequest = ({
     counterparty_name: string;
     description?: string;
     category_id?: string | null;
+    reconciliation_group_id?: string | null;
     version: string;
 } | {
     direction?: "inflow" | "outflow";
@@ -50,6 +55,7 @@ type IUpdatePaymentRequest = ({
     counterparty_name?: string;
     description: string;
     category_id?: string | null;
+    reconciliation_group_id?: string | null;
     version: string;
 } | {
     direction?: "inflow" | "outflow";
@@ -132,3 +138,16 @@ interface IRemovePaymentMatchParams {
 
 
 export type { ICreatePaymentRequest, IUpdatePaymentRequest, ICreateMatchRequest, IListPaymentsParams, ICreatePaymentParams, IGetPaymentParams, IUpdatePaymentParams, ICancelPaymentParams, IListPaymentMatchesParams, IMatchPaymentParams, IRemovePaymentMatchParams };
+
+
+// OpenAPI CreateReconciliationGroupRequest: exactly one explicit confirmation branch.
+type ICreateReconciliationGroupRequest = {
+    cutoff_date: string;
+    horizon_start: string;
+    horizon_end: string;
+} & ({ kind: "additional"; additional: { confirmed: true } } | {
+    kind: "replacement";
+    replacement: { complete_for_horizon: true; historical_operations: Array<{ transaction_id: string; version: string }> };
+});
+
+export type { ICreateReconciliationGroupRequest };
