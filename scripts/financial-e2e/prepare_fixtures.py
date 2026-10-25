@@ -101,16 +101,32 @@ def short_history(rows: list[dict[str, str]], days: int = 30) -> list[dict[str, 
 
 
 def eod_conflict(rows_90: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Create an intra-day EOD disagreement (blocking INVALID_ROW on balance_eod).
+
+    Flipping the last row alone is not enough when the cutoff day has a single
+    operation: that only yields BALANCE_DISCONTINUITY (warning). Diagnostics
+    block when the same operation_date carries distinct balance_minor values.
+    """
     if not rows_90:
         raise SystemExit("ordinary slice empty")
     conflicted = [dict(row) for row in rows_90]
-    # Flip last row EOD to create an intra-day conflict while keeping other fields.
-    last = conflicted[-1]
+    by_date: dict[str, list[int]] = {}
+    for idx, row in enumerate(conflicted):
+        by_date.setdefault(row["operation_date"], []).append(idx)
+    target_idxs: list[int] | None = None
+    for day in sorted(by_date, reverse=True):
+        idxs = by_date[day]
+        if len(idxs) >= 2:
+            target_idxs = idxs
+            break
+    if not target_idxs:
+        raise SystemExit("ordinary slice has no multi-op day for EOD conflict")
+    victim = conflicted[target_idxs[-1]]
     try:
-        value = float(last["balance_eod"])
+        value = float(victim["balance_eod"])
     except ValueError as exc:
-        raise SystemExit(f"bad balance_eod: {last['balance_eod']}") from exc
-    last["balance_eod"] = f"{value + 1.0:.2f}"
+        raise SystemExit(f"bad balance_eod: {victim['balance_eod']}") from exc
+    victim["balance_eod"] = f"{value + 1.0:.2f}"
     return conflicted
 
 

@@ -22,7 +22,8 @@ import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-REPO = ROOT.parents[1]
+DEFAULT_REPO = ROOT.parents[1]
+REPO = DEFAULT_REPO
 ARTIFACTS = ROOT / "artifacts"
 # Same pin as services/api/integration/company_runtime_test.go
 POSTGRES_IMAGE = (
@@ -178,7 +179,18 @@ def main() -> int:
     parser.add_argument("--keep", action="store_true", help="do not tear down on exit (daemonize children)")
     parser.add_argument("--suffix", default=None, help="stable project suffix; default random")
     parser.add_argument("--skip-ml", action="store_true", help="start without ML (forecast scenarios will fail explicitly)")
+    parser.add_argument(
+        "--repo-root",
+        type=Path,
+        default=None,
+        help="build/run service sources from this checkout (e.g. integration merge of #48); harness stays under scripts/financial-e2e",
+    )
     args = parser.parse_args()
+
+    global REPO
+    REPO = (args.repo_root or DEFAULT_REPO).resolve()
+    if not (REPO / "services" / "api").is_dir():
+        raise SystemExit(f"--repo-root missing services/api: {REPO}")
 
     suffix = args.suffix or uuid.uuid4().hex[:8]
     project = f"saldo-financial-e2e-{suffix}"

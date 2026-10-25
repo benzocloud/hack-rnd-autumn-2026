@@ -23,5 +23,9 @@ standalone `npx` from harness without editing shared manifests.
 
 ## Status
 
-Specs will be added after HTTP happy-path is green on an isolated origin.
-Placeholder: `smoke.checklist.md`.
+HTTP P0 + R/N green on isolated stack; PAY green on #48 integration stack
+(except PAY-01 CURRENT-calendar points — ordinary CSV blocker).
+
+Browser: still checklist-only — shared `@playwright/test` / `test:e2e:financial`
+not present in `frontend/package.json` (agent B). See
+`smoke.checklist.md` and `docs/verification/financial-checkpoint-2026-10-25.md`.

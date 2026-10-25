@@ -21,7 +21,7 @@
     },
     "eod_conflict.csv": {
       "path": "fixtures/eod_conflict.csv",
-      "sha256": "24581aafd2bc76283e61092d121a408af74200afd75c4061720404fc276998bc",
+      "sha256": "e5f8d0aebf64ca6fef8a82792ea4d3bb605f32b96c43a219f9fcfb1b06a9aa99",
       "rows": 151
     }
   }

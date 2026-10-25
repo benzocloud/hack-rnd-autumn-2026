@@ -40,8 +40,8 @@
 | Base | `origin/main` `71f2a86ffbcf218d7fff517830b7aa41f0a97c95` |
 | CSV/manual (#47) | main | `f686ca8` | merged |
 | Onboarding (#41) | main | ancestor | 0 commits ahead |
-| Payments (#48) | `globalarray/feat/payments_frozen_calendar` | ~`ac90fa3` | open draft; нужно для lifecycle |
-| Frontend (#49) | `globalarray/feat/financial_user_journey` | ~`7d6d749` | open; агент B |
+| Payments (#48) | `globalarray/feat/payments_frozen_calendar` | `0826fa6` | open; integration stack `pay48` |
+| Frontend (#49) | `globalarray/feat/financial_user_journey` | `14639d5` | open; browser manifests ещё у B |
 | ML train (#45) | `god4k1ta/feat/ml_trained_forecast` | ~`462344f` | open; не закрывает calibration |
 
 Интеграционный прогон: отдельный checkout = merge опубликованных SHA.
@@ -64,7 +64,7 @@ Secrets/cookies/private keys не коммитятся; артефакты — �
 | source `dataset/statements/C001.csv` | `945fe67e8418882bf7bd5e9bdcda570c613fc7777113d55424ae34b052dfa92a` | полный; gitignored |
 | generated `ordinary_90d_c001.csv` | `8780e7806a705f1c2898acf234c301ff6c1391f88fbb99bd27bb55f7c4e4bf85` | window 2026-07-02..2026-09-29, 151 ops |
 | generated `short_history.csv` | `a25c0d3ccf4c2823a7740c2617889f0cad02a3bda67eaa1fe94be6f9445f4df3` | 30d negative |
-| generated `eod_conflict.csv` | `24581aafd2bc76283e61092d121a408af74200afd75c4061720404fc276998bc` | EOD conflict negative |
+| generated `eod_conflict.csv` | `e5f8d0aebf64ca6fef8a82792ea4d3bb605f32b96c43a219f9fcfb1b06a9aa99` | intra-day EOD conflict (blocking) |
 
 Наблюдение: C001 не имеет строк на `2026-09-30`; последний EOD `2026-09-29`.
 
@@ -161,3 +161,42 @@ Base main: `71f2a86ffbcf218d7fff517830b7aa41f0a97c95`
 - Local/remote: `52afc6d6d0e90e13add0841ba96bc6443ea4a677`
 - Draft PR #50 remains draft; CI check-runs may still be pending (pending ≠ passed).
 - Next: CSV/manual regression on same stack; payments need #48 integration checkout.
+
+## Checkpoint ~11:30 МСК — этапы 4–6 На ревью
+
+### R/N на `stack-p0ml` (exit 0)
+
+`run_regression.py`: R-01,R-02,R-03,R-04,R-05,R-08,N-01,N-02,N-04,N-05,N-08,N-09 = **pass**.
+
+Fixture fix: `eod_conflict.csv` now flips EOD on a multi-op day (blocking
+`INVALID_ROW` / `balance_eod`); SHA `e5f8d0ae…`.
+
+### PAY на `stack-pay48` из #48 `0826fa6`
+
+```sh
+up_stack.py --keep --suffix pay48 --repo-root …/hack-rnd-autumn-2026-pay48
+run_payments.py
+```
+
+| ID | Status |
+| --- | --- |
+| PAY-01 | `blocked:ordinary_csv_current_calendar` (payment ok; in-horizon → `UNSUPPORTED_MODEL_CONTEXT`) |
+| PAY-02 | pass |
+| PAY-03 | pass |
+| PAY-04 | pass |
+| PAY-05 | pass |
+
+### Browser
+
+`blocked:no_playwright_manifest` — shared manifests остаются у агента B;
+checklist не закрыт real browser.
+
+### Запрос к B (без правки shared manifests с нашей стороны)
+
+Если нужен `@playwright/test` + `test:e2e:financial` в `frontend/package.json`,
+добавьте в #49; harness готов потреблять isolated API origin + CA.
+
+### Next
+
+Commit/push harness+report to draft #50; не merge / не ready-for-review /
+не public deploy.
