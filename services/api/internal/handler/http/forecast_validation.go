@@ -15,7 +15,7 @@ func validForecast(f *corev1.Forecast, a *corev1.Account, id string) bool {
 	case *corev1.Forecast_Pending:
 		return state != nil && state.Pending != nil && (state.Pending.Status == corev1.ForecastStatus_FORECAST_STATUS_QUEUED || state.Pending.Status == corev1.ForecastStatus_FORECAST_STATUS_RUNNING)
 	case *corev1.Forecast_Succeeded:
-		return provenCoverage(f.Input.GetHistoryCoverage()) && f.Readiness.Status != "insufficient" && state != nil && state.Succeeded != nil && timestamp(state.Succeeded.CompletedAt) && !state.Succeeded.CompletedAt.AsTime().Before(f.CreatedAt.AsTime()) && validForecastResult(state.Succeeded.Result, f.Input)
+		return (provenCoverage(f.Input.GetHistoryCoverage()) || (validCSVAssessment(f.Input) && f.Readiness.Status == "limited" && csvReadiness(f))) && f.Readiness.Status != "insufficient" && state != nil && state.Succeeded != nil && timestamp(state.Succeeded.CompletedAt) && !state.Succeeded.CompletedAt.AsTime().Before(f.CreatedAt.AsTime()) && validForecastResult(state.Succeeded.Result, f.Input)
 	case *corev1.Forecast_Failed:
 		if state == nil || state.Failed == nil || !timestamp(state.Failed.CompletedAt) || state.Failed.CompletedAt.AsTime().Before(f.CreatedAt.AsTime()) {
 			return false
@@ -28,6 +28,12 @@ func validForecast(f *corev1.Forecast, a *corev1.Account, id string) bool {
 }
 func validForecastInput(i *corev1.ForecastInput, account string) bool {
 	if i == nil || !resourceID(i.SnapshotId) || i.AccountId != account || i.DataVersion < 1 || i.Currency != "RUB" || !validMoney(i.OpeningBalance) || !dateSequence(i.CutoffDate, i.StartDate, i.EndDate, i.HorizonDays) || i.BalanceAsOf != i.CutoffDate || !businessDate(i.DataAsOf) || i.DataAsOf > i.CutoffDate || i.RiskDefinition != "below_zero_eod" || !validHistoryCoverage(i.HistoryCoverage, i.DataVersion, i.CutoffDate) {
+		return false
+	}
+	if i.HistoryAssessment != nil && !validCSVAssessment(i) {
+		return false
+	}
+	if i.ModelContext != nil && i.ModelContext.ModelVersion == "mean_90_csv_v1" && !validCSVAssessment(i) {
 		return false
 	}
 	m := i.ModelContext
@@ -48,6 +54,8 @@ func validHistoryCoverage(c *corev1.HistoryCoverage, revision int64, cutoff stri
 		return false
 	}
 	switch c.Kind {
+	case corev1.HistoryCoverageKind_HISTORY_COVERAGE_KIND_UNSPECIFIED:
+		return false
 	case corev1.HistoryCoverageKind_HISTORY_COVERAGE_KIND_CERTIFIED:
 	case corev1.HistoryCoverageKind_HISTORY_COVERAGE_KIND_DATASET_FIXTURE_ASSUMPTION:
 		if !contains("dataset_coverage_assumed_not_bank_certified", c.Limitations...) {
@@ -179,4 +187,37 @@ func validForecastMetrics(m *corev1.ForecastMetrics, points []*corev1.ForecastPo
 		return m.FirstGap == nil
 	}
 	return m.FirstGap != nil && m.FirstGap.Date == first.Date && m.FirstGap.Shortfall.AmountMinor == -first.Balance.AmountMinor
+}
+
+func validCSVAssessment(i *corev1.ForecastInput) bool {
+	a, m := i.HistoryAssessment, i.ModelContext
+	if a == nil || m == nil || i.HistoryCoverage != nil || a.RuleVersion != "csv_history_quality_v1" || a.DataVersion != i.DataVersion || a.ThroughDate != i.CutoffDate || a.OperationDays < 1 || a.OperationDays > 90 || a.BalanceDays < 1 || a.BalanceDays > 90 || m.ModelName != "mean_90" || m.ModelVersion != "mean_90_csv_v1" || m.PreprocessingVersion != "csv_observed_operations_v1" || m.ConfigurationId != "mean_90_csv_v1" || m.RandomSeed != nil || m.TrajectoryCount != nil {
+		return false
+	}
+	cutoff, err := time.Parse(time.DateOnly, i.CutoffDate)
+	if err != nil || a.FromDate != cutoff.AddDate(0, 0, -89).Format(time.DateOnly) {
+		return false
+	}
+	expected := []string{"csv_history_completeness_unverified", "unobserved_days_unknown", "observed_operations_mean_per_calendar_day", "historical_calendar_unavailable", "historical_availability_unverified", "not_calibrated"}
+	if len(a.Limitations) != len(expected) {
+		return false
+	}
+	for n, v := range expected {
+		if a.Limitations[n] != v {
+			return false
+		}
+	}
+	return true
+}
+
+func csvReadiness(f *corev1.Forecast) bool {
+	if f.Readiness.HistoryDays != 90 || f.Readiness.ObservedDays != f.Input.HistoryAssessment.OperationDays {
+		return false
+	}
+	for _, limitation := range f.Input.HistoryAssessment.Limitations {
+		if !contains(limitation, f.Readiness.Limitations...) {
+			return false
+		}
+	}
+	return true
 }

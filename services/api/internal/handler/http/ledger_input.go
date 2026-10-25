@@ -14,6 +14,22 @@ import (
 // These small flat mutation DTOs require exact keys and explicit presence;
 // encoding/json alone would accept case variants, null scalars and duplicates.
 func ledgerBody(w http.ResponseWriter, r *http.Request, required ...string) (map[string]json.RawMessage, error) {
+	fields, err := ledgerObject(w, r)
+	if err != nil {
+		return nil, err
+	}
+	if len(fields) != len(required) {
+		return nil, errors.New("invalid JSON fields")
+	}
+	for _, key := range required {
+		if _, ok := fields[key]; !ok {
+			return nil, errors.New("missing JSON field")
+		}
+	}
+	return fields, nil
+}
+
+func ledgerObject(w http.ResponseWriter, r *http.Request) (map[string]json.RawMessage, error) {
 	media, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil || media != "application/json" {
 		return nil, errors.New("JSON content type required")
@@ -26,13 +42,8 @@ func ledgerBody(w http.ResponseWriter, r *http.Request, required ...string) (map
 		return nil, err
 	}
 	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(data, &fields); err != nil || len(fields) != len(required) {
+	if err := json.Unmarshal(data, &fields); err != nil {
 		return nil, errors.New("invalid JSON fields")
-	}
-	for _, key := range required {
-		if _, ok := fields[key]; !ok {
-			return nil, errors.New("missing JSON field")
-		}
 	}
 	return fields, nil
 }

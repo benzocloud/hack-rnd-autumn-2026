@@ -36,6 +36,7 @@ type jobCommands interface {
 type jobSnapshots interface {
 	ReadOpeningBalance(context.Context, ledger.Scope, ledger.Date) (domain.OpeningBalance, bool, error)
 	ReadFacts(context.Context, ledger.Scope, ledger.Date) ([]domain.Fact, error)
+	ReadBalanceHistory(context.Context, ledger.Scope, ledger.Date) ([]domain.OpeningBalance, error)
 	ReadCalendar(context.Context, ledger.Scope) (domain.Calendar, error)
 	InsertSnapshot(context.Context, domain.FinancialSnapshot) error
 	ReadSnapshot(context.Context, ledger.Scope, uuid.UUID) (domain.FinancialSnapshot, error)
@@ -97,6 +98,8 @@ type ForecastView struct {
 	Snapshot             domain.FinancialSnapshot
 	ModelContextID       uuid.UUID
 	Coverage             domain.JobCoverage
+	Assessment           *HistoryAssessment
+	Model                ModelContext
 	Result               *SavedForecast
 	ErrorCode, RequestID string
 }

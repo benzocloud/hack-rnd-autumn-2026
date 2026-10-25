@@ -184,6 +184,21 @@ class FinancialDemoContractTests(unittest.TestCase):
         self.validate("ForecastAnalysis", analysis)
         self.reject("ForecastAnalysis", analysis | {"analysis_version": "unknown"})
 
+    def test_csv_assessment_is_not_bank_coverage(self):
+        assessment = {
+            "rule_version": "csv_history_quality_v1",
+            "from_date": "2026-07-02",
+            "through_date": "2026-09-29",
+            "data_version": "2",
+            "operation_days": 51,
+            "balance_days": 51,
+            "limitations": ["csv_history_completeness_unverified"],
+        }
+        self.validate("HistoryAssessment", assessment)
+        self.reject("HistoryAssessment", assessment | {"kind": "certified"})
+        self.reject("HistoryAssessment", assessment | {"operation_days": 91})
+        self.reject("HistoryAssessment", assessment | {"data_version": 2})
+
 
 if __name__ == "__main__":
     unittest.main()

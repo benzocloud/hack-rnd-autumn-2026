@@ -29,6 +29,9 @@ var queryLoadTransaction string
 //go:embed sql/insert_transaction.sql
 var queryInsertTransaction string
 
+//go:embed sql/imported_equivalent.sql
+var queryImportedEquivalent string
+
 //go:embed sql/transaction_created_at.sql
 var queryTransactionCreatedAt string
 

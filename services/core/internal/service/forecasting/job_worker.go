@@ -72,7 +72,7 @@ func (s *jobs) ProcessOne(ctx context.Context) (bool, error) {
 		if d.Scope != job.Scope || d.DataVersion != job.DataVersion || d.Cutoff != frozen.Cutoff {
 			return ErrUnavailable
 		}
-		input, err = prepareFinancial(snapshot, frozen.Coverage)
+		input, err = prepareJob(snapshot, frozen)
 		return err
 	})
 	if err != nil || !found {
@@ -135,6 +135,9 @@ func saveForecast(result FinancialModelResult) SavedForecast {
 }
 
 func validateSavedForecast(frozen jobInput, snapshot domain.FinancialSnapshot, result *SavedForecast) error {
+	if frozen.SchemaVersion == 2 && (result == nil || !slices.Equal(result.Limitations, csvLimitations()) || len(result.Components) != 0 || len(result.Evidence) != 0) {
+		return ErrModelResponse
+	}
 	if result == nil || result.SchemaVersion != 1 || len(result.Days) != 30 || result.ProbabilityReason != "not_calibrated" || !slices.Contains(result.Limitations, "historical_calendar_unavailable") {
 		return ErrModelResponse
 	}

@@ -112,7 +112,7 @@ func TestManualTransactionRPCConcurrentReplayAndStoredTime(t *testing.T) {
 	}
 }
 
-func TestManualTransactionRPCRejectsForeignCategoryAndImportedHistory(t *testing.T) {
+func TestManualTransactionRPCRejectsForeignCategoryAndAcceptsImportedHistory(t *testing.T) {
 	f := newManualBalanceFixture(t)
 	client := f.client(t, f.app, mtls.API)
 	request := manualTransactionRequest(f)
@@ -152,15 +152,12 @@ func TestManualTransactionRPCRejectsForeignCategoryAndImportedHistory(t *testing
 		t.Fatal(err)
 	}
 	request.ExpectedDataVersion = 2
-	_, err := client.CreateManualTransaction(t.Context(), request)
-	if status.Code(err) != codes.FailedPrecondition {
-		t.Fatal(err)
+	created, err := client.CreateManualTransaction(t.Context(), request)
+	if err != nil || created.DataVersion != 3 || created.Transaction.Source.Kind != pb.RecordSourceKind_RECORD_SOURCE_KIND_MANUAL {
+		t.Fatal(created, err)
 	}
-	detail := status.Convert(err).Details()
-	if len(detail) != 1 || detail[0].(*pb.CoreErrorDetail).Reason != pb.CoreErrorReason_CORE_ERROR_REASON_FACTUAL_SOURCE_CONFLICT {
-		t.Fatal(detail)
-	}
-	assertRevision(t, f.app, f.scope, 2)
-	assertCount(t, f.app, "SELECT count(*) FROM core_transactions WHERE company_id=$1", f.scope, 0)
-	assertCount(t, f.app, "SELECT count(*) FROM core_command_results WHERE company_id=$1", f.scope, 0)
+	assertRevision(t, f.app, f.scope, 3)
+	assertCount(t, f.app, "SELECT count(*) FROM core_transactions WHERE company_id=$1", f.scope, 1)
+	assertCount(t, f.app, "SELECT count(*) FROM core_command_results WHERE company_id=$1", f.scope, 1)
+	assertCount(t, f.app, "SELECT count(*) FROM core_accounts WHERE company_id=$1 AND factual_kind='imported' AND source_system='dataset_v1' AND source_company_id='C001'", f.scope, 1)
 }

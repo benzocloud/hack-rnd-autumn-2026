@@ -8,6 +8,9 @@ var queryReadRevision string
 //go:embed sql/read_facts.sql
 var queryReadFacts string
 
+//go:embed sql/read_balance_history.sql
+var queryReadBalanceHistory string
+
 //go:embed sql/read_calendar.sql
 var queryReadCalendar string
 

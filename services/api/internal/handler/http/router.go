@@ -52,6 +52,7 @@ type CoreClients struct {
 	}
 	Ledger interface {
 		GetDefaultAccount(context.Context, *corev1.GetDefaultAccountRequest, ...grpc.CallOption) (*corev1.GetDefaultAccountResponse, error)
+		CreateManualTransaction(context.Context, *corev1.CreateManualTransactionRequest, ...grpc.CallOption) (*corev1.CreateManualTransactionResponse, error)
 		ListCategories(context.Context, *corev1.ListCategoriesRequest, ...grpc.CallOption) (*corev1.ListCategoriesResponse, error)
 		ListTransactions(context.Context, *corev1.ListTransactionsRequest, ...grpc.CallOption) (*corev1.ListTransactionsResponse, error)
 		UpdateTransactionCategory(context.Context, *corev1.UpdateTransactionCategoryRequest, ...grpc.CallOption) (*corev1.UpdateTransactionCategoryResponse, error)

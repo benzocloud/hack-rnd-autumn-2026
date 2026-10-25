@@ -60,6 +60,7 @@ def validate_request(request, pb, allow_reconstructed=False):
     s = request.snapshot
     if (
         request.operations
+        or request.HasField("csv_history")
         or request.HasField("calendar")
         or request.availability_limitations
         or any(day.quality_codes for day in s.history)

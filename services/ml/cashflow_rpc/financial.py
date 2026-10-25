@@ -68,6 +68,8 @@ def empirical_bands(history, known, initial, horizon):
 
 
 def financial_forecast(request, pb):
+    if request.HasField("csv_history"):
+        raise InvalidSnapshot("CSV quality context requires the explicit CSV profile")
     if not request.HasField("model") or (
         request.model.model_name,
         request.model.model_version,

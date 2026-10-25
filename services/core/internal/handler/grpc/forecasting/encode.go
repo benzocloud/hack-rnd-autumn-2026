@@ -51,6 +51,22 @@ func encodeForecast(view forecasting.ForecastView) *pb.Forecast {
 	limitations := []string{"historical_calendar_unavailable", "historical_availability_unverified", "history_reconstructed_from_covered_facts_and_cutoff_eod", "not_calibrated"}
 	limitations = append(limitations, coverage.Limitations...)
 	out := &pb.Forecast{Id: view.ID.String(), CompanyId: view.Scope.CompanyID.String(), CreatedAt: timestamppb.New(view.CreatedAt), IsStale: view.CurrentDataVersion > d.DataVersion, CurrentDataVersion: view.CurrentDataVersion, Input: input, Readiness: &pb.ForecastReadiness{Status: "limited", HistoryDays: 90, ObservedDays: observedDays(d.Facts, coverage, cutoff), Limitations: limitations}}
+	if a := view.Assessment; a != nil {
+		input.HistoryCoverage = nil
+		input.HistoryAssessment = &pb.HistoryAssessment{RuleVersion: a.RuleVersion, FromDate: string(a.From), ThroughDate: string(a.Through), DataVersion: a.DataVersion, OperationDays: uint32(a.OperationDays), Limitations: append([]string{}, a.Limitations...)}
+		for _, b := range a.Balances {
+			if b.Date >= a.From && b.Date <= a.Through {
+				input.HistoryAssessment.BalanceDays++
+			}
+		}
+		input.ModelContext.ModelName = view.Model.Name
+		input.ModelContext.ModelVersion = view.Model.Version
+		input.ModelContext.PreprocessingVersion = view.Model.PreprocessingVersion
+		input.ModelContext.ConfigurationId = view.Model.Version
+		out.Readiness.ObservedDays = uint32(a.OperationDays)
+		out.Readiness.Limitations = append([]string{}, a.Limitations...)
+	}
+
 	switch view.Status {
 	case "queued", "running":
 		out.State = &pb.Forecast_Pending{Pending: &pb.ForecastPending{Status: statusName(view.Status)}}

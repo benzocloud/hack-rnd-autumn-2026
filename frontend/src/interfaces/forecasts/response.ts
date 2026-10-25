@@ -35,6 +35,15 @@ interface IForecastInput {
     balance_as_of: string;
     risk_definition: "below_zero_eod";
     model_context: IModelContext;
+    history_assessment?: {
+        rule_version: "csv_history_quality_v1";
+        from_date: string;
+        through_date: string;
+        data_version: string;
+        operation_days: number;
+        balance_days: number;
+        limitations: Array<string>;
+    } | null;
 }
 
 
