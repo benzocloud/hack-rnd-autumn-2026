@@ -48,6 +48,18 @@ func TestPublicErrorsHaveKnownMessagesWithoutUpstreamDiagnostics(t *testing.T) {
 	}
 }
 
+func TestFieldMessageCoversKnownFields(t *testing.T) {
+	fallback := fieldMessage("reset_token")
+	if fallback != "Запросите новую ссылку и повторите действие." {
+		t.Fatal(fallback)
+	}
+	for _, field := range []string{"email", "password", "new_password", "display_name", "personal_data_consent", "code", "challenge_id", "cutoff_date", "horizon_days", "account_id"} {
+		if message := fieldMessage(field); message == "" || message == fallback {
+			t.Fatal(field, message)
+		}
+	}
+}
+
 func TestLoginMessageDoesNotDiscloseAccountExistence(t *testing.T) {
 	code, _ := reasonStatus("INVALID_CREDENTIALS")
 	for _, diagnostic := range []string{"email not registered", "password mismatch"} {
