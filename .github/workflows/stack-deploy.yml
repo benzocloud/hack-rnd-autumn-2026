@@ -83,7 +83,11 @@ jobs:
             if [[ "$service" == ml ]]; then file=deploy/stack/Dockerfile.ml; fi
             if [[ "$service" == frontend-real ]]; then context=frontend; file=frontend/Dockerfile; fi
             publish=()
-            if [[ "$EVENT_NAME" != pull_request ]]; then publish+=(--push); fi
+            if [[ "$EVENT_NAME" == pull_request ]]; then
+              publish+=(--check)
+            else
+              publish+=(--push)
+            fi
             metadata="$RUNNER_TEMP/saldo-$service.json"
             docker buildx build --file "$file" --platform linux/amd64 \
               --tag "ghcr.io/benzocloud/saldo-$service:sha-$REVISION" \

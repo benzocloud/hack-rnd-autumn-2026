@@ -2,10 +2,10 @@ name: Landing CI and deploy
 
 on:
   pull_request:
-    paths: ['landing/**', 'deploy/landing/**', 'deploy/frontend/nginx-https.conf', '.github/workflows/landing.yml']
+    paths: ['landing/**', 'deploy/landing/**', 'deploy/frontend/nginx-https.conf']
   push:
     branches: [main]
-    paths: ['landing/**', 'deploy/landing/**', 'deploy/frontend/nginx-https.conf', '.github/workflows/landing.yml']
+    paths: ['landing/**', 'deploy/landing/**', 'deploy/frontend/nginx-https.conf']
   workflow_dispatch:
 
 permissions:

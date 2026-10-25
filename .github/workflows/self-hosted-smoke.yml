@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: self-hosted-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   smoke:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository

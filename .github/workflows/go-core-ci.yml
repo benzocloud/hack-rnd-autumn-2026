@@ -2,7 +2,7 @@ name: Go Core CI
 
 on:
   pull_request:
-    paths: ['testdata/company-bootstrap-fingerprint-v1.json', 'services/core/**', 'proto/**', 'buf*.yaml', 'scripts/**', 'docs/api/openapi.yaml', 'docs/core/rest-rpc-map.json', '.github/workflows/go-core-ci.yml', 'LICENSE']
+    paths: ['testdata/company-bootstrap-fingerprint-v1.json', 'services/core/**', 'proto/**', 'buf*.yaml', 'scripts/**', 'docs/api/openapi.yaml', 'docs/core/rest-rpc-map.json', 'LICENSE']
   workflow_dispatch:
 
 permissions:

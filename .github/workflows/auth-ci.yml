@@ -2,7 +2,7 @@ name: Auth CI
 
 on:
   pull_request:
-    paths: ['testdata/company-bootstrap-fingerprint-v1.json', 'services/auth/**', 'proto/auth/**', 'proto/core/v1/company.proto', 'proto/core/v1/errors.proto', 'buf.auth-core.gen.yaml', 'buf.yaml', '.github/workflows/auth-ci.yml', 'LICENSE']
+    paths: ['testdata/company-bootstrap-fingerprint-v1.json', 'services/auth/**', 'proto/auth/**', 'proto/core/v1/company.proto', 'proto/core/v1/errors.proto', 'buf.auth-core.gen.yaml', 'buf.yaml', 'LICENSE']
   workflow_dispatch:
 
 permissions:

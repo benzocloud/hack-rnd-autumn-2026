@@ -35,6 +35,10 @@ second runtime image. Full race/lint/coverage/vulnerability checks remain in PR
 CI; the deployment preflight runs short Go unit tests, frontend tests/typecheck
 and deployment-script checks. Merge accepted PRs only after their full gates.
 
+CI-only changes use workflow validation/runner smoke instead of rerunning every
+unchanged service suite. On PRs, Dockerfiles use BuildKit check mode; full
+production images are built on main or an explicit manual dispatch.
+
 The integrated workflow builds the five production images serially using a
 persistent `saldo-stack` BuildKit cache. Go module/compiler and Next.js caches
 are reused. Digests pass through job outputs, without Actions artifact storage.

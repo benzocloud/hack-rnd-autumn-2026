@@ -2,7 +2,7 @@ name: ML RPC checks
 
 on:
   pull_request:
-    paths: ['proto/**', 'buf.yaml', 'services/ml/**', '.github/workflows/ml-rpc.yml']
+    paths: ['proto/**', 'buf.yaml', 'services/ml/**']
   workflow_dispatch:
 
 permissions:
