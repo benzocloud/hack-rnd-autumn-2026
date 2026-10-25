@@ -4,6 +4,7 @@ import type { INonnegativeMoney, IPositiveMoney, ISource } from "@/interfaces";
 interface IPayment {
     id: string;
     account_id: string;
+    reconciliation_group_id?: string | null;
     direction: "inflow" | "outflow";
     amount: IPositiveMoney;
     remaining_amount: INonnegativeMoney;
@@ -19,6 +20,7 @@ interface IPayment {
 
 
 interface IMatch {
+    removed_at?: string | null;
     id: string;
     payment_id: string;
     transaction_id: string;
@@ -40,3 +42,16 @@ interface IMatchList {
 
 
 export type { IPayment, IMatch, IPaymentList, IMatchList };
+
+
+// Same tagged confirmation payload returned by OpenAPI ReconciliationGroup.
+type IReconciliationGroup = import("./request").ICreateReconciliationGroupRequest & {
+    id: string;
+    account_id: string;
+    version: string;
+    status: "active" | "revoked";
+    confirmed_by: string;
+    confirmed_at: string;
+};
+
+export type { IReconciliationGroup };
