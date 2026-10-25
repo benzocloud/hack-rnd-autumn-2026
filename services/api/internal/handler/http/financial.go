@@ -18,6 +18,12 @@ type createForecastRequest struct {
 }
 
 func (h *handler) financialRoute(w http.ResponseWriter, r *http.Request) bool {
+	if h.paymentGroupRoute(w, r) {
+		return true
+	}
+	if h.paymentRoute(w, r) {
+		return true
+	}
 	if h.ledgerRoute(w, r) {
 		return true
 	}

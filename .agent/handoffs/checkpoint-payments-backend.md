@@ -33,3 +33,14 @@ Lifecycle в работе: новые domain update/unmatch, сервисные 
 Дополнительный wire diff: `PaymentMatch.optional google.protobuf.Timestamp removed_at = 6` — audit отменённого распределения, исключённого из active total. Старые поля/номера неизменны. Generation и schema projection ещё в работе.
 Изолированный PostgreSQL18 поднимается внутри контейнера на 127.0.0.1:55488, отдельный .agent/local/pg18, DB saldo_core_test, marker saldo-core-integration. После смены модели прежний процесс отсутствовал; новый старт перепроверяется.
 Следующая команда: `git status --short`; затем закончить lifecycle block и serial integration.
+
+## Lifecycle checkpoint 10:27 МСК — На ревью
+
+Текущий опубликованный baseline до этого блока: d7674d52abaac411e689f74d7c738c98fd60b310 (remote SHA проверен). Следующий commit содержит lifecycle, исходные projections create/match, scoped cursor reads, audit unmatch и durable group primitives. P0 forecast activation ещё в работе.
+
+Проверено: Go domain/service unit; Core handler/server compile; API handler/app tests; marked PG18 integration `TestPaymentLifecyclePersistsAuditAndOriginalReplay|TestPaymentExternalReplayAfterMatch|TestHistoryCoverageCarries` с race — pass. ML existing RPC/mTLS suite — 45 tests, без skips после generation; API schema suite — 13 tests pass. Первый ML запуск с 45 skips был неуспешным и заменён настоящим прогоном. Full module lint preliminary обнаружил handler enum/date/format findings; исправляются, итоговый lint ещё не pass.
+
+Реализовано: list/get/create/update/cancel/match/unmatch/history на service/SQL/Core RPC и API lifecycle adapters. Partial cancel сохраняет remaining и allocations; unmatch после cancel возвращает PAYMENT_STATE_CONFLICT. Tombstones читаются через nullable removed_at. Для create/match новых receipts сохранена исходная projection; legacy receipt codec/fingerprint tests сохранены.
+
+Schema: 00013 audit tombstone, downgrade guard при reversed allocations; 00014 independent scoped groups и nullable payment FK. Обе миграции применены только в own disposable DB. Group/calendar end-to-end приёмка ещё не выполнена. Rollback со схемы14 требует совместимого decoder и сохранения групп, не обещается простой downgrade.
+Следующая команда: `go test -p 1 -tags=integration,mlintegration -race ./internal/app -run TestPaymentHTTP` с own DB/API binary/Python env после завершения API process build. Затем закончить current calendar/Predict arithmetic, gates и независимое review.

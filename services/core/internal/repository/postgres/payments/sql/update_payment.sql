@@ -1,0 +1,1 @@
+UPDATE core_expected_payments SET direction=$4,amount_minor=$5,remaining_minor=$6,scheduled_date=$7,category_id=$8,counterparty_name=$9,description=$10,status=$11,version=$12,reconciliation_group_id=$14 WHERE company_id=$1 AND account_id=$2 AND id=$3 AND version=$13;

@@ -23,6 +23,7 @@ type CreatePaymentResult struct {
 	PaymentID      uuid.UUID
 	PaymentVersion int64
 	DataVersion    int64
+	Payment        domain.ExpectedPayment
 }
 
 type paymentStore interface {
@@ -63,13 +64,23 @@ func (s *service) CreatePayment(ctx context.Context, cmd CreateCommand) (CreateP
 				return err
 			}
 			result = CreatePaymentResult{PaymentID: saved.ID, PaymentVersion: saved.Version, DataVersion: saved.DataVersion}
+			if saved.Projection != nil {
+				restored, err := saved.Projection.result()
+				if err != nil {
+					return err
+				}
+				if restored.Payment.Data().ID != saved.ID || restored.Payment.Data().Scope != cmd.Record.Scope || restored.Payment.Version() != saved.Version || restored.DataVersion != saved.DataVersion {
+					return ErrUnavailable
+				}
+				result.Payment = restored.Payment
+			}
 			return nil
 		}
 		result, err = createPayment(ctx, store, cmd, record)
 		if err != nil {
 			return err
 		}
-		return completeCommand(ctx, commands, cmd.Record.Scope, cmd.ActorID, "create_payment", "", cmd.IdempotencyKey, paymentResult{ID: result.PaymentID, Version: result.PaymentVersion, DataVersion: result.DataVersion})
+		return completeCommand(ctx, commands, cmd.Record.Scope, cmd.ActorID, "create_payment", "", cmd.IdempotencyKey, paymentResult{ID: result.PaymentID, Version: result.PaymentVersion, DataVersion: result.DataVersion, Projection: paymentProjection(result)})
 	})
 	if txErr != nil {
 		return CreatePaymentResult{}, txErr
@@ -101,7 +112,7 @@ func createPayment(ctx context.Context, store paymentStore, cmd CreateCommand, r
 			if _, err := record.CheckReplay(stored); err != nil {
 				return CreatePaymentResult{}, err
 			}
-			return CreatePaymentResult{PaymentID: stored.Data().ID, PaymentVersion: stored.Version(), DataVersion: revision}, nil
+			return CreatePaymentResult{PaymentID: stored.Data().ID, PaymentVersion: stored.Version(), DataVersion: revision, Payment: stored}, nil
 		}
 	}
 	if cmd.ExpectedDataVersion > 0 && account.DataVersion() != cmd.ExpectedDataVersion {
@@ -119,11 +130,14 @@ func createPayment(ctx context.Context, store paymentStore, cmd CreateCommand, r
 	if err := store.SaveAccount(ctx, account); err != nil {
 		return CreatePaymentResult{}, err
 	}
+	if err := validateGroupLink(ctx, store, record); err != nil {
+		return CreatePaymentResult{}, err
+	}
 	if err := store.InsertPayment(ctx, record, account.DataVersion()); err != nil {
 		return CreatePaymentResult{}, err
 	}
 	if err := store.CarryHistoryCoverage(ctx, record.Data().Scope, previousRevision, account.DataVersion()); err != nil {
 		return CreatePaymentResult{}, err
 	}
-	return CreatePaymentResult{PaymentID: record.Data().ID, PaymentVersion: record.Version(), DataVersion: account.DataVersion()}, nil
+	return CreatePaymentResult{PaymentID: record.Data().ID, PaymentVersion: record.Version(), DataVersion: account.DataVersion(), Payment: record}, nil
 }

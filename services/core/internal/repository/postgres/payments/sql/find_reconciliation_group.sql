@@ -1,0 +1,1 @@
+SELECT id,version,status,to_char(cutoff,'YYYY-MM-DD'),to_char(horizon_start,'YYYY-MM-DD'),to_char(horizon_end,'YYYY-MM-DD'),confirmed_by,confirmed_at,additional,operation_refs FROM core_payment_reconciliation_groups WHERE company_id=$1 AND account_id=$2 AND id=$3;

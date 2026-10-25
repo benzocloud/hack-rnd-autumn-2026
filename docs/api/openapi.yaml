@@ -6110,6 +6110,10 @@ components:
       type: "object"
       additionalProperties: false
       properties:
+        removed_at:
+          type: [string, 'null']
+          format: date-time
+          description: Reversal timestamp. Retained for audit and excluded from active allocated totals.
         id:
           $ref: "#/components/schemas/ResourceID"
           examples:

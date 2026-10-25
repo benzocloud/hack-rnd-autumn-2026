@@ -9,7 +9,6 @@ import (
 	storage "github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/repository/postgres"
 
 	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
 
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/ledger"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/core/internal/domain/money"
@@ -30,19 +29,20 @@ func (r *repository) FindPayment(ctx context.Context, scope ledger.Scope, id uui
 	return record, revision, err == nil, storage.StorageError(err)
 }
 
-func scanPayment(row *sqlx.Row, scope ledger.Scope) (domain.ExpectedPayment, int64, error) {
+func scanPayment(row interface{ Scan(...any) error }, scope ledger.Scope) (domain.ExpectedPayment, int64, error) {
 	d := domain.PaymentData{Scope: scope}
 	var amount, remaining, version, revision int64
 	var currency, date string
 	var status domain.Status
 	var imported *time.Time
-	var category uuid.NullUUID
+	var category, group uuid.NullUUID
 	err := row.Scan(&d.ID, &d.Direction, &amount, &remaining, &currency, &date, &d.Source.Kind,
 		&d.Source.Namespace.System, &d.Source.Namespace.CompanyID, &d.Source.ExternalID, &imported,
-		&category, &d.CounterpartyName, &d.Description, &status, &version, &d.CreatedAt, &revision)
+		&category, &d.CounterpartyName, &d.Description, &status, &version, &d.CreatedAt, &revision, &group)
 	if err != nil {
 		return domain.ExpectedPayment{}, 0, storage.StorageError(err)
 	}
+	d.ReconciliationGroupID = group.UUID
 	d.ScheduledDate = ledger.Date(date)
 	d.Amount, err = money.New(amount, currency)
 	if err != nil {
@@ -73,6 +73,6 @@ func (r *repository) InsertPayment(ctx context.Context, record domain.ExpectedPa
 		d.Amount.Minor(), record.Remaining().Minor(), d.Amount.Currency(), string(d.ScheduledDate), d.Source.Kind,
 		d.Source.Namespace.System, d.Source.Namespace.CompanyID, d.Source.ExternalID, imported,
 		uuid.NullUUID{UUID: d.Category.ID, Valid: d.Category.ID != uuid.Nil}, d.CounterpartyName, d.Description,
-		record.Status(), record.Version(), d.CreatedAt, revision)
+		record.Status(), record.Version(), d.CreatedAt, revision, uuid.NullUUID{UUID: d.ReconciliationGroupID, Valid: d.ReconciliationGroupID != uuid.Nil})
 	return storage.StorageError(err)
 }

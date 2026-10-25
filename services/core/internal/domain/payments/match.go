@@ -17,6 +17,7 @@ type PaymentMatch struct {
 	transactionID uuid.UUID
 	amount        money.Money
 	createdAt     time.Time
+	removedAt     *time.Time
 }
 
 func (m PaymentMatch) ID() uuid.UUID { return m.id }
@@ -74,4 +75,21 @@ func (p ExpectedPayment) Match(id uuid.UUID, fact ledger.Transaction, factAlloca
 	match := PaymentMatch{id: id, scope: p.data.Scope, paymentID: p.data.ID,
 		transactionID: tx.ID, amount: amount, createdAt: at.UTC()}
 	return p, match, nil
+}
+
+// RemovedAt marks a reversed allocation; it remains readable as audit history.
+func (m PaymentMatch) RemovedAt() *time.Time {
+	if m.removedAt == nil {
+		return nil
+	}
+	at := *m.removedAt
+	return &at
+}
+func (m PaymentMatch) WithRemoval(at time.Time) (PaymentMatch, error) {
+	if at.IsZero() || at.Before(m.createdAt) {
+		return PaymentMatch{}, ErrInvalid
+	}
+	at = at.UTC()
+	m.removedAt = &at
+	return m, nil
 }

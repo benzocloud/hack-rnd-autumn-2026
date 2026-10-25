@@ -9,9 +9,10 @@ import (
 )
 
 type matchResult struct {
-	ID             uuid.UUID `json:"id"`
-	PaymentVersion int64     `json:"payment_version"`
-	DataVersion    int64     `json:"data_version"`
+	Projection     *matchProjection `json:"projection,omitempty"`
+	ID             uuid.UUID        `json:"id"`
+	PaymentVersion int64            `json:"payment_version"`
+	DataVersion    int64            `json:"data_version"`
 }
 
 func validateMatchResult(result matchResult) error {
