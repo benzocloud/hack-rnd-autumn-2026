@@ -130,6 +130,15 @@ func (s *service) Commit(ctx context.Context, cmd CommitCommand) (CommitResult, 
 			if entry.Scope != cmd.Scope || entry.FileSHA256 != record.Metadata.Digest || entry.SourceCompanyID != record.Metadata.SourceCompanyID {
 				continue
 			}
+			// A fixture certifies only its own imported facts. Manual supplements
+			// are permitted but require the ordinary CSV suitability evaluation.
+			manual, err := st.ManualHistoryExists(ctx, cmd.Scope, entry.FromDate, entry.ThroughDate)
+			if err != nil {
+				return err
+			}
+			if manual {
+				break
+			}
 			valid, err := st.VerifyCoverage(ctx, record, entry.FromDate, entry.ThroughDate, entry.CutoffDate, entry.CutoffBalanceMinor, entry.CutoffRowNumbers)
 			if err != nil {
 				return err

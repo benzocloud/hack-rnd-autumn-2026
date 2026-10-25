@@ -73,6 +73,16 @@ message PredictRequest {
   repeated FinancialOperation operations = 4;
   FinancialCalendar calendar = 5;
   repeated string availability_limitations = 6;
+  // Only the explicitly selected CSV profile accepts this context.
+  CsvHistoryContext csv_history = 7;
+}
+
+message CsvHistoryContext {
+  string rule_version = 1;
+  string from_date = 2;
+  string through_date = 3;
+  uint64 data_version = 4;
+  string first_operation_date = 5;
 }
 
 message ForecastDay {
@@ -122,6 +132,7 @@ message PredictResponse {
   repeated RecurringHypothesis recurring_hypotheses = 24;
   // Exact echo of the synthetic calendar context; absent in every other mode.
   SyntheticScenarioContext scenario_context = 25;
+  CsvHistoryContext csv_history = 26;
 }
 
 // Caller-owned immutable facts. At most one direction is positive. Categories

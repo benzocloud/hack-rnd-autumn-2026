@@ -47,12 +47,12 @@ func TestStatementBalanceOwnsFactualAuthority(t *testing.T) {
 		t.Fatalf("balance replay changed storage: %v", err)
 	}
 	base.ExpectedDataVersion = 2
-	if _, err := service.CreateTransaction(t.Context(), base); !errors.Is(err, domain.ErrSourceConflict) || storage.inserts != 1 {
-		t.Fatalf("manual facts mixed with statement: %v", err)
+	if _, err := service.CreateTransaction(t.Context(), base); err != nil || storage.inserts != 2 || storage.account.State().Factual != domain.Imported || storage.account.State().Namespace != cmd.Source.Namespace {
+		t.Fatalf("manual supplement changed statement binding: %v", err)
 	}
 	cmd.Date = "2026-10-24"
 	storage.balanceFound = false
-	if _, err := service.RecordBalance(t.Context(), cmd); !errors.Is(err, ledger.ErrStaleVersion) || storage.inserts != 1 {
+	if _, err := service.RecordBalance(t.Context(), cmd); !errors.Is(err, ledger.ErrStaleVersion) || storage.inserts != 2 {
 		t.Fatalf("stale balance accepted: %v", err)
 	}
 }

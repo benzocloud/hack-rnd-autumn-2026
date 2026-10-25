@@ -19,3 +19,7 @@ func (f *financialFixture) ListTransactions(context.Context, *corev1.ListTransac
 func (f *financialFixture) UpdateTransactionCategory(context.Context, *corev1.UpdateTransactionCategoryRequest, ...grpc.CallOption) (*corev1.UpdateTransactionCategoryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "unused fixture method")
 }
+
+func (f *financialFixture) CreateManualTransaction(context.Context, *corev1.CreateManualTransactionRequest, ...grpc.CallOption) (*corev1.CreateManualTransactionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "unused fixture method")
+}

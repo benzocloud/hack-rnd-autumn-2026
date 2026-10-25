@@ -2,6 +2,8 @@ package ledger
 
 import "errors"
 
+var ErrSuspectedDuplicate = errors.New("manual transaction matches an imported fact")
+
 var ErrInvalid = errors.New("invalid ledger command")
 
 var (

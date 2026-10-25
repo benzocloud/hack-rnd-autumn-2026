@@ -148,7 +148,11 @@ func TestImportsHTTPAPIWithPostgres(t *testing.T) {
 	model := forecastModelFunc(func(ctx context.Context, input forecasting.FinancialModelInput) (forecasting.FinancialModelResult, error) {
 		captured := input
 		predictedInput = &captured
-		return deterministicForecast(ctx, input)
+		result, err := deterministicForecast(ctx, input)
+		if input.Assessment != nil {
+			result.Limitations = append([]string{}, input.Assessment.Limitations...)
+		}
+		return result, err
 	})
 	jobs := newForecastJobs(f.app.db, config.Postgres{QueryTimeout: 5 * time.Second}, model)
 	auth := importsHTTPAuth{company: f.scope.CompanyID.String()}
@@ -514,6 +518,63 @@ func TestImportsHTTPAPIWithPostgres(t *testing.T) {
 	}
 	if json.Unmarshal(ready["readiness"], &readiness) != nil || readiness.Status != "limited" || !slices.Contains(readiness.Limitations, "dataset_coverage_assumed_not_bank_certified") {
 		t.Fatal("fixture was presented as certified", ready)
+	}
+	// Simulate an existing import with no coverage. Reevaluation through the real
+	// HTTP adapter must select the CSV profile without inserting a proof or facts.
+	if _, err := f.app.db.ExecContext(t.Context(), "DELETE FROM core_history_coverage WHERE company_id=$1 AND account_id=$2", f.scope.CompanyID, f.scope.AccountID); err != nil {
+		t.Fatal(err)
+	}
+	csvAccepted := call(http.MethodPost, company+"/forecasts", "application/json", "http-csv-forecast-123", forecastBody, http.StatusAccepted)
+	var csvURL string
+	if json.Unmarshal(csvAccepted["status_url"], &csvURL) != nil || csvURL == "" {
+		t.Fatal(csvAccepted)
+	}
+	if worked, err := restartedJobs.ProcessOne(t.Context()); err != nil || !worked {
+		t.Fatal(worked, err)
+	}
+	csvReady := call(http.MethodGet, csvURL, "", "", nil, http.StatusOK)
+	csvReload := call(http.MethodGet, csvURL, "", "", nil, http.StatusOK)
+	var csvInput struct {
+		Coverage   any `json:"history_coverage"`
+		Assessment *struct {
+			RuleVersion string `json:"rule_version"`
+			Version     string `json:"data_version"`
+		} `json:"history_assessment"`
+	}
+	if string(csvReady["status"]) != `"succeeded"` || !bytes.Equal(csvReady["result"], csvReload["result"]) || json.Unmarshal(csvReady["input"], &csvInput) != nil || csvInput.Coverage != nil || csvInput.Assessment == nil || csvInput.Assessment.RuleVersion != "csv_history_quality_v1" || csvInput.Assessment.Version != strconv.FormatInt(accountVersion, 10) {
+		t.Fatal("CSV HTTP projection lost its assessment", csvReady)
+	}
+	if predictedInput == nil || predictedInput.Assessment == nil || predictedInput.Snapshot.Model.Version != forecasting.CSVModelVersion || len(predictedInput.Snapshot.History) != 0 {
+		t.Fatal("CSV input was relabeled covered", predictedInput)
+	}
+	assertCount(t, f.app, "SELECT count(*) FROM core_history_coverage WHERE company_id=$1", f.scope, 0)
+	assertCount(t, f.app, "SELECT count(*) FROM core_transactions WHERE company_id=$1", f.scope, 90)
+	assertRevision(t, f.app, f.scope, accountVersion)
+	// Manual HTTP creation is permitted on this imported account, with the
+	// original external namespace retained and an immutable replay response.
+	duplicateBody, err := json.Marshal(map[string]any{"operation_date": start.Format(time.DateOnly), "direction": "inflow", "amount": map[string]string{"amount_minor": "100", "currency": "RUB"}, "counterparty_inn": "0012345678", "counterparty_name": "Контрагент", "payment_purpose": "Выручка", "expected_data_version": strconv.FormatInt(accountVersion, 10)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	duplicate := call(http.MethodPost, company+"/transactions", "application/json", "http-manual-duplicate-123", duplicateBody, http.StatusConflict)
+	if !bytes.Contains(duplicate["error"], []byte("TRANSACTION_DUPLICATE_SUSPECTED")) {
+		t.Fatal("import duplicate not explained", duplicate)
+	}
+	manualBody, err := json.Marshal(map[string]any{"operation_date": start.AddDate(0, 0, 90).Format(time.DateOnly), "direction": "inflow", "amount": map[string]string{"amount_minor": "180", "currency": "RUB"}, "counterparty_name": "Manual client", "payment_purpose": "Manual supplement", "category_id": nil, "expected_data_version": strconv.FormatInt(accountVersion, 10)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	manualCreated := call(http.MethodPost, company+"/transactions", "application/json", "http-manual-create-123", manualBody, http.StatusCreated)
+	manualReplay := call(http.MethodPost, company+"/transactions", "application/json", "http-manual-create-123", manualBody, http.StatusCreated)
+	if !bytes.Equal(manualCreated["id"], manualReplay["id"]) || !bytes.Equal(manualCreated["created_at"], manualReplay["created_at"]) || !bytes.Contains(manualCreated["source"], []byte(`"manual"`)) {
+		t.Fatal("manual replay/provenance changed", manualCreated, manualReplay)
+	}
+	assertRevision(t, f.app, f.scope, accountVersion+1)
+	assertCount(t, f.app, "SELECT count(*) FROM core_accounts WHERE company_id=$1 AND factual_kind='imported' AND source_company_id='C001'", f.scope, 1)
+	assertCount(t, f.app, "SELECT count(*) FROM core_transactions WHERE company_id=$1", f.scope, 91)
+	staleCSV := call(http.MethodGet, csvURL, "", "", nil, http.StatusOK)
+	if string(staleCSV["is_stale"]) != "true" {
+		t.Fatal("manual fact did not stale old forecast", staleCSV)
 	}
 	// A second uncommitted job independently exercises expiry. The already
 	// applied import/forecast must remain unaffected by its cleanup.

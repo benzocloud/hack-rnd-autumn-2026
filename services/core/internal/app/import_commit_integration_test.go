@@ -323,7 +323,7 @@ func TestImportCommitRollsBackFactsWhenEODWriteFails(t *testing.T) {
 
 const validImportBody = "company_id;operation_id;operation_date;amount;direction;counterparty_inn;counterparty_name;payment_purpose;balance_eod\nC001;OP1;2026-10-24;1.00;Поступление;0012345678;name;purpose;11.00\n"
 
-func stageImport(t *testing.T, application *application, cfg config.Config, scope ledger.Scope, body string) (importOperations, domain.Accepted, domain.Record) {
+func stageImport(t *testing.T, application *application, cfg config.Config, scope ledger.Scope, body string, keys ...string) (importOperations, domain.Accepted, domain.Record) {
 	t.Helper()
 	service, err := newImports(application.db, cfg.Postgres)
 	if err != nil {
@@ -331,7 +331,11 @@ func stageImport(t *testing.T, application *application, cfg config.Config, scop
 	}
 	digest := sha256.Sum256([]byte(body))
 	reader := strings.NewReader(body)
-	accepted, err := service.Upload(t.Context(), importsUploadCommand(scope, digest, body), func() ([]byte, error) {
+	command := importsUploadCommand(scope, digest, body)
+	if len(keys) != 0 {
+		command.Key = keys[0]
+	}
+	accepted, err := service.Upload(t.Context(), command, func() ([]byte, error) {
 		buf := make([]byte, 256)
 		n, err := reader.Read(buf)
 		return buf[:n], err

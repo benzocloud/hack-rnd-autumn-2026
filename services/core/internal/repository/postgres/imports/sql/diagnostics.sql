@@ -10,6 +10,16 @@ SELECT 'CONFLICTING_EXTERNAL_ID','blocking',s.row_number,'operation_id',jsonb_bu
 FROM core_import_rows s JOIN core_transactions t ON t.company_id=$2 AND t.account_id=$3 AND t.source_system='dataset_v1' AND t.source_company_id=$4 AND t.external_id=s.external_id
 WHERE s.import_id=$1 AND (s.operation_date<>t.operation_date OR s.amount_minor<>t.amount_minor OR s.direction<>t.direction OR s.payload->>'INN'<>t.counterparty_inn OR s.payload->>'Name'<>t.counterparty_name OR s.payload->>'Purpose'<>t.purpose)
 UNION ALL
+SELECT 'SUSPECTED_CONTENT_DUPLICATE','warning',s.row_number,'manual_transaction',jsonb_build_array(s.external_id)
+FROM core_import_rows s
+WHERE s.import_id=$1 AND EXISTS (
+    SELECT 1 FROM core_transactions t
+    WHERE t.company_id=$2 AND t.account_id=$3 AND t.source_kind='manual'
+      AND t.operation_date=s.operation_date AND t.direction=s.direction AND t.amount_minor=s.amount_minor
+      AND t.counterparty_inn=s.payload->>'INN' AND t.counterparty_name=s.payload->>'Name'
+      AND t.purpose=s.payload->>'Purpose'
+)
+UNION ALL
 SELECT 'INVALID_ROW','blocking',min(row_number),'balance_eod','[]'::jsonb FROM core_import_rows WHERE import_id=$1 GROUP BY operation_date HAVING count(DISTINCT balance_minor)>1
 UNION ALL
 SELECT 'INVALID_ROW','blocking',min(s.row_number),'balance_eod','[]'::jsonb FROM core_import_rows s JOIN core_balances b ON b.company_id=$2 AND b.account_id=$3 AND b.balance_date=s.operation_date WHERE s.import_id=$1 AND s.balance_minor<>b.amount_minor GROUP BY s.operation_date

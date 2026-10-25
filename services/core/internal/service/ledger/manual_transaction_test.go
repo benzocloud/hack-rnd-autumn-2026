@@ -38,6 +38,20 @@ func TestManualTransactionFullReplayAndAuthority(t *testing.T) {
 	}
 }
 
+func TestManualSupplementPreservesImportedAuthority(t *testing.T) {
+	cmd := manualFact(t)
+	storage := &captureStore{}
+	storage.account, _ = domain.NewBankAccount(cmd.Record.Scope)
+	namespace := domain.Namespace{System: "dataset_v1", CompanyID: "C001"}
+	if err := storage.account.BindStatementFacts(namespace); err != nil {
+		t.Fatal(err)
+	}
+	result, err := ledger.New(storage.withinTx).CreateManualTransaction(t.Context(), cmd)
+	if err != nil || result.Transaction.Data().Source.Kind != domain.Manual || result.DataVersion != 2 || storage.account.State().Factual != domain.Imported || storage.account.State().Namespace != namespace {
+		t.Fatal(result, err)
+	}
+}
+
 func TestManualTransactionValidationBeforeSQL(t *testing.T) {
 	for name, edit := range map[string]func(*ledger.ManualTransactionCommand){
 		"future date":   func(c *ledger.ManualTransactionCommand) { c.Record.Date = "2026-10-25" },
@@ -76,7 +90,7 @@ func TestManualTransactionValidationBeforeSQL(t *testing.T) {
 }
 
 func TestManualTransactionStorageFailures(t *testing.T) {
-	for _, name := range []string{"commit", "category", "stale", "imported", "scope"} {
+	for _, name := range []string{"commit", "category", "stale", "duplicate imported", "scope"} {
 		t.Run(name, func(t *testing.T) {
 			cmd, storage := manualFact(t), &captureStore{}
 			want := ledger.ErrUnavailable
@@ -89,12 +103,13 @@ func TestManualTransactionStorageFailures(t *testing.T) {
 			case "stale":
 				cmd.ExpectedDataVersion = 2
 				want = ledger.ErrStaleVersion
-			case "imported":
+			case "duplicate imported":
 				storage.account, _ = domain.NewBankAccount(cmd.Record.Scope)
 				if err := storage.account.BindStatementFacts(domain.Namespace{System: "dataset_v1", CompanyID: "C001"}); err != nil {
 					t.Fatal(err)
 				}
-				want = domain.ErrSourceConflict
+				storage.importedEquivalent = true
+				want = ledger.ErrSuspectedDuplicate
 			case "scope":
 				storage.account, _ = domain.NewBankAccount(domain.Scope{CompanyID: uuid.New(), AccountID: cmd.Record.Scope.AccountID})
 			}

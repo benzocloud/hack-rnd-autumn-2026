@@ -6,6 +6,7 @@ import { useEffect, useId, useState } from "react";
 import { useDispatch } from "react-redux";
 
 import { companyPath, formatDate } from "@/helpers/finance";
+import { forecastQualityDescription } from "@/helpers/forecastQuality";
 import formatMoney from "@/helpers/formatMoney";
 import getErrorMessage from "@/helpers/getErrorMessage";
 import { showErrorSnackbar } from "@/helpers/snackbar";
@@ -103,7 +104,7 @@ const Dashboard = ( { companyId }: { companyId?: string } ) => {
     const insufficient = data?.forecast?.readiness.status === "insufficient";
     const loadingLabel = forecastStatus === "queued" ? "Прогноз в очереди" : forecastStatus === "running" ? "Рассчитываем прогноз" : "Загружаем прогноз";
     const status = loading ? <LoadingText>{ loadingLabel }</LoadingText> : failed ? "Не удалось загрузить данные" : ready && !insufficient ? gap ? "ОЖИДАЕТСЯ КАССОВЫЙ РАЗРЫВ" : "КАССОВЫЙ РАЗРЫВ НЕ ПРОГНОЗИРУЕТСЯ" : "НЕДОСТАТОЧНО ДАННЫХ";
-    const warning = loading ? <LoadingText>Проверяем данные</LoadingText> : failed ? "Попробуйте повторить загрузку" : gap ? `${dateFormatter.format(new Date(`${gap.date}T00:00:00Z`)).toLocaleUpperCase("ru-RU")} ПРОГНОЗИРУЕТСЯ КАССОВЫЙ РАЗРЫВ` : ready && insufficient ? "Истории недостаточно для оценки риска. Проверьте полноту выписки." : ready ? data?.forecast?.readiness.limitations[0] || "На выбранный период предупреждений нет" : data?.company ? "Укажите датированный остаток на счёте для построения прогноза" : "Для прогноза нужна компания с данными счёта";
+    const warning = loading ? <LoadingText>Проверяем данные</LoadingText> : failed ? "Попробуйте повторить загрузку" : gap ? `${dateFormatter.format(new Date(`${gap.date}T00:00:00Z`)).toLocaleUpperCase("ru-RU")} ПРОГНОЗИРУЕТСЯ КАССОВЫЙ РАЗРЫВ` : ready && insufficient ? "Истории недостаточно для оценки риска. Проверьте полноту выписки." : ready ? forecastQualityDescription(data?.forecast?.readiness.limitations[0] || "На выбранный период предупреждений нет") : data?.company ? "Укажите датированный остаток на счёте для построения прогноза" : "Для прогноза нужна компания с данными счёта";
 
 
     return (

@@ -60,6 +60,7 @@ func TestCreateTransactionControlsVersionsAndSource(t *testing.T) {
 			if err := storage.account.BindStatementFacts(domain.Namespace{System: "bank", CompanyID: "C1"}); err != nil {
 				t.Fatal(err)
 			}
+			cmd.Record.Source = importSourceForConflict()
 		}, want: domain.ErrSourceConflict},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -72,6 +73,10 @@ func TestCreateTransactionControlsVersionsAndSource(t *testing.T) {
 			}
 		})
 	}
+}
+
+func importSourceForConflict() domain.Source {
+	return domain.Source{Kind: domain.Imported, Namespace: domain.Namespace{System: "other_bank", CompanyID: "C2"}, ExternalID: "other", ImportedAt: time.Now()}
 }
 
 func TestImportedTransactionReplayDoesNotWrite(t *testing.T) {

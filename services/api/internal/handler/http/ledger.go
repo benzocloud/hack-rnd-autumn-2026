@@ -26,6 +26,9 @@ func (h *handler) ledgerRoute(w http.ResponseWriter, r *http.Request) bool {
 		action = h.listCategories
 	case len(parts) == 2 && parts[1] == "transactions":
 		action = h.listTransactions
+		if r.Method == http.MethodPost {
+			method, action = http.MethodPost, h.createManualTransaction
+		}
 	case len(parts) == 4 && parts[1] == "transactions" && parts[3] == "category":
 		method, action = http.MethodPatch, h.updateTransactionCategory
 	default:
@@ -33,6 +36,9 @@ func (h *handler) ledgerRoute(w http.ResponseWriter, r *http.Request) bool {
 	}
 	if r.Method != method {
 		w.Header().Set("Allow", method)
+		if len(parts) == 2 && parts[1] == "transactions" {
+			w.Header().Set("Allow", "GET, POST")
+		}
 		writeError(w, r, 405, "INVALID_REQUEST", nil)
 		return true
 	}
@@ -40,7 +46,7 @@ func (h *handler) ledgerRoute(w http.ResponseWriter, r *http.Request) bool {
 		writeError(w, r, 422, "VALIDATION_ERROR", nil)
 		return true
 	}
-	if method == http.MethodPatch && (!h.allowedOrigin(r) || len(r.Header.Values("X-CSRF-Token")) != 1 || len(r.Header.Get("X-CSRF-Token")) < 16 || len(r.Header.Get("X-CSRF-Token")) > 512) {
+	if (method == http.MethodPatch || method == http.MethodPost) && (!h.allowedOrigin(r) || len(r.Header.Values("X-CSRF-Token")) != 1 || len(r.Header.Get("X-CSRF-Token")) < 16 || len(r.Header.Get("X-CSRF-Token")) > 512) {
 		writeError(w, r, 403, "CSRF_INVALID", nil)
 		return true
 	}
@@ -83,12 +89,12 @@ func (h *handler) listCategories(w http.ResponseWriter, r *http.Request) {
 		}
 		var direction any
 		if category.Direction != corev1.Direction_DIRECTION_UNSPECIFIED {
-			value := directionName(category.Direction)
-			if !contains(value, "inflow", "outflow") {
+			name := directionName(category.Direction)
+			if !contains(name, "inflow", "outflow") {
 				dependencyError(w, r)
 				return
 			}
-			direction = value
+			direction = name
 		}
 		seen[category.Id] = true
 		items = append(items, object{"id": category.Id, "name": category.Name, "direction": direction, "semantic_kind": category.SemanticKind})

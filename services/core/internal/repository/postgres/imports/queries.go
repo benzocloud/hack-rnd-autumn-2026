@@ -95,6 +95,9 @@ var queryInsertEod string
 //go:embed sql/verify_coverage.sql
 var queryVerifyCoverage string
 
+//go:embed sql/manual_history_exists.sql
+var queryManualHistoryExists string
+
 //go:embed sql/insert_coverage.sql
 var queryInsertCoverage string
 

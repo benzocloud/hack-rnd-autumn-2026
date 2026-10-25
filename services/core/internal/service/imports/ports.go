@@ -27,6 +27,7 @@ type store interface {
 	List(context.Context, ledger.Scope, int, time.Time, uuid.UUID) ([]domain.Record, error)
 	Issues(context.Context, uuid.UUID, int64, int) ([]domain.Issue, []int64, error)
 	Cleanup(context.Context, time.Time) error
+	ManualHistoryExists(context.Context, ledger.Scope, ledger.Date, ledger.Date) (bool, error)
 }
 
 // Work runs synchronously in an app-owned transaction. Network reads and CSV

@@ -31,6 +31,11 @@ type captureStore struct {
 	saves, inserts                 int
 	categoryExists                 bool
 	createdAt                      time.Time
+	importedEquivalent             bool
+}
+
+func (s *captureStore) HasImportedEquivalent(context.Context, domain.TransactionData) (bool, error) {
+	return s.importedEquivalent, nil
 }
 
 func (s *captureStore) CategoryExists(context.Context, uuid.UUID, uuid.UUID) (bool, error) {

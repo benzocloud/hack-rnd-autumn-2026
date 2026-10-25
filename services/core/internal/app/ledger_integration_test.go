@@ -111,8 +111,13 @@ func TestExternalTransactionReplayAndBinding(t *testing.T) {
 	manual := transactionCommand(t, scope)
 	manual.ExpectedDataVersion = 2
 	_, err = application.Ledger.CreateTransaction(t.Context(), manual)
-	requireError(t, err, ledger.ErrSourceConflict)
+	requireError(t, err, service.ErrSuspectedDuplicate)
 	assertRevision(t, application, scope, 2)
+	manual.Record.Purpose += " manual supplement"
+	if _, err := application.Ledger.CreateTransaction(t.Context(), manual); err != nil {
+		t.Fatal(err)
+	}
+	assertRevision(t, application, scope, 3)
 }
 
 func TestBalanceReplayAndAuthority(t *testing.T) {
@@ -226,17 +231,21 @@ func TestStatementEODFactualAuthority(t *testing.T) {
 				}
 				fact.ExpectedDataVersion = 2
 				_, err := application.Ledger.CreateTransaction(t.Context(), fact)
-				requireError(t, err, ledger.ErrSourceConflict)
+				if err != nil {
+					t.Fatal("manual supplement rejected", err)
+				}
+				fact.ExpectedDataVersion = 3
+				fact.IdempotencyKey = uuid.NewString()
 				fact.Record.Source = ledger.Source{Kind: ledger.Imported, Namespace: ledger.Namespace{System: "other_bank", CompanyID: "C002"}, ExternalID: "OP1", ImportedAt: time.Now()}
 				_, err = application.Ledger.CreateTransaction(t.Context(), fact)
 				requireError(t, err, ledger.ErrSourceConflict)
 				balance.Date = "2026-10-24"
-				balance.ExpectedDataVersion = 2
+				balance.ExpectedDataVersion = 3
 				balance.Source.Namespace.System = "other_bank"
 				_, err = application.Ledger.RecordBalance(t.Context(), balance)
 				requireError(t, err, ledger.ErrSourceConflict)
-				assertRevision(t, application, scope, 2)
-				assertCount(t, application, "SELECT count(*) FROM core_transactions WHERE company_id=$1", scope, 0)
+				assertRevision(t, application, scope, 3)
+				assertCount(t, application, "SELECT count(*) FROM core_transactions WHERE company_id=$1", scope, 1)
 				assertCount(t, application, "SELECT count(*) FROM core_balances WHERE company_id=$1", scope, 1)
 				// The original namespace accepts both new facts and subsequent observations.
 				fact.Record.Source.Namespace = ledger.Namespace{System: "bank", CompanyID: "C001"}
@@ -244,11 +253,11 @@ func TestStatementEODFactualAuthority(t *testing.T) {
 					t.Fatal(err)
 				}
 				balance.Source.Namespace = fact.Record.Source.Namespace
-				balance.ExpectedDataVersion = 3
+				balance.ExpectedDataVersion = 4
 				if _, err := application.Ledger.RecordBalance(t.Context(), balance); err != nil {
 					t.Fatal(err)
 				}
-				assertRevision(t, application, scope, 4)
+				assertRevision(t, application, scope, 5)
 				return
 			}
 			if first == "other bank" {
