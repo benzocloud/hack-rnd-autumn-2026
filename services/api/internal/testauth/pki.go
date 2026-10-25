@@ -94,6 +94,11 @@ func issueCertificate(ca *x509.Certificate, caKey *ecdsa.PrivateKey, serial int6
 		NotBefore: ca.NotBefore, NotAfter: ca.NotAfter, BasicConstraintsValid: true,
 		KeyUsage: x509.KeyUsageDigitalSignature, ExtKeyUsage: []x509.ExtKeyUsage{usage},
 	}
+	// Real Auth/Core loopback integration uses each service identity in both
+	// directions, as the deployed service certificates do.
+	if uri == "spiffe://saldo.local/auth" || uri == "spiffe://saldo.local/core" {
+		certificate.ExtKeyUsage = append(certificate.ExtKeyUsage, x509.ExtKeyUsageClientAuth)
+	}
 	if usage == x509.ExtKeyUsageServerAuth {
 		certificate.DNSNames = []string{"localhost"}
 		certificate.IPAddresses = []net.IP{net.ParseIP("127.0.0.1")}

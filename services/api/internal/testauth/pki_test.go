@@ -48,6 +48,7 @@ func TestEphemeralPKIIdentityChainAndPermissions(t *testing.T) {
 	}{
 		{"API", paths.APICert, paths.APIKey, "spiffe://saldo.local/api", x509.ExtKeyUsageClientAuth},
 		{"Auth", paths.AuthCert, paths.AuthKey, "spiffe://saldo.local/auth", x509.ExtKeyUsageServerAuth},
+		{"Core", paths.CoreCert, paths.CoreKey, "spiffe://saldo.local/core", x509.ExtKeyUsageServerAuth},
 		{"HTTPS", paths.HTTPCert, paths.HTTPKey, "", x509.ExtKeyUsageServerAuth},
 	} {
 		t.Run(item.name, func(t *testing.T) {
@@ -60,6 +61,11 @@ func TestEphemeralPKIIdentityChainAndPermissions(t *testing.T) {
 			}
 			if item.uri != "" && (len(certificate.URIs) != 1 || certificate.URIs[0].String() != item.uri) {
 				t.Fatal("incorrect service URI identity")
+			}
+			if item.name == "Auth" || item.name == "Core" {
+				if _, verifyErr := certificate.Verify(x509.VerifyOptions{Roots: roots, KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}}); verifyErr != nil {
+					t.Fatal("service identity cannot make authenticated outgoing calls")
+				}
 			}
 			if item.usage == x509.ExtKeyUsageServerAuth {
 				for _, hostname := range []string{"localhost", "127.0.0.1"} {

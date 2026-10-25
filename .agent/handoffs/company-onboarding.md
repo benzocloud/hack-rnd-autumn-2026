@@ -16,8 +16,8 @@ Scope/invariants/checklist: [plan](../plans/company-onboarding.md). Issue не �
 [Draft PR #41](https://github.com/benzocloud/hack-rnd-autumn-2026/pull/41).
 Исходный checkout `prosteyshiyyy/goapi` не изменялся; отдельный worktree.
 Начальная база `fdee0ed`; main обновляется обычным merge перед каждым push.
-Последний включённый main `0f0ff73`, опубликованный recovery head:
-`b2f882b5d28e637cb35215246ac83bf1ab7ea7f5` (remote API ref проверен).
+Последний включённый main `0f0ff73`, опубликованный API adapter head:
+`49938a6969471e4d2c34725c73b4cfe95d72a06d` (GitHub PR head API проверен).
 
 ## Состояние A0–A5
 
@@ -25,14 +25,14 @@ Scope/invariants/checklist: [plan](../plans/company-onboarding.md). Issue не �
 | --- | --- | --- | --- | --- |
 | A0 | На ревью владельца | Docs links/diff/fences, draft/remote SHA | Caveman/Ponytail без дефектов | Docs-only, runtime не требовался |
 | A1 | На ревью владельца | Полный Auth unit/real PG integration/race/shuffle/vet/build/lint | Два independent reviews `9463e40`, дефектов нет | Auth/Core gates `7f62b72` SUCCESS |
-| A2 | На ревью владельца: recovery готов к push | Полный Auth gate, real PG recovery/race, TLS/Buf/drift | Два reviews RPC/client и recovery; clock-skew fix проверен | Новый recovery SHA требует CI |
-| A3 | В работе: API adapter slice | Full API check +41 OpenAPI responses, real Core chain далее | Два reviews adapter, дефектов нет | Новый API SHA ещё не опубликован |
+| A2 | На ревью владельца | Полный Auth gate, real PG recovery/race, TLS/Buf/drift | Два reviews RPC/client и recovery; clock-skew fix проверен | Auth/Core CI49938a6 SUCCESS |
+| A3 | На ревью владельца | Full API check +41 OpenAPI responses; actual processes/PG/race PASS | Два reviews adapter/runtime закрыты; readiness/PATH fixes проверены | API/Auth/Core CI49938a6 SUCCESS; новый runtime CI ещё не запускался |
 | A4 | Не начат | PR40/43 из main сохранены; onboarding UI ещё не проверен | Pending | Pending |
 | A5 | Не начат | Нет полного register→owner→account→reload browser E2E | Pending | Pending |
 
-HTTP create adapter реализован в текущем diff. Durable worker опубликован;
-Core в service integration пока boundary fixture, полный Core/API/browser E2E
-остаётся A3/A5 и ещё не объявляется пройденным.
+HTTP create adapter49938a6 и durable worker опубликованы. Текущий runtime diff
+проверен настоящими Auth/Core/API процессами и PostgreSQL. Браузерный Workspace
+flow остаётся A4/A5 и ещё не объявляется пройденным.
 Продукт/импорт/ML/MVP готовыми не объявлять.
 
 ## Что реализовано и чем подтверждено
@@ -186,12 +186,11 @@ provision.py отказывается перезаписывать сущест�
 
 ## Следующие действия
 
-1. Опубликовать текущий API adapter slice в тот же draft, verify remote SHA/CI.
-2. A3 real integration: отдельные actual Auth/Core/API binaries, HTTPS/mTLS и
-   отдельные marked Auth/Core test DB. Register/verify/login→POST company→owner/
-   empty default account без SQL membership; lost reply/restart/replay security.
-3. A4 current Workspace/useRequest/CompanySettings context/retry/redirect;
-   financial mocks off, затем A5 browser/reviews/final gates/CI. Не ждать владельца
+1. Проверить remote SHA/CI нового A3 runtime checkpoint, исправлять свои failures при появлении.
+2. A4 Workspace: pending create intent scoped по auth user, устойчивый key/body
+   через reload/lost response, update selected company/membership context. CompanyShell
+   settings использует только поддержанные ReadCompany/GetDefaultAccount.
+3. A4/A5 browser с financial mocks off, final reviews/gates/CI. Не ждать владельца
    между этапами, но ничего не принимать за него.
 
 Known blockers продукта не подтверждены; remaining work выше не выполнен.
@@ -271,3 +270,67 @@ plugins/task через GOBIN=<tools> go install с этими pinned верси
 зависимости/production данные не затрагивались. Новый company report генерируется
 API_COMPANY_REPORT при TestCompanyCreationContractResponses; check.sh добавляет
 его к прежним smoke/financial OpenAPI captures.
+
+
+## A3 actual runtime — проверенный diff поверх49938a6
+
+services/api/integration/onboarding_{process,proxy}_test.go, opt-in build tag
+`onboardingintegration`: harness собирает отдельные бинарники текущих Auth/Core/API,
+применяет текущие миграции и проверяет HTTPS API→mTLS Auth/Core→два real PostgreSQL18.6.
+Никаких cross-module internal imports. Оба DB URL обязаны явно выбирать loopback,
+точные имена saldo_onboarding_auth_test/saldo_onboarding_core_test, sslmode=disable
+и server markers saldo-auth-integration/saldo-core-integration до первой записи.
+Отсутствие env — failure, не skip. Ephemeral PKI/HMAC/process logs приватны и
+удаляются testing; сертификаты Auth/Core имеют serverAuth+clientAuth. Никакого
+использования live credentials/config/CA, контейнеров других разработчиков.
+
+Воспроизводимый setup из services/api/ — [README](../../services/api/README.md),
+compose.onboarding.yml с двумя disposable PG18.6/tmpfs и случайными loopback ports.
+Установить psql/Go1.27.3/gcc/goose3.29.0; env имена:
+API_ONBOARDING_AUTH_DATABASE_URL, API_ONBOARDING_CORE_DATABASE_URL; optional GOOSE.
+Команды: `go test -tags=onboardingintegration -race -count=1 -timeout=4m -v -run '^TestRealCompanyOnboardingProcesses$' ./integration`,
+`golangci-lint run --build-tags=onboardingintegration ./...` (v2.15.0).
+Harness сам собирает сервисы/мигрирует только проверенные test DB; финансовых
+fixtures не добавляет. PostgreSQL записи остаются только в disposable test DB.
+
+PASS -race, включая повтор после review fix: existing register/verify/login,
+пустой initial membership list, CSRF denial, два одновременных POST/один key,
+идентичный replay/409 другой body, normalized Cyrillic/escaping name, owner,
+единственный company/account/receipt/membership, unknown balance/source и version1,
+отсутствие transactions/balances/source bindings/coverage, restart всех3 процессов,
+logout/login и retained membership. Positive owner создаётся только HTTP/RPC.
+Actual Core commit с потерянным API reply возвращает503, unreadable receipt
+оставляет PREPARED без membership; после logout/restart worker завершает без
+cookie и повтор201 возвращает тот же ID. Отдельно: restart после Begin до
+bootstrap, foreign command, API→Core-only Auth RPC denied, API→Auth-only receipt
+denied, чужая компания404, SQL negative revocation fixture, completed replay
+не восстанавливает owner. Test proxy только управляет транспортом, forwards
+real Core с исходной API/Auth service identity.
+
+Оба independent reviews нашли одинаковый harness readiness race: API health
+проверял live proxy, а не actual Core. Исправлено direct Auth mTLS receipt read
+unknown command→NotFound до API readiness. Повторный actual runtime/race PASS;
+full API lint с integration tag0issues. Оба review closure подтверждены; доказанных открытых дефектов нет.
+
+Обязательные Core gates из services/core/ завершились exit0 на этом checkout:
+`PATH=<pinned-tools>:$PATH task check` и после pinned `task migrate-up`
+`task integration` с real отдельной marked saldo_core_test, PostgreSQL18.6, race.
+CORE_POSTGRES_HOST/PORT/USER/PASSWORD/DATABASE/SSL_MODE, GOOSE_DBSTRING — только
+disposable values. Go1.27.3/Task3.48.0/goose3.29.0/lint2.15.0. Не skipped.
+
+CI exact49938a6: Auth40139961768, Core40139961796, API40139961757,
+infra40139961764, integrated stack40139961753 workflows SUCCESS. Stack workflow
+сам по себе не доказывает deployment; deployment не разрешён. Новый runtime
+diff этим старым CI не покрыт. api-ci новый отдельный onboarding job проверит
+actual process/PG/race и tag lint; services Auth/Core paths добавлены в trigger.
+
+A3 checkpoint closure: independent Caveman/Ponytail reviews поверх49938a6
+завершены без открытых доказанных замечаний. Помимо readiness исправлен README
+Goose PATH: явные ONBOARDING_TOOLS/GOBIN/absolute GOOSE. Process SHA256
+a710b9ef8dcf7979aa6bc6778a1d690f6bb0f46448cf4c801b08d91bb9ab983e; proxy
+8205c678dec960677acbda741e136a10c6afc5278076b76a1c9ecc87de1545da.
+Полный literal API scripts/check.sh после PKI delta exit0, 41 responses, full
+unit/race/build/vet/fmt/lint/generation/import/smoke, own statements90.33%,
+executable block lines90.91%. Runtime -race после readiness fix PASS9.64s,
+full API tag lint0issues. CI/Compose YAML parsed; новый GH job ещё должен пройти.
+A3 остаётся на ревью владельца, браузерный A4/A5 не завершён.

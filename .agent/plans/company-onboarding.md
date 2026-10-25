@@ -96,7 +96,7 @@ invitations, reset/email delivery, новые роли и полный redesign 
 | A0 | На ревью владельца | Удалённые plan/handoff и один проверенный draft PR |
 | A1 | На ревью владельца | Durable Auth command/repository и atomic owner finalization |
 | A2 | На ревью владельца | RPC, Core client и recovery после restart |
-| A3 | В работе | Настоящий POST /companies, HTTPS/mTLS conformance |
+| A3 | На ревью владельца | Настоящий POST /companies, conformance и actual HTTPS/mTLS/PG process gate |
 | A4 | Не начат | Workspace без блокирующей зависимости от invitations |
 | A5 | Не начат | Реальный полный сценарий, два ревью, CI, итоговый handoff |
 
@@ -148,7 +148,7 @@ canonical generated Core bindings только через generator; Core тол
 - [x] Missing/mismatched receipt, lost reply, restart/rollback переходов,
   две реплики, disabled/deleted user, expired/reset session, quarantined command,
   unavailable dependencies и сохранённый login/verify.
-- [x] RPC/client checkpoint `382fed6`; recovery готов к отдельному push. Два read-only reviews обоих slices завершены, clock-skew defect исправлен и проверен.
+- [x] RPC/client checkpoint `382fed6`; recovery `b2f882b` опубликован. Два read-only reviews обоих slices завершены, clock-skew defect исправлен и проверен.
 
 Критерий: восстановление принятой PREPARED без браузера выдаёт ровно одну
 membership, небезопасный receipt/инициатор не выдаёт доступ.
@@ -162,9 +162,9 @@ REST conformance/security tests; минимальные config examples/deploy t
 - [x] Typed clients, safe Russian errors/request ID, key conflict и 503/in-progress;
   201 только после COMPLETED и успешного read. Не дублировать Company domain.
 - [x] OpenAPI conformance и adapter boundary regressions (201/409/503, Origin/CSRF, owner injection, revoked/malformed dependencies).
-- [ ] Реальный HTTPS API → mTLS Auth/Core → PostgreSQL: чужой command/peer/CSRF/revocation/timeouts/replay.
-- [x] Полный API check и два reviews adapter slice пройдены, отдельный checkpoint готов к push.
-- [ ] Реальная интеграция A3 и её отдельное ревью/публикация.
+- [x] Реальный HTTPS API → mTLS Auth/Core → PostgreSQL: чужой command/peer/CSRF/revocation/timeouts/replay.
+- [x] Полный API check и два reviews adapter slice пройдены; adapter49938a6 опубликован.
+- [x] Реальная интеграция A3 и её отдельные Caveman/Ponytail reviews; checkpoint подготовлен к публикации.
 
 ### A4 — Workspace и пользовательский путь
 
@@ -219,3 +219,5 @@ merge свежего main → проверки затронутой интегр
 - Pinned caveman-review/ponytail-review/golang-how-to получены из `.agent/infra/skills/skills.json`; A0 docs проверены двумя независимыми read-only reviewers без подтверждённых замечаний; code review A1–A5 ещё pending.
 - Параллельные изменения Workspace/Core/API требуют проверки свежего main и PR;
   не дублировать уже сделанное. Исторический `5c5797e` не является pin.
+
+A3 actual runtime поверх49938a6: -race process/PG security/replay/lostreply/restart PASS, full tag lint0. Core task check и real markedPG task integration/race PASS. Два независимых runtime reviews закрыты после readiness/PATH fixes; checkpoint публикуется. Браузер/A4 не объявлены завершёнными.
