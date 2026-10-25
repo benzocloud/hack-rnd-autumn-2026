@@ -89,6 +89,7 @@ type SavedForecast struct {
 }
 
 type ForecastView struct {
+	Occurrences          []EffectiveOccurrence
 	Sales                []SalesComponent
 	Categories           []ledger.CategoryDefinition
 	ScenarioExpenses     []ExpenseChange

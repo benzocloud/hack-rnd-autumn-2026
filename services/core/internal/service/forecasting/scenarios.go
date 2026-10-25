@@ -47,11 +47,18 @@ type ScenarioCommand struct {
 	BaseForecastID                uuid.UUID
 	Changes                       []ExpenseChange
 	SalesChanges                  []SalesReductionChange
+	DelayChanges                  []DelayReceiptChange
+	ParentScenarioID              uuid.UUID
+	Response                      *ResponseAction
 }
 type ScenarioView struct {
-	Record       domain.Scenario
-	Changes      []ExpenseChange
-	SalesChanges []SalesReductionChange
+	Record           domain.Scenario
+	Changes          []ExpenseChange
+	SalesChanges     []SalesReductionChange
+	DelayChanges     []DelayReceiptChange
+	ParentScenarioID *uuid.UUID
+	Response         *ResponseAction
+	OutOfHorizonIDs  []string
 }
 type ScenarioListCommand struct {
 	Scope           ledger.Scope
@@ -64,15 +71,30 @@ type ScenarioList struct {
 	NextCursor string
 }
 type scenarioPayload struct {
-	SchemaVersion int
-	Changes       []ExpenseChange
-	SalesChanges  []SalesReductionChange `json:",omitempty"`
-	SalesBasis    []SalesComponent       `json:",omitempty"`
-	Result        SavedForecast
+	SchemaVersion    int
+	Changes          []ExpenseChange
+	SalesChanges     []SalesReductionChange `json:",omitempty"`
+	SalesBasis       []SalesComponent       `json:",omitempty"`
+	DelayChanges     []DelayReceiptChange   `json:",omitempty"`
+	ParentScenarioID *uuid.UUID             `json:",omitempty"`
+	ResponseAction   *ResponseAction        `json:",omitempty"`
+	Occurrences      []EffectiveOccurrence  `json:",omitempty"`
+	OutOfHorizonIDs  []string               `json:",omitempty"`
+	Result           SavedForecast
 }
 
 func validateScenario(cmd ScenarioCommand) error {
-	if cmd.Scope.Validate() != nil || cmd.BaseForecastID == uuid.Nil || strings.TrimSpace(cmd.ActorID) == "" || !validForecastKey(cmd.IdempotencyKey) || strings.TrimSpace(cmd.Name) == "" || !utf8.ValidString(cmd.Name) || utf8.RuneCountInString(cmd.Name) > 200 || len(cmd.Changes)+len(cmd.SalesChanges) < 1 || len(cmd.Changes)+len(cmd.SalesChanges) > 20 {
+	if cmd.Scope.Validate() != nil || strings.TrimSpace(cmd.ActorID) == "" || !validForecastKey(cmd.IdempotencyKey) || strings.TrimSpace(cmd.Name) == "" || !utf8.ValidString(cmd.Name) || utf8.RuneCountInString(cmd.Name) > 200 {
+		return ErrInvalid
+	}
+	count := len(cmd.Changes) + len(cmd.SalesChanges) + len(cmd.DelayChanges)
+	if cmd.ParentScenarioID != uuid.Nil {
+		if cmd.BaseForecastID != uuid.Nil || count != 0 || validateResponse(cmd.Response) != nil {
+			return ErrInvalid
+		}
+		return nil
+	}
+	if cmd.Response != nil || cmd.BaseForecastID == uuid.Nil || count < 1 || count > 20 {
 		return ErrInvalid
 	}
 	seen := map[uuid.UUID]bool{}
@@ -82,11 +104,17 @@ func validateScenario(cmd ScenarioCommand) error {
 		}
 		seen[c.ID] = true
 	}
-	for _, change := range cmd.SalesChanges {
-		if validateSalesChange(change) != nil || seen[change.ID] {
+	for _, c := range cmd.SalesChanges {
+		if validateSalesChange(c) != nil || seen[c.ID] {
 			return ErrInvalid
 		}
-		seen[change.ID] = true
+		seen[c.ID] = true
+	}
+	for _, c := range cmd.DelayChanges {
+		if validateDelay(c) != nil || seen[c.ID] {
+			return ErrInvalid
+		}
+		seen[c.ID] = true
 	}
 	return nil
 }
@@ -152,27 +180,24 @@ func (s *scenarios) Create(ctx context.Context, cmd ScenarioCommand) (ScenarioVi
 	if err := validateScenario(cmd); err != nil {
 		return ScenarioView{}, err
 	}
-	base, err := s.base.Read(ctx, cmd.Scope, cmd.BaseForecastID)
+	prepared, baseID, err := s.prepareScenario(ctx, cmd)
 	if err != nil {
 		return ScenarioView{}, err
 	}
-	if base.Status != "succeeded" || base.Result == nil {
-		return ScenarioView{}, ErrInvalid
-	}
-	result, err := ApplyScenario(*base.Result, cmd.Changes)
-	if err != nil {
-		return ScenarioView{}, err
-	}
-	result, salesBasis, err := applySalesReductions(result, base.Sales, cmd.SalesChanges)
-	if err != nil {
-		return ScenarioView{}, err
+	var parent *uuid.UUID
+	if cmd.ParentScenarioID != uuid.Nil {
+		parent = &cmd.ParentScenarioID
 	}
 	body, _ := json.Marshal(struct {
-		Name    string
-		Base    uuid.UUID
-		Changes []ExpenseChange
-		Sales   []SalesReductionChange `json:",omitempty"`
-	}{cmd.Name, cmd.BaseForecastID, cmd.Changes, cmd.SalesChanges})
+		Name     string
+		Base     uuid.UUID
+		Changes  []ExpenseChange
+		Sales    []SalesReductionChange `json:",omitempty"`
+		Delays   []DelayReceiptChange   `json:",omitempty"`
+		Parent   *uuid.UUID             `json:",omitempty"`
+		Response *ResponseAction        `json:",omitempty"`
+	}{cmd.Name, cmd.BaseForecastID, cmd.Changes, cmd.SalesChanges, cmd.DelayChanges, parent, cmd.Response})
+
 	digest := sha256.Sum256(body)
 	var record domain.Scenario
 	err = s.work(ctx, func(ctx context.Context, store scenarioStore, commands jobCommands) error {
@@ -196,15 +221,11 @@ func (s *scenarios) Create(ctx context.Context, cmd ScenarioCommand) (ScenarioVi
 		if e != nil {
 			return ErrUnavailable
 		}
-		schema := 1
-		if len(cmd.SalesChanges) > 0 {
-			schema = 2
-		}
-		payload, e := json.Marshal(scenarioPayload{SchemaVersion: schema, Changes: cmd.Changes, SalesChanges: cmd.SalesChanges, SalesBasis: salesBasis, Result: result})
+		payload, e := json.Marshal(prepared)
 		if e != nil || len(payload) > 2<<20 {
 			return ErrUnavailable
 		}
-		record = domain.Scenario{Scope: cmd.Scope, ID: id, ForecastID: fid, BaseForecastID: cmd.BaseForecastID, Name: cmd.Name, CreatedAt: time.Now().UTC().Truncate(time.Microsecond), Payload: payload}
+		record = domain.Scenario{Scope: cmd.Scope, ID: id, ForecastID: fid, BaseForecastID: baseID, Name: cmd.Name, CreatedAt: time.Now().UTC().Truncate(time.Microsecond), Payload: payload}
 		if e := store.Insert(ctx, record); e != nil {
 			return e
 		}
@@ -221,10 +242,13 @@ func (s *scenarios) Create(ctx context.Context, cmd ScenarioCommand) (ScenarioVi
 }
 func scenarioView(record domain.Scenario) (ScenarioView, error) {
 	var p scenarioPayload
-	if json.Unmarshal(record.Payload, &p) != nil || (p.SchemaVersion != 1 && p.SchemaVersion != 2) || len(p.Changes)+len(p.SalesChanges) < 1 || len(p.Changes)+len(p.SalesChanges) > 20 {
+	if json.Unmarshal(record.Payload, &p) != nil || (p.SchemaVersion < 1 || p.SchemaVersion > 3) || len(p.Changes)+len(p.SalesChanges)+len(p.DelayChanges) < 1 || len(p.Changes)+len(p.SalesChanges)+len(p.DelayChanges) > 20 {
 		return ScenarioView{}, ErrUnavailable
 	}
-	return ScenarioView{Record: record, Changes: p.Changes, SalesChanges: p.SalesChanges}, nil
+	if (p.ParentScenarioID == nil) != (p.ResponseAction == nil) {
+		return ScenarioView{}, ErrUnavailable
+	}
+	return ScenarioView{Record: record, Changes: p.Changes, SalesChanges: p.SalesChanges, DelayChanges: p.DelayChanges, ParentScenarioID: p.ParentScenarioID, Response: p.ResponseAction, OutOfHorizonIDs: p.OutOfHorizonIDs}, nil
 }
 func (s *scenarios) Read(ctx context.Context, scope ledger.Scope, id uuid.UUID) (ScenarioView, error) {
 	if scope.Validate() != nil || id == uuid.Nil {
@@ -256,7 +280,7 @@ func (s *scenarios) Forecast(ctx context.Context, scope ledger.Scope, id uuid.UU
 		return ForecastView{}, err
 	}
 	var p scenarioPayload
-	if json.Unmarshal(r.Payload, &p) != nil || (p.SchemaVersion != 1 && p.SchemaVersion != 2) || len(p.Result.Days) != 30 {
+	if json.Unmarshal(r.Payload, &p) != nil || (p.SchemaVersion < 1 || p.SchemaVersion > 3) || len(p.Result.Days) != 30 {
 		return ForecastView{}, ErrUnavailable
 	}
 	view.ID = r.ForecastID
@@ -265,6 +289,15 @@ func (s *scenarios) Forecast(ctx context.Context, scope ledger.Scope, id uuid.UU
 	if p.SalesBasis != nil {
 		view.Sales = p.SalesBasis
 	}
+	view.Occurrences = p.Occurrences
+	if view.Occurrences == nil {
+		view.Result = &p.Result
+		view.Occurrences, err = ScenarioOccurrences(view)
+		if err != nil {
+			return ForecastView{}, err
+		}
+	}
+
 	view.CreatedAt = r.CreatedAt
 	view.CompletedAt = &r.CreatedAt
 	view.Result = &p.Result
