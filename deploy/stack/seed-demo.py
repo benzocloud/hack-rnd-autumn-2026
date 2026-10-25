@@ -88,7 +88,7 @@ INSERT INTO core_company_profiles VALUES('{company}','{account}','Демо: Ма
 INSERT INTO core_transactions(company_id,account_id,id,operation_date,direction,amount_minor,currency,source_kind,counterparty_inn,counterparty_name,purpose,version,created_data_version)
 SELECT '{company}','{account}',uuidv7(),'{cutoff}'::date-n,dir,amount,'RUB','manual','','Синтетический контрагент','Демонстрационная операция, не реальные данные',1,1 FROM generate_series(0,89)n CROSS JOIN (VALUES('inflow',100000),('outflow',400000))v(dir,amount);
 INSERT INTO core_balances(company_id,account_id,balance_date,amount_minor,currency,source_kind,recorded_at,note,created_data_version) VALUES('{company}','{account}','{cutoff}',5000000,'RUB','manual',now(),'Синтетический наблюдаемый EOD',183);
-INSERT INTO core_history_coverage VALUES('{company}','{account}',183,'{cutoff}'::date-89,'{cutoff}','Complete synthetic demo fixture: 180 known operations and explicit zero-missing source days');
+INSERT INTO core_history_coverage(company_id,account_id,data_version,from_date,through_date,reference,kind) VALUES('{company}','{account}',183,'{cutoff}'::date-89,'{cutoff}','Complete synthetic demo fixture: 180 known operations and explicit zero-missing source days','certified');
 COMMIT;""",
     )
     sql(
