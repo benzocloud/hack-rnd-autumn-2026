@@ -146,16 +146,22 @@ const Dashboard = ( { companyId, forecastAction }: { companyId?: string; forecas
                     { desktop && <span className={styles.chartHint} aria-hidden="true">{ isExpanded ? "Нажмите, чтобы свернуть" : "Нажмите, чтобы развернуть" }</span> }
                 </div>
 
-                <p>Горизонт прогноза: 30 дней.</p>
+                <div className={styles.periods} role="group" aria-label="Период прогноза" aria-busy={loading}>
+                    <div className={`${styles.periodOptions} ${loading ? styles.contentHidden : ""}`} aria-hidden={loading || undefined}>
+                        <button className={styles.period} type="button" aria-pressed={true} disabled={loading}>30 дней</button>
+                    </div>
+                    { loading && <span className={styles.periodSpinner}><Spinner label="Загружаем период прогноза" /></span> }
+                </div>
                 { ready && data?.forecast && (data.forecast.input.history_assessment || visibleLimitations.length > 0) && <div>{ data.forecast.input.history_assessment && <Notice tone="warning">Ограниченная оценка по CSV. Полнота банковской истории не подтверждена.</Notice> }{ visibleLimitations.map(( item, index ) => <p key={index}>{ forecastQualityDescription(item) }</p>) }</div> }
 
                 { failed && <div className={styles.retry}><AuthButton type="button" loading={loading} onClick={retry}>Повторить загрузку</AuthButton></div> }
             </section>
             <div className={styles.details}>
-                { process.env.developerMode === "mock" && <Notice tone="warning">Демонстрационные данные: финансы и прогнозы замоканы.</Notice> }
-                <div className={styles.links}><AuthButton type="button" loading={loading} onClick={retry}>Обновить данные</AuthButton>{ forecastAction }</div>
                 { data?.forecast?.is_stale && <Notice tone="warning">После расчёта данные изменились. Этот прогноз отражает сохранённый снимок.</Notice> }
-                { data?.company ? <div className={styles.links}><LinkButton href={companyPath(data.company.id, "settings")} secondary>Остаток и реквизиты</LinkButton><LinkButton href={companyPath(data.company.id, "calendar")} secondary>Ближайшие платежи</LinkButton>{ data.forecast && <LinkButton href={companyPath(data.company.id, `forecasts/${data.forecast.id}`)}>Подробнее о прогнозе</LinkButton> }</div> : !loading && <LinkButton href="/workspace">Добавить компанию</LinkButton> }
+                <div className={styles.actions}>
+                    <div className={styles.links}><AuthButton type="button" loading={loading} onClick={retry}>Обновить данные</AuthButton>{ forecastAction }</div>
+                    { data?.company ? <div className={styles.links}><LinkButton href={companyPath(data.company.id, "settings")} secondary>Остаток и реквизиты</LinkButton><LinkButton href={companyPath(data.company.id, "calendar")} secondary>Ближайшие платежи</LinkButton>{ data.forecast && <LinkButton href={companyPath(data.company.id, `forecasts/${data.forecast.id}`)}>Подробнее о прогнозе</LinkButton> }</div> : !loading && <LinkButton href="/workspace">Добавить компанию</LinkButton> }
+                </div>
                 { data?.forecast && <p className={styles.note}>Прогноз по данным на { formatDate(data.forecast.input.data_as_of) }. Вероятность отрицательного остатка: { data.forecast.result.metrics.gap_probability.value === null ? "не оценена" : `${Math.round(data.forecast.result.metrics.gap_probability.value * 100)}%` }.</p> }
             </div>
         </main>
