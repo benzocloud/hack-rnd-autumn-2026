@@ -81,3 +81,13 @@ API final full race:298 tests/subtests /8 test packages pass (4 без tests); v
 Fixes roundtrip/negative groups pushed bed1e6825b1e49695d4eb1fae78f2132ba5034d6, remote verified. Затем обычный clean merge origin/main6c9edd969b3a694bccabaf6980b86531e2722490 → merge a4c7078423709cd33f468b15fedf4ded0fed0af2. Auth/onboarding/training/deploy/frontend изменения принадлежат upstream, не собственной реализации; конфликты отсутствовали. Новая API coverage gate85% из main требует дополнительных meaningful adapter checks, не weakening. Gate проверяется отдельно после merge.
 
 Actual CI2723d0a: contracts и ML RPC SUCCESS, Core lint FAILURE (один goimports diff уже исправлен), API verify FAILURE (protoc unknown header drift уже заменён реальным generated header), onboarding ещё IN_PROGRESS на момент проверки. Это прежний SHA, не статус интеграционного merge. Полный новый прогон/gates выполняются далее.
+
+## Full merged verification 10:50 МСК — На ревью
+
+Current/remote integration SHA27657de0af6dee3de40a1c40c4f3b6eb1a919eaa проверены. Base main6c9edd969b3a694bccabaf6980b86531e2722490. Независимые caveman/ponytail повторены на27657de относительно этого main: новыхfindingsнет, net:-0. Исходные4findings устранены.
+
+Полный Core `go test -json -p1 -tags=integration,mlintegration -race -count=1 ./...` на mergedtree — PASS:755tests/subtests,30testpackages,9packages безtests;1skip opt-in large-import measurement. Runtime real PG/API/Python checks included. Финальные tagged fullmodulelint/vet/fmt и contracts послеmerge завершаются.
+ML merged suite —55tests безskips PASS; Ruff check/format17files PASS. Local reference originals unavailable; применялось tracked go-services описание и ADR.
+API mandatory85 gate: initial70.37/71.00 показал непокрытые новые adapters; добавлены смысловые HTTP boundary tests happy paths/scope/CSRF/CAS/money/Core errors/bad projection/query/presence. Штатный check дошёл до own coverage88.42%statements/88.77%lines PASS; generation/build/unit/race/vet/fmt/full lint0/Ruff/data-contracts pass. Process smoke упёрся в noexec /tmp; только оставшиеся smoke/conformance перезапускаются с executable TMPDIR, без измененияguards.
+
+Actual CI27657de на проверку: Core contracts/lint и ML RPC/safety/ml-tests SUCCESS; Coretests/APIverify/onboarding IN_PROGRESS. Новые API tests публикуются следующим commit, его CI проверять отдельно.
