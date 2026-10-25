@@ -4,11 +4,11 @@ ARG TARGETOS=linux
 ARG TARGETARCH=amd64
 WORKDIR /src
 COPY services/${SERVICE}/go.mod services/${SERVICE}/go.sum ./
-RUN go mod download
+RUN --mount=type=cache,id=saldo-go-mod,target=/go/pkg/mod go mod download
 COPY services/${SERVICE}/ ./
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/${SERVICE}
-RUN if [ "$SERVICE" = auth ]; then CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w" -o /out/migrate ./cmd/migrate; fi
-RUN if [ "$SERVICE" = core ]; then CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go install -tags='no_clickhouse no_libsql no_mssql no_mysql no_sqlite3 no_vertica no_ydb' github.com/pressly/goose/v3/cmd/goose@v3.29.0; find /go/bin -type f -name goose -exec cp {} /out/goose \;; cp -r migrations /out/migrations; fi
+RUN --mount=type=cache,id=saldo-go-mod,target=/go/pkg/mod --mount=type=cache,id=saldo-go-build,target=/root/.cache/go-build CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/${SERVICE}
+RUN --mount=type=cache,id=saldo-go-mod,target=/go/pkg/mod --mount=type=cache,id=saldo-go-build,target=/root/.cache/go-build if [ "$SERVICE" = auth ]; then CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w" -o /out/migrate ./cmd/migrate; fi
+RUN --mount=type=cache,id=saldo-go-mod,target=/go/pkg/mod --mount=type=cache,id=saldo-go-build,target=/root/.cache/go-build if [ "$SERVICE" = core ]; then CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go install -tags='no_clickhouse no_libsql no_mssql no_mysql no_sqlite3 no_vertica no_ydb' github.com/pressly/goose/v3/cmd/goose@v3.29.0; find /go/bin -type f -name goose -exec cp {} /out/goose \;; cp -r migrations /out/migrations; fi
 
 FROM alpine:3.23 AS runtime
 RUN apk add --no-cache ca-certificates tzdata
