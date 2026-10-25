@@ -1,0 +1,45 @@
+name: Self-hosted runner smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: ['.github/workflows/**', 'docs/ci/self-hosted-runners.md']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: self-hosted-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    strategy:
+      fail-fast: false
+      matrix:
+        host: [gbrain, runner]
+    runs-on: [self-hosted, Linux, X64, saldo-ci, '${{ matrix.host }}']
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - name: Verify unprivileged execution and isolated Docker
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -ne 0
+          if id -nG | tr ' ' '\n' | grep -qx docker; then
+            echo 'Runner must not access the host Docker group.' >&2
+            exit 1
+          fi
+          docker info --format '{{json .SecurityOptions}}' | grep -q rootless
+          docker run --rm --network none alpine:3.23 sh -c 'echo isolated-container-ok'
+          protoc --version
+          psql --version
+          python3 -m venv "$RUNNER_TEMP/python-smoke"
+          "$RUNNER_TEMP/python-smoke/bin/python" -c 'print("python-venv-ok")'
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with: {go-version: '1.27.3', cache: false}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with: {node-version: '24'}
+      - run: go version && node --version && npm --version

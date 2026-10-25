@@ -4,8 +4,11 @@
 import argparse
 import re
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
+
+import grpc_tools
 
 
 def normalize(text):
@@ -27,9 +30,13 @@ def generate(check):
     with tempfile.TemporaryDirectory(prefix="saldo-api-proto-") as temporary:
         subprocess.run(
             [
-                "protoc",
+                sys.executable,
+                "-m",
+                "grpc_tools.protoc",
                 "-I",
                 "proto",
+                "-I",
+                str(Path(grpc_tools.__file__).parent / "_proto"),
                 f"--go_out={temporary}",
                 "--go_opt=paths=source_relative",
                 *[f"--go_opt={mapping}" for mapping in mappings],
