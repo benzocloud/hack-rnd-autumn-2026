@@ -55,3 +55,59 @@ func (r *repository) ListMemberships(ctx context.Context, user, after uuid.UUID,
 	}
 	return result, nil
 }
+
+func (r *repository) InsertFinancier(ctx context.Context, company, user uuid.UUID, created time.Time) (bool, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
+	defer cancel()
+	result, err := r.db.ExecContext(ctx, insertFinancierSQL, company, user, created)
+	if err != nil {
+		return false, storageError(err)
+	}
+	count, err := result.RowsAffected()
+	if err != nil {
+		return false, storageError(err)
+	}
+	return count == 1, nil
+}
+
+func (r *repository) DeleteFinancier(ctx context.Context, company, user uuid.UUID) (bool, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
+	defer cancel()
+	result, err := r.db.ExecContext(ctx, deleteFinancierSQL, company, user)
+	if err != nil {
+		return false, storageError(err)
+	}
+	count, err := result.RowsAffected()
+	if err != nil {
+		return false, storageError(err)
+	}
+	return count == 1, nil
+}
+
+func (r *repository) LockCompanyMemberships(ctx context.Context, company uuid.UUID) ([]domain.Membership, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
+	defer cancel()
+	var rows []record.Membership
+	if err := sqlx.SelectContext(ctx, r.db, &rows, lockCompanyMembershipsSQL, company); err != nil {
+		return nil, storageError(err)
+	}
+	result := make([]domain.Membership, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, fromRecord(row))
+	}
+	return result, nil
+}
+
+func (r *repository) ListCompanyMembers(ctx context.Context, company, afterUser uuid.UUID, afterCreated *time.Time, limit int) ([]domain.Member, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
+	defer cancel()
+	var rows []record.Member
+	if err := sqlx.SelectContext(ctx, r.db, &rows, listCompanyMembersSQL, company, afterCreated, afterUser, limit); err != nil {
+		return nil, storageError(err)
+	}
+	result := make([]domain.Member, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, domain.Member{UserID: row.UserID, Email: row.Email, DisplayName: row.DisplayName, Role: row.Role, JoinedAt: row.CreatedAt})
+	}
+	return result, nil
+}

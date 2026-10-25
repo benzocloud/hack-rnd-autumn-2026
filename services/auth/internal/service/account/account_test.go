@@ -21,7 +21,8 @@ type memoryStore struct {
 	users        map[uuid.UUID]domain.User
 	contexts     map[string]domain.SecurityContext
 	challenges   map[uuid.UUID]domain.Challenge
-	memberships  map[uuid.UUID]domain.Membership
+	memberships  map[string]domain.Membership
+	invitations  map[uuid.UUID]domain.Invitation
 	creations    map[uuid.UUID]domain.CompanyCreation
 	evidence     []domain.ConsentEvidence
 	failEvidence bool
@@ -29,8 +30,10 @@ type memoryStore struct {
 	document     Document
 }
 
+func membershipKey(company, user uuid.UUID) string { return company.String() + "|" + user.String() }
+
 func freshStore() *memoryStore {
-	return &memoryStore{users: map[uuid.UUID]domain.User{}, contexts: map[string]domain.SecurityContext{}, challenges: map[uuid.UUID]domain.Challenge{}, memberships: map[uuid.UUID]domain.Membership{}, creations: map[uuid.UUID]domain.CompanyCreation{}}
+	return &memoryStore{users: map[uuid.UUID]domain.User{}, contexts: map[string]domain.SecurityContext{}, challenges: map[uuid.UUID]domain.Challenge{}, memberships: map[string]domain.Membership{}, invitations: map[uuid.UUID]domain.Invitation{}, creations: map[uuid.UUID]domain.CompanyCreation{}}
 }
 func cloneMap[K comparable, V any](in map[K]V) map[K]V {
 	out := make(map[K]V, len(in))
@@ -47,18 +50,20 @@ func (m *memoryStore) work(ctx context.Context, fn Work) error {
 	working.contexts = cloneMap(m.contexts)
 	working.challenges = cloneMap(m.challenges)
 	working.memberships = cloneMap(m.memberships)
+	working.invitations = cloneMap(m.invitations)
 	working.creations = cloneMap(m.creations)
 	working.evidence = append([]domain.ConsentEvidence(nil), m.evidence...)
 	working.failEvidence = m.failEvidence
 	working.failComplete = m.failComplete
 	working.document = m.document
-	if err := fn(ctx, working, working, working, working, working, working); err != nil {
+	if err := fn(ctx, working, working, working, working, working, working, working); err != nil {
 		return err
 	}
 	m.users = working.users
 	m.contexts = working.contexts
 	m.challenges = working.challenges
 	m.memberships = working.memberships
+	m.invitations = working.invitations
 	m.creations = working.creations
 	m.evidence = working.evidence
 	m.document = working.document
@@ -166,17 +171,17 @@ func (m *memoryStore) InsertEvidence(_ context.Context, e domain.ConsentEvidence
 	return nil
 }
 func (m *memoryStore) FindMembership(_ context.Context, company, user uuid.UUID) (domain.Membership, error) {
-	member, ok := m.memberships[company]
-	if !ok || member.UserID != user {
+	member, ok := m.memberships[membershipKey(company, user)]
+	if !ok {
 		return domain.Membership{}, domain.ErrNotFound
 	}
 	return member, nil
 }
 func (m *memoryStore) ListMemberships(_ context.Context, user, after uuid.UUID, created *time.Time, limit int) ([]domain.Membership, error) {
 	var result []domain.Membership
-	for _, m := range m.memberships {
-		if m.UserID == user && (created == nil || m.CreatedAt.Before(*created) || (m.CreatedAt.Equal(*created) && m.CompanyID.String() < after.String())) {
-			result = append(result, m)
+	for _, row := range m.memberships {
+		if row.UserID == user && (created == nil || row.CreatedAt.Before(*created) || (row.CreatedAt.Equal(*created) && row.CompanyID.String() < after.String())) {
+			result = append(result, row)
 		}
 	}
 	sort.Slice(result, func(i, j int) bool {
@@ -189,6 +194,140 @@ func (m *memoryStore) ListMemberships(_ context.Context, user, after uuid.UUID, 
 		result = result[:limit]
 	}
 	return result, nil
+}
+func (m *memoryStore) InsertFinancier(_ context.Context, company, user uuid.UUID, created time.Time) (bool, error) {
+	key := membershipKey(company, user)
+	if _, ok := m.memberships[key]; ok {
+		return false, nil
+	}
+	m.memberships[key] = domain.Membership{CompanyID: company, UserID: user, Role: "financier", CreatedAt: created}
+	return true, nil
+}
+func (m *memoryStore) DeleteFinancier(_ context.Context, company, user uuid.UUID) (bool, error) {
+	key := membershipKey(company, user)
+	member, ok := m.memberships[key]
+	if !ok || member.Role != "financier" {
+		return false, nil
+	}
+	delete(m.memberships, key)
+	return true, nil
+}
+func (m *memoryStore) LockCompanyMemberships(_ context.Context, company uuid.UUID) ([]domain.Membership, error) {
+	var result []domain.Membership
+	for _, row := range m.memberships {
+		if row.CompanyID == company {
+			result = append(result, row)
+		}
+	}
+	return result, nil
+}
+func (m *memoryStore) ListCompanyMembers(_ context.Context, company, afterUser uuid.UUID, afterCreated *time.Time, limit int) ([]domain.Member, error) {
+	var result []domain.Member
+	for _, row := range m.memberships {
+		if row.CompanyID != company {
+			continue
+		}
+		if afterCreated != nil && !row.CreatedAt.Before(*afterCreated) && (!row.CreatedAt.Equal(*afterCreated) || row.UserID.String() >= afterUser.String()) {
+			continue
+		}
+		user := m.users[row.UserID]
+		result = append(result, domain.Member{UserID: row.UserID, Email: user.Email, DisplayName: user.DisplayName, Role: row.Role, JoinedAt: row.CreatedAt})
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].JoinedAt.Equal(result[j].JoinedAt) {
+			return result[i].UserID.String() > result[j].UserID.String()
+		}
+		return result[i].JoinedAt.After(result[j].JoinedAt)
+	})
+	if len(result) > limit {
+		result = result[:limit]
+	}
+	return result, nil
+}
+func (m *memoryStore) Insert(_ context.Context, invitation domain.Invitation) error {
+	for _, row := range m.invitations {
+		if row.Status == "pending" && row.CompanyID == invitation.CompanyID && row.Email == invitation.Email {
+			return domain.ErrConflict
+		}
+		if invitation.CreateIdempotencyKey != nil && row.CreateIdempotencyKey != nil && row.CreatedBy == invitation.CreatedBy && row.CompanyID == invitation.CompanyID && *row.CreateIdempotencyKey == *invitation.CreateIdempotencyKey {
+			return domain.ErrConflict
+		}
+	}
+	m.invitations[invitation.ID] = invitation
+	return nil
+}
+func (m *memoryStore) Find(_ context.Context, id uuid.UUID, _ bool) (domain.Invitation, error) {
+	row, ok := m.invitations[id]
+	if !ok {
+		return domain.Invitation{}, domain.ErrNotFound
+	}
+	return row, nil
+}
+func (m *memoryStore) FindCreateIdempotency(_ context.Context, actor, company uuid.UUID, key string) (domain.Invitation, error) {
+	for _, row := range m.invitations {
+		if row.CreatedBy == actor && row.CompanyID == company && row.CreateIdempotencyKey != nil && *row.CreateIdempotencyKey == key {
+			return row, nil
+		}
+	}
+	return domain.Invitation{}, domain.ErrNotFound
+}
+func (m *memoryStore) ListOutgoing(_ context.Context, company, afterID uuid.UUID, retentionCutoff time.Time, afterCreated *time.Time, limit int) ([]domain.Invitation, error) {
+	var result []domain.Invitation
+	for _, row := range m.invitations {
+		if row.CompanyID != company {
+			continue
+		}
+		if row.TerminalAt != nil && !row.TerminalAt.After(retentionCutoff) {
+			continue
+		}
+		if afterCreated != nil && !row.CreatedAt.Before(*afterCreated) && (!row.CreatedAt.Equal(*afterCreated) || row.ID.String() >= afterID.String()) {
+			continue
+		}
+		result = append(result, row)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].CreatedAt.Equal(result[j].CreatedAt) {
+			return result[i].ID.String() > result[j].ID.String()
+		}
+		return result[i].CreatedAt.After(result[j].CreatedAt)
+	})
+	if len(result) > limit {
+		result = result[:limit]
+	}
+	return result, nil
+}
+func (m *memoryStore) ListIncoming(_ context.Context, email string, afterID uuid.UUID, retentionCutoff time.Time, afterCreated *time.Time, limit int) ([]domain.Invitation, error) {
+	var result []domain.Invitation
+	for _, row := range m.invitations {
+		if row.Email != email {
+			continue
+		}
+		if row.TerminalAt != nil && !row.TerminalAt.After(retentionCutoff) {
+			continue
+		}
+		if afterCreated != nil && !row.CreatedAt.Before(*afterCreated) && (!row.CreatedAt.Equal(*afterCreated) || row.ID.String() >= afterID.String()) {
+			continue
+		}
+		result = append(result, row)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].CreatedAt.Equal(result[j].CreatedAt) {
+			return result[i].ID.String() > result[j].ID.String()
+		}
+		return result[i].CreatedAt.After(result[j].CreatedAt)
+	})
+	if len(result) > limit {
+		result = result[:limit]
+	}
+	return result, nil
+}
+func (m *memoryStore) Save(_ context.Context, invitation domain.Invitation, expectedVersion int64) error {
+	current, ok := m.invitations[invitation.ID]
+	if !ok || current.Version != expectedVersion {
+		return domain.ErrConflict
+	}
+	m.invitations[invitation.ID] = invitation
+	return nil
 }
 
 type verifyFixture struct {
@@ -325,7 +464,7 @@ func TestDemoProofCannotGrantStrictCompanyAccess(t *testing.T) {
 	f.verify(t, "000000", nil)
 	user := f.store.users[f.user.ID]
 	company := uuid.Must(uuid.NewV7())
-	f.store.memberships[company] = domain.Membership{CompanyID: company, UserID: user.ID, Role: "owner", CreatedAt: f.now}
+	f.store.memberships[membershipKey(company, user.ID)] = domain.Membership{CompanyID: company, UserID: user.ID, Role: "owner", CreatedAt: f.now}
 	c, token, err := f.service.newContext(user)
 	if err != nil {
 		t.Fatal(err)
@@ -409,7 +548,7 @@ func TestMembershipCursorUsesDescendingTimeAndActorBinding(t *testing.T) {
 		if id == older {
 			created = created.Add(-time.Hour)
 		}
-		f.store.memberships[id] = domain.Membership{CompanyID: id, UserID: user.ID, Role: "owner", CreatedAt: created}
+		f.store.memberships[membershipKey(id, user.ID)] = domain.Membership{CompanyID: id, UserID: user.ID, Role: "owner", CreatedAt: created}
 	}
 	page, err := f.service.ListMemberships(t.Context(), cookie, 1, "")
 	if err != nil || len(page.Items) != 1 || page.Items[0].CompanyID != newerHigh || page.NextCursor == "" {

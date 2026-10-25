@@ -65,7 +65,7 @@ func (s *service) BeginCompanyCreation(ctx context.Context, input BeginCompanyCr
 		return CreationCommand{}, ErrValidation
 	}
 	var result domain.CompanyCreation
-	err = s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, _ challengeStore, _ consentStore, _ membershipStore, commands creationStore) error {
+	err = s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, _ challengeStore, _ consentStore, _ membershipStore, commands creationStore, _ invitationStore) error {
 		_, user, err := s.checkContext(ctx, users, contexts, input.Context, true, true)
 		if err != nil {
 			return err
@@ -143,7 +143,7 @@ func (s *service) AuthorizeCompanyBootstrap(ctx context.Context, input Authorize
 	}
 	var result domain.CompanyCreation
 	denied := false
-	err := s.withinTx(ctx, func(ctx context.Context, users userStore, _ contextStore, _ challengeStore, _ consentStore, _ membershipStore, commands creationStore) error {
+	err := s.withinTx(ctx, func(ctx context.Context, users userStore, _ contextStore, _ challengeStore, _ consentStore, _ membershipStore, commands creationStore, _ invitationStore) error {
 		command, user, err := lockCreation(ctx, users, commands, input.CommandID)
 		if err != nil {
 			return err
@@ -184,7 +184,7 @@ func (s *service) CompleteCompanyCreation(ctx context.Context, input CompleteCom
 		return CreationCommand{}, ErrValidation
 	}
 	var snapshot domain.CompanyCreation
-	err := s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, _ challengeStore, _ consentStore, _ membershipStore, commands creationStore) error {
+	err := s.withinTx(ctx, func(ctx context.Context, users userStore, contexts contextStore, _ challengeStore, _ consentStore, _ membershipStore, commands creationStore, _ invitationStore) error {
 		_, user, err := s.checkContext(ctx, users, contexts, input.Context, true, true)
 		if err != nil {
 			return err
@@ -252,7 +252,7 @@ func (s *service) creationInitiatorEnabled(user domain.User) bool {
 func (s *service) finalizeCreation(ctx context.Context, snapshot domain.CompanyCreation, receipt CreationReceipt, lease uuid.UUID) (CreationCommand, error) {
 	var result domain.CompanyCreation
 	quarantined := false
-	err := s.withinTx(ctx, func(ctx context.Context, users userStore, _ contextStore, _ challengeStore, _ consentStore, memberships membershipStore, commands creationStore) error {
+	err := s.withinTx(ctx, func(ctx context.Context, users userStore, _ contextStore, _ challengeStore, _ consentStore, memberships membershipStore, commands creationStore, _ invitationStore) error {
 		command, user, err := lockCreation(ctx, users, commands, snapshot.ID)
 		if err != nil {
 			return err

@@ -55,6 +55,18 @@ func rpcError(err error) error {
 	case errors.Is(err, account.ErrIdempotencyConflict):
 		code = codes.Aborted
 		reason = pb.AuthErrorReason_AUTH_ERROR_REASON_IDEMPOTENCY_CONFLICT
+	case errors.Is(err, account.ErrVersionConflict):
+		code = codes.Aborted
+		reason = pb.AuthErrorReason_AUTH_ERROR_REASON_VERSION_CONFLICT
+	case errors.Is(err, account.ErrInvitationNotAvailable):
+		code = codes.InvalidArgument
+		reason = pb.AuthErrorReason_AUTH_ERROR_REASON_INVITATION_NOT_AVAILABLE
+	case errors.Is(err, account.ErrInvitationStateConflict):
+		code = codes.Aborted
+		reason = pb.AuthErrorReason_AUTH_ERROR_REASON_INVITATION_STATE_CONFLICT
+	case errors.Is(err, account.ErrMembershipRevoked):
+		code = codes.Aborted
+		reason = pb.AuthErrorReason_AUTH_ERROR_REASON_MEMBERSHIP_REVOKED
 	case errors.Is(err, account.ErrCreationInProgress):
 		code = codes.Unavailable
 		reason = pb.AuthErrorReason_AUTH_ERROR_REASON_COMPANY_CREATION_IN_PROGRESS

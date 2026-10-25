@@ -91,14 +91,19 @@ func (m *memoryStore) RetryCreation(_ context.Context, id, lease uuid.UUID, dela
 	return nil
 }
 func (m *memoryStore) InsertOwner(_ context.Context, company, user uuid.UUID, created time.Time) error {
-	old, ok := m.memberships[company]
-	if ok {
-		if old.UserID == user && old.Role == "owner" {
+	key := membershipKey(company, user)
+	if old, ok := m.memberships[key]; ok {
+		if old.Role == "owner" {
 			return nil
 		}
 		return domain.ErrConflict
 	}
-	m.memberships[company] = domain.Membership{CompanyID: company, UserID: user, Role: "owner", CreatedAt: created}
+	for _, old := range m.memberships {
+		if old.CompanyID == company && old.Role == "owner" && old.UserID != user {
+			return domain.ErrConflict
+		}
+	}
+	m.memberships[key] = domain.Membership{CompanyID: company, UserID: user, Role: "owner", CreatedAt: created}
 	return nil
 }
 
@@ -208,12 +213,12 @@ func TestCompleteCompanyCreationReadsOutsideTransactionAndCommitsOwner(t *testin
 	if err != nil || completed.ID != cmd.ID || completed.State != domain.CreationCompleted {
 		t.Fatal(completed, err)
 	}
-	owner := f.store.memberships[cmd.CompanyID]
+	owner := f.store.memberships[membershipKey(cmd.CompanyID, f.user.ID)]
 	if owner.UserID != f.user.ID || owner.Role != "owner" {
 		t.Fatal(owner)
 	}
 	// Completed replay cannot recreate access after an independent revocation.
-	delete(f.store.memberships, cmd.CompanyID)
+	delete(f.store.memberships, membershipKey(cmd.CompanyID, f.user.ID))
 	f.service.core = nil
 	if _, err := f.service.CompleteCompanyCreation(t.Context(), CompleteCompanyCreationInput{Context: f.write, CommandID: cmd.ID}); err != nil {
 		t.Fatal(err)
