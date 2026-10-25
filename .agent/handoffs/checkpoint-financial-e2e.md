@@ -155,3 +155,9 @@ Base main: `71f2a86ffbcf218d7fff517830b7aa41f0a97c95`
 1. Browser specs ещё checklist-only; `@playwright/test` в shared manifests — зона агента B.
 2. `artifacts/ml-gen` не в git: перед ML нужно скопировать/сгенерировать `services/ml/ml` bindings локально.
 3. Payment lifecycle не гонять на чистом main без #48 candidate checkout.
+
+## Remote after 11:12 push
+
+- Local/remote: `52afc6d6d0e90e13add0841ba96bc6443ea4a677`
+- Draft PR #50 remains draft; CI check-runs may still be pending (pending ≠ passed).
+- Next: CSV/manual regression on same stack; payments need #48 integration checkout.
