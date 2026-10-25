@@ -146,8 +146,8 @@ func TestImportsHTTPAPIWithPostgres(t *testing.T) {
 	}
 	var predictedInput *forecasting.FinancialModelInput
 	model := forecastModelFunc(func(ctx context.Context, input forecasting.FinancialModelInput) (forecasting.FinancialModelResult, error) {
-		copy := input
-		predictedInput = &copy
+		captured := input
+		predictedInput = &captured
 		return deterministicForecast(ctx, input)
 	})
 	jobs := newForecastJobs(f.app.db, config.Postgres{QueryTimeout: 5 * time.Second}, model)
