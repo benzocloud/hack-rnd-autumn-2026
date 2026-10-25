@@ -120,7 +120,7 @@ func TestCertificateRejectsMalformedIdentityAndInvalidSigner(t *testing.T) {
 	}
 	directory := t.TempDir()
 	cert, private := filepath.Join(directory, "leaf.pem"), filepath.Join(directory, "key.pem")
-	if err := issueCertificate(ca, key, 2, "malformed", "spiffe://%", x509.ExtKeyUsageClientAuth, cert, private); err == nil {
+	if err := issueCertificate(ca, key, 2, "malformed", "spiffe://%", []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}, cert, private); err == nil {
 		t.Fatal("accepted malformed URI SAN")
 	}
 	ca.PublicKey = &key.PublicKey
@@ -128,7 +128,7 @@ func TestCertificateRejectsMalformedIdentityAndInvalidSigner(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := issueCertificate(ca, other, 3, "wrong signer", "", x509.ExtKeyUsageClientAuth, cert, private); err == nil {
+	if err := issueCertificate(ca, other, 3, "wrong signer", "", []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}, cert, private); err == nil {
 		t.Fatal("signed with a key that does not match CA")
 	}
 }
