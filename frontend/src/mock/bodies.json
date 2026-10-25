@@ -1361,7 +1361,85 @@
                     "in_horizon": true,
                     "response_action_eligible": true
                 }
-            ]
+            ],
+            "analysis": {
+                "analysis_version": "text_categories_monthly_v1",
+                "window_from": "2026-07-03",
+                "window_through": "2026-09-30",
+                "classified_operations": [
+                    {
+                        "transaction_id": "019a0c65-9800-7000-8000-00000000000f",
+                        "version": "42",
+                        "category_code": "rent",
+                        "category_source": "rules",
+                        "category_rule_id": "text_rent_v1",
+                        "category_id": "019a0c65-9800-7000-8000-000000000002"
+                    },
+                    {
+                        "transaction_id": "019a0c65-9800-7000-8000-000000000013",
+                        "version": "5",
+                        "category_code": "rent",
+                        "category_source": "rules",
+                        "category_rule_id": "text_rent_v1",
+                        "category_id": "019a0c65-9800-7000-8000-000000000002"
+                    },
+                    {
+                        "transaction_id": "019a0c65-9800-7000-8000-000000000014",
+                        "version": "5",
+                        "category_code": "rent",
+                        "category_source": "rules",
+                        "category_rule_id": "text_rent_v1",
+                        "category_id": "019a0c65-9800-7000-8000-000000000002"
+                    },
+                    {
+                        "transaction_id": "019a0c65-9800-7000-8000-000000000011",
+                        "version": "7",
+                        "category_code": "rent",
+                        "category_source": "manual",
+                        "category_rule_id": "",
+                        "category_id": "019a0c65-9800-7000-8000-000000000002"
+                    },
+                    {
+                        "transaction_id": "019a0c65-9800-7000-8000-000000000012",
+                        "version": "3",
+                        "category_code": "unknown",
+                        "category_source": "unknown",
+                        "category_rule_id": "text_unknown_v1",
+                        "category_id": null
+                    }
+                ],
+                "recurring_hypotheses": [
+                    {
+                        "pattern_id": "monthly_fit:rent:outflow:7",
+                        "rule_id": "monthly_fit",
+                        "direction": "outflow",
+                        "historical_operations": [
+                            {
+                                "transaction_id": "019a0c65-9800-7000-8000-00000000000f",
+                                "version": "42"
+                            },
+                            {
+                                "transaction_id": "019a0c65-9800-7000-8000-000000000013",
+                                "version": "5"
+                            },
+                            {
+                                "transaction_id": "019a0c65-9800-7000-8000-000000000014",
+                                "version": "5"
+                            }
+                        ],
+                        "day_of_month": 7,
+                        "weekend_shift": "previous",
+                        "expected_amount_minor": "9000000",
+                        "confirmations": 3,
+                        "expected_periods": 4,
+                        "first_evidence_date": "2026-07-07",
+                        "last_evidence_date": "2026-09-07",
+                        "category_code": "rent",
+                        "rule_version": "text_categories_monthly_v1",
+                        "status": "hypothesis"
+                    }
+                ]
+            }
         },
         "error": null
     },
