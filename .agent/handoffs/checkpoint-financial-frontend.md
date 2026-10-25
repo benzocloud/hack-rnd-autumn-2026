@@ -1,8 +1,8 @@
 # Handoff финансового frontend
 
 Дата: 25.10.2026, старт 10:36 МСК; checkpoint 11:15/11:45 МСК.
-Ветка: globalarray/feat/financial_user_journey. Base: 6c9edd9 (origin/main). Local/remote SHA: первый plan commit, см. git log/remote; будет уточнён следующим push. PR: создаётся первым push.
-Этап 1: В работе. Прочитаны инструкции/ADR/workflows, README/OpenAPI, исходники Imports/Calendar/Dashboard; обсуждения #47/#48 пусты, #47 merged.
+Ветка: globalarray/feat/financial_user_journey. Base: 6c9edd9 (origin/main). Local/remote предыдущего push: 27226dd7d6818eb2e1d0fdfee11cbf44625ffd58; текущий исходный срез — следующий commit, SHA публикации проверяется git ls-remote. PR: https://github.com/benzocloud/hack-rnd-autumn-2026/pull/49.
+Этап 1: На ревью. Прочитаны инструкции/ADR/workflows, README/OpenAPI, исходники Imports/Calendar/Dashboard; обсуждения #47/#48 пусты, #47 merged.
 
 | API | Готовность/следующий шаг |
 | --- | --- |
@@ -16,3 +16,10 @@ Dependencies: https://github.com/benzocloud/hack-rnd-autumn-2026/pull/47 merged 
 Проверки: git fetch origin выполнен; новый isolated worktree /tmp/saldo-financial от свежего main, чужие dirty files не копировались. Финансовые браузерные сценарии ещё не проверены; screenshots отсутствуют. CI не проверен.
 Инструменты: GBrain MCP не предоставлен; RTK отсутствует. Sandbox bwrap namespace недоступен, команды разрешены через escalation.
 Следующий шаг: закончить матрицу source/API, исправить независимые состояния/формы и опубликовать блок.
+
+## Блок imports/manual/forecast, 10:45 МСК — На ревью
+
+Изменены frontend financial screens/helpers/hooks/dashboard service: stale preview запрещает повтор commit и предлагает новую загрузку; warnings объясняют сохранение обеих manual/import записей. Manual retry сохраняет исходное тело и CAS; после VERSION_CONFLICT доступно явное обновление версий без потери полей. Деньги поддерживают точные signed int64, включая значения выше Number.MAX_SAFE_INTEGER. Ручной остаток пояснён как датированный якорь. Dashboard только 30 дней; bounded detail polling (40 проверок), явные queued/running/terminal states, таблица точных сумм и CSV ограничения. Backend cancellation отсутствует в текущем DTO/RPC: UI обрабатывает неизвестный терминальный статус без бесконечного spinner, серверная cancellation не объявляется реализованной.
+Проверки из frontend/: npm ci повторно успешно после переноса с /tmp (512MiB) на /workspace/repo/.financial-worktree; npm test — 34/34, npm run typecheck — passed, npm run lint — passed. Build будет один раз после календаря. Ранний npm test ошибочно запущен из корня (ENOENT), исправлен запуском из frontend; успешные результаты относятся к frontend.
+Страницы в настоящем браузере ещё не проверены. Screenshots отсутствуют. Это unit/contract regression, не real backend acceptance.
+Следующий шаг: календарь и reconciliation на DTO опубликованного #48; после — полный build и browser проверки при доступных зависимостях.

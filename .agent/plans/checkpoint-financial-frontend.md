@@ -7,9 +7,9 @@
 
 | Этап | Результат/пути | Зависимости/проверки | Статус |
 | --- | --- | --- | --- |
-| 1 | Сверка API, план/handoff, draft | main/OpenAPI/PR discussions; remote SHA | В работе |
-| 2 | Imports/Transactions: preview, ошибки, точные деньги, retry | существующий API #47; unit tests | Не начат |
-| 3 | ForecastDetail/Dashboard: 30 дней, polling, immutable/stale, null | forecast DTO; unit/typecheck | Не начат |
+| 1 | Сверка API, план/handoff, draft | main/OpenAPI/PR discussions; remote SHA | На ревью |
+| 2 | Imports/Transactions: preview, ошибки, точные деньги, retry | существующий API #47; unit tests | На ревью |
+| 3 | ForecastDetail/Dashboard: 30 дней, polling, immutable/stale, null | forecast DTO; unit/typecheck | На ревью |
 | 4 | Calendar: lifecycle, remaining/history, явная reconciliation семантика | #48 handlers; contract tests | Не начат |
 | 5 | Проверки, независимые caveman/ponytail, исправления | frontend test/typecheck/lint/build; real backend browser при доступности | Не начат |
 

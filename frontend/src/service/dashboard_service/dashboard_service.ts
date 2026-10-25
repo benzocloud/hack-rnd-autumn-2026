@@ -18,7 +18,7 @@ const waitForForecast = ( duration: number, signal: AbortSignal ) => new Promise
         signal.removeEventListener("abort", abort);
         reject(new CanceledError("Запрос отменён."));
     };
-    const timer = setTimeout(finish, Math.max(1000, duration));
+    const timer = setTimeout(finish, Math.min(10000, Math.max(1000, duration)));
 
     signal.addEventListener("abort", abort, { once: true });
 
@@ -37,7 +37,7 @@ const completeForecast = async ( companyId: string, forecastId: string, pollAfte
             const points = forecast.result.daily_points;
             const start = Date.parse(`${forecast.input.start_date}T00:00:00Z`);
 
-            if (forecast.input.horizon_days < 30 || points.length !== forecast.input.horizon_days || points.some(( point, index ) => Date.parse(`${point.date}T00:00:00Z`) !== start + index * 86400000)) {
+            if (forecast.input.horizon_days !== 30 || points.length !== forecast.input.horizon_days || points.some(( point, index ) => Date.parse(`${point.date}T00:00:00Z`) !== start + index * 86400000)) {
                 throw new Error("API вернул неполный дневной прогноз. Пропуски не заменены нулями. Повторите загрузку.");
             }
 
@@ -48,6 +48,9 @@ const completeForecast = async ( companyId: string, forecastId: string, pollAfte
             throw new Error(forecast.error.message || "Не удалось построить прогноз. Попробуйте ещё раз.");
         }
 
+        if (![ "queued", "running" ].includes(forecast.status)) {
+            throw new Error("Расчёт остановлен или имеет неподдерживаемый статус. Сохранённый результат недоступен.");
+        }
         await waitForForecast(pollAfter, signal);
     }
 
@@ -56,6 +59,7 @@ const completeForecast = async ( companyId: string, forecastId: string, pollAfte
 
 
 const getDashboardData = async ( period: ForecastPeriod, signal: AbortSignal, companyId?: string, onStatus?: ( status: IForecast["status"] ) => void ): Promise<IDashboardData> => {
+    if (period !== 30) { throw new Error("Доступен только прогноз на 30 дней."); }
     const company = companyId ? await companiesService.getCompany({ company_id: companyId }, signal) : (await companiesService.listCompanies({ limit: 1 }, signal)).items[0];
 
     if (!company) {
