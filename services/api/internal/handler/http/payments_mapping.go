@@ -37,7 +37,7 @@ func paymentStatusName(status corev1.PaymentStatus) string {
 	}
 }
 func paymentDTO(p *corev1.ExpectedPayment, account string) (object, error) {
-	if p == nil || !resourceID(p.Id) || p.AccountId != account || !contains(directionName(p.Direction), "inflow", "outflow") || !positiveMoney(p.Amount) || !nonnegativeMoney(p.RemainingAmount) || p.RemainingAmount.AmountMinor > p.Amount.AmountMinor || !businessDate(p.ScheduledDate) || !optionalID(p.CategoryId) || !optionalID(p.ReconciliationGroupId) || !bounded(p.CounterpartyName, 500) || !bounded(p.Description, 2000) || p.Version < 1 || !timestamp(p.CreatedAt) || !validSource(p.Source) {
+	if p == nil || !resourceID(p.Id) || p.AccountId != account || !contains(directionName(p.Direction), "inflow", "outflow") || !positiveMoney(p.Amount) || !nonnegativeMoney(p.RemainingAmount) || p.RemainingAmount.AmountMinor > p.Amount.AmountMinor || !businessDate(p.ScheduledDate) || !optionalID(p.CategoryId) || !optionalID(p.ReconciliationGroupId) || !bounded(p.CounterpartyName, 500) || !bounded(p.Description, 2000) || p.Version < 1 || !timestamp(p.CreatedAt) || p.Source == nil || !validSource(p.Source) {
 		return nil, errProjection
 	}
 	status := paymentStatusName(p.Status)

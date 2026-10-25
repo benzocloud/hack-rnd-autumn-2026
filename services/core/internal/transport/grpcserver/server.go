@@ -32,6 +32,19 @@ func authorizePeer(ctx context.Context, request any, info *grpc.UnaryServerInfo,
 		allowed = identity == mtls.Auth
 	case pb.CompanyService_ReadCompany_FullMethodName, pb.CompanyService_UpdateCompany_FullMethodName, pb.LedgerService_GetDefaultAccount_FullMethodName, pb.LedgerService_RecordManualBalance_FullMethodName, pb.LedgerService_CreateManualTransaction_FullMethodName:
 		allowed = identity == mtls.API
+	case pb.PaymentsService_UpdatePayment_FullMethodName,
+		pb.PaymentsService_CancelPayment_FullMethodName,
+		pb.PaymentsService_RemovePaymentMatch_FullMethodName,
+		pb.PaymentsService_ListPayments_FullMethodName,
+		pb.PaymentsService_GetPayment_FullMethodName,
+		pb.PaymentsService_CreateManualPayment_FullMethodName,
+		pb.PaymentsService_ListPaymentMatches_FullMethodName,
+		pb.PaymentsService_MatchPayment_FullMethodName,
+		pb.PaymentsService_CreateReconciliationGroup_FullMethodName,
+		pb.PaymentsService_GetReconciliationGroup_FullMethodName,
+		pb.PaymentsService_ListReconciliationGroups_FullMethodName,
+		pb.PaymentsService_RevokeReconciliationGroup_FullMethodName:
+		allowed = identity == mtls.API
 	case pb.ForecastingService_CreateForecast_FullMethodName, pb.ForecastingService_GetForecast_FullMethodName, pb.ForecastingService_ListForecasts_FullMethodName:
 		allowed = identity == mtls.API
 	case pb.ImportsService_ListImports_FullMethodName, pb.ImportsService_GetImport_FullMethodName, pb.ImportsService_ListImportIssues_FullMethodName:

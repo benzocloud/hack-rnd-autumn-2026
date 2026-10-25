@@ -44,3 +44,11 @@ Lifecycle в работе: новые domain update/unmatch, сервисные 
 
 Schema: 00013 audit tombstone, downgrade guard при reversed allocations; 00014 independent scoped groups и nullable payment FK. Обе миграции применены только в own disposable DB. Group/calendar end-to-end приёмка ещё не выполнена. Rollback со схемы14 требует совместимого decoder и сохранения групп, не обещается простой downgrade.
 Следующая команда: `go test -p 1 -tags=integration,mlintegration -race ./internal/app -run TestPaymentHTTP` с own DB/API binary/Python env после завершения API process build. Затем закончить current calendar/Predict arithmetic, gates и независимое review.
+
+Wire diff перед следующим блоком: для явного различия available-empty и unavailable добавляются `ForecastInput.calendar_knowledge_mode = 18` (новый typed `ForecastCalendarKnowledgeMode`, значения mirror ML: unspecified0/current1/historical_as_of_certified2/unavailable3/synthetic_scenario4), `calendar_as_of_date = 19` string, `no_post_cutoff_movements = 20` bool. Поля 1–17 неизменны. Legacy unspecified не превращается в historical/current knowledge. REST read projection — optional mode/date/bool; request calendar_mode остаётся прежним выбором available/synthetic, а не assertion знания. Current context не выдаётся за synthetic historical; synthetic пока explicit unsupported.
+
+## Проверка публикации и исправление checkpoint
+
+Independent caveman review f344200 обнаружил пропущенный untracked API `payment_groups.go`: опубликованный API checkpoint не собирался. Исправление включается отдельным fix commit немедленно; этот неуспешный checkpoint не объявляется passing. Review также обнаружил external reimport/linkage comparison — исключение изменяемого reconciliation_group_id из external identity исправлено с regression.
+
+Real HTTP tests текущего дерева с race: `TestPaymentForecastHTTPWithPostgresPythonAndRestart` и `TestPaymentHTTPAPILifecyclePersistsAudit` — PASS, package4.577s; весь API→Core→PG→Python mTLS путь, семь прогнозов, 30 exact points, audit/stale/immutable bytes/restart. Auth double и covered CURRENT fixture обозначены в тестах, обычный CSV и настоящий Auth не заявляются.
