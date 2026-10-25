@@ -69,6 +69,7 @@ def build(cutoff, version, calendar=None, extra=(), eod=EOD):
         (cutoff - timedelta(days=89)).isoformat(),
         cutoff.isoformat(),
         f"Complete synthetic demo fixture: {len(operations)} known operations",
+        "dataset_fixture_assumption",
     )
     request = prepare_financial_request(
         snapshot,
