@@ -18,3 +18,40 @@
 Проверенная реализация и ограничения находятся в handoff. CURRENT covered сценарий работает; CSV/calendar и synthetic остаются explicit unsupported. Owner acceptance не запрашивался/не утверждался.
 
 Финальный implementation checkpoint: ac90fa3; свежий main6c9edd9 интегрирован. Все локальные gates и независимые reviews завершены; upstream CI на фиксацию pending, не passing. Подробности/repro/limitations и owner pickup — .agent/handoffs/checkpoint-payments-backend.md.
+
+## Продолжение A: ordinary CSV + CURRENT calendar (25.10, поручение владельца)
+
+Это явно разрешённая доработка основного пути, не достаточный blocker-report.
+Предыдущие реализации/gates/review сохраняются; owner review отложен, новые
+стадии остаются На ревью после выполнения. Merge/ready/deploy запрещены.
+
+Принятый для этого slice context: model_name=mean_90,
+model_version=mean_90_csv_calendar_v1,
+preprocessing_version=csv_observed_operations_calendar_v1,
+configuration_id=mean_90_csv_calendar_v1. Это отдельный профиль, не переименование
+CSV-only/covered/trained расчёта. Trained default/model/training не меняются.
+
+Совместимость: прежние mean_90_csv_v1 и mean_90_components_v1 и schema1/2 читаются
+с прежней семантикой. Новый schema2 job замораживает assessment+CURRENT+context;
+выбор нового profile при существующих payments/groups и допустимом CURRENT
+cutoff. До календаря обычный CSV-only сохраняет oldprofile. Никаких proof/fixture
+allowlist/SQL facts, history не certified. Eligibility90days/EOD/reconciliation/
+unknown days/manual provenance/limits прежняя. Версия результата не переиспользуется
+при новой revision; worker не читает live calendar. Proto/REST shape не меняются.
+
+Новый limitations list: csv_history_completeness_unverified,
+unobserved_days_unknown, observed_operations_mean_per_calendar_day,
+historical_availability_unverified, not_calibrated, current_calendar_only.
+Probability unavailable/null, bands отсутствуют; unknown не превращается в zero.
+
+6. CSV+CURRENT happy path — В работе: shared CSV eligibility и calendar math в ML,
+Core explicit selector/frozen decoder/independent arithmetic, API exact context;
+реальный CSV import/commit→forecast→payment→новый forecast в own marked PG/Python mTLS.
+7. Negatives/backward/review — Не начат: lifecycle/replacement lifetime/overflow/
+scope/CAS/replay/unknown context/unavailable ML, serial Go gates/APIcheck/MLRuff,
+independent caveman+ponytail нового diff на SHA, fixes и push в draft48.
+
+Бизнес-граница: поддерживается только CURRENT (cutoff сегодня/вчера без post-cutoff
+movements). Historical/synthetic не расширяются. Additional только explicit;
+replacement только exact IDs/versions/completeness, не категория. Cancel/fullmatch/
+за горизонтом сохраняют mapping до revoke. Новое обучение/accuracy claim отсутствуют.

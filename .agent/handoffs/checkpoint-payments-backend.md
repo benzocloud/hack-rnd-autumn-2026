@@ -175,3 +175,30 @@ CI links: [Core](https://github.com/benzocloud/hack-rnd-autumn-2026/actions/runs
 Owner pickup: проверить окончательный CI, review draft48, передать frontend B
 подключённые DTO и C настоящий Auth/browser сценарий. CSV/calendar и historical
 synthetic требуют принятого совместимого профиля; no silent fallback сохранён.
+
+## Возобновление A — CSV+CURRENT (25.10.2026 11:12 МСК)
+
+Owner прямо разрешил минимальную versioned CSV/calendar совместимость. Старый
+UNSUPPORTED_MODEL_CONTEXT для валидного CSV+CURRENT теперь функциональный пробел,
+который реализуется в том же draft48, без нового промежуточного апрува.
+Previous head/local/remote:1f10b6e615296a01d64957730ac2ce38a2e2b11c.
+Fresh main71f2a86 (verification frontend change) merged clean в текущую ветку;
+собственный source frontend/Auth/deploy не редактируется. Активны PR48/49/50;
+прочитаны body и полные comments/reviews/inline, все обсуждения пусты. Issues нет.
+B=#49 dfa9f505, C=#50 e95e98ee; их файлы/PR не меняются.
+
+Context: mean_90 / mean_90_csv_calendar_v1 /
+csv_observed_operations_calendar_v1 / config mean_90_csv_calendar_v1.
+Exact wire/DTO diff: отсутствует; existing CSV assessment + CURRENT calendar
+передаются в том же Predict. Новые profile/preprocessing/config значения будут
+видны в существующем ForecastInput.model_context. Limitations: старый CSV list
+без historical_calendar_unavailable, с current_calendar_only в конце; остальные
+CSV ограничения и not_calibrated сохраняются. Schema1/2 backwards read сохраняется.
+Никакого certified proof, reconstructed observed zeros, operator manifest или
+SQL facts. Residual только supplied operations после proven replacement /90
+плюс known remaining ровно один раз; независимая Go проверка обязательна.
+
+Последний законченный этап прежнего результата На ревью; продолжение6 в работе.
+Tools/state .agent/local сохранены; RTK/GBrain MCP ранее отсутствовали, новые calls
+не заявляются. OwnPG18 остановлен после прошлого блока, поднимается снова.
+Следующая команда: `pg_ctl -D .agent/local/pg18 -l .agent/local/pg18.log -o '-h 127.0.0.1 -p 55488 -k /tmp' start`; затем Core selector/ML shared validation.
