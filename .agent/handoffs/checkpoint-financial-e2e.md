@@ -6,11 +6,11 @@
 
 | Поле | Значение |
 | --- | --- |
-| PR URL | *(создаётся после первого push; обновить)* |
+| PR URL | https://github.com/benzocloud/hack-rnd-autumn-2026/pull/50 |
 | Branch | `globalarray/test/verify_financial_user_journey` |
-| Base | `origin/main` `6c9edd969b3a694bccabaf6980b86531e2722490` |
-| Local HEAD | *(после commit)* |
-| Remote HEAD | *(после push + `git ls-remote`)* |
+| Base | `origin/main` `71f2a86ffbcf218d7fff517830b7aa41f0a97c95` |
+| Local HEAD | `971a1b79dca53ef87122b7637283961f2d3ed163` |
+| Remote HEAD | `971a1b79dca53ef87122b7637283961f2d3ed163` (match=yes) |
 | Worktree | `/Users/globalarray/hack-rnd-autumn-2026-financial-e2e` |
 | Nickname | `globalarray` |
 
@@ -37,7 +37,7 @@
 
 | Компонент | Источник | SHA | Примечание |
 | --- | --- | --- | --- |
-| Base | main | `6c9edd9` | |
+| Base | `origin/main` `71f2a86ffbcf218d7fff517830b7aa41f0a97c95` |
 | CSV/manual (#47) | main | `f686ca8` | merged |
 | Onboarding (#41) | main | ancestor | 0 commits ahead |
 | Payments (#48) | `globalarray/feat/payments_frozen_calendar` | ~`ac90fa3` | open draft; нужно для lifecycle |
@@ -102,3 +102,16 @@ verification stub.
 3. Поднять disposable stack (отдельный project/ports) или зафиксировать точный
    blocker команд.
 4. Не ждать апрува этапов; статусы — «На ревью».
+
+
+## Checkpoint 10:58 МСК — этап 1 На ревью
+
+- Draft PR: https://github.com/benzocloud/hack-rnd-autumn-2026/pull/50
+- Pushed SHA matched remote at publication: `971a1b79dca53ef87122b7637283961f2d3ed163`
+- Current local before this docs commit: `971a1b79dca53ef87122b7637283961f2d3ed163`
+- Base main: `71f2a86ffbcf218d7fff517830b7aa41f0a97c95`
+- Payments tip (#48): `1f10b6e615296a01d64957730ac2ce38a2e2b11c`
+- Frontend tip (#49): `7d6d749c4dcd0547e11d48162527c38021dbb003`
+- ML tip (#45): `462344f9a11ae563c7d8d104cd6844270f64983d`
+- Fixtures prepared; real stack not yet started.
+- Next: isolated stack under `scripts/financial-e2e` (no `deploy/**` edits).

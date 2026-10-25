@@ -9,9 +9,9 @@ real HTTP / real browser / restart / blocked.
 | --- | --- |
 | Дата (МСК) | 2026-10-25 |
 | Test PR branch | `globalarray/test/verify_financial_user_journey` |
-| Test PR | *(URL после создания)* |
-| Base main SHA | `6c9edd969b3a694bccabaf6980b86531e2722490` |
-| Harness commit | *(после push)* |
+| Test PR | https://github.com/benzocloud/hack-rnd-autumn-2026/pull/50 |
+| Base main SHA | `71f2a86ffbcf218d7fff517830b7aa41f0a97c95` |
+| Harness commit | `971a1b79dca53ef87122b7637283961f2d3ed163` |
 | Integrated candidate SHAs | main + #48 + #49 (+ опц. #45); уточнить перед прогоном |
 | API origin | isolated only; не `saldo.brokebyte.me` |
 | Auth profile | demo allowlist только если server-enabled; пометить |

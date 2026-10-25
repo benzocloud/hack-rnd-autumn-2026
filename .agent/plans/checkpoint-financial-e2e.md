@@ -20,7 +20,7 @@ Frontend → Go API → Auth/Core → PostgreSQL → Python ML.
 
 - Worktree: `/Users/globalarray/hack-rnd-autumn-2026-financial-e2e`
 - Branch: `globalarray/test/verify_financial_user_journey`
-- Base `origin/main`: `6c9edd969b3a694bccabaf6980b86531e2722490`
+- Base `origin/main`: `71f2a86ffbcf218d7fff517830b7aa41f0a97c95`
 - GBrain MCP: недоступен в этой Cursor-сессии (нет namespace/tools recall);
   продолжаем по Git/ADR/PR.
 - Чужой dirty tree `hack-rnd-autumn-2026` на
@@ -110,14 +110,14 @@ rebuild/merge кандидата.
 
 ### 1. Матрица и ранняя публикация
 
-Статус: **В работе** → после push: **На ревью**
+Статус: **На ревью**
 
 Результат: draft PR с матрицей, CSV source, env, dependency SHA, планом запуска.
 
-- [ ] plan/handoff
-- [ ] skeleton harness + scenario matrix
-- [ ] commit/push/draft PR
-- [ ] remote SHA verification
+- [x] plan/handoff
+- [x] skeleton harness + scenario matrix
+- [x] commit/push/draft PR #50
+- [x] remote SHA verification
 
 ### 2. Изолированное окружение
 
