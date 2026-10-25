@@ -1,5 +1,6 @@
 import { CanceledError } from "axios";
 
+import { getErrorDetailMessage } from "@/helpers/getErrorMessage";
 import { collectPages } from "@/helpers/pagination";
 import type { ForecastPeriod, IDashboardData, IForecast, IForecastSucceeded } from "@/interfaces";
 
@@ -45,7 +46,7 @@ const completeForecast = async ( companyId: string, forecastId: string, pollAfte
         }
 
         if (forecast.status === "failed") {
-            throw new Error(forecast.error.message || "Не удалось построить прогноз. Попробуйте ещё раз.");
+            throw new Error(getErrorDetailMessage(forecast.error));
         }
 
         if (![ "queued", "running" ].includes(forecast.status)) {

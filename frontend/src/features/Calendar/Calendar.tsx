@@ -90,22 +90,24 @@ const Calendar = () => {
 const PaymentExecution = ( { payment, onClose, onChanged }: { payment: IPayment; onClose: () => void; onChanged: () => void } ) => {
     const { company } = useCompany();
     const request = useRequest();
+    const [ cursor, setCursor ] = useState<string | undefined>();
+    const [ cursors, setCursors ] = useState<(string | undefined)[]>([]);
+    const transactions = useResource(useCallback(( signal: AbortSignal ) => ledgerService.listTransactions({ company_id: company.id, direction: payment.direction, limit: 20, cursor }, signal), [ company.id, payment.direction, cursor ]));
     const resource = useResource(useCallback(async ( signal: AbortSignal ) => {
-        const [ current, matches, transactions ] = await Promise.all([
+        const [ current, matches ] = await Promise.all([
             paymentsService.getPayment({ company_id: company.id, payment_id: payment.id }, signal),
             collectPages(( cursor ) => paymentsService.listPaymentMatches({ company_id: company.id, payment_id: payment.id, limit: 100, cursor }, signal)),
-            collectPages(( cursor ) => ledgerService.listTransactions({ company_id: company.id, direction: payment.direction, limit: 100, cursor }, signal)),
         ]);
 
-        return { current, matches, transactions };
-    }, [ company.id, payment.id, payment.direction ]));
+        return { current, matches };
+    }, [ company.id, payment.id ]));
 
 
     const match = async ( event: FormEvent<HTMLFormElement> ) => {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
         const result = await request.run(( signal, key ) => {
-            const transaction = resource.data?.transactions.find(( item ) => item.id === form.get("transaction"));
+            const transaction = transactions.data?.items.find(( item ) => item.id === form.get("transaction"));
             const amount = parseMoney(textField(form, "amount", "Сумма"));
 
             if (!transaction || !resource.data) { return invalid("Выберите фактическую операцию.", "transaction"); }
@@ -114,7 +116,7 @@ const PaymentExecution = ( { payment, onClose, onChanged }: { payment: IPayment;
             return paymentsService.matchPayment({ company_id: company.id, payment_id: payment.id, idempotency_key: key, data: { transaction_id: transaction.id, amount: { amount_minor: amount, currency: "RUB" }, payment_version: resource.data.current.version, transaction_version: transaction.version } }, signal);
         }, "Исполнение связано с операцией", formIdentity(form));
 
-        if (result.ok) { resource.reload(); onChanged(); }
+        if (result.ok) { resource.reload(); transactions.reload(); onChanged(); }
     };
 
 
@@ -123,11 +125,11 @@ const PaymentExecution = ( { payment, onClose, onChanged }: { payment: IPayment;
         const version = resource.data.current.version;
         const result = await request.run(( signal ) => paymentsService.removePaymentMatch({ company_id: company.id, payment_id: payment.id, match_id: id, payment_version: version }, signal), "Связь удалена, фактическая операция сохранена", id);
 
-        if (result.ok) { resource.reload(); onChanged(); }
+        if (result.ok) { resource.reload(); transactions.reload(); onChanged(); }
     };
 
 
-    return <Modal title="Исполнение платежа" busy={request.busy} onClose={onClose}><DataState loading={resource.loading} error={resource.error} onRetry={resource.reload}>{ resource.data && <div className={styles.stack}><Notice>Связь отмечает исполнение фактом и не проводит платёж. Осталось исполнить: { formatMoney(resource.data.current.remaining_amount.amount_minor) }.</Notice>{ resource.data.matches.map(( item ) => <div className={styles.item} key={item.id}><span>{ formatMoney(item.amount.amount_minor) } · операция { item.transaction_id } · { formatDate(item.created_at) }{ item.removed_at ? ` · связь снята ${formatDate(item.removed_at)}` : " · действующая связь" }</span>{ resource.data?.current.status !== "cancelled" && !item.removed_at && <ActionButton variant="secondary" loading={request.busy} onClick={() => unmatch(item.id)}>Убрать связь</ActionButton> }</div>) }{ resource.data.current.status === "cancelled" && <Notice>Платёж отменён. История связей сохранена; новые связи и unmatch запрещены.</Notice> }{ [ "planned", "partially_matched" ].includes(resource.data.current.status) && BigInt(resource.data.current.remaining_amount.amount_minor) > BigInt(0) && <ValidatedForm request={request} noValidate className={styles.form} onSubmit={match}><fieldset disabled={request.busy}><Select disabled={request.busy} name="transaction" label="Фактическая операция"><option value="">Выберите операцию</option>{ resource.data.transactions.map(( item ) => <option value={item.id} key={item.id}>{ formatDate(item.operation_date) } · { item.counterparty_name } · { formatMoney(item.amount.amount_minor) }</option>) }</Select><Field required data-maximum="200" name="amount" label="Исполненная сумма, ₽" inputMode="decimal" placeholder="0,00" defaultValue={moneyInput(resource.data.current.remaining_amount.amount_minor)} /></fieldset><FormError message={request.error} /><ActionButton type="submit" loading={request.busy} disabled={!resource.data.transactions.length}>Связать с операцией</ActionButton>{ !resource.data.transactions.length && <p className={styles.muted}>Сначала загрузите или добавьте фактическую операцию того же направления.</p> }</ValidatedForm> }</div> }</DataState></Modal>;
+    return <Modal title="Исполнение платежа" busy={request.busy} onClose={onClose}><DataState loading={resource.loading} error={resource.error} onRetry={resource.reload}>{ resource.data && <div className={styles.stack}><Notice>Связь отмечает исполнение фактом и не проводит платёж. Осталось исполнить: { formatMoney(resource.data.current.remaining_amount.amount_minor) }.</Notice>{ resource.data.matches.map(( item ) => <div className={styles.item} key={item.id}><span>{ formatMoney(item.amount.amount_minor) } · операция { item.transaction_id } · { formatDate(item.created_at) }{ item.removed_at ? ` · связь снята ${formatDate(item.removed_at)}` : " · действующая связь" }</span>{ resource.data?.current.status !== "cancelled" && !item.removed_at && <ActionButton variant="secondary" loading={request.busy} onClick={() => unmatch(item.id)}>Убрать связь</ActionButton> }</div>) }{ resource.data.current.status === "cancelled" && <Notice>Платёж отменён. История связей сохранена; новые связи и unmatch запрещены.</Notice> }{ [ "planned", "partially_matched" ].includes(resource.data.current.status) && BigInt(resource.data.current.remaining_amount.amount_minor) > BigInt(0) && <ValidatedForm request={request} noValidate className={styles.form} onSubmit={match}><fieldset disabled={request.busy}><DataState loading={transactions.loading} error={transactions.error} onRetry={transactions.reload}><Select key={cursor || "first"} disabled={request.busy} name="transaction" label="Фактическая операция"><option value="">Выберите операцию</option>{ transactions.data?.items.map(( item ) => <option value={item.id} key={item.id}>{ formatDate(item.operation_date) } · { item.counterparty_name } · { formatMoney(item.amount.amount_minor) }</option>) }</Select><div className={styles.row}><ActionButton variant="secondary" disabled={!cursors.length || request.busy} onClick={() => { setCursor(cursors.at(-1)); setCursors(( current ) => current.slice(0, -1)); }}>Предыдущие операции</ActionButton><ActionButton variant="secondary" disabled={!transactions.data?.next_cursor || request.busy} onClick={() => { setCursors(( current ) => [ ...current, cursor ]); setCursor(transactions.data?.next_cursor || undefined); }}>Следующие операции</ActionButton></div></DataState><Field required data-maximum="200" name="amount" label="Исполненная сумма, ₽" inputMode="decimal" placeholder="0,00" defaultValue={moneyInput(resource.data.current.remaining_amount.amount_minor)} /></fieldset><FormError message={request.error} /><ActionButton type="submit" loading={request.busy} disabled={transactions.loading || !transactions.data?.items.length}>Связать с операцией</ActionButton>{ !transactions.loading && !transactions.data?.items.length && <p className={styles.muted}>Сначала загрузите или добавьте фактическую операцию того же направления.</p> }</ValidatedForm> }</div> }</DataState></Modal>;
 };
 
 

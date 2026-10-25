@@ -108,3 +108,17 @@ test("dashboard stops polling on cancellation and propagates terminal failures",
     t.mock.method(forecastsService, "getForecast", async () => ({ ...forecast, status: "failed", result: null, error: { message: "ML недоступен" } }));
     await assert.rejects(dashboardService.getDashboardData(30, new AbortController().signal, company.id), /ML недоступен/);
 });
+
+
+test("dashboard refuses unsupported horizons before sending financial requests", async ( t ) => {
+    const { create } = setup(t);
+    await assert.rejects(dashboardService.getDashboardData(60, new AbortController().signal), /только прогноз на 30 дней/);
+    assert.equal(create.mock.callCount(), 0);
+});
+
+test("dashboard treats cancelled or unknown terminal jobs as unavailable rather than polling forever", async ( t ) => {
+    const { forecast, company } = setup(t);
+    const get = t.mock.method(forecastsService, "getForecast", async () => ({ ...forecast, status: "cancelled", result: null }));
+    await assert.rejects(dashboardService.getDashboardData(30, new AbortController().signal, company.id), /Расчёт остановлен/);
+    assert.equal(get.mock.callCount(), 1);
+});

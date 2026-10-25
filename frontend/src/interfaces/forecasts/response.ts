@@ -35,6 +35,9 @@ interface IForecastInput {
     balance_as_of: string;
     risk_definition: "below_zero_eod";
     model_context: IModelContext;
+    calendar_knowledge_mode?: "current" | "historical_as_of_certified" | "unavailable" | "synthetic_scenario" | null;
+    calendar_as_of_date?: string | null;
+    no_post_cutoff_movements?: boolean;
     history_assessment?: {
         rule_version: "csv_history_quality_v1";
         from_date: string;

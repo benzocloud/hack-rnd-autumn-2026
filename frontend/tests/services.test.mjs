@@ -191,13 +191,10 @@ test("mock: all endpoints, persisted mutations, auth, jobs, cancellation and no 
     await assert.rejects(pending, ( error ) => axios.isCancel(error));
     assert.equal((await get("/companies")).items.length, 2);
     await assert.rejects(get("/companies/does-not-exist"), ( error ) => error.response.status === 404);
-    for (const days of [ 30 ]) {
-        const dashboard = await services.dashboardService.getDashboardData(days, new AbortController().signal);
-
-        assert.equal(dashboard.company.id, company.id);
-        assert.equal(dashboard.forecast.input.horizon_days, days);
-        assert.equal(dashboard.forecast.result.daily_points.length, days);
-    }
+    const dashboard = await services.dashboardService.getDashboardData(30, new AbortController().signal);
+    assert.equal(dashboard.company.id, company.id);
+    assert.equal(dashboard.forecast.input.horizon_days, 30);
+    assert.equal(dashboard.forecast.result.daily_points.length, 30);
 
     const cachedDashboard = await services.dashboardService.getDashboardData(30, new AbortController().signal);
     const reusedDashboard = await services.dashboardService.getDashboardData(30, new AbortController().signal);

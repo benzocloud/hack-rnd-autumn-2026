@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { AxiosError } from "axios";
 import { parseMoney, moneyInput } from "../src/helpers/finance.ts";
-import getErrorMessage, { getErrorCode } from "../src/helpers/getErrorMessage.ts";
+import getErrorMessage, { getErrorCode, getErrorDetailMessage } from "../src/helpers/getErrorMessage.ts";
 
 const failure = (code) => new AxiosError("request failed", "ERR_BAD_RESPONSE", undefined, undefined, { data: { error: { code, message: "Server message" } }, status: 409 });
 
@@ -34,6 +34,7 @@ test("financial conflicts explain distinct recovery without pretending a success
     for (const [code, message] of Object.entries(cases)) {
         assert.equal(getErrorCode(failure(code)), code);
         assert.match(getErrorMessage(failure(code)), message);
+        assert.match(getErrorDetailMessage({ code, message: "generic job failure" }), message);
     }
     assert.equal(getErrorMessage(failure("FUTURE_CODE")), "Server message");
     assert.equal(getErrorCode(new Error("offline")), null);

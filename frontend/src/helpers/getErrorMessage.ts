@@ -29,26 +29,23 @@ const explanations: Record<string, string> = {
 };
 
 
+const getErrorDetailMessage = ( detail: unknown ): string => {
+    if (detail && typeof detail === "object") {
+        if ("code" in detail && typeof detail.code === "string" && explanations[detail.code]) { return explanations[detail.code]; }
+        if ("message" in detail && typeof detail.message === "string" && detail.message.trim()) { return detail.message.trim(); }
+    }
+    return DEFAULT_ERROR_MESSAGE;
+};
+
+
 const getErrorMessage = ( error: unknown ): string => {
     if (axios.isAxiosError(error)) {
-        const explanation = explanations[getErrorCode(error) || ""];
-        if (explanation) { return explanation; }
         const data: unknown = error.response?.data;
-
-        if (data && typeof data === "object") {
-            const detail = "error" in data ? data.error : data;
-
-            if (detail && typeof detail === "object" && "message" in detail && typeof detail.message === "string" && detail.message.trim()) {
-                return detail.message.trim();
-            }
-        }
-
-        return DEFAULT_ERROR_MESSAGE;
+        return getErrorDetailMessage(data && typeof data === "object" && "error" in data ? data.error : data);
     }
-
     return error instanceof Error && error.message.trim() ? error.message.trim() : DEFAULT_ERROR_MESSAGE;
 };
 
 
-export { DEFAULT_ERROR_MESSAGE, getErrorCode };
+export { DEFAULT_ERROR_MESSAGE, getErrorCode, getErrorDetailMessage };
 export default getErrorMessage;
