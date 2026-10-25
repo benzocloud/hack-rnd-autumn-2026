@@ -25,6 +25,14 @@ type accountOperations interface {
 	GetCurrentAccount(context.Context, string) (account.User, error)
 	AuthorizeCompany(context.Context, account.AuthorizeCompanyInput) (account.Authorization, error)
 	ListMemberships(context.Context, string, int, string) (account.MembershipPage, error)
+	ListMembers(context.Context, account.ListMembersInput) (account.MemberPage, error)
+	RemoveMember(context.Context, account.RemoveMemberInput) error
+	CreateInvitation(context.Context, account.CreateInvitationInput) (account.Invitation, error)
+	ListOutgoingInvitations(context.Context, account.ListOutgoingInvitationsInput) (account.InvitationPage, error)
+	ListIncomingInvitations(context.Context, account.ListIncomingInvitationsInput) (account.InvitationPage, error)
+	AcceptInvitation(context.Context, account.AcceptInvitationInput) (uuid.UUID, error)
+	DeclineInvitation(context.Context, account.DeclineInvitationInput) (account.Invitation, error)
+	RevokeInvitation(context.Context, account.RevokeInvitationInput) error
 }
 
 type server struct {

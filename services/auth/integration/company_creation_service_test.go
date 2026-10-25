@@ -17,6 +17,7 @@ import (
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/repository/challenge"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/repository/companycreation"
 	consentSQL "github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/repository/consent"
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/repository/invitation"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/repository/membership"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/repository/postgres"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/repository/securitycontext"
@@ -51,7 +52,7 @@ func newCreationAccounts(t *testing.T, cfg config.Config, pool *sqlx.DB, core cr
 	t.Helper()
 	service, err := account.New(func(ctx context.Context, work account.Work) error {
 		return postgres.WithTx(ctx, pool, cfg.QueryTimeout, func(ctx context.Context, tx *sqlx.Tx) error {
-			return work(ctx, user.NewRepository(tx, cfg.QueryTimeout), securitycontext.NewRepository(tx, cfg.QueryTimeout), challenge.NewRepository(tx, cfg.QueryTimeout), consentSQL.NewRepository(tx, cfg.QueryTimeout), membership.NewRepository(tx, cfg.QueryTimeout), companycreation.NewRepository(tx, cfg.QueryTimeout))
+			return work(ctx, user.NewRepository(tx, cfg.QueryTimeout), securitycontext.NewRepository(tx, cfg.QueryTimeout), challenge.NewRepository(tx, cfg.QueryTimeout), consentSQL.NewRepository(tx, cfg.QueryTimeout), membership.NewRepository(tx, cfg.QueryTimeout), companycreation.NewRepository(tx, cfg.QueryTimeout), invitation.NewRepository(tx, cfg.QueryTimeout))
 		})
 	}, account.Options{Core: core, CodeKey: cfg.CodeHMACKey(), CSRFKey: cfg.CSRFHMACKey(), Demo: cfg.DemoEmailVerification, DemoEmails: cfg.DemoTestEmails, Consent: consent.Document()})
 	if err != nil {

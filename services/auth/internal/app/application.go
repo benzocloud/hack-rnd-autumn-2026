@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"google.golang.org/grpc"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/repository/challenge"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/repository/companycreation"
 	consentSQL "github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/repository/consent"
+	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/repository/invitation"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/repository/membership"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/repository/postgres"
 	"github.com/benzocloud/hack-rnd-autumn-2026/services/auth/internal/repository/securitycontext"
@@ -35,6 +37,14 @@ type accountOperations interface {
 	GetCurrentAccount(context.Context, string) (account.User, error)
 	AuthorizeCompany(context.Context, account.AuthorizeCompanyInput) (account.Authorization, error)
 	ListMemberships(context.Context, string, int, string) (account.MembershipPage, error)
+	ListMembers(context.Context, account.ListMembersInput) (account.MemberPage, error)
+	RemoveMember(context.Context, account.RemoveMemberInput) error
+	CreateInvitation(context.Context, account.CreateInvitationInput) (account.Invitation, error)
+	ListOutgoingInvitations(context.Context, account.ListOutgoingInvitationsInput) (account.InvitationPage, error)
+	ListIncomingInvitations(context.Context, account.ListIncomingInvitationsInput) (account.InvitationPage, error)
+	AcceptInvitation(context.Context, account.AcceptInvitationInput) (uuid.UUID, error)
+	DeclineInvitation(context.Context, account.DeclineInvitationInput) (account.Invitation, error)
+	RevokeInvitation(context.Context, account.RevokeInvitationInput) error
 }
 
 type application struct {
@@ -75,7 +85,7 @@ func New(ctx context.Context, cfg config.Config) (*application, error) {
 
 	accounts, err := account.New(func(ctx context.Context, work account.Work) error {
 		err := postgres.WithTx(ctx, resources.db, cfg.QueryTimeout, func(ctx context.Context, tx *sqlx.Tx) error {
-			return work(ctx, user.NewRepository(tx, cfg.QueryTimeout), securitycontext.NewRepository(tx, cfg.QueryTimeout), challenge.NewRepository(tx, cfg.QueryTimeout), consentSQL.NewRepository(tx, cfg.QueryTimeout), membership.NewRepository(tx, cfg.QueryTimeout), companycreation.NewRepository(tx, cfg.QueryTimeout))
+			return work(ctx, user.NewRepository(tx, cfg.QueryTimeout), securitycontext.NewRepository(tx, cfg.QueryTimeout), challenge.NewRepository(tx, cfg.QueryTimeout), consentSQL.NewRepository(tx, cfg.QueryTimeout), membership.NewRepository(tx, cfg.QueryTimeout), companycreation.NewRepository(tx, cfg.QueryTimeout), invitation.NewRepository(tx, cfg.QueryTimeout))
 		})
 		if errors.Is(err, postgres.ErrUnavailable) {
 			return account.ErrUnavailable

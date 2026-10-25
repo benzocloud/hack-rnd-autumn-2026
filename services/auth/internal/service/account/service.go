@@ -14,18 +14,22 @@ import (
 )
 
 var (
-	ErrInvalidCursor      = errors.New("invalid cursor")
-	ErrValidation         = errors.New("auth validation failed")
-	ErrAuthRequired       = errors.New("auth required")
-	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrCSRFInvalid        = errors.New("invalid csrf")
-	ErrConsentRequired    = errors.New("consent required")
-	ErrConsentChanged     = errors.New("consent document changed")
-	ErrEmailUnverified    = errors.New("email unverified")
-	ErrCodeInvalid        = errors.New("code invalid or expired")
-	ErrForbidden          = errors.New("forbidden")
-	ErrNotFound           = domain.ErrNotFound
-	ErrUnavailable        = domain.ErrUnavailable
+	ErrInvalidCursor           = errors.New("invalid cursor")
+	ErrValidation              = errors.New("auth validation failed")
+	ErrAuthRequired            = errors.New("auth required")
+	ErrInvalidCredentials      = errors.New("invalid credentials")
+	ErrCSRFInvalid             = errors.New("invalid csrf")
+	ErrConsentRequired         = errors.New("consent required")
+	ErrConsentChanged          = errors.New("consent document changed")
+	ErrEmailUnverified         = errors.New("email unverified")
+	ErrCodeInvalid             = errors.New("code invalid or expired")
+	ErrForbidden               = errors.New("forbidden")
+	ErrNotFound                = domain.ErrNotFound
+	ErrUnavailable             = domain.ErrUnavailable
+	ErrVersionConflict         = errors.New("version conflict")
+	ErrInvitationNotAvailable  = errors.New("invitation not available")
+	ErrInvitationStateConflict = errors.New("invitation state conflict")
+	ErrMembershipRevoked       = errors.New("membership revoked")
 )
 
 type userStore interface {
@@ -63,12 +67,25 @@ type creationStore interface {
 
 type membershipStore interface {
 	InsertOwner(context.Context, uuid.UUID, uuid.UUID, time.Time) error
+	InsertFinancier(context.Context, uuid.UUID, uuid.UUID, time.Time) (bool, error)
+	DeleteFinancier(context.Context, uuid.UUID, uuid.UUID) (bool, error)
 	FindMembership(context.Context, uuid.UUID, uuid.UUID) (domain.Membership, error)
 	ListMemberships(context.Context, uuid.UUID, uuid.UUID, *time.Time, int) ([]domain.Membership, error)
+	ListCompanyMembers(context.Context, uuid.UUID, uuid.UUID, *time.Time, int) ([]domain.Member, error)
+	LockCompanyMemberships(context.Context, uuid.UUID) ([]domain.Membership, error)
+}
+
+type invitationStore interface {
+	Insert(context.Context, domain.Invitation) error
+	Find(context.Context, uuid.UUID, bool) (domain.Invitation, error)
+	FindCreateIdempotency(context.Context, uuid.UUID, uuid.UUID, string) (domain.Invitation, error)
+	ListOutgoing(context.Context, uuid.UUID, uuid.UUID, time.Time, *time.Time, int) ([]domain.Invitation, error)
+	ListIncoming(context.Context, string, uuid.UUID, time.Time, *time.Time, int) ([]domain.Invitation, error)
+	Save(context.Context, domain.Invitation, int64) error
 }
 
 // Work binds consumer-owned ports to one transaction in the composing application.
-type Work func(context.Context, userStore, contextStore, challengeStore, consentStore, membershipStore, creationStore) error
+type Work func(context.Context, userStore, contextStore, challengeStore, consentStore, membershipStore, creationStore, invitationStore) error
 
 type Options struct {
 	Core             creationCore
@@ -176,7 +193,7 @@ func validateOptions(work func(context.Context, Work) error, o Options) error {
 }
 func (s *service) GetPersonalDataConsent(ctx context.Context) (Document, error) {
 	var result Document
-	err := s.withinTx(ctx, func(ctx context.Context, _ userStore, _ contextStore, _ challengeStore, consents consentStore, _ membershipStore, _ creationStore) error {
+	err := s.withinTx(ctx, func(ctx context.Context, _ userStore, _ contextStore, _ challengeStore, consents consentStore, _ membershipStore, _ creationStore, _ invitationStore) error {
 		active, err := consents.GetActiveDocument(ctx, false)
 		if err != nil {
 			return err

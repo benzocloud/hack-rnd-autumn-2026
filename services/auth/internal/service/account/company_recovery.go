@@ -21,7 +21,7 @@ func (s *service) ReconcileOne(ctx context.Context) (bool, error) {
 		return false, ErrUnavailable
 	}
 	var command domain.CompanyCreation
-	err = s.withinTx(ctx, func(ctx context.Context, _ userStore, _ contextStore, _ challengeStore, _ consentStore, _ membershipStore, commands creationStore) error {
+	err = s.withinTx(ctx, func(ctx context.Context, _ userStore, _ contextStore, _ challengeStore, _ consentStore, _ membershipStore, commands creationStore, _ invitationStore) error {
 		var err error
 		command, err = commands.ClaimCreation(ctx, lease)
 		return err
@@ -66,7 +66,7 @@ func (s *service) ReconcileOne(ctx context.Context) (bool, error) {
 
 func (s *service) prepareRecovery(ctx context.Context, snapshot domain.CompanyCreation) (bool, error) {
 	terminal := false
-	err := s.withinTx(ctx, func(ctx context.Context, users userStore, _ contextStore, _ challengeStore, _ consentStore, _ membershipStore, commands creationStore) error {
+	err := s.withinTx(ctx, func(ctx context.Context, users userStore, _ contextStore, _ challengeStore, _ consentStore, _ membershipStore, commands creationStore, _ invitationStore) error {
 		command, user, err := lockCreation(ctx, users, commands, snapshot.ID)
 		if err != nil {
 			return err
@@ -94,7 +94,7 @@ func (s *service) retryCreation(ctx context.Context, command domain.CompanyCreat
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
-	err := s.withinTx(ctx, func(ctx context.Context, _ userStore, _ contextStore, _ challengeStore, _ consentStore, _ membershipStore, commands creationStore) error {
+	err := s.withinTx(ctx, func(ctx context.Context, _ userStore, _ contextStore, _ challengeStore, _ consentStore, _ membershipStore, commands creationStore, _ invitationStore) error {
 		return commands.RetryCreation(ctx, command.ID, command.LeaseToken, creationRetryDelay(command.Attempts))
 	})
 	if errors.Is(err, domain.ErrLeaseLost) {
