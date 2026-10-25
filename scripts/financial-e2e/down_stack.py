@@ -25,7 +25,9 @@ def main() -> int:
         state_path = ARTIFACTS / f"stack-{args.suffix}" / "state.json"
     if state_path is None:
         # newest state.json under artifacts/stack-*
-        candidates = sorted(ARTIFACTS.glob("stack-*/state.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+        candidates = sorted(
+            ARTIFACTS.glob("stack-*/state.json"), key=lambda p: p.stat().st_mtime, reverse=True
+        )
         if not candidates:
             print("no stack state found", file=sys.stderr)
             return 2
@@ -54,10 +56,6 @@ def main() -> int:
         )
         for pid in result.stdout.split():
             try:
-                Path(f"/proc/{pid}")  # noqa: not on mac
-            except Exception:
-                pass
-            try:
                 import os
 
                 os.kill(int(pid), signal.SIGTERM)
@@ -69,7 +67,13 @@ def main() -> int:
 
     if container:
         inspect = subprocess.run(
-            ["docker", "inspect", "-f", "{{index .Config.Labels \"saldo.financial-e2e\"}}", container],
+            [
+                "docker",
+                "inspect",
+                "-f",
+                '{{index .Config.Labels "saldo.financial-e2e"}}',
+                container,
+            ],
             text=True,
             capture_output=True,
             check=False,

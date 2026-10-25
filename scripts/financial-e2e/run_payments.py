@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
 from lib.http_client import ApiClient  # noqa: E402
-from lib.journey import Journey, load_stack_env, next_demo_email, FIXTURES, poll  # noqa: E402
+from lib.journey import FIXTURES, Journey, load_stack_env, next_demo_email, poll  # noqa: E402
 
 ARTIFACTS = ROOT / "artifacts"
 CUTOFF = "2026-09-29"
@@ -28,11 +28,15 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def record(results: list[dict[str, Any]], scenario_id: str, status: str, detail: str = "", **evidence: Any) -> None:
+def record(
+    results: list[dict[str, Any]], scenario_id: str, status: str, detail: str = "", **evidence: Any
+) -> None:
     evidence.pop("status", None)
     evidence.pop("detail", None)
     evidence.pop("id", None)
-    results.append({"id": scenario_id, "status": status, "detail": detail or None, "evidence": evidence})
+    results.append(
+        {"id": scenario_id, "status": status, "detail": detail or None, "evidence": evidence}
+    )
     print(f"{scenario_id:8} {status} {detail}")
 
 
@@ -54,15 +58,19 @@ def create_forecast(client: ApiClient, company_id: str, cutoff: str = CUTOFF) ->
         client,
         f"/api/v1/companies/{company_id}/forecasts/{fid}",
         timeout_s=120,
-        is_done=lambda b: isinstance(b, dict)
-        and b.get("status") in {"succeeded", "failed", "rejected", "cancelled"},
+        is_done=lambda b: (
+            isinstance(b, dict)
+            and b.get("status") in {"succeeded", "failed", "rejected", "cancelled"}
+        ),
     )
     assert isinstance(final, dict)
     return final
 
 
 def get_payment(client: ApiClient, company_id: str, payment_id: str) -> dict[str, Any]:
-    body = client.request("GET", f"/api/v1/companies/{company_id}/payments/{payment_id}", expected=200).body
+    body = client.request(
+        "GET", f"/api/v1/companies/{company_id}/payments/{payment_id}", expected=200
+    ).body
     assert isinstance(body, dict)
     return body
 
@@ -99,10 +107,14 @@ def main() -> int:
     if baseline.get("status") != "succeeded":
         record(results, "BOOT-forecast", "fail", "baseline forecast required", body=baseline)
         ARTIFACTS.mkdir(parents=True, exist_ok=True)
-        (ARTIFACTS / "last-payments.json").write_text(json.dumps(run, ensure_ascii=False, indent=2) + "\n")
+        (ARTIFACTS / "last-payments.json").write_text(
+            json.dumps(run, ensure_ascii=False, indent=2) + "\n"
+        )
         return 1
     baseline_points = (baseline.get("result") or {}).get("daily_points") or []
-    record(results, "BOOT-forecast", "pass", "ordinary CSV forecast ok", points=len(baseline_points))
+    record(
+        results, "BOOT-forecast", "pass", "ordinary CSV forecast ok", points=len(baseline_points)
+    )
 
     # --- PAY-01 create + forecast interaction ---
     try:
@@ -147,9 +159,18 @@ def main() -> int:
         elif after.get("status") == "succeeded":
             # Unexpected on ordinary CSV with wall clock far from cutoff — still accept if points reflect payment.
             points = (after.get("result") or {}).get("daily_points") or []
-            record(results, "PAY-01", "pass", "forecast succeeded with payment", points=len(points), payment_id=pay_id)
+            record(
+                results,
+                "PAY-01",
+                "pass",
+                "forecast succeeded with payment",
+                points=len(points),
+                payment_id=pay_id,
+            )
         else:
-            record(results, "PAY-01", "fail", "unexpected forecast outcome after payment", body=after)
+            record(
+                results, "PAY-01", "fail", "unexpected forecast outcome after payment", body=after
+            )
     except Exception as exc:  # noqa: BLE001
         record(results, "PAY-01", "fail", str(exc))
         pay_id = None
@@ -223,7 +244,13 @@ def main() -> int:
             found = any(item.get("id") == pay_id for item in items)
             fc = create_forecast(client, company_id)
             if not found:
-                record(results, "PAY-04", "fail", "cancelled payment missing from history", items_len=len(items))
+                record(
+                    results,
+                    "PAY-04",
+                    "fail",
+                    "cancelled payment missing from history",
+                    items_len=len(items),
+                )
             elif fc.get("_http_status") == 422:
                 err = ((fc.get("_body") or {}).get("error") or {}).get("code")
                 record(
@@ -303,11 +330,17 @@ def main() -> int:
             refreshed = get_payment(client, company_id, match_pay["id"])
             rem = refreshed["remaining_amount"]["amount_minor"]
             st = refreshed["status"]
-            if rem != "2000000" or st not in {"partially_matched", "planned"}:
+            if rem != "2000000" or st != "partially_matched":
                 # status should be partially_matched
-                if rem != "2000000":
-                    record(results, "PAY-03", "fail", "remaining after partial mismatch", remaining=rem, payment_status=st)
-                    raise RuntimeError("partial remaining")
+                record(
+                    results,
+                    "PAY-03",
+                    "fail",
+                    "remaining after partial mismatch",
+                    remaining=rem,
+                    payment_status=st,
+                )
+                raise RuntimeError("partial remaining")
             client.refresh_csrf()
             client.request(
                 "DELETE",
@@ -318,7 +351,13 @@ def main() -> int:
             )
             after_unmatch = get_payment(client, company_id, match_pay["id"])
             if after_unmatch["remaining_amount"]["amount_minor"] != "3000000":
-                record(results, "PAY-03", "fail", "unmatch did not restore remaining", body=after_unmatch)
+                record(
+                    results,
+                    "PAY-03",
+                    "fail",
+                    "unmatch did not restore remaining",
+                    body=after_unmatch,
+                )
             else:
                 # Re-partial
                 client.refresh_csrf()
@@ -403,8 +442,14 @@ def main() -> int:
         record(results, "PAY-05", "fail", str(exc))
 
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
-    (ARTIFACTS / "last-payments.json").write_text(json.dumps(run, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps({"summary": {r["id"]: r["status"] for r in results}}, ensure_ascii=False, indent=2))
+    (ARTIFACTS / "last-payments.json").write_text(
+        json.dumps(run, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    print(
+        json.dumps(
+            {"summary": {r["id"]: r["status"] for r in results}}, ensure_ascii=False, indent=2
+        )
+    )
 
     hard_fail = any(r["status"] == "fail" for r in results)
     return 1 if hard_fail else 0

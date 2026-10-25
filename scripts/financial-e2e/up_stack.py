@@ -35,11 +35,19 @@ def log(msg: str) -> None:
     print(msg, flush=True)
 
 
-def run(cmd: list[str], *, cwd: Path | None = None, env: dict[str, str] | None = None, check: bool = True) -> subprocess.CompletedProcess[str]:
+def run(
+    cmd: list[str],
+    *,
+    cwd: Path | None = None,
+    env: dict[str, str] | None = None,
+    check: bool = True,
+) -> subprocess.CompletedProcess[str]:
     merged = os.environ.copy()
     if env:
         merged.update(env)
-    result = subprocess.run(cmd, cwd=str(cwd) if cwd else None, env=merged, text=True, capture_output=True)
+    result = subprocess.run(
+        cmd, cwd=str(cwd) if cwd else None, env=merged, text=True, capture_output=True
+    )
     if check and result.returncode != 0:
         raise RuntimeError(
             f"command failed ({result.returncode}): {' '.join(cmd)}\n"
@@ -131,9 +139,13 @@ def docker_postgres(name: str) -> tuple[str, str]:
         time.sleep(0.5)
     else:
         raise TimeoutError("postgres not ready")
-    port = run(
-        ["docker", "port", name, "5432"],
-    ).stdout.strip().rsplit(":", 1)[-1]
+    port = (
+        run(
+            ["docker", "port", name, "5432"],
+        )
+        .stdout.strip()
+        .rsplit(":", 1)[-1]
+    )
     log(f"postgres {cid[:12]} on 127.0.0.1:{port}")
     return name, port
 
@@ -176,9 +188,15 @@ def write_state(path: Path, payload: dict) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--keep", action="store_true", help="do not tear down on exit (daemonize children)")
+    parser.add_argument(
+        "--keep", action="store_true", help="do not tear down on exit (daemonize children)"
+    )
     parser.add_argument("--suffix", default=None, help="stable project suffix; default random")
-    parser.add_argument("--skip-ml", action="store_true", help="start without ML (forecast scenarios will fail explicitly)")
+    parser.add_argument(
+        "--skip-ml",
+        action="store_true",
+        help="start without ML (forecast scenarios will fail explicitly)",
+    )
     parser.add_argument(
         "--repo-root",
         type=Path,
@@ -226,7 +244,13 @@ def main() -> int:
         if container:
             # Only remove if marker label matches.
             inspect = run(
-                ["docker", "inspect", "-f", "{{index .Config.Labels \"saldo.financial-e2e\"}}", container],
+                [
+                    "docker",
+                    "inspect",
+                    "-f",
+                    '{{index .Config.Labels "saldo.financial-e2e"}}',
+                    container,
+                ],
                 check=False,
             )
             if inspect.stdout.strip() == container:
@@ -302,7 +326,13 @@ def main() -> int:
         demo_emails = [f"owner-{suffix}-{i:02d}@financial-e2e.test" for i in range(1, 21)]
         demo_email = demo_emails[0]
 
-        def start(name: str, binary: Path, cwd: Path, env: dict[str, str], ready: tuple[str, int] | None = None) -> None:
+        def start(
+            name: str,
+            binary: Path,
+            cwd: Path,
+            env: dict[str, str],
+            ready: tuple[str, int] | None = None,
+        ) -> None:
             log_path = logs / f"{name}.log"
             handle = open(log_path, "w", encoding="utf-8")  # noqa: SIM115
             merged = os.environ.copy()
@@ -357,8 +387,11 @@ def main() -> int:
             handle = open(log_path, "w", encoding="utf-8")  # noqa: SIM115
             ml_env = os.environ.copy()
             gen = ARTIFACTS / "ml-gen"
-            ml_env["PYTHONPATH"] = str(gen) + os.pathsep + str(REPO / "services" / "ml") + (
-                os.pathsep + ml_env["PYTHONPATH"] if ml_env.get("PYTHONPATH") else ""
+            ml_env["PYTHONPATH"] = (
+                str(gen)
+                + os.pathsep
+                + str(REPO / "services" / "ml")
+                + (os.pathsep + ml_env["PYTHONPATH"] if ml_env.get("PYTHONPATH") else "")
             )
             if not (gen / "ml").exists():
                 raise RuntimeError(
@@ -411,7 +444,13 @@ def main() -> int:
             core_env["CORE_ML_ADDRESS"] = f"127.0.0.1:{ml_grpc}"
             core_env["CORE_ML_SERVER_NAME"] = "saldo-ml"
 
-        start("core", core_bins["core"], REPO / "services" / "core", core_env, ("127.0.0.1", core_grpc))
+        start(
+            "core",
+            core_bins["core"],
+            REPO / "services" / "core",
+            core_env,
+            ("127.0.0.1", core_grpc),
+        )
 
         auth_env = {
             "AUTH_ENV": "local",
@@ -431,7 +470,13 @@ def main() -> int:
             "AUTH_DEMO_EMAIL_VERIFICATION": "true",
             "AUTH_DEMO_TEST_EMAILS": ",".join(demo_emails),
         }
-        start("auth", auth_bins["auth"], REPO / "services" / "auth", auth_env, ("127.0.0.1", auth_http))
+        start(
+            "auth",
+            auth_bins["auth"],
+            REPO / "services" / "auth",
+            auth_env,
+            ("127.0.0.1", auth_http),
+        )
 
         api_env = {
             "API_ADDRESS": f"127.0.0.1:{api_port}",
@@ -495,7 +540,17 @@ def main() -> int:
             ),
             encoding="utf-8",
         )
-        log(json.dumps({"ok": True, "state": str(state_path), "api_origin": origin, "demo_email": demo_email}, ensure_ascii=False))
+        log(
+            json.dumps(
+                {
+                    "ok": True,
+                    "state": str(state_path),
+                    "api_origin": origin,
+                    "demo_email": demo_email,
+                },
+                ensure_ascii=False,
+            )
+        )
         log(f"source env: . {export_path}")
 
         if args.keep:

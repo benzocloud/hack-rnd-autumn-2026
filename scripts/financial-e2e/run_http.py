@@ -9,6 +9,7 @@ the run unless --allow-skip-mandatory is set (never for CI greenwashing).
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import secrets
 import sys
@@ -211,7 +212,13 @@ def main() -> int:
         run["results"] = [item.as_dict() for item in results.values()]
         write_json(ARTIFACTS / "last-run.json", run)
         print(json.dumps(run, ensure_ascii=False, indent=2))
-        return 0 if all(not r.status.startswith("blocked") and r.status != "fail" for r in results.values()) else 2
+        return (
+            0
+            if all(
+                not r.status.startswith("blocked") and r.status != "fail" for r in results.values()
+            )
+            else 2
+        )
 
     unique = uuid.uuid4().hex[:12]
     email = args.email
@@ -287,7 +294,9 @@ def main() -> int:
                 )
                 # Verify must not silently establish a financial session as login.
                 # /auth/me is not implemented on this build (404); probe a financial list.
-                companies = client.request("GET", "/api/v1/companies", expected={200, 401, 403, 404})
+                companies = client.request(
+                    "GET", "/api/v1/companies", expected={200, 401, 403, 404}
+                )
                 auto_login = companies.status == 200 and isinstance(companies.body, dict)
                 if auto_login:
                     s.fail("verify-email appeared to auto-login", companies=companies.body)
@@ -316,9 +325,9 @@ def main() -> int:
             # /auth/me may be absent on some builds; accept session payload or /auth/me.
             me = client.request("GET", "/api/v1/auth/me", expected={200, 404})
             user_ok = False
-            if me.status == 200 and isinstance(me.body, dict) and me.body.get("user"):
-                user_ok = True
-            elif isinstance(session, dict) and (session.get("user") or session.get("account")):
+            if (me.status == 200 and isinstance(me.body, dict) and me.body.get("user")) or (
+                isinstance(session, dict) and (session.get("user") or session.get("account"))
+            ):
                 user_ok = True
             if not user_ok:
                 s.fail("login_without_user", session=session, me_status=me.status, me=me.body)
@@ -362,7 +371,11 @@ def main() -> int:
             s.blocked(f"company_create:{exc}")
 
     # Remaining P0 import/forecast steps need company + fixture.
-    if company_id and args.fixture.is_file() and any(wanted(x) for x in ("P0-05", "P0-06", "P0-07", "P0-08", "P0-09", "P0-10")):
+    if (
+        company_id
+        and args.fixture.is_file()
+        and any(wanted(x) for x in ("P0-05", "P0-06", "P0-07", "P0-08", "P0-09", "P0-10"))
+    ):
         # Upload is multipart; keep implementation minimal and explicit.
         csv_bytes = args.fixture.read_bytes()
         account = client.request(
@@ -432,10 +445,17 @@ def main() -> int:
                     f"/api/v1/companies/{company_id}/imports/{import_id}",
                     timeout_s=args.poll_timeout,
                     interval_s=args.poll_interval,
-                    is_done=lambda body: isinstance(body, dict)
-                    and body.get("status") in {"ready", "failed", "rejected", "preview_ready", "awaiting_ack"},
+                    is_done=lambda body: (
+                        isinstance(body, dict)
+                        and body.get("status")
+                        in {"ready", "failed", "rejected", "preview_ready", "awaiting_ack"}
+                    ),
                 )
-                s.pass_("preview_terminal", status=preview.get("status"), can_commit=preview.get("can_commit"))
+                s.pass_(
+                    "preview_terminal",
+                    status=preview.get("status"),
+                    can_commit=preview.get("can_commit"),
+                )
                 run["preview"] = {
                     "status": preview.get("status"),
                     "can_commit": preview.get("can_commit"),
@@ -454,7 +474,9 @@ def main() -> int:
                     expected=200,
                 ).body
                 assert isinstance(preview, dict)
-                preview_block = preview.get("preview") if isinstance(preview.get("preview"), dict) else preview
+                preview_block = (
+                    preview.get("preview") if isinstance(preview.get("preview"), dict) else preview
+                )
                 commit_body = {
                     "version": str(preview.get("version")),
                     "expected_data_version": str(
@@ -473,7 +495,9 @@ def main() -> int:
                     json_body=commit_body,
                     expected={200, 201},
                 ).body
-                s.pass_("committed", body_keys=sorted(committed) if isinstance(committed, dict) else [])
+                s.pass_(
+                    "committed", body_keys=sorted(committed) if isinstance(committed, dict) else []
+                )
             except Exception as exc:  # noqa: BLE001
                 s.fail(str(exc))
 
@@ -495,7 +519,11 @@ def main() -> int:
                     items = txs.get("items") or txs.get("transactions")
                     if isinstance(items, list):
                         count = len(items)
-                s.pass_("ledger_readable", transaction_page_count=count, account_keys=sorted(account) if isinstance(account, dict) else [])
+                s.pass_(
+                    "ledger_readable",
+                    transaction_page_count=count,
+                    account_keys=sorted(account) if isinstance(account, dict) else [],
+                )
             except Exception as exc:  # noqa: BLE001
                 s.fail(str(exc))
 
@@ -505,10 +533,10 @@ def main() -> int:
                 # cutoff_date must be explicit; use fixture window cutoff from manifest when present.
                 cutoff = "2026-09-29"
                 if args.manifest.is_file():
-                    try:
-                        cutoff = json.loads(args.manifest.read_text(encoding="utf-8"))["ordinary_window"]["cutoff"]
-                    except (KeyError, json.JSONDecodeError, TypeError):
-                        pass
+                    with contextlib.suppress(KeyError, json.JSONDecodeError, TypeError):
+                        cutoff = json.loads(args.manifest.read_text(encoding="utf-8"))[
+                            "ordinary_window"
+                        ]["cutoff"]
                 client.refresh_csrf()
                 created = client.request(
                     "POST",
@@ -598,10 +626,15 @@ def main() -> int:
 
     failed = False
     for item in results.values():
-        if item.status == "fail" or item.status.startswith("blocked:"):
-            if item.scenario_id in MANDATORY or (selected and item.scenario_id in selected):
-                failed = True
-        if item.status == "skip" and item.scenario_id in MANDATORY and not args.allow_skip_mandatory:
+        if (item.status == "fail" or item.status.startswith("blocked:")) and (
+            item.scenario_id in MANDATORY or (selected and item.scenario_id in selected)
+        ):
+            failed = True
+        if (
+            item.status == "skip"
+            and item.scenario_id in MANDATORY
+            and not args.allow_skip_mandatory
+        ):
             failed = True
     return 1 if failed else 0
 

@@ -30,7 +30,9 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def record(results: list[dict[str, Any]], scenario_id: str, status: str, detail: str = "", **evidence: Any) -> None:
+def record(
+    results: list[dict[str, Any]], scenario_id: str, status: str, detail: str = "", **evidence: Any
+) -> None:
     # Keep evidence keys out of reserved names used by the result row.
     evidence.pop("status", None)
     evidence.pop("detail", None)
@@ -42,7 +44,9 @@ def record(results: list[dict[str, Any]], scenario_id: str, status: str, detail:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--api-origin", default=__import__("os").environ.get("SALDO_E2E_API_ORIGIN", ""))
+    parser.add_argument(
+        "--api-origin", default=__import__("os").environ.get("SALDO_E2E_API_ORIGIN", "")
+    )
     parser.add_argument("--ca-file", default=__import__("os").environ.get("SALDO_E2E_CA_FILE", ""))
     parser.add_argument("--fixture", type=Path, default=FIXTURES / "ordinary_90d_c001.csv")
     parser.add_argument("--short", type=Path, default=FIXTURES / "short_history.csv")
@@ -56,7 +60,11 @@ def main() -> int:
     client = ApiClient(origin=args.api_origin, ca_file=args.ca_file or state.get("ca_file"))
     email = next_demo_email(state)
     results: list[dict[str, Any]] = []
-    run: dict[str, Any] = {"ts": utc_now(), "email_local": email.split("@", 1)[0], "results": results}
+    run: dict[str, Any] = {
+        "ts": utc_now(),
+        "email_local": email.split("@", 1)[0],
+        "results": results,
+    }
 
     journey = Journey.register_login(client, email)
     company_id = journey.create_company()
@@ -67,9 +75,17 @@ def main() -> int:
     journey.upload_csv(args.fixture, idempotency_key=first_key)
     preview = journey.wait_preview()
     if preview.get("status") != "preview_ready":
-        record(results, "BOOT-import", "fail", f"preview status {preview.get('status')}", preview=preview)
+        record(
+            results,
+            "BOOT-import",
+            "fail",
+            f"preview status {preview.get('status')}",
+            preview=preview,
+        )
         ARTIFACTS.mkdir(parents=True, exist_ok=True)
-        (ARTIFACTS / "last-regression.json").write_text(json.dumps(run, ensure_ascii=False, indent=2) + "\n")
+        (ARTIFACTS / "last-regression.json").write_text(
+            json.dumps(run, ensure_ascii=False, indent=2) + "\n"
+        )
         return 1
     committed = journey.commit_import(preview)
     baseline_count = journey.transaction_count()
@@ -96,15 +112,44 @@ def main() -> int:
             (isinstance(already, int) and already > 0) or new_tx == 0
         ):
             # Commit should not double facts when all already present.
-            if preview_block.get("can_commit") is False and (preview_block.get("blocking_issue_count") or 0) > 0:
-                record(results, "R-01", "pass", "re-upload preview without new facts / blocked appropriately", already_present_count=already, new_transaction_count=new_tx)
+            if (
+                preview_block.get("can_commit") is False
+                and (preview_block.get("blocking_issue_count") or 0) > 0
+            ):
+                record(
+                    results,
+                    "R-01",
+                    "pass",
+                    "re-upload preview without new facts / blocked appropriately",
+                    already_present_count=already,
+                    new_transaction_count=new_tx,
+                )
             else:
                 journey.commit_import(preview2)
                 after = journey.transaction_count()
-                if after == baseline_count or (isinstance(already, int) and already > 0 and new_tx == 0):
-                    record(results, "R-01", "pass", "no fact doubling", before=baseline_count, after=after, already_present_count=already)
+                if after == baseline_count or (
+                    isinstance(already, int) and already > 0 and new_tx == 0
+                ):
+                    record(
+                        results,
+                        "R-01",
+                        "pass",
+                        "no fact doubling",
+                        before=baseline_count,
+                        after=after,
+                        already_present_count=already,
+                    )
                 else:
-                    record(results, "R-01", "fail", "transaction count grew after identical re-import", before=baseline_count, after=after, already_present_count=already, new_transaction_count=new_tx)
+                    record(
+                        results,
+                        "R-01",
+                        "fail",
+                        "transaction count grew after identical re-import",
+                        before=baseline_count,
+                        after=after,
+                        already_present_count=already,
+                        new_transaction_count=new_tx,
+                    )
         else:
             record(results, "R-01", "fail", "unexpected re-upload preview", preview=preview2)
         baseline_count = journey.transaction_count() or baseline_count
@@ -115,7 +160,14 @@ def main() -> int:
     try:
         again = journey.upload_csv(args.fixture, idempotency_key=first_key)
         # Same key+same body should reuse; exact id may match first import or return equivalent.
-        record(results, "R-02", "pass", "replay accepted without new enqueue failure", replay_id=again.get("id"), original_id=committed.get("id"))
+        record(
+            results,
+            "R-02",
+            "pass",
+            "replay accepted without new enqueue failure",
+            replay_id=again.get("id"),
+            original_id=committed.get("id"),
+        )
     except Exception as exc:  # noqa: BLE001
         # Conflict on different body is N-02; same body should not fail.
         record(results, "R-02", "fail", str(exc))
@@ -124,7 +176,13 @@ def main() -> int:
     try:
         old = journey.create_forecast()
         if old.get("status") != "succeeded":
-            record(results, "R-08", "fail", "baseline forecast not succeeded", forecast_status=old.get("status"))
+            record(
+                results,
+                "R-08",
+                "fail",
+                "baseline forecast not succeeded",
+                forecast_status=old.get("status"),
+            )
         else:
             old_id = journey.forecast_id
             account = journey.account()
@@ -187,7 +245,13 @@ def main() -> int:
         if source_kind != "manual":
             record(results, "R-03", "fail", "manual provenance missing", body=body)
         elif system not in {None, "dataset_v1"} and mode == "manual":
-            record(results, "R-03", "fail", "external namespace replaced by manual", transaction_source=source2)
+            record(
+                results,
+                "R-03",
+                "fail",
+                "external namespace replaced by manual",
+                transaction_source=source2,
+            )
         else:
             # Prefer external binding preserved.
             ok_ns = True
@@ -196,7 +260,14 @@ def main() -> int:
             if not ok_ns:
                 record(results, "R-03", "fail", "namespace changed", before=source, after=source2)
             else:
-                record(results, "R-03", "pass", "manual allowed; provenance manual; namespace kept", transaction_source=source2, manual_id=body.get("id"))
+                record(
+                    results,
+                    "R-03",
+                    "pass",
+                    "manual allowed; provenance manual; namespace kept",
+                    transaction_source=source2,
+                    manual_id=body.get("id"),
+                )
         manual_id = body.get("id")
         run["manual_id"] = manual_id
         baseline_count = journey.transaction_count() or baseline_count
@@ -222,13 +293,32 @@ def main() -> int:
             body = replay.body
             assert isinstance(body, dict)
             if body.get("id") == manual_id:
-                record(results, "R-04", "pass", "manual replay returns same id", manual_id=manual_id)
+                record(
+                    results, "R-04", "pass", "manual replay returns same id", manual_id=manual_id
+                )
             else:
                 after = journey.transaction_count()
                 if after == baseline_count:
-                    record(results, "R-04", "pass", "manual replay did not increase count", before=baseline_count, after=after, replay_id=body.get("id"))
+                    record(
+                        results,
+                        "R-04",
+                        "pass",
+                        "manual replay did not increase count",
+                        before=baseline_count,
+                        after=after,
+                        replay_id=body.get("id"),
+                    )
                 else:
-                    record(results, "R-04", "fail", "manual replay created another fact", before=baseline_count, after=after, replay_id=body.get("id"), original=manual_id)
+                    record(
+                        results,
+                        "R-04",
+                        "fail",
+                        "manual replay created another fact",
+                        before=baseline_count,
+                        after=after,
+                        replay_id=body.get("id"),
+                        original=manual_id,
+                    )
     except Exception as exc:  # noqa: BLE001
         record(results, "R-04", "fail", str(exc))
 
@@ -258,7 +348,11 @@ def main() -> int:
                 counterparty_inn=imported.get("counterparty_inn") or "",
                 expected={409, 422},
             )
-            code = (dup.body or {}).get("error", {}).get("code") if isinstance(dup.body, dict) else None
+            code = (
+                (dup.body or {}).get("error", {}).get("code")
+                if isinstance(dup.body, dict)
+                else None
+            )
             if dup.status == 409 and code in {
                 "TRANSACTION_DUPLICATE_SUSPECTED",
                 "FACTUAL_SOURCE_CONFLICT",
@@ -266,9 +360,18 @@ def main() -> int:
             }:
                 record(results, "R-05", "pass", "exact imported duplicate rejected", code=code)
             elif dup.status == 409:
-                record(results, "R-05", "pass", "duplicate rejected with 409", code=code, body=dup.body)
+                record(
+                    results, "R-05", "pass", "duplicate rejected with 409", code=code, body=dup.body
+                )
             else:
-                record(results, "R-05", "fail", "expected 409 duplicate", http_status=dup.status, body=dup.body)
+                record(
+                    results,
+                    "R-05",
+                    "fail",
+                    "expected 409 duplicate",
+                    http_status=dup.status,
+                    body=dup.body,
+                )
     except Exception as exc:  # noqa: BLE001
         # create_manual with expected set raises on unexpected; catch AssertionError from request
         msg = str(exc)
@@ -284,11 +387,11 @@ def main() -> int:
         # Corrupt adapter field by rebuilding with wrong adapter.
         boundary = f"----saldo{uuid.uuid4().hex}"
         bad = (
-            f"--{boundary}\r\nContent-Disposition: form-data; name=\"adapter\"\r\n\r\nbogus\r\n"
-            f"--{boundary}\r\nContent-Disposition: form-data; name=\"source_company_id\"\r\n\r\nC001\r\n"
-            f"--{boundary}\r\nContent-Disposition: form-data; name=\"account_id\"\r\n\r\n{journey.account_id}\r\n"
-            f"--{boundary}\r\nContent-Disposition: form-data; name=\"currency\"\r\n\r\nRUB\r\n"
-            f"--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"bad.csv\"\r\nContent-Type: text/csv\r\n\r\nx\r\n"
+            f'--{boundary}\r\nContent-Disposition: form-data; name="adapter"\r\n\r\nbogus\r\n'
+            f'--{boundary}\r\nContent-Disposition: form-data; name="source_company_id"\r\n\r\nC001\r\n'
+            f'--{boundary}\r\nContent-Disposition: form-data; name="account_id"\r\n\r\n{journey.account_id}\r\n'
+            f'--{boundary}\r\nContent-Disposition: form-data; name="currency"\r\n\r\nRUB\r\n'
+            f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="bad.csv"\r\nContent-Type: text/csv\r\n\r\nx\r\n'
             f"--{boundary}--\r\n"
         ).encode()
         client.refresh_csrf()
@@ -310,7 +413,9 @@ def main() -> int:
         key = client.new_idempotency_key("dupbody")
         journey.upload_csv(args.fixture, idempotency_key=key)
         # Different bytes under same key.
-        body, content_type = multipart_import(journey.account_id or "", args.short.read_bytes(), "short.csv")
+        body, content_type = multipart_import(
+            journey.account_id or "", args.short.read_bytes(), "short.csv"
+        )
         client.refresh_csrf()
         conflict = client.request(
             "POST",
@@ -321,7 +426,13 @@ def main() -> int:
             idempotency_key=key,
             expected={409, 422},
         )
-        record(results, "N-02", "pass", "duplicate key different body rejected", http_status=conflict.status)
+        record(
+            results,
+            "N-02",
+            "pass",
+            "duplicate key different body rejected",
+            http_status=conflict.status,
+        )
     except Exception as exc:  # noqa: BLE001
         record(results, "N-02", "fail", str(exc))
 
@@ -329,7 +440,9 @@ def main() -> int:
     try:
         # Fresh company for short history isolation.
         email2 = next_demo_email(state)
-        j2 = Journey.register_login(ApiClient(origin=args.api_origin, ca_file=args.ca_file or state.get("ca_file")), email2)
+        j2 = Journey.register_login(
+            ApiClient(origin=args.api_origin, ca_file=args.ca_file or state.get("ca_file")), email2
+        )
         j2.create_company()
         j2.upload_csv(args.short)
         p = j2.wait_preview()
@@ -339,16 +452,36 @@ def main() -> int:
             final = j2.create_forecast(cutoff="2026-09-29")
             status = final.get("status")
             if status in {"failed", "rejected"}:
-                record(results, "N-04", "pass", "short history not green-washed", status=status, error=final.get("error"))
+                record(
+                    results,
+                    "N-04",
+                    "pass",
+                    "short history not green-washed",
+                    status=status,
+                    error=final.get("error"),
+                )
             elif status == "succeeded":
                 # Must carry explicit limitations, not silent success as certified.
                 readiness = final.get("readiness") or {}
-                limitations = (final.get("result") or {}).get("assumptions") or readiness.get("limitations") or []
-                record(results, "N-04", "fail", "short history produced succeeded forecast; check limitations", limitations=limitations, readiness=readiness)
+                limitations = (
+                    (final.get("result") or {}).get("assumptions")
+                    or readiness.get("limitations")
+                    or []
+                )
+                record(
+                    results,
+                    "N-04",
+                    "fail",
+                    "short history produced succeeded forecast; check limitations",
+                    limitations=limitations,
+                    readiness=readiness,
+                )
             else:
                 record(results, "N-04", "fail", f"unexpected status {status}", body=final)
         else:
-            record(results, "N-04", "pass", "short history blocked at preview", status=p.get("status"))
+            record(
+                results, "N-04", "pass", "short history blocked at preview", status=p.get("status")
+            )
     except Exception as exc:  # noqa: BLE001
         msg = str(exc)
         if any(
@@ -368,7 +501,9 @@ def main() -> int:
     # N-05 EOD conflict
     try:
         email3 = next_demo_email(state)
-        j3 = Journey.register_login(ApiClient(origin=args.api_origin, ca_file=args.ca_file or state.get("ca_file")), email3)
+        j3 = Journey.register_login(
+            ApiClient(origin=args.api_origin, ca_file=args.ca_file or state.get("ca_file")), email3
+        )
         j3.create_company()
         j3.upload_csv(args.eod_conflict)
         p = j3.wait_preview()
@@ -376,7 +511,14 @@ def main() -> int:
         blocking = preview_block.get("blocking_issue_count") or 0
         can_commit = preview_block.get("can_commit")
         if p.get("status") == "failed" or (blocking and can_commit is False):
-            record(results, "N-05", "pass", "EOD conflict blocks commit", blocking_issue_count=blocking, can_commit=can_commit)
+            record(
+                results,
+                "N-05",
+                "pass",
+                "EOD conflict blocks commit",
+                blocking_issue_count=blocking,
+                can_commit=can_commit,
+            )
         elif can_commit is False:
             record(results, "N-05", "pass", "can_commit false", preview=preview_block)
         else:
@@ -414,8 +556,19 @@ def main() -> int:
                     idempotency_key=client.new_idempotency_key("csrf2"),
                     expected=403,
                 )
-                code = (resp.body or {}).get("error", {}).get("code") if isinstance(resp.body, dict) else None
-                record(results, "N-08", "pass", "invalid CSRF rejected", code=code, http_status=resp.status)
+                code = (
+                    (resp.body or {}).get("error", {}).get("code")
+                    if isinstance(resp.body, dict)
+                    else None
+                )
+                record(
+                    results,
+                    "N-08",
+                    "pass",
+                    "invalid CSRF rejected",
+                    code=code,
+                    http_status=resp.status,
+                )
             else:
                 raise
         finally:
@@ -436,10 +589,20 @@ def main() -> int:
         record(results, "N-09", "fail", str(exc))
 
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
-    (ARTIFACTS / "last-regression.json").write_text(json.dumps(run, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps({"summary": {r["id"]: r["status"] for r in results}}, ensure_ascii=False, indent=2))
+    (ARTIFACTS / "last-regression.json").write_text(
+        json.dumps(run, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    print(
+        json.dumps(
+            {"summary": {r["id"]: r["status"] for r in results}}, ensure_ascii=False, indent=2
+        )
+    )
 
-    failed = any(r["status"] == "fail" or str(r["status"]).startswith("blocked:") for r in results if r["id"] != "BOOT-import")
+    failed = any(
+        r["status"] == "fail" or str(r["status"]).startswith("blocked:")
+        for r in results
+        if r["id"] != "BOOT-import"
+    )
     boot_fail = any(r["id"] == "BOOT-import" and r["status"] != "pass" for r in results)
     return 1 if failed or boot_fail else 0
 

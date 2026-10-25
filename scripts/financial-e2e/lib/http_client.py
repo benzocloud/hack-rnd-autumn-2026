@@ -42,7 +42,11 @@ class ApiClient:
                     "Python SSL stack cannot enable TLS 1.3; use Homebrew "
                     "Python 3.12+ with OpenSSL 3 (SALDO_E2E_PYTHON)"
                 ) from exc
-        ca = self.ca_file or __import__("os").environ.get("SALDO_E2E_CA_FILE") or __import__("os").environ.get("SSL_CERT_FILE")
+        ca = (
+            self.ca_file
+            or __import__("os").environ.get("SALDO_E2E_CA_FILE")
+            or __import__("os").environ.get("SSL_CERT_FILE")
+        )
         if ca:
             context.load_verify_locations(cafile=ca)
         self._opener = urllib.request.build_opener(
@@ -82,12 +86,16 @@ class ApiClient:
             headers["Content-Type"] = content_type
         if csrf:
             if not self.csrf_token:
-                raise RuntimeError("CSRF required but csrf_token is empty; call refresh_csrf() first")
+                raise RuntimeError(
+                    "CSRF required but csrf_token is empty; call refresh_csrf() first"
+                )
             headers["X-CSRF-Token"] = self.csrf_token
         if idempotency_key is not None:
             headers["Idempotency-Key"] = idempotency_key
 
-        request = urllib.request.Request(self._url(path), data=body, headers=headers, method=method.upper())
+        request = urllib.request.Request(
+            self._url(path), data=body, headers=headers, method=method.upper()
+        )
         try:
             with self._opener.open(request, timeout=self.timeout_s) as handle:
                 raw = handle.read()

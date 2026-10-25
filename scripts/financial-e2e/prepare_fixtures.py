@@ -97,7 +97,9 @@ def short_history(rows: list[dict[str, str]], days: int = 30) -> list[dict[str, 
         by_date.setdefault(day, []).append(row)
     cutoff = max(by_date)
     start = cutoff - timedelta(days=days - 1)
-    return [row for day, items in sorted(by_date.items()) if start <= day <= cutoff for row in items]
+    return [
+        row for day, items in sorted(by_date.items()) if start <= day <= cutoff for row in items
+    ]
 
 
 def eod_conflict(rows_90: list[dict[str, str]]) -> list[dict[str, str]]:
@@ -168,8 +170,15 @@ def main() -> int:
         }
 
     manifest_path = args.out / "manifest.json"
-    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps({"ok": True, "manifest": str(manifest_path), **manifest["ordinary_window"]}, ensure_ascii=False))
+    manifest_path.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    print(
+        json.dumps(
+            {"ok": True, "manifest": str(manifest_path), **manifest["ordinary_window"]},
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

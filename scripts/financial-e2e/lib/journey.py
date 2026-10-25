@@ -30,7 +30,9 @@ def next_demo_email(state: dict[str, Any]) -> str:
     for candidate in pool:
         if candidate not in used:
             used.append(candidate)
-            used_path.write_text(json.dumps(used, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            used_path.write_text(
+                json.dumps(used, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+            )
             return candidate
     raise RuntimeError("demo email pool exhausted; restart stack with a new suffix")
 
@@ -40,9 +42,7 @@ def multipart_import(account_id: str, csv_bytes: bytes, filename: str) -> tuple[
 
     def field(name: str, value: str) -> bytes:
         return (
-            f"--{boundary}\r\n"
-            f'Content-Disposition: form-data; name="{name}"\r\n\r\n'
-            f"{value}\r\n"
+            f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n{value}\r\n'
         ).encode()
 
     body = b"".join(
@@ -64,7 +64,9 @@ def multipart_import(account_id: str, csv_bytes: bytes, filename: str) -> tuple[
     return body, f"multipart/form-data; boundary={boundary}"
 
 
-def poll(client: ApiClient, path: str, *, is_done, timeout_s: float = 120.0, interval_s: float = 0.5) -> Any:
+def poll(
+    client: ApiClient, path: str, *, is_done, timeout_s: float = 120.0, interval_s: float = 0.5
+) -> Any:
     deadline = time.monotonic() + timeout_s
     last = None
     while time.monotonic() < deadline:
@@ -176,8 +178,10 @@ class Journey:
         body = poll(
             self.client,
             f"/api/v1/companies/{self.company_id}/imports/{self.import_id}",
-            is_done=lambda b: isinstance(b, dict)
-            and b.get("status") in {"preview_ready", "failed", "rejected", "applied"},
+            is_done=lambda b: (
+                isinstance(b, dict)
+                and b.get("status") in {"preview_ready", "failed", "rejected", "applied"}
+            ),
         )
         assert isinstance(body, dict)
         return body
@@ -185,7 +189,9 @@ class Journey:
     def commit_import(self, preview: dict[str, Any] | None = None) -> dict[str, Any]:
         assert self.company_id and self.import_id
         preview = preview or self.wait_preview()
-        preview_block = preview.get("preview") if isinstance(preview.get("preview"), dict) else preview
+        preview_block = (
+            preview.get("preview") if isinstance(preview.get("preview"), dict) else preview
+        )
         self.client.refresh_csrf()
         committed = self.client.request(
             "POST",
@@ -285,8 +291,10 @@ class Journey:
             self.client,
             f"/api/v1/companies/{self.company_id}/forecasts/{self.forecast_id}",
             timeout_s=120,
-            is_done=lambda b: isinstance(b, dict)
-            and b.get("status") in {"succeeded", "failed", "rejected", "cancelled"},
+            is_done=lambda b: (
+                isinstance(b, dict)
+                and b.get("status") in {"succeeded", "failed", "rejected", "cancelled"}
+            ),
         )
         assert isinstance(final, dict)
         return final
