@@ -12,4 +12,26 @@ const descriptions: Record<string, string> = {
     "The projection excludes unknown future obligations and has no calibrated probability or interval.": "Неизвестные будущие обязательства не учтены. Достоверная вероятность и интервал прогноза не оценены.",
 };
 
+const dashboardHiddenLimitationCodes = new Set([
+    "historical_availability_unverified",
+    "history_reconstructed_from_covered_facts_and_cutoff_eod",
+    "not_calibrated",
+]);
+
+const dashboardHiddenLimitationTexts = new Set([
+    descriptions.historical_availability_unverified,
+    descriptions.not_calibrated,
+    "history_reconstructed_from_covered_facts_and_cutoff_eod",
+]);
+
 export const forecastQualityDescription = ( value: string ): string => descriptions[value] || value;
+
+export const isDashboardHiddenLimitation = ( value: string ): boolean => {
+    if (dashboardHiddenLimitationCodes.has(value)) {
+        return true;
+    }
+
+    return dashboardHiddenLimitationTexts.has(forecastQualityDescription(value));
+};
+
+export const visibleDashboardLimitations = ( values: string[] ): string[] => values.filter(( value ) => !isDashboardHiddenLimitation(value));
