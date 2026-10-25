@@ -75,3 +75,9 @@ Full serial Core race integration+mlintegration:746 passed tests/subtests,2 fail
 API final full race:298 tests/subtests /8 test packages pass (4 без tests); vet/full lint0/fmt clean. Core tagged full lint0/vet pass; последний fmt fix calendar_mode_test сделан с module config. Buf lint/build/breaking и scripts/check-core-contracts.sh — pass (58 REST maps, generated drift, consumer compilation). API generation --check — pass после генерации настоящим pinned grpc_tools protoc: Buf unknown version header ранее вызывал CI false drift, сохраняется реальный version header. API schema13 pass; ML45 без skips; pinned Ruff0/check+format14files clean.
 
 Свежий origin/main сейчас6c9edd969b3a694bccabaf6980b86531e2722490; включает #47/onboarding/training. Следующий шаг — обычный merge в нашу ветку, минимальные conflicts, релевантные checks и actual CI. Main не изменялся нами.
+
+## Integration main checkpoint 10:47 МСК
+
+Fixes roundtrip/negative groups pushed bed1e6825b1e49695d4eb1fae78f2132ba5034d6, remote verified. Затем обычный clean merge origin/main6c9edd969b3a694bccabaf6980b86531e2722490 → merge a4c7078423709cd33f468b15fedf4ded0fed0af2. Auth/onboarding/training/deploy/frontend изменения принадлежат upstream, не собственной реализации; конфликты отсутствовали. Новая API coverage gate85% из main требует дополнительных meaningful adapter checks, не weakening. Gate проверяется отдельно после merge.
+
+Actual CI2723d0a: contracts и ML RPC SUCCESS, Core lint FAILURE (один goimports diff уже исправлен), API verify FAILURE (protoc unknown header drift уже заменён реальным generated header), onboarding ещё IN_PROGRESS на момент проверки. Это прежний SHA, не статус интеграционного merge. Полный новый прогон/gates выполняются далее.
