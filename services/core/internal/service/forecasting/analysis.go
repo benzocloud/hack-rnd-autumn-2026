@@ -3,6 +3,8 @@ package forecasting
 import (
 	"crypto/sha256"
 	"fmt"
+	"math"
+	"math/big"
 	"slices"
 	"strings"
 	"time"
@@ -153,7 +155,7 @@ func ValidateAnalysis(input FinancialModelInput, analysis *Analysis) error {
 				return ErrModelResponse
 			}
 		} else {
-			if !ValidAnalysisLabel(op.CategoryCode, op.CategorySource, op.RuleID) || op.CategoryID != AnalysisCategory(op.CategoryCode, d.Direction, input.Categories) {
+			if !ValidAnalysisLabel(op.CategoryCode, op.CategorySource, op.RuleID) || !analysisDirection(op.CategoryCode, d.Direction) || op.CategoryID != AnalysisCategory(op.CategoryCode, d.Direction, input.Categories) {
 				return ErrModelResponse
 			}
 		}
@@ -163,7 +165,7 @@ func ValidateAnalysis(input FinancialModelInput, analysis *Analysis) error {
 	total := 0
 	for _, h := range analysis.Hypotheses {
 		minimum := uint32(4)
-		if h.Direction == ledger.Outflow && slices.Contains([]string{"salary", "salary_advance", "salary_final", "tax", "rent", "equipment_rent", "bank_fee", "utilities", "subscription", "loan_payment", "overdraft_interest"}, h.CategoryCode) {
+		if h.Direction == ledger.Outflow && regularExpense(h.CategoryCode) {
 			minimum = 3
 		}
 		if !recurrenceCategory(h.CategoryCode) || h.ID == "" || ids[h.ID] || h.RuleID != "monthly_fit" || h.RuleVersion != AnalysisVersion || h.Status != "hypothesis" || (h.Direction != ledger.Inflow && h.Direction != ledger.Outflow) || h.AmountMinor <= 0 || h.Confirmations < minimum || h.ExpectedPeriods < h.Confirmations || h.ExpectedPeriods > 5 || h.Confirmations*4 < h.ExpectedPeriods*3 || (h.MonthEnd && h.DayOfMonth != 0) || (!h.MonthEnd && (h.DayOfMonth < 1 || h.DayOfMonth > 31)) || !slices.Contains([]string{"none", "previous", "next"}, h.WeekendShift) || len(h.Operations) < int(h.Confirmations) || h.First < analysis.From || h.Last > analysis.Through || h.First > h.Last {
@@ -183,10 +185,7 @@ func ValidateAnalysis(input FinancialModelInput, analysis *Analysis) error {
 			if !ok || refs[ref.ID] || ref.Version != fact.Version() || d.Direction != h.Direction || labels[ref.ID].CategorySource != "rules" || labels[ref.ID].CategoryCode != h.CategoryCode {
 				return ErrModelResponse
 			}
-			key := d.CounterpartyINN
-			if key == "" {
-				key = strings.Join(strings.Fields(strings.ReplaceAll(strings.ToLower(norm.NFKC.String(d.CounterpartyName)), "ё", "е")), " ")
-			}
+			key := analysisParty(d)
 			if key == "" || party != "" && key != party {
 				return ErrModelResponse
 			}
@@ -197,7 +196,7 @@ func ValidateAnalysis(input FinancialModelInput, analysis *Analysis) error {
 			last = max(last, d.Date)
 		}
 		identity := strings.Join(append([]string{input.Snapshot.SnapshotID.String(), "monthly_fit", AnalysisVersion}, sourceIDs...), "\n")
-		if !slices.IsSorted(sourceIDs) || h.ID != fmt.Sprintf("monthly_%x", sha256.Sum256([]byte(identity))) || !validMonthlyPattern(h, facts, string(analysis.Through)) || first != h.First || last != h.Last {
+		if !slices.IsSorted(sourceIDs) || h.ID != fmt.Sprintf("monthly_%x", sha256.Sum256([]byte(identity))) || !validMonthlyPattern(h, facts, string(analysis.Through)) || !validMonthlyFloor(h, facts, labels) || first != h.First || last != h.Last {
 			return ErrModelResponse
 		}
 		lastDate, err := time.Parse(time.DateOnly, string(h.Last))
@@ -233,7 +232,7 @@ func validMonthlyPattern(h RecurringHypothesis, facts map[uuid.UUID]ledger.Trans
 		return false
 	}
 	minimum := uint32(4)
-	if h.Direction == ledger.Outflow && slices.Contains([]string{"salary", "salary_advance", "salary_final", "tax", "rent", "equipment_rent", "bank_fee", "utilities", "subscription", "loan_payment", "overdraft_interest"}, h.CategoryCode) {
+	if h.Direction == ledger.Outflow && regularExpense(h.CategoryCode) {
 		minimum = 3
 	}
 	totals := map[string]int64{}
@@ -262,6 +261,7 @@ func validMonthlyPattern(h RecurringHypothesis, facts map[uuid.UUID]ledger.Trans
 	end := cutoff.AddDate(0, 0, 4)
 	used := map[string]bool{}
 	amounts := []int64{}
+	confirmedAmounts := []int64{}
 	confirmed := uint32(0)
 	expected := uint32(0)
 	for month := time.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, time.UTC); !month.After(end); month = month.AddDate(0, 1, 0) {
@@ -308,10 +308,14 @@ func validMonthlyPattern(h RecurringHypothesis, facts map[uuid.UUID]ledger.Trans
 			amounts = append(amounts, totals[best])
 			if !due.After(cutoff) {
 				confirmed++
+				confirmedAmounts = append(confirmedAmounts, totals[best])
 			}
 		}
 	}
 	if confirmed < minimum || confirmed != h.Confirmations || expected != h.ExpectedPeriods || confirmed*4 < expected*3 || len(used) != len(dates) {
+		return false
+	}
+	if !regularExpense(h.CategoryCode) && !validAmountMAD(confirmedAmounts) {
 		return false
 	}
 	// The helper uses the median of the last three matched monthly amounts.
@@ -328,4 +332,101 @@ func validMonthlyPattern(h RecurringHypothesis, facts map[uuid.UUID]ledger.Trans
 
 func recurrenceCategory(code string) bool {
 	return slices.Contains([]string{"salary", "salary_advance", "salary_final", "tax", "rent", "equipment_rent", "bank_fee", "utilities", "subscription", "loan_payment", "overdraft_interest", "customer_payment", "agency_revenue", "operating_expense"}, code)
+}
+
+func regularExpense(code string) bool {
+	return slices.Contains([]string{"salary", "salary_advance", "salary_final", "tax", "rent", "equipment_rent", "bank_fee", "utilities", "subscription", "loan_payment", "overdraft_interest"}, code)
+}
+
+func analysisDirection(code string, direction ledger.Direction) bool {
+	switch code {
+	case "owner_capital", "owner_financing", "loan_receipt", "retention_receipt", "refund_in", "insurance_receipt", "grant_receipt", "agency_revenue", "acquiring_revenue", "cash_revenue", "marketplace_revenue", "customer_payment":
+		return direction == ledger.Inflow
+	case "owner_repayment", "owner_withdrawal", "overdraft_interest", "loan_payment", "refund_out", "enforcement_payment", "tax", "salary", "salary_advance", "salary_final", "rent", "equipment_rent", "bank_fee", "utilities", "subscription", "operating_expense":
+		return direction == ledger.Outflow
+	default:
+		return true
+	}
+}
+
+func analysisParty(d ledger.TransactionData) string {
+	if d.CounterpartyINN != "" {
+		return d.CounterpartyINN
+	}
+	return strings.Join(strings.Fields(strings.ReplaceAll(strings.ToLower(norm.NFKC.String(d.CounterpartyName)), "ё", "е")), " ")
+}
+
+func medianAmount(values []int64) *big.Rat {
+	sorted := slices.Clone(values)
+	slices.Sort(sorted)
+	middle := len(sorted) / 2
+	center := new(big.Rat).SetInt64(sorted[middle])
+	if len(sorted)%2 == 0 {
+		center.Add(center, new(big.Rat).SetInt64(sorted[middle-1]))
+		center.Quo(center, big.NewRat(2, 1))
+	}
+	return center
+}
+
+// Apply the helper's 25% monthly maximum floor to the complete matching party
+// group, not an ML-selected subset. Every same-day operation remains evidence.
+func validMonthlyFloor(h RecurringHypothesis, facts map[uuid.UUID]ledger.Transaction, labels map[uuid.UUID]OperationAnalysis) bool {
+	party := analysisParty(facts[h.Operations[0].ID].Data())
+	totals := map[ledger.Date]int64{}
+	maxima := map[string]int64{}
+	for id, fact := range facts {
+		d := fact.Data()
+		label := labels[id]
+		if label.CategorySource != "rules" || label.CategoryCode != h.CategoryCode || d.Direction != h.Direction || analysisParty(d) != party {
+			continue
+		}
+		amount := d.Amount.Minor()
+		if totals[d.Date] > math.MaxInt64-amount {
+			return false
+		}
+		totals[d.Date] += amount
+	}
+	for date, amount := range totals {
+		month := string(date)[:7]
+		maxima[month] = max(maxima[month], amount)
+	}
+	values := make([]int64, 0, len(maxima))
+	for _, v := range maxima {
+		values = append(values, v)
+	}
+	floor := medianAmount(values)
+	floor.Quo(floor, big.NewRat(4, 1))
+	selected := map[ledger.Date]int64{}
+	for _, ref := range h.Operations {
+		d := facts[ref.ID].Data()
+		if selected[d.Date] > math.MaxInt64-d.Amount.Minor() {
+			return false
+		}
+		selected[d.Date] += d.Amount.Minor()
+	}
+	for date, amount := range selected {
+		if amount != totals[date] || new(big.Rat).SetInt64(amount).Cmp(floor) < 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// Median absolute deviation / median must be <=0.3. Rational arithmetic avoids
+// float/int64 rounding changing a threshold or overflowing derived money.
+func validAmountMAD(amounts []int64) bool {
+	center := medianAmount(amounts)
+	deviations := make([]*big.Rat, 0, len(amounts))
+	for _, amount := range amounts {
+		d := new(big.Rat).Sub(new(big.Rat).SetInt64(amount), center)
+		deviations = append(deviations, d.Abs(d))
+	}
+	slices.SortFunc(deviations, func(a, b *big.Rat) int { return a.Cmp(b) })
+	middle := len(deviations) / 2
+	mad := new(big.Rat).Set(deviations[middle])
+	if len(deviations)%2 == 0 {
+		mad.Add(mad, deviations[middle-1])
+		mad.Quo(mad, big.NewRat(2, 1))
+	}
+	return mad.Cmp(new(big.Rat).Mul(center, big.NewRat(3, 10))) <= 0
 }

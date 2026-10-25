@@ -66,7 +66,7 @@ func TestManualSupplementAfterImportKeepsSourceReplayAndForecast(t *testing.T) {
 		for n := 0; n < 30; n++ {
 			projection.Days = append(projection.Days, forecasting.ModelForecastDay{Date: ledger.Date(cutoff.AddDate(0, 0, n+1).Format(time.DateOnly)), Inflow: rubModel(2), Outflow: rubModel(50), ReferenceBalance: rubModel(95680 - int64(n+1)*48)})
 		}
-		return forecasting.FinancialModelResult{Projection: projection, ProbabilityUnavailableReason: "not_calibrated", Limitations: input.Assessment.Limitations}, nil
+		return forecasting.FinancialModelResult{Analysis: fixtureUnknownAnalysis(input), Projection: projection, ProbabilityUnavailableReason: "not_calibrated", Limitations: input.Assessment.Limitations}, nil
 	})
 	jobs := newForecastJobs(application.db, cfg.Postgres, model)
 	job, err := jobs.Create(t.Context(), forecasting.CreateForecastCommand{Scope: scope, ActorID: "actor", IdempotencyKey: uuid.NewString(), Cutoff: "2026-09-30", Today: "2026-10-25", HorizonDays: 30})
