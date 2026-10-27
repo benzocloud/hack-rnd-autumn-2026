@@ -36,6 +36,17 @@ func encodeScenario(v forecasting.ScenarioView) *pb.Scenario {
 		s.Changes = append(s.Changes, &pb.ScenarioChange{Change: &pb.ScenarioChange_ReduceSales{ReduceSales: &pb.ReduceSalesChange{Id: c.ID.String(), Targets: targets, PeriodStart: string(c.PeriodStart), PeriodEnd: string(c.PeriodEnd), ReductionBasisPoints: c.ReductionBasisPoints}}})
 	}
 
+	for _, c := range v.DelayChanges {
+		s.Changes = append(s.Changes, &pb.ScenarioChange{Change: &pb.ScenarioChange_DelayReceipt{DelayReceipt: &pb.DelayReceiptChange{Id: c.ID.String(), Target: &pb.OccurrenceTarget{ComponentId: c.Target.ComponentID, OccurrenceId: c.Target.OccurrenceID}, Amount: kopecks(c.AmountMinor), NewDate: string(c.NewDate)}}})
+	}
+	if v.ParentScenarioID != nil {
+		s.ComparisonParentScenarioId = new(v.ParentScenarioID.String())
+	}
+	if v.Response != nil {
+		s.ResponseAction = &pb.ReschedulePaymentPart{EffectiveOccurrenceId: v.Response.EffectiveOccurrenceID, Amount: kopecks(v.Response.AmountMinor), NewDate: string(v.Response.NewDate), FeasibilityCondition: v.Response.FeasibilityCondition}
+	}
+	s.OutOfHorizonOccurrenceIds = append([]string{}, v.OutOfHorizonIDs...)
+
 	return s
 }
 func (h *handler) CreateScenario(ctx context.Context, r *pb.CreateScenarioRequest) (*pb.CreateScenarioResponse, error) {
@@ -50,38 +61,9 @@ func (h *handler) CreateScenario(ctx context.Context, r *pb.CreateScenarioReques
 	if err != nil {
 		return nil, rpcerror.From(err)
 	}
-	input := r.GetIndependent()
-	if input == nil {
-		return nil, rpcerror.New(codes.FailedPrecondition, pb.CoreErrorReason_CORE_ERROR_REASON_SCENARIO_NOT_SUPPORTED)
-	}
-	base, err := parseID(input.BaseForecastId)
+	cmd, err := scenarioCommand(r, scope, actor)
 	if err != nil {
-		return nil, rpcerror.From(err)
-	}
-	cmd := forecasting.ScenarioCommand{Scope: scope, ActorID: actor, IdempotencyKey: r.IdempotencyKey, Name: r.Name, BaseForecastID: base}
-	for _, c := range input.Changes {
-		if reduction := c.GetReduceSales(); reduction != nil {
-			id, e := parseID(reduction.Id)
-			if e != nil {
-				return nil, rpcerror.From(e)
-			}
-			change := forecasting.SalesReductionChange{ID: id, PeriodStart: ledger.Date(reduction.PeriodStart), PeriodEnd: ledger.Date(reduction.PeriodEnd), ReductionBasisPoints: reduction.ReductionBasisPoints}
-			for _, t := range reduction.Targets {
-				change.Targets = append(change.Targets, forecasting.SalesTarget{ComponentID: t.GetComponentId(), OccurrenceID: t.GetOccurrenceId()})
-			}
-			cmd.SalesChanges = append(cmd.SalesChanges, change)
-			continue
-		}
-
-		v := c.GetOneOffExpense()
-		if v == nil {
-			return nil, rpcerror.New(codes.FailedPrecondition, pb.CoreErrorReason_CORE_ERROR_REASON_SCENARIO_NOT_SUPPORTED)
-		}
-		id, e := parseID(v.Id)
-		if e != nil || v.Amount == nil || v.Amount.Currency != "RUB" || v.CategoryId != nil {
-			return nil, rpcerror.From(forecasting.ErrInvalid)
-		}
-		cmd.Changes = append(cmd.Changes, forecasting.ExpenseChange{ID: id, Date: ledger.Date(v.Date), AmountMinor: v.Amount.AmountMinor, Description: v.Description})
+		return nil, err
 	}
 	v, err := h.scenarios.Create(ctx, cmd)
 	if err != nil {
@@ -176,14 +158,22 @@ func (h *handler) CompareForecasts(ctx context.Context, r *pb.CompareForecastsRe
 		return nil, rpcerror.From(err)
 	}
 	incompatible := rpcerror.New(codes.FailedPrecondition, pb.CoreErrorReason_CORE_ERROR_REASON_FORECAST_NOT_COMPARABLE)
-	if candidate.Status != "succeeded" || reference.Status != "succeeded" || candidate.Result == nil || reference.Result == nil || candidate.Snapshot.Data().ID != reference.Snapshot.Data().ID || candidate.ModelContextID != reference.ModelContextID || candidate.ScenarioID == nil || reference.ScenarioID != nil || h.scenarios == nil {
+	if candidate.Status != "succeeded" || reference.Status != "succeeded" || candidate.Result == nil || reference.Result == nil || candidate.Snapshot.Data().ID != reference.Snapshot.Data().ID || candidate.ModelContextID != reference.ModelContextID || candidate.ScenarioID == nil || h.scenarios == nil {
 		return nil, incompatible
 	}
 	scenario, err := h.scenarios.Read(ctx, scope, *candidate.ScenarioID)
 	if err != nil {
 		return nil, rpcerror.From(err)
 	}
-	if scenario.Record.BaseForecastID != rid {
+	expectedReference := scenario.Record.BaseForecastID
+	if scenario.ParentScenarioID != nil {
+		parent, e := h.scenarios.Read(ctx, scope, *scenario.ParentScenarioID)
+		if e != nil {
+			return nil, rpcerror.From(e)
+		}
+		expectedReference = parent.Record.ForecastID
+	}
+	if expectedReference != rid {
 		return nil, incompatible
 	}
 	cm, rm := encodeResult(candidate.Result).Metrics, encodeResult(reference.Result).Metrics

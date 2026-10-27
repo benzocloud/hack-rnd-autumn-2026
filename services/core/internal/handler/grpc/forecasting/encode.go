@@ -88,10 +88,20 @@ func encodeForecast(view forecasting.ForecastView) *pb.Forecast {
 		out.ScenarioId = new(view.ScenarioID.String())
 	}
 	if view.Status == "succeeded" {
-		encodeKnownComponents(out.GetSucceeded().Result, view.Result, d.Calendar)
-		encodeSales(out.GetSucceeded().Result, view)
-		for _, expense := range view.ScenarioExpenses {
-			out.GetSucceeded().Result.Components = append(out.GetSucceeded().Result.Components, &pb.ForecastComponent{Id: expense.ID.String(), OccurrenceId: expense.ID.String(), Kind: "scenario_expense", Direction: pb.Direction_DIRECTION_OUTFLOW, Date: string(expense.Date), Amount: kopecks(expense.AmountMinor), RemainingAmount: kopecks(expense.AmountMinor)})
+		if view.Occurrences != nil {
+			encodeOccurrences(out.GetSucceeded().Result, view)
+		} else {
+			encodeKnownComponents(out.GetSucceeded().Result, view.Result, d.Calendar)
+			encodeSales(out.GetSucceeded().Result, view)
+			for _, expense := range view.ScenarioExpenses {
+				out.GetSucceeded().Result.Components = append(out.GetSucceeded().Result.Components, &pb.ForecastComponent{Id: expense.ID.String(), OccurrenceId: expense.ID.String(), Kind: "scenario_expense", Direction: pb.Direction_DIRECTION_OUTFLOW, Date: string(expense.Date), Amount: kopecks(expense.AmountMinor), RemainingAmount: kopecks(expense.AmountMinor)})
+			}
+			for _, component := range out.GetSucceeded().Result.Components {
+				if component.Kind == "known_payment" && component.Direction == pb.Direction_DIRECTION_INFLOW && component.RemainingAmount.AmountMinor > 0 {
+					component.ScenarioEligible = true
+					out.GetSucceeded().Result.ScenarioCapabilities.DelayReceipt = true
+				}
+			}
 		}
 	}
 	return out
@@ -183,6 +193,7 @@ func encodeSales(out *pb.ForecastResult, view forecasting.ForecastView) {
 	}
 	if len(view.Sales) > 0 {
 		out.ScenarioCapabilities.ReduceSales = view.ScenarioID == nil
+		out.ScenarioCapabilities.DelayReceipt = view.ScenarioID == nil
 		out.Assumptions = append(out.Assumptions, "classified_sales_mean_90_v1: модельная доля продаж по сохранённой классификации за 90 дней; займы, свои переводы и платежи календаря исключены")
 	}
 	out.ScenarioCapabilities.UnavailableReason = new("Для этого шаблона нет подходящих проверенных компонентов прогноза.")

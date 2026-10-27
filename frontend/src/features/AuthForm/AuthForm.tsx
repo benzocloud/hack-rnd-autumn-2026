@@ -328,7 +328,6 @@ const AuthForm = ( { mode, verificationPurpose = "register", resetToken = "" }: 
 
                 { mode === "forgot-password" && <p className={styles.description}>Укажите почту, чтобы получить письмо для восстановления пароля.</p> }
 
-                { (isRegister || verifiesEmail) && emailVerificationMode === "demo" && <aside className={styles.demoNotice} role="status"><strong>Демо: подтверждение замокано</strong><p>Для разрешённых тестовых аккаунтов подойдут любые шесть цифр до истечения срока кода. Это не доказывает владение почтой.</p></aside> }
                 { (isRegister || verifiesEmail) && emailVerificationMode === "loading" && <p className={styles.description} role="status">Загружаем режим подтверждения…</p> }
                 { (isRegister || verifiesEmail) && emailVerificationMode === "unavailable" && <div className={styles.modeError} role="status"><p>Не удалось получить режим подтверждения.</p><button className={styles.link} type="button" onClick={() => { setEmailVerificationMode("loading"); void loadVerificationMode(); }}>Повторить загрузку</button></div> }
 

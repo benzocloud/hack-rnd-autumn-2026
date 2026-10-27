@@ -64,15 +64,28 @@ func (h *handler) createScenario(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, 422, "VALIDATION_ERROR", nil)
 		return
 	}
-	if fields["response_action"] != nil || fields["comparison_parent_scenario_id"] != nil {
-		writeError(w, r, 422, "SCENARIO_NOT_SUPPORTED", nil)
-		return
-	}
 	name, ok := paymentText(fields, "name", 200)
 	if !ok || name == nil || strings.TrimSpace(*name) == "" {
 		writeError(w, r, 422, "VALIDATION_ERROR", nil)
 		return
 	}
+	_, hasParent := fields["comparison_parent_scenario_id"]
+	_, hasResponse := fields["response_action"]
+	if hasParent || hasResponse {
+		if !hasParent || !hasResponse || fields["base_forecast_id"] != nil || fields["changes"] != nil {
+			writeError(w, r, 422, "VALIDATION_ERROR", nil)
+			return
+		}
+		var parent string
+		action, valid := responseActionBody(fields["response_action"])
+		if json.Unmarshal(fields["comparison_parent_scenario_id"], &parent) != nil || !resourceID(parent) || !valid {
+			writeError(w, r, 422, "VALIDATION_ERROR", nil)
+			return
+		}
+		h.submitScenario(w, r, &corev1.CreateScenarioRequest{Name: *name, Scenario: &corev1.CreateScenarioRequest_Response{Response: &corev1.ResponseScenario{ComparisonParentScenarioId: parent, ResponseAction: action}}})
+		return
+	}
+
 	var base string
 	if json.Unmarshal(fields["base_forecast_id"], &base) != nil || !resourceID(base) {
 		writeError(w, r, 422, "VALIDATION_ERROR", nil)
@@ -86,14 +99,23 @@ func (h *handler) createScenario(w http.ResponseWriter, r *http.Request) {
 	changes := []*corev1.ScenarioChange{}
 	for _, f := range raw {
 		var discriminator string
-		if json.Unmarshal(f["type"], &discriminator) == nil && discriminator == "reduce_sales" {
-			change, valid := salesChangeBody(f)
-			if !valid {
-				writeError(w, r, 422, "VALIDATION_ERROR", nil)
-				return
+		if json.Unmarshal(f["type"], &discriminator) == nil {
+			var change *corev1.ScenarioChange
+			var valid bool
+			switch discriminator {
+			case "reduce_sales":
+				change, valid = salesChangeBody(f)
+			case "delay_receipt":
+				change, valid = delayChangeBody(f)
 			}
-			changes = append(changes, change)
-			continue
+			if discriminator == "reduce_sales" || discriminator == "delay_receipt" {
+				if !valid {
+					writeError(w, r, 422, "VALIDATION_ERROR", nil)
+					return
+				}
+				changes = append(changes, change)
+				continue
+			}
 		}
 
 		for key := range f {
@@ -119,6 +141,9 @@ func (h *handler) createScenario(w http.ResponseWriter, r *http.Request) {
 		}
 		changes = append(changes, &corev1.ScenarioChange{Change: &corev1.ScenarioChange_OneOffExpense{OneOffExpense: &corev1.OneOffExpenseChange{Id: id, Date: date, Amount: amount, Description: description}}})
 	}
+	h.submitScenario(w, r, &corev1.CreateScenarioRequest{Name: *name, Scenario: &corev1.CreateScenarioRequest_Independent{Independent: &corev1.IndependentScenario{BaseForecastId: base, Changes: changes}}})
+}
+func (h *handler) submitScenario(w http.ResponseWriter, r *http.Request, request *corev1.CreateScenarioRequest) {
 	keys := r.Header.Values("Idempotency-Key")
 	if len(keys) != 1 || !validIdempotencyKey(keys[0]) {
 		writeError(w, r, 422, "VALIDATION_ERROR", nil)
@@ -129,7 +154,10 @@ func (h *handler) createScenario(w http.ResponseWriter, r *http.Request) {
 		coreRPCError(w, r, err)
 		return
 	}
-	response, err := h.core.Scenarios.CreateScenario(r.Context(), &corev1.CreateScenarioRequest{Context: writeContext(r), Scope: scopeFor(account), IdempotencyKey: keys[0], Name: *name, Scenario: &corev1.CreateScenarioRequest_Independent{Independent: &corev1.IndependentScenario{BaseForecastId: base, Changes: changes}}})
+	request.Context = writeContext(r)
+	request.Scope = scopeFor(account)
+	request.IdempotencyKey = keys[0]
+	response, err := h.core.Scenarios.CreateScenario(r.Context(), request)
 	if err != nil {
 		coreRPCError(w, r, err)
 		return
@@ -142,11 +170,32 @@ func (h *handler) createScenario(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 202, object{"id": v.Id, "forecast_id": v.ForecastId, "status": "queued", "poll_after_ms": v.PollAfterMs, "status_url": "/api/v1/companies/" + account.CompanyId + "/forecasts/" + v.ForecastId})
 }
 func scenarioDTO(s *corev1.Scenario) (object, bool) {
-	if s == nil || !resourceID(s.Id) || !resourceID(s.BaseForecastId) || !resourceID(s.ForecastId) || !nonempty(s.Name, 200) || !timestamp(s.CreatedAt) || s.ComparisonParentScenarioId != nil || s.ResponseAction != nil || len(s.Changes) < 1 || len(s.Changes) > 20 {
+	if s == nil || !resourceID(s.Id) || !resourceID(s.BaseForecastId) || !resourceID(s.ForecastId) || !nonempty(s.Name, 200) || !timestamp(s.CreatedAt) || !optionalID(s.ComparisonParentScenarioId) || (s.ComparisonParentScenarioId == nil) != (s.ResponseAction == nil) || len(s.Changes) < 1 || len(s.Changes) > 20 {
 		return nil, false
 	}
+	var response any
+	if action := s.ResponseAction; action != nil {
+		if !nonempty(action.EffectiveOccurrenceId, 128) || !positiveMoney(action.Amount) || !businessDate(action.NewDate) || !nonempty(action.FeasibilityCondition, 1000) {
+			return nil, false
+		}
+		response = object{"type": "reschedule_payment_part", "target": object{"effective_occurrence_id": action.EffectiveOccurrenceId}, "amount": moneyDTO(action.Amount), "new_date": action.NewDate, "feasibility_condition": action.FeasibilityCondition}
+	}
+	for _, id := range s.OutOfHorizonOccurrenceIds {
+		if !nonempty(id, 128) {
+			return nil, false
+		}
+	}
+
 	changes := []object{}
 	for _, c := range s.Changes {
+		if delay := c.GetDelayReceipt(); delay != nil {
+			if !resourceID(delay.Id) || delay.Target == nil || !nonempty(delay.Target.ComponentId, 128) || !nonempty(delay.Target.OccurrenceId, 128) || !positiveMoney(delay.Amount) || !businessDate(delay.NewDate) {
+				return nil, false
+			}
+			changes = append(changes, object{"id": delay.Id, "type": "delay_receipt", "target": object{"component_id": delay.Target.ComponentId, "occurrence_id": delay.Target.OccurrenceId}, "amount": moneyDTO(delay.Amount), "new_date": delay.NewDate})
+			continue
+		}
+
 		if reduction := c.GetReduceSales(); reduction != nil {
 			if !resourceID(reduction.Id) || !businessDate(reduction.PeriodStart) || !businessDate(reduction.PeriodEnd) || reduction.PeriodStart > reduction.PeriodEnd || reduction.ReductionBasisPoints < 1 || reduction.ReductionBasisPoints > 10000 || len(reduction.Targets) < 1 || len(reduction.Targets) > 1000 {
 				return nil, false
@@ -168,7 +217,7 @@ func scenarioDTO(s *corev1.Scenario) (object, bool) {
 		}
 		changes = append(changes, object{"id": v.Id, "type": "one_off_expense", "date": v.Date, "amount": moneyDTO(v.Amount), "description": v.Description, "category_id": nil})
 	}
-	return object{"id": s.Id, "name": s.Name, "base_forecast_id": s.BaseForecastId, "forecast_id": s.ForecastId, "comparison_parent_scenario_id": nil, "changes": changes, "response_action": nil, "out_of_horizon_occurrence_ids": stringsDTO(s.OutOfHorizonOccurrenceIds), "created_at": utc(s.CreatedAt)}, true
+	return object{"id": s.Id, "name": s.Name, "base_forecast_id": s.BaseForecastId, "forecast_id": s.ForecastId, "comparison_parent_scenario_id": textPointer(s.ComparisonParentScenarioId), "changes": changes, "response_action": response, "out_of_horizon_occurrence_ids": stringsDTO(s.OutOfHorizonOccurrenceIds), "created_at": utc(s.CreatedAt)}, true
 }
 func (h *handler) getScenario(w http.ResponseWriter, r *http.Request) {
 	account, err := h.accountScope(r)

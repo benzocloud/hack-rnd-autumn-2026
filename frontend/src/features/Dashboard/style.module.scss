@@ -54,6 +54,16 @@
     }
 }
 
+.warnings {
+    display: grid;
+    gap: 5px;
+    padding-bottom: 10px;
+
+    h2 {
+        margin: 0;
+    }
+}
+
 .danger {
     color: global.$red;
 }
@@ -199,6 +209,18 @@
     pointer-events: none;
 }
 
+.chartNotes {
+    display: grid;
+    gap: 5px;
+    padding: 0 10px 10px;
+    font-size: 14px;
+    line-height: 1.5;
+
+    p {
+        margin: 0;
+    }
+}
+
 .retry {
     padding: 8px 10px 10px;
 }
@@ -267,5 +289,6 @@
 .navigation, .links { display: flex; flex-wrap: wrap; gap: 10px; }
 .navigation { max-width: 1234px; margin: 24px auto 0; padding-inline: 10px; }
 .details { grid-column: 1 / -1; display: grid; gap: 20px; min-width: 0; }
+.actions { display: grid; gap: 10px; min-width: 0; }
 .note { margin: 0; font-size: 14px; line-height: 1.5; }
 @media (max-width: 800px) { .details { grid-row: 3; } }
